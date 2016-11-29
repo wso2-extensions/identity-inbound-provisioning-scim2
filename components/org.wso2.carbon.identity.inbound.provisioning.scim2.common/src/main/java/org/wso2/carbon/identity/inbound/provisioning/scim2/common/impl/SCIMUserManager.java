@@ -52,7 +52,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * This is the class which deals with user core API.
+ * This is the class which deals with user core APIs.
  */
 public class SCIMUserManager implements UserManager {
     private static Logger log = LoggerFactory.getLogger(SCIMUserManager.class);
