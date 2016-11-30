@@ -10,7 +10,7 @@ import javax.ws.rs.ext.ExceptionMapper;
  */
 
 @Component(
-        name = "org.wso2.carbon.identity.inbound.provisioning.scim2.common.mappers.NotFoundMapper;",
+        name = "org.wso2.carbon.identity.inbound.provisioning.scim2.provider.mappers.NotFoundMapper",
         service = ExceptionMapper.class,
         immediate = true
 )
