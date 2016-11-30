@@ -1,8 +1,9 @@
 package org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils;
 
 import org.wso2.carbon.identity.mgt.claim.Claim;
-import org.wso2.carbon.identity.mgt.exception.ClaimManagerException;
+import org.wso2.carbon.identity.mgt.claim.MetaClaim;
 import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
+import org.wso2.carbon.identity.mgt.exception.UserNotFoundException;
 import org.wso2.carbon.identity.mgt.model.UserModel;
 import org.wso2.charon.core.v2.exceptions.BadRequestException;
 import org.wso2.charon.core.v2.exceptions.CharonException;
@@ -33,9 +34,11 @@ public class SimpleClaimResolver {
         try {
             User scimUser = null;
 
-            List<String> claimURIs = new ArrayList<>();
+            List<MetaClaim> claimURIs = new ArrayList<>();
             for (Claim claim : claimURIList) {
-                claimURIs.add(claim.getClaimUri());
+                MetaClaim metaClaim = new MetaClaim();
+                metaClaim.setClaimUri(claim.getClaimUri());
+                claimURIs.add(metaClaim);
             }
 
             //obtain user claim values
@@ -54,9 +57,10 @@ public class SimpleClaimResolver {
             scimUser.setSchemas();
 
             return scimUser;
-        } catch (BadRequestException | IdentityStoreException | CharonException |
-                ClaimManagerException | NotFoundException e) {
+        } catch (BadRequestException | IdentityStoreException | CharonException | NotFoundException e) {
             throw new CharonException("Error in getting the user.");
+        } catch (UserNotFoundException e) {
+            throw new CharonException("User does not exits.");
         }
     }
 

@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMClaimResolver;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SimpleClaimResolver;
 import org.wso2.carbon.identity.mgt.claim.Claim;
-import org.wso2.carbon.identity.mgt.exception.ClaimManagerException;
+import org.wso2.carbon.identity.mgt.claim.MetaClaim;
 import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
 import org.wso2.carbon.identity.mgt.exception.UserNotFoundException;
 import org.wso2.carbon.identity.mgt.model.UserModel;
@@ -135,8 +135,6 @@ public class CarbonUserManager implements UserManager {
             throw new CharonException("Error in getting user from the userid :" + userId, e);
         } catch (UserNotFoundException e) {
             throw new CharonException("User not found with the given userid :" + userId, e);
-        } catch (ClaimManagerException e) {
-            throw new CharonException("Error in getting user claims", e);
         }
         return scimUser;
     }
@@ -151,9 +149,11 @@ public class CarbonUserManager implements UserManager {
         try {
             org.wso2.carbon.identity.mgt.bean.User existingUser = identityStore.getUser(userId);
 
-            List<String> claimList = new ArrayList<>();
-
-            claimList.add("urn:ietf:params:scim:schemas:core:2.0:User:userName");
+            List<MetaClaim> claimList = new ArrayList<>();
+            MetaClaim metaClaim = new MetaClaim();
+            metaClaim.setDialectUri("urn:ietf:params:scim:schemas:core:2.0:User");
+            metaClaim.setClaimUri("urn:ietf:params:scim:schemas:core:2.0:User:userName");
+            claimList.add(metaClaim);
 
             List<Claim> userNames = existingUser.getClaims(claimList);
 
@@ -164,7 +164,7 @@ public class CarbonUserManager implements UserManager {
 
             log.info("User: " + userName + " is deleted through SCIM.");
 
-        } catch (UserNotFoundException | ClaimManagerException | IdentityStoreException e) {
+        } catch (UserNotFoundException  | IdentityStoreException e) {
             throw new NotFoundException("No matching user with the name: " + userName);
         }
     }
@@ -257,7 +257,7 @@ public class CarbonUserManager implements UserManager {
 
             log.info("User: " + user.getUserName() + " updated updated through SCIM.");
             return user;
-        } catch (IdentityStoreException e) {
+        } catch (IdentityStoreException | UserNotFoundException e) {
             throw new CharonException("Error in updading the user.");
         }
     }
