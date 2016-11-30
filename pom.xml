@@ -27,7 +27,7 @@
     <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.parent</artifactId>
     <packaging>pom</packaging>
     <modelVersion>4.0.0</modelVersion>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>2.0.0-SNAPSHOT</version>
     <name>WSO2 Carbon - SCIM Provisioning Module</name>
     <description>
 
@@ -300,7 +300,7 @@
     </modules>
 
     <properties>
-        <org.wso2.carbon.identity.inbound.provisioning.scim2.version>1.0.0-SNAPSHOT</org.wso2.carbon.identity.inbound.provisioning.scim2.version>
+        <org.wso2.carbon.identity.inbound.provisioning.scim2.version>2.0.0-SNAPSHOT</org.wso2.carbon.identity.inbound.provisioning.scim2.version>
 
         <org.osgi.core.version>6.0.0</org.osgi.core.version>
         <carbon.kernel.version>5.1.0</carbon.kernel.version>
@@ -308,7 +308,7 @@
         <carbon.jndi.version>1.0.0</carbon.jndi.version>
         <carbon.datasources.version>1.0.0</carbon.datasources.version>
         <carbon.security.userstore.jdbc.version>1.0.0-SNAPSHOT</carbon.security.userstore.jdbc.version>
-        <org.wso2.carbon.identity.mgt.version>1.0.3-SNAPSHOT</org.wso2.carbon.identity.mgt.version>
+        <org.wso2.carbon.identity.mgt.version>1.0.0-SNAPSHOT</org.wso2.carbon.identity.mgt.version>
         <com.h2database.h2.version>1.4.191</com.h2database.h2.version>
         <carbon.security.caas.version>1.0.0-SNAPSHOT</carbon.security.caas.version>
 

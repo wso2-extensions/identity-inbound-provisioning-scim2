@@ -11,7 +11,7 @@ import javax.ws.rs.ext.ExceptionMapper;
  */
 
 @Component(
-        name = "org.wso2.carbon.identity.inbound.provisioning.scim2.common.mappers.CharonMapper;",
+        name = "org.wso2.carbon.identity.inbound.provisioning.scim2.provider.CharonMapper",
         service = ExceptionMapper.class,
         immediate = true
 )
