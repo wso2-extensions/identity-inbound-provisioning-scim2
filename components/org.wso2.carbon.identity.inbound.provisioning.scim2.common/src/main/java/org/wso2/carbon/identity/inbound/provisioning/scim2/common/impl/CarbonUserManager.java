@@ -20,8 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMClaimResolver;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMCommonConstants;
+import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.claim.ClaimMapper;
 import org.wso2.carbon.identity.mgt.claim.Claim;
-import org.wso2.carbon.identity.mgt.claim.MetaClaim;
 import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
 import org.wso2.carbon.identity.mgt.exception.UserNotFoundException;
 import org.wso2.carbon.identity.mgt.model.UserModel;
@@ -42,7 +42,6 @@ import org.wso2.charon.core.v2.schema.SCIMConstants;
 import org.wso2.charon.core.v2.utils.codeutils.ExpressionNode;
 import org.wso2.charon.core.v2.utils.codeutils.Node;
 import org.wso2.charon.core.v2.utils.codeutils.SearchRequest;
-
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,6 +80,8 @@ public class CarbonUserManager implements UserManager {
 
             //create user model as that is what need to send to identity store api.
             UserModel userModel = getUserModelFromClaims(claimsMap);
+            //TODO this is a temporary method. need to remove this once the claim management is completed.
+            userModel = ClaimMapper.getInstance().convertToWso2Dialect(userModel);
 
             //TODO : get the domain of the user store and call that method instead of this method.
             //add the user.
@@ -113,7 +114,7 @@ public class CarbonUserManager implements UserManager {
             String errMsg = "User : " + user.getUserName() + " already exists.";
             throw new ConflictException(errMsg);
         } catch (NotFoundException e) {
-           throw new CharonException("Error in retrieving the user from the user store.", e);
+            throw new CharonException("Error in retrieving the user from the user store.", e);
         }
     }
 
@@ -129,6 +130,8 @@ public class CarbonUserManager implements UserManager {
 
             //TODO:We need to pass the scim claim dialect for this method
             List<Claim> claimList = userStoreUser.getClaims();
+            //TODO this is a temporary method. need to remove this once the claim management is completed.
+            claimList = ClaimMapper.getInstance().convertToScimDialect(claimList);
 
             User scimUser = getSCIMUser(userStoreUser, claimList);
 
@@ -160,7 +163,7 @@ public class CarbonUserManager implements UserManager {
             throw new NotFoundException("User with the user id : " + userId + " does not exists.");
 
         } catch (IdentityStoreException e) {
-           throw new CharonException ("Error in deleting the user with the id: " + userId);
+            throw new CharonException("Error in deleting the user with the id: " + userId);
 
         }
     }
@@ -329,26 +332,11 @@ public class CarbonUserManager implements UserManager {
     private User getSCIMUser(org.wso2.carbon.identity.mgt.bean.User userStoreUser,
                              List<Claim> claimURIList) throws CharonException {
 
-
-        //get a claim string list
-        List<MetaClaim> claimURIs = new ArrayList<>();
-        for (Claim claim : claimURIList) {
-            MetaClaim metaClaim = new MetaClaim(claim.getDialectUri(), claim.getClaimUri());
-            claimURIs.add(metaClaim);
-        }
         //map to keep the claim, value  pair.
         Map<String, String> attributeMap = new HashMap<>();
 
-        try {
-            //obtain user claim values
-            List<Claim> attributes = userStoreUser.getClaims(claimURIs);
-
-            for (Claim claim : attributes) {
-                attributeMap.put(claim.getClaimUri(), claim.getValue());
-            }
-
-        } catch (UserNotFoundException | IdentityStoreException e) {
-            throw new CharonException("Error in getting the claims values.", e);
+        for (Claim claim : claimURIList) {
+            attributeMap.put(claim.getClaimUri(), claim.getValue());
         }
 
         //get the groups of the user separately as we are going to make a scim user with the groups in it.
