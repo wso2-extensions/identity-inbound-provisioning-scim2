@@ -43,7 +43,11 @@ import org.wso2.charon.core.v2.utils.codeutils.ExpressionNode;
 import org.wso2.charon.core.v2.utils.codeutils.Node;
 import org.wso2.charon.core.v2.utils.codeutils.SearchRequest;
 
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -88,16 +92,16 @@ public class CarbonUserManager implements UserManager {
             if (groupsAttribute != null) {
                 List<Attribute> subValues = groupsAttribute.getAttributeValues();
 
-                if(subValues != null && subValues.size() != 0){
+                if (subValues != null && subValues.size() != 0) {
                     for (Attribute subValue : subValues) {
                         SimpleAttribute valueAttribute =
-                            (SimpleAttribute)((subValue)).getSubAttribute(SCIMConstants.CommonSchemaConstants.VALUE);
+                            (SimpleAttribute) ((subValue)).getSubAttribute(SCIMConstants.CommonSchemaConstants.VALUE);
                         groupIds.add((String) valueAttribute.getValue());
                     }
                 }
             }
             //need to add users groups if it is available in the request
-            if (groupIds != null && groupIds.size() != 0) {
+            if (groupIds.size() != 0) {
                 //now add the user's groups explicitly.
                 identityStore.updateGroupsOfUser(userStoreUser.getUniqueUserId(), groupIds);
             }
@@ -156,7 +160,7 @@ public class CarbonUserManager implements UserManager {
             throw new NotFoundException("User with the user id : " + userId + " does not exists.");
 
         } catch (IdentityStoreException e) {
-           throw new CharonException("Error in deleting the user with the id: " +userId );
+           throw new CharonException ("Error in deleting the user with the id: " + userId);
 
         }
     }
@@ -180,7 +184,7 @@ public class CarbonUserManager implements UserManager {
             return listWithPaginationAndFilter(rootNode, 1, 100);
 
         // if user has not mentioned any parameters, perform default listing.
-        } else{
+        } else {
             return listWithPagination(1, 100);
         }
 
@@ -389,14 +393,14 @@ public class CarbonUserManager implements UserManager {
             List<org.wso2.carbon.identity.mgt.bean.User> userList = identityStore.listUsers(startIndex, count);
             List<Object> userObjectList = new ArrayList<>();
             //convert identity store users to objects.
-            for(org.wso2.carbon.identity.mgt.bean.User user : userList){
+            for (org.wso2.carbon.identity.mgt.bean.User user : userList) {
                 userObjectList.add(user);
             }
             return userObjectList;
 
         } catch (IdentityStoreException e) {
             throw new CharonException("Error in getting the user list with start index :"
-                    +startIndex + " and " + "count of :" + count);
+                    + startIndex + " and " + "count of :" + count);
         }
     }
 
