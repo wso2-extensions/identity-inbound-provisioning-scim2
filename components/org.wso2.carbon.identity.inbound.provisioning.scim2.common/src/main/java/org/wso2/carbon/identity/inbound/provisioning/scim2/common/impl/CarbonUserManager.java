@@ -19,7 +19,7 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.common.impl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMClaimResolver;
-import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SimpleClaimResolver;
+import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.mgt.claim.Claim;
 import org.wso2.carbon.identity.mgt.claim.MetaClaim;
 import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
@@ -27,7 +27,6 @@ import org.wso2.carbon.identity.mgt.exception.UserNotFoundException;
 import org.wso2.carbon.identity.mgt.model.UserModel;
 import org.wso2.carbon.identity.mgt.store.IdentityStore;
 import org.wso2.charon.core.v2.attributes.Attribute;
-import org.wso2.charon.core.v2.attributes.ComplexAttribute;
 import org.wso2.charon.core.v2.attributes.MultiValuedAttribute;
 import org.wso2.charon.core.v2.attributes.SimpleAttribute;
 import org.wso2.charon.core.v2.config.SCIMUserSchemaExtensionBuilder;
@@ -44,8 +43,9 @@ import org.wso2.charon.core.v2.utils.codeutils.ExpressionNode;
 import org.wso2.charon.core.v2.utils.codeutils.Node;
 import org.wso2.charon.core.v2.utils.codeutils.SearchRequest;
 
+
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -73,99 +73,95 @@ public class CarbonUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug("Creating user: " + user.toString());
             }
-
             //get the groups attribute as we are going to explicitly store the info of the user's groups
             MultiValuedAttribute groupsAttribute = (MultiValuedAttribute) (
                     user.getAttribute(SCIMConstants.UserSchemaConstants.GROUPS));
 
-            List<String> groupIds = null;
+            Map<String, String> claimsMap = SCIMClaimResolver.getClaimsMap(user);
+
+            //create user model as that is what need to send to identity store api.
+            UserModel userModel = getUserModelFromClaims(claimsMap);
+
+            //TODO : get the domain of the user store and call that method instead of this method.
+            //add the user.
+            org.wso2.carbon.identity.mgt.bean.User userStoreUser = identityStore.addUser(userModel);
+
+            // list to store the group ids which will be used to create the group attribute in scim user.
+            List<String> groupIds = new ArrayList<>();
 
             if (groupsAttribute != null) {
                 List<Attribute> subValues = groupsAttribute.getAttributeValues();
-                groupIds = new ArrayList<>();
-                for (Attribute subValue : subValues) {
-                    SimpleAttribute valueAttribute = (SimpleAttribute)
-                            ((ComplexAttribute) (subValue)).getSubAttribute(SCIMConstants.CommonSchemaConstants.VALUE);
-                    groupIds.add((String) valueAttribute.getValue());
+
+                if (subValues != null && subValues.size() != 0) {
+                    for (Attribute subValue : subValues) {
+                        SimpleAttribute valueAttribute =
+                            (SimpleAttribute) ((subValue)).getSubAttribute(SCIMConstants.CommonSchemaConstants.VALUE);
+                        groupIds.add((String) valueAttribute.getValue());
+                    }
                 }
             }
-
-            Map<String, String> claimsMap = SCIMClaimResolver.getClaimsMap(user);
-
-            //TODO : Replace this method with getUserModelFromClaims
-            UserModel userModel = SimpleClaimResolver.demoGetUserModelFromClaims(claimsMap);
-
-            //TODO : get the domain of the user store and call that method instead of this method.
-            identityStore.addUser(userModel);
-
-            if (groupIds != null && groupIds.size() != 0) {
-                //now add the user's groups explicitly.
-                identityStore.updateGroupsOfUser(user.getId(), groupIds);
-            }
             //need to add users groups if it is available in the request
+            if (groupIds.size() != 0) {
+                //now add the user's groups explicitly.
+                identityStore.updateGroupsOfUser(userStoreUser.getUniqueUserId(), groupIds);
+            }
             log.info("User: " + user.getUserName() + " is created through SCIM.");
+            //get the user again from the user store and send it to client.
+            return this.getUser(userStoreUser.getUniqueUserId(), requiredAttributes);
 
         } catch (IdentityStoreException e) {
             String errMsg = "User : " + user.getUserName() + " already exists.";
             throw new ConflictException(errMsg);
+        } catch (NotFoundException e) {
+           throw new CharonException("Error in retrieving the user from the user store.", e);
         }
-        return user;
     }
 
     @Override
     public User getUser(String userId, Map<String, Boolean> requiredAttributes) throws CharonException,
-            BadRequestException {
+            BadRequestException, NotFoundException {
 
         if (log.isDebugEnabled()) {
             log.debug("Retrieving user: " + userId);
         }
-        User scimUser = null;
         try {
             org.wso2.carbon.identity.mgt.bean.User userStoreUser = identityStore.getUser(userId);
 
-            //TODO:We need to pass the claim dialect for this method
+            //TODO:We need to pass the scim claim dialect for this method
             List<Claim> claimList = userStoreUser.getClaims();
 
-            //TODO : this method should be getSCIMUser() - this is testing only
-            scimUser = SimpleClaimResolver.demoeGetScimUser(userStoreUser, claimList);
+            User scimUser = getSCIMUser(userStoreUser, claimList);
 
             log.info("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
+
+            return scimUser;
 
         } catch (IdentityStoreException e) {
             throw new CharonException("Error in getting user from the userid :" + userId, e);
         } catch (UserNotFoundException e) {
-            throw new CharonException("User not found with the given userid :" + userId, e);
+            throw new NotFoundException("User not found with the given userid :" + userId);
         }
-        return scimUser;
+
     }
 
     @Override
     public void deleteUser(String userId) throws NotFoundException, CharonException, NotImplementedException,
             BadRequestException {
+
         if (log.isDebugEnabled()) {
             log.debug("Deleting user: " + userId);
         }
-        String userName = null;
         try {
-            org.wso2.carbon.identity.mgt.bean.User existingUser = identityStore.getUser(userId);
-
-            List<MetaClaim> claimList = new ArrayList<>();
-            MetaClaim metaClaim = new MetaClaim();
-            metaClaim.setDialectUri("urn:ietf:params:scim:schemas:core:2.0:User");
-            metaClaim.setClaimUri("urn:ietf:params:scim:schemas:core:2.0:User:userName");
-            claimList.add(metaClaim);
-
-            List<Claim> userNames = existingUser.getClaims(claimList);
-
-            //we assume (since id is unique per user) only one user exists for a given id
-            userName = userNames.get(0).getValue();
-
+            //TODO : think of adding the domain.
             identityStore.deleteUser(userId);
+            log.info("User with the id : " + userId + " is deleted through SCIM.");
 
-            log.info("User: " + userName + " is deleted through SCIM.");
+        } catch (UserNotFoundException e) {
+            throw new NotFoundException("User with the user id : " + userId + " does not exists.");
 
-        } catch (UserNotFoundException  | IdentityStoreException e) {
-            throw new NotFoundException("No matching user with the name: " + userName);
+        } catch (IdentityStoreException e) {
+           throw new CharonException ("Error in deleting the user with the id: " + userId);
+
         }
     }
 
@@ -173,92 +169,57 @@ public class CarbonUserManager implements UserManager {
     public List<Object> listUsersWithGET(Node rootNode, int startIndex, int count, String sortBy,
                                          String sortOrder, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
+
+        //check if it is a pagination only request.
         if (count != 0 && sortOrder == null && sortBy == null && rootNode == null) {
             return listWithPagination(startIndex, count);
+
+        // check if it is a pagination and filter combination.
         } else if (count != 0 && sortOrder == null && sortBy == null && rootNode != null) {
-            if (rootNode.getRightNode() != null) {
-                throw new NotImplementedException("Complex filters are not implemented.");
-            }
-            if (rootNode.getLeftNode() != null) {
-                throw new NotImplementedException("Complex filters are not implemented.");
-            }
+            return listWithPaginationAndFilter(rootNode, startIndex, count);
 
-            if (((ExpressionNode) (rootNode)).getOperation().equals("EQ")) {
+        // if the user has only mentioned the filter string.
+        } else if (rootNode != null) {
+            //TODO : we need to read the count and start index from the config file.
+            return listWithPaginationAndFilter(rootNode, 1, 100);
 
-                Claim filterClaim = new Claim();
-
-                filterClaim.setValue(((ExpressionNode) (rootNode)).getValue());
-                filterClaim.setClaimUri(((ExpressionNode) (rootNode)).getAttributeValue());
-
-
-                List<String> list = Arrays.asList(((ExpressionNode) (rootNode)).getAttributeValue().split(":"));
-
-                if (list.get(0).equals("urn:ietf:params:scim:schemas:core:2.0:User")) {
-                    filterClaim.setDialectUri("urn:ietf:params:scim:schemas:core:2.0:User");
-                } else if (list.get(0).equals("urn:ietf:params:scim:schemas:core:2.0")) {
-                    filterClaim.setDialectUri("urn:ietf:params:scim:schemas:core:2.0:User");
-                } else {
-                    filterClaim.setDialectUri(SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
-                            .getURI());
-                }
-                return listWithPaginationAndFilter(filterClaim, startIndex, count);
-
-            } else {
-                throw new CharonException("Filter type :" + ((ExpressionNode) (rootNode)).getOperation() + "does not " +
-                        "supported.");
-            }
+        // if user has not mentioned any parameters, perform default listing.
+        } else {
+            return listWithPagination(1, 100);
         }
-        return null;
-    }
 
-    private List<Object> listWithPaginationAndFilter(Claim filterClaim, int startIndex, int count) {
-        return null;
-    }
-
-    private List<Object> listWithPagination(int startIndex, int count) {
-        return null;
     }
 
     @Override
     public List<Object> listUsersWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
+        // this is identical to getUsersWithGet.
         return listUsersWithGET(searchRequest.getFilter(), searchRequest.getStartIndex(), searchRequest.getCount(),
                 searchRequest.getSortBy(), searchRequest.getSortOder(), requiredAttributes);
     }
 
     @Override
     public User updateUser(User user, Map<String, Boolean> requiredAttributes) throws NotImplementedException,
-            CharonException, BadRequestException {
+            CharonException, BadRequestException, NotFoundException {
         try {
             if (log.isDebugEnabled()) {
                 log.debug("Updating user: " + user.toString());
             }
-
+            //get the claims map from the new scim user object.
             Map<String, String> claims = SCIMClaimResolver.getClaimsMap(user);
-
-            List<Claim> claimList = new ArrayList<>();
-            for (Entry<String, String> claim : claims.entrySet()) {
-                Claim newClaim = new Claim();
-                newClaim.setClaimUri(claim.getKey());
-                newClaim.setValue(claims.get(claim.getKey()));
-                List<String> list = Arrays.asList(claim.getKey().split(":"));
-
-                if (list.get(0).equals("urn:ietf:params:scim:schemas:core:2.0:User")) {
-                    newClaim.setDialectUri("urn:ietf:params:scim:schemas:core:2.0:User");
-                } else if (list.get(0).equals("urn:ietf:params:scim:schemas:core:2.0")) {
-                    newClaim.setDialectUri("urn:ietf:params:scim:schemas:core:2.0:User");
-                } else {
-                    newClaim.setDialectUri(SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
-                }
-                claimList.add(newClaim);
-            }
-            //set user claim values
-            identityStore.updateUserClaims(user.getUserName(), claimList);
+            //get the claim list to be updated.
+            List<Claim> claimList = getUserModelFromClaims(claims).getClaims();
+            //set user updated claim values
+            identityStore.updateUserClaims(user.getId(), claimList);
 
             log.info("User: " + user.getUserName() + " updated updated through SCIM.");
-            return user;
-        } catch (IdentityStoreException | UserNotFoundException e) {
-            throw new CharonException("Error in updading the user.");
+            //get the updated user from the user core and sent it to client.
+            return this.getUser(user.getId(), requiredAttributes);
+
+        } catch (UserNotFoundException e) {
+            throw new NotFoundException("No such user with the user id : " + user.getId());
+        } catch (IdentityStoreException e) {
+            throw new CharonException("Error in updating the user", e);
         }
     }
 
@@ -322,7 +283,11 @@ public class CarbonUserManager implements UserManager {
         return null;
     }
 
-/*
+    /*
+     * This method is to get the user model from the claims.
+     * @param claims
+     * @return
+     */
     private UserModel getUserModelFromClaims(Map<String, String> claims) {
 
         UserModel userModel = new UserModel();
@@ -330,67 +295,180 @@ public class CarbonUserManager implements UserManager {
         List<Claim> claimList = new ArrayList<>();
 
         for (Entry<String, String> claim : claims.entrySet()) {
-
+            //create claims for all entries and add it to claim list
             Claim newClaim = new Claim();
             newClaim.setClaimUri(claim.getKey());
             newClaim.setValue(claim.getValue());
-
+            //add the right claim dialect for the claim.
             if (claim.getKey().contains(SCIMCommonConstants.USER_DIALECT)) {
+                //claim dialect is the scim user dialect.
                 newClaim.setDialectUri(SCIMCommonConstants.USER_DIALECT);
 
             } else if (claim.getKey().contains(SCIMCommonConstants.CORE_DIALECT)) {
+                //claim dialect is the scim core dialect.
                 newClaim.setDialectUri(SCIMCommonConstants.CORE_DIALECT);
 
             } else {
+                //claim dialect is the scim extended user dialect.
                 newClaim.setDialectUri(SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
             }
             claimList.add(newClaim);
         }
-
+        //se the claim to user model.
         userModel.setClaims(claimList);
         return userModel;
     }
 
-    private User getSCIMUser(org.wso2.carbon.identity.mgt.bean.User userStoreUser, List<Claim> claimURIList)
-            throws CharonException {
+    /*
+     * This method is to get the scim user from the claims.
+     * @param userStoreUser
+     * @param claimURIList
+     * @return
+     * @throws CharonException
+     */
+    private User getSCIMUser(org.wso2.carbon.identity.mgt.bean.User userStoreUser,
+                             List<Claim> claimURIList) throws CharonException {
+
+
+        //get a claim string list
+        List<MetaClaim> claimURIs = new ArrayList<>();
+        for (Claim claim : claimURIList) {
+            MetaClaim metaClaim = new MetaClaim(claim.getDialectUri(), claim.getClaimUri());
+            claimURIs.add(metaClaim);
+        }
+        //map to keep the claim, value  pair.
+        Map<String, String> attributeMap = new HashMap<>();
 
         try {
-            User scimUser = null;
-
-            List<String> claimURIs = new ArrayList<>();
-            for (Claim claim : claimURIList) {
-                claimURIs.add(claim.getClaimUri());
-            }
-
             //obtain user claim values
             List<Claim> attributes = userStoreUser.getClaims(claimURIs);
-            Map<String, String> attributeMap = new HashMap<>();
 
             for (Claim claim : attributes) {
                 attributeMap.put(claim.getClaimUri(), claim.getValue());
             }
 
-            List<org.wso2.carbon.identity.mgt.bean.Group> groups = identityStore.getGroupsOfUser
-                    (userStoreUser.getUserId());
+        } catch (UserNotFoundException | IdentityStoreException e) {
+            throw new CharonException("Error in getting the claims values.", e);
+        }
+
+        //get the groups of the user separately as we are going to make a scim user with the groups in it.
+        try {
+            List<org.wso2.carbon.identity.mgt.bean.Group> groups =
+                    identityStore.getGroupsOfUser(userStoreUser.getUniqueUserId());
 
             //construct the SCIM Object from the attributes
-            scimUser = (User) SCIMClaimResolver.constructSCIMObjectFromAttributes(attributeMap, 1);
+            User scimUser = (User) SCIMClaimResolver.constructSCIMObjectFromAttributes(attributeMap, 1);
+            //set the id of the user from the unique user id.
 
             for (org.wso2.carbon.identity.mgt.bean.Group group : groups) {
                 if (group != null) { // can be null for non SCIM groups
-                    scimUser.setGroup(null, group.getGroupId(), null);
+                    scimUser.setGroup(null, group.getUniqueGroupId(), null);
                 }
             }
+            //set the id of the user from the unique user id.
+            scimUser.setId(userStoreUser.getUniqueUserId());
             //set the schemas of the scim user
             scimUser.setSchemas();
 
             return scimUser;
-        } catch (BadRequestException | IdentityStoreException | CharonException |
-                ClaimManagerException | NotFoundException e) {
-            throw new CharonException("Error in getting the user.");
-        }
 
+        } catch (IdentityStoreException | UserNotFoundException e) {
+            throw new CharonException("Error in getting the groups of the user.", e);
+        } catch (BadRequestException | NotFoundException e) {
+            throw new CharonException("Error in creating the scim user from the claims and the values.", e);
+        }
     }
-*/
+
+    /*
+     * This method is to list the users with pagination.
+     * @param startIndex
+     * @param count
+     * @return
+     * @throws CharonException
+     */
+    private List<Object> listWithPagination(int startIndex, int count) throws CharonException {
+        try {
+            //get the user list accroding to the start index and the count values provided.
+            //TODO : Add the domain of the store.
+            List<org.wso2.carbon.identity.mgt.bean.User> userList = identityStore.listUsers(startIndex, count);
+            List<Object> userObjectList = new ArrayList<>();
+            //convert identity store users to objects.
+            for (org.wso2.carbon.identity.mgt.bean.User user : userList) {
+                userObjectList.add(user);
+            }
+            return userObjectList;
+
+        } catch (IdentityStoreException e) {
+            throw new CharonException("Error in getting the user list with start index :"
+                    + startIndex + " and " + "count of :" + count);
+        }
+    }
+
+    /*
+     * List the users with pagination and filter (Eq filter only)
+     * @param rootNode
+     * @param startIndex
+     * @param count
+     * @return
+     * @throws NotImplementedException
+     * @throws CharonException
+     */
+    private List<Object> listWithPaginationAndFilter(Node rootNode, int startIndex, int count)
+            throws NotImplementedException, CharonException {
+
+        //Filter model simply consists of a binary tree where the terminal nodes are the filter expressions and
+        //non -terminal nodes are the logical operators.
+        //we currently do not support complex type filter
+        //eg : userName Eq vindula AND nickName sw J
+        if (rootNode.getRightNode() != null) {
+            throw new NotImplementedException("Complex filters are not implemented.");
+        }
+        if (rootNode.getLeftNode() != null) {
+            throw new NotImplementedException("Complex filters are not implemented.");
+        }
+        //we only support 'eq' filter
+        if (((ExpressionNode) (rootNode)).getOperation().equals("EQ")) {
+            //create a claim for the asked eq related attribute
+            Claim filterClaim = new Claim();
+
+            filterClaim.setValue(((ExpressionNode) (rootNode)).getValue());
+            filterClaim.setClaimUri(((ExpressionNode) (rootNode)).getAttributeValue());
+
+            //add the right claim dialect for the claim.
+            if (((ExpressionNode) (rootNode)).getAttributeValue().contains(SCIMCommonConstants.USER_DIALECT)) {
+                //claim dialect is the scim user dialect.
+                filterClaim.setDialectUri(SCIMCommonConstants.USER_DIALECT);
+
+            } else if (((ExpressionNode) (rootNode)).getAttributeValue().contains(SCIMCommonConstants.CORE_DIALECT)) {
+                //claim dialect is the scim core dialect.
+                filterClaim.setDialectUri(SCIMCommonConstants.CORE_DIALECT);
+
+            } else {
+                //claim dialect is the scim extended user dialect.
+                filterClaim.setDialectUri(SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
+            }
+
+            try {
+                List<org.wso2.carbon.identity.mgt.bean.User> userList;
+                // get the user list from the user core.
+                userList = identityStore.listUsers(filterClaim, startIndex, count);
+
+                List<Object> userObjectList = new ArrayList<>();
+                //convert identity store users to objects.
+                for (org.wso2.carbon.identity.mgt.bean.User user : userList) {
+                    userObjectList.add(user);
+                }
+                return userObjectList;
+
+            } catch (IdentityStoreException e) {
+                throw new CharonException("Error in getting the user list with the filter and pagination.");
+            }
+
+        } else {
+            throw new NotImplementedException("Filter type :" +
+                    ((ExpressionNode) (rootNode)).getOperation() + "is not supported.");
+        }
+    }
+
 }
 
