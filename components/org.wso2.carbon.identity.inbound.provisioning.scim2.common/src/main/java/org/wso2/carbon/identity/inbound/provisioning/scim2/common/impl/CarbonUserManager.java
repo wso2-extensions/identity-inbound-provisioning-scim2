@@ -22,11 +22,14 @@ import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMClai
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.claim.ClaimMapper;
 import org.wso2.carbon.identity.mgt.claim.Claim;
+import org.wso2.carbon.identity.mgt.exception.GroupNotFoundException;
 import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
 import org.wso2.carbon.identity.mgt.exception.UserNotFoundException;
+import org.wso2.carbon.identity.mgt.model.GroupModel;
 import org.wso2.carbon.identity.mgt.model.UserModel;
 import org.wso2.carbon.identity.mgt.store.IdentityStore;
 import org.wso2.charon.core.v2.attributes.Attribute;
+import org.wso2.charon.core.v2.attributes.ComplexAttribute;
 import org.wso2.charon.core.v2.attributes.MultiValuedAttribute;
 import org.wso2.charon.core.v2.attributes.SimpleAttribute;
 import org.wso2.charon.core.v2.config.SCIMUserSchemaExtensionBuilder;
@@ -253,12 +256,81 @@ public class CarbonUserManager implements UserManager {
     @Override
     public Group createGroup(Group group, Map<String, Boolean> requiredAttributes) throws CharonException,
             ConflictException, NotImplementedException, BadRequestException {
-        return null;
+
+        if (log.isDebugEnabled()) {
+            log.debug("Creating group: " + group.toString());
+        }
+        //get the claim, value pair from the group object.
+        Map<String, String> claimsMap = SCIMClaimResolver.getClaimsMap(group);
+
+        //create group model as that is what need to send to identity store api.
+        GroupModel groupModel = getGroupModelFromClaims(claimsMap);
+
+        org.wso2.carbon.identity.mgt.bean.Group userStoreGroup = null;
+        try {
+            //TODO : get the domain of the user store and call that method instead of this method.
+            //add the group.
+            userStoreGroup = identityStore.addGroup(groupModel);
+
+        } catch (IdentityStoreException e) {
+            throw new CharonException("Error in creating the group.", e);
+        }
+        // list to store the user ids which will be used to create the group's members.
+        List<String> userIds = new ArrayList<>();
+
+        MultiValuedAttribute membersAttribute = (MultiValuedAttribute)
+                group.getAttribute(SCIMConstants.GroupSchemaConstants.MEMBERS);
+        //add the member ids to userIds list
+        if (membersAttribute != null) {
+            List<Attribute> membersValues = membersAttribute.getAttributeValues();
+            for (Attribute attribute : membersValues) {
+                ComplexAttribute attributeValue = (ComplexAttribute) attribute;
+                SimpleAttribute valueAttribute = (SimpleAttribute)
+                        attributeValue.getSubAttribute(SCIMConstants.CommonSchemaConstants.VALUE);
+                userIds.add((String) valueAttribute.getValue());
+            }
+        }
+        //add the members to the created group.
+        try {
+            identityStore.updateUsersOfGroup(userStoreGroup.getUniqueGroupId(), userIds);
+        } catch (IdentityStoreException e) {
+            throw new CharonException("Error in adding members to the group", e);
+        }
+        log.info("Group: " + group.getDisplayName() + " is created through SCIM.");
+        //get the group again from the user store and send it to client.
+        try {
+            return this.getGroup(userStoreGroup.getUniqueGroupId(), requiredAttributes);
+        } catch (NotFoundException e) {
+            throw new CharonException("Created Group retrieval failed.", e);
+        }
     }
 
     @Override
-    public Group getGroup(String s, Map<String, Boolean> requiredAttributes) throws NotImplementedException,
-            BadRequestException, CharonException {
+    public Group getGroup(String groupId, Map<String, Boolean> requiredAttributes) throws NotImplementedException,
+            BadRequestException, CharonException, NotFoundException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving group: " + groupId);
+        }
+        /*
+        try {
+            org.wso2.carbon.identity.mgt.bean.Group userStoreGroup = identityStore.getGroup(groupId);
+
+            //TODO:We need to pass the scim claim dialect for this method
+            List<Claim> claimList = userStoreGroup.get
+
+            Group scimGroup = getSCIMUser(userStoreUser, claimList);
+
+            log.info("Group: " + userStoreGroup.g + " is retrieved through SCIM.");
+
+            return scimGroup;
+
+        } catch (IdentityStoreException e) {
+           throw new CharonException("Error in getting the group : " + groupId, e);
+        } catch (GroupNotFoundException e) {
+            throw new NotFoundException("Group with the id :" + groupId + "does not exists.");
+        }
+        */
         return null;
     }
 
@@ -320,6 +392,39 @@ public class CarbonUserManager implements UserManager {
         //se the claim to user model.
         userModel.setClaims(claimList);
         return userModel;
+    }
+
+    /*
+     * This method is to get the group model from the claims.
+     * @param claimsMap
+     * @return
+     */
+    private GroupModel getGroupModelFromClaims(Map<String, String> claims) {
+
+        GroupModel groupModel = new GroupModel();
+
+        List<Claim> claimList = new ArrayList<>();
+
+        for (Entry<String, String> claim : claims.entrySet()) {
+            //create claims for all entries and add it to claim list
+            Claim newClaim = new Claim();
+            newClaim.setClaimUri(claim.getKey());
+            newClaim.setValue(claim.getValue());
+            //add the right claim dialect for the claim.
+            if (claim.getKey().contains(SCIMCommonConstants.USER_DIALECT)) {
+                //claim dialect is the scim group dialect.
+                newClaim.setDialectUri(SCIMCommonConstants.USER_DIALECT);
+
+            } else if (claim.getKey().contains(SCIMCommonConstants.CORE_DIALECT)) {
+                //claim dialect is the scim core dialect.
+                newClaim.setDialectUri(SCIMCommonConstants.CORE_DIALECT);
+
+            }
+            claimList.add(newClaim);
+        }
+        //set the claim to group model.
+        groupModel.setClaims(claimList);
+        return groupModel;
     }
 
     /*
