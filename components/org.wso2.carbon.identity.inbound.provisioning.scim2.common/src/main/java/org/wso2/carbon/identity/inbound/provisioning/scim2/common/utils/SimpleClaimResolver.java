@@ -29,8 +29,8 @@ public class SimpleClaimResolver {
      * @return
      * @throws CharonException
      */
-    public static User demoeGetScimUser(org.wso2.carbon.identity.mgt.bean.User userStoreUser,
-                                        List<Claim> claimURIList) throws CharonException {
+    public static User demoGetScimUser(org.wso2.carbon.identity.mgt.bean.User userStoreUser,
+                                       List<Claim> claimURIList) throws CharonException {
         try {
             User scimUser = null;
 
@@ -38,6 +38,7 @@ public class SimpleClaimResolver {
             for (Claim claim : claimURIList) {
                 MetaClaim metaClaim = new MetaClaim();
                 metaClaim.setClaimUri(claim.getClaimUri());
+                metaClaim.setDialectUri(claim.getDialectUri());
                 claimURIs.add(metaClaim);
             }
 

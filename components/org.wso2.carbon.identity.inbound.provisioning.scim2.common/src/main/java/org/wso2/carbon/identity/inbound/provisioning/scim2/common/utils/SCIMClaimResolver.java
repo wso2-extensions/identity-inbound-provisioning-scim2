@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.wso2.carbon.identity.mgt.claim.Claim;
 import org.wso2.charon.core.v2.attributes.Attribute;
 import org.wso2.charon.core.v2.attributes.ComplexAttribute;
 import org.wso2.charon.core.v2.attributes.DefaultAttributeFactory;
