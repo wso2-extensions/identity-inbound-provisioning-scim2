@@ -35,7 +35,6 @@ import org.wso2.charon.core.v2.protocol.SCIMResponse;
 import org.wso2.charon.core.v2.protocol.endpoints.UserResourceManager;
 import org.wso2.msf4j.Microservice;
 
-import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -93,7 +92,7 @@ public class UserResource extends AbstractResource {
                             @ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
-                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes)
+                            @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes)
             throws FormatNotSupportedException, CharonException {
 
         //Accept type validation checking.
@@ -119,6 +118,10 @@ public class UserResource extends AbstractResource {
         }
     }
 
+
+    @ApiOperation(
+            value = "Return the user which was created",
+            notes = "Returns HTTP 201 if the user is successfully created.")
 
     @POST
     @Produces(MediaType.APPLICATION_JSON)
@@ -268,7 +271,6 @@ public class UserResource extends AbstractResource {
 
     @POST
     @Path("/.search")
-    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Return users according to the filter, sort and pagination parameters",
@@ -289,11 +291,6 @@ public class UserResource extends AbstractResource {
         if (inputFormat == null) {
             String error = SCIMProviderConstants.CONTENT_TYPE
                     + " not present in the request header";
-            throw new FormatNotSupportedException(error);
-        }
-
-        if (!isValidInputFormat(inputFormat)) {
-            String error = inputFormat + " is not supported.";
             throw new FormatNotSupportedException(error);
         }
 
@@ -319,7 +316,6 @@ public class UserResource extends AbstractResource {
 
     @PUT
     @Path("{id}")
-    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(
             value = "Return the updated user",
@@ -345,11 +341,6 @@ public class UserResource extends AbstractResource {
         if (inputFormat == null) {
             String error = SCIMProviderConstants.CONTENT_TYPE
                     + " not present in the request header";
-            throw new FormatNotSupportedException(error);
-        }
-
-        if (!isValidInputFormat(inputFormat)) {
-            String error = inputFormat + " is not supported.";
             throw new FormatNotSupportedException(error);
         }
 
