@@ -16,11 +16,77 @@
 
 package org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources;
 
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.Contact;
+import io.swagger.annotations.Info;
+import io.swagger.annotations.License;
+import io.swagger.annotations.SwaggerDefinition;
+import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
+import org.wso2.charon.core.v2.exceptions.CharonException;
+import org.wso2.charon.core.v2.exceptions.FormatNotSupportedException;
+import org.wso2.charon.core.v2.protocol.SCIMResponse;
+import org.wso2.charon.core.v2.protocol.endpoints.ResourceTypeResourceManager;
+
+
+import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
 /**
- * Endpoints of the ResourceTypeResource in micro service.
+ * Endpoints of the ResourceType in micro service. This will basically captures
+ * the requests from the remote clients and hand over the request to respective operation performer.
+ * Clients can view resource type configurations through this endpoint.
  */
 
+@Api(value = "scim/v2/ResourceType")
+@SwaggerDefinition(
+        info = @Info(
+                title = "/ResourceType Endpoint Swagger Definition", version = "1.0",
+                description = "SCIM 2.0 /ResourceType endpoint",
+                license = @License(name = "Apache 2.0", url = "http://www.apache.org/licenses/LICENSE-2.0"),
+                contact = @Contact(
+                        name = "WSO2 Identity Server Team",
+                        email = "vindula@wso2.com",
+                        url = "http://wso2.com"
+                ))
+)
+@Path("/scim/v2/ResourceType")
 public class ResourceTypeResource extends AbstractResource {
 
-}
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
 
+    @ApiOperation(
+            value = "Return the ResourceType schema.",
+            notes = "Returns HTTP 200 if the schema is found.")
+
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Schema is found"),
+            @ApiResponse(code = 404, message = "Schema is not found")})
+
+    public Response getUser(@ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
+                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat)
+            throws FormatNotSupportedException, CharonException {
+
+        //Accept type validation checking.
+        if (!isValidOutputFormat(outputFormat)) {
+            String error = outputFormat + " is not supported.";
+            throw new FormatNotSupportedException(error);
+        }
+
+        // create charon-SCIM resourceType endpoint and hand-over the request.
+        ResourceTypeResourceManager resourceTypeResourceManager = new ResourceTypeResourceManager();
+
+        SCIMResponse scimResponse = resourceTypeResourceManager.get(null, null, null, null);
+        // needs to check the code of the response and return 200 0k or other error codes
+        // appropriately.
+        return buildResponse(scimResponse);
+    }
+}

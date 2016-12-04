@@ -3,6 +3,7 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.claim;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.identity.mgt.claim.Claim;
+import org.wso2.carbon.identity.mgt.claim.MetaClaim;
 import org.wso2.carbon.identity.mgt.model.UserModel;
 import org.wso2.carbon.identity.mgt.util.IdentityMgtConstants;
 import org.wso2.charon.core.v2.schema.SCIMConstants;
@@ -80,7 +81,7 @@ public class ClaimMapper {
 
     }
 
-    public UserModel convertToWso2Dialect(UserModel userModel) {
+    public UserModel convertMetaToWso2Dialect(UserModel userModel) {
         UserModel newUserModel = new UserModel();
         List<Claim> convertedClaims = new ArrayList<>();
         for (Claim claim : userModel.getClaims()) {
@@ -96,7 +97,7 @@ public class ClaimMapper {
 
     }
 
-    public List<Claim> convertToWso2Dialect(List<Claim> claimList) {
+    public List<Claim> convertMetaToWso2Dialect(List<Claim> claimList) {
         List<Claim> convertedClaims = new ArrayList<>();
         for (Claim claim : claimList) {
             String uri = scimMap.get(claim.getClaimUri());
@@ -109,12 +110,25 @@ public class ClaimMapper {
 
     }
 
-    public Claim convertToWso2Dialect(Claim claim) {
+    public Claim convertMetaToWso2Dialect(Claim claim) {
         String uri = scimMap.get(claim.getClaimUri());
         if (uri != null) {
             Claim newClaim = new Claim(IdentityMgtConstants.CLAIM_ROOT_DIALECT, uri, claim.getValue());
             return newClaim;
         }
         return null;
+    }
+
+    public List<MetaClaim> convertMetaToWso2Dialect(List<MetaClaim> claimList, String s) {
+        List<MetaClaim> convertedClaims = new ArrayList<>();
+        for (MetaClaim claim : claimList) {
+            String uri = scimMap.get(claim.getClaimUri());
+            if (uri != null) {
+                MetaClaim newClaim = new MetaClaim(IdentityMgtConstants.CLAIM_ROOT_DIALECT, uri);
+                convertedClaims.add(newClaim);
+            }
+        }
+        return convertedClaims;
+
     }
 }

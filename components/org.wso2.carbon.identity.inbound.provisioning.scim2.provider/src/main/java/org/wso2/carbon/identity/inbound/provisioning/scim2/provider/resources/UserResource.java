@@ -25,7 +25,6 @@ import io.swagger.annotations.Contact;
 import io.swagger.annotations.Info;
 import io.swagger.annotations.License;
 import io.swagger.annotations.SwaggerDefinition;
-import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.charon.core.v2.exceptions.CharonException;
@@ -33,7 +32,6 @@ import org.wso2.charon.core.v2.exceptions.FormatNotSupportedException;
 import org.wso2.charon.core.v2.extensions.UserManager;
 import org.wso2.charon.core.v2.protocol.SCIMResponse;
 import org.wso2.charon.core.v2.protocol.endpoints.UserResourceManager;
-import org.wso2.msf4j.Microservice;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -46,17 +44,20 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+/*
+@Component(
+        name = "org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources.UserResource",
+        service = Microservice.class,
+        immediate = true
+)
+
+*/
 
 /**
  * Endpoints of the UserResource in micro service. This will basically captures
  * the requests from the remote clients and hand over the request to respective operation performer.
  *
  */
-@Component(
-        name = "org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources.UserResource",
-        service = Microservice.class,
-        immediate = true
-)
 
 @Api(value = "scim/v2/Users")
 @SwaggerDefinition(
@@ -79,10 +80,10 @@ public class UserResource extends AbstractResource {
 
     @ApiOperation(
             value = "Return the user with the given id",
-            notes = "Returns HTTP 204 if the user is not found.")
+            notes = "Returns HTTP 200 if the user is found.")
 
     @ApiResponses(value = {
-            @ApiResponse(code = 204, message = "Valid user is found"),
+            @ApiResponse(code = 200, message = "Valid user is found"),
             @ApiResponse(code = 404, message = "Valid user is not found")})
 
     public Response getUser(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
@@ -114,7 +115,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
     }
 
@@ -165,7 +166,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(response);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
 
     }
@@ -209,7 +210,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
     }
 
@@ -265,7 +266,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
     }
 
@@ -310,7 +311,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
     }
 
@@ -353,15 +354,15 @@ public class UserResource extends AbstractResource {
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
             // create charon-SCIM user endpoint and hand-over the request.
-            UserResourceManager userResourceEndpoint = new UserResourceManager();
+            UserResourceManager userResourceManager = new UserResourceManager();
 
-            SCIMResponse response = userResourceEndpoint.updateWithPUT(
+            SCIMResponse response = userResourceManager.updateWithPUT(
                     id, resourceString, userManager, attribute, excludedAttributes);
 
             return buildResponse(response);
 
         } catch (CharonException e) {
-           throw new CharonException(e.getDetail());
+           throw new CharonException(e.getDetail(), e);
         }
     }
 

@@ -21,7 +21,7 @@ public class CharonMapper implements ExceptionMapper<CharonException> {
     @Override
     public Response toResponse(CharonException e) {
         return Response.status(e.getStatus()).
-                entity(e.getDetail() + "." + e.getMessage()).
+                entity(e.getDetail()).
                 type("text/plain").
                 build();
     }
