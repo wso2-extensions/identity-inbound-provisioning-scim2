@@ -227,8 +227,8 @@ public class CarbonUserManager implements UserManager {
     }
 
     @Override
-    public User getMe(String userId, Map<String, Boolean> requiredAttributes) throws CharonException, BadRequestException,
-            NotFoundException {
+    public User getMe(String userId, Map<String, Boolean> requiredAttributes)
+            throws CharonException, BadRequestException, NotFoundException {
         //redirect to getUser;
         return getUser(userId, requiredAttributes);
     }
