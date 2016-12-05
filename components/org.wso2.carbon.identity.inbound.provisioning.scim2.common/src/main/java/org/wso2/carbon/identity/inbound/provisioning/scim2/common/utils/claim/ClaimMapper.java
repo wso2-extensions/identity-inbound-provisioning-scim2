@@ -108,4 +108,13 @@ public class ClaimMapper {
         return convertedClaims;
 
     }
+
+    public Claim convertToWso2Dialect(Claim claim) {
+        String uri = scimMap.get(claim.getClaimUri());
+        if (uri != null) {
+            Claim newClaim = new Claim(IdentityMgtConstants.CLAIM_ROOT_DIALECT, uri, claim.getValue());
+            return newClaim;
+        }
+        return null;
+    }
 }

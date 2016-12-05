@@ -24,9 +24,11 @@ import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.claim.Cl
 import org.wso2.carbon.identity.mgt.claim.Claim;
 import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
 import org.wso2.carbon.identity.mgt.exception.UserNotFoundException;
+import org.wso2.carbon.identity.mgt.model.GroupModel;
 import org.wso2.carbon.identity.mgt.model.UserModel;
 import org.wso2.carbon.identity.mgt.store.IdentityStore;
 import org.wso2.charon.core.v2.attributes.Attribute;
+import org.wso2.charon.core.v2.attributes.ComplexAttribute;
 import org.wso2.charon.core.v2.attributes.MultiValuedAttribute;
 import org.wso2.charon.core.v2.attributes.SimpleAttribute;
 import org.wso2.charon.core.v2.config.SCIMUserSchemaExtensionBuilder;
@@ -173,24 +175,19 @@ public class CarbonUserManager implements UserManager {
                                          String sortOrder, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
-        //check if it is a pagination only request.
-        if (count != 0 && sortOrder == null && sortBy == null && rootNode == null) {
-            return listWithPagination(startIndex, count);
-
         // check if it is a pagination and filter combination.
-        } else if (count != 0 && sortOrder == null && sortBy == null && rootNode != null) {
+        if (sortOrder == null && sortBy == null && rootNode != null) {
+
             return listWithPaginationAndFilter(rootNode, startIndex, count);
 
-        // if the user has only mentioned the filter string.
-        } else if (rootNode != null) {
-            //TODO : we need to read the count and start index from the config file.
-            return listWithPaginationAndFilter(rootNode, 1, 100);
+        } //check if it is a pagination only request.
+        if (sortOrder == null && sortBy == null && rootNode == null) {
+            return listWithPagination (startIndex, count);
 
         // if user has not mentioned any parameters, perform default listing.
         } else {
-            return listWithPagination(1, 100);
+            throw new NotImplementedException("Sorting is not supported.");
         }
-
     }
 
     @Override
@@ -212,6 +209,8 @@ public class CarbonUserManager implements UserManager {
             Map<String, String> claims = SCIMClaimResolver.getClaimsMap(user);
             //get the claim list to be updated.
             List<Claim> claimList = getUserModelFromClaims(claims).getClaims();
+            //TODO this is a temporary method. need to remove this once the claim management is completed.
+            claimList = ClaimMapper.getInstance().convertToWso2Dialect(claimList);
             //set user updated claim values
             identityStore.updateUserClaims(user.getId(), claimList);
 
@@ -253,12 +252,77 @@ public class CarbonUserManager implements UserManager {
     @Override
     public Group createGroup(Group group, Map<String, Boolean> requiredAttributes) throws CharonException,
             ConflictException, NotImplementedException, BadRequestException {
-        return null;
+
+        if (log.isDebugEnabled()) {
+            log.debug("Creating group: " + group.toString());
+        }
+        //get the claim, value pair from the group object.
+        Map<String, String> claimsMap = SCIMClaimResolver.getClaimsMap(group);
+
+        //create group model as that is what need to send to identity store api.
+        GroupModel groupModel = getGroupModelFromClaims(claimsMap);
+
+        org.wso2.carbon.identity.mgt.bean.Group userStoreGroup = null;
+        try {
+            //TODO : get the domain of the user store and call that method instead of this method.
+            //add the group.
+            userStoreGroup = identityStore.addGroup(groupModel);
+
+        } catch (IdentityStoreException e) {
+            throw new CharonException("Error in creating the group.", e);
+        }
+        // list to store the user ids which will be used to create the group's members.
+        List<String> userIds = new ArrayList<>();
+
+        MultiValuedAttribute membersAttribute = (MultiValuedAttribute)
+                group.getAttribute(SCIMConstants.GroupSchemaConstants.MEMBERS);
+        //add the member ids to userIds list
+        if (membersAttribute != null) {
+            List<Attribute> membersValues = membersAttribute.getAttributeValues();
+            for (Attribute attribute : membersValues) {
+                ComplexAttribute attributeValue = (ComplexAttribute) attribute;
+                SimpleAttribute valueAttribute = (SimpleAttribute)
+                        attributeValue.getSubAttribute(SCIMConstants.CommonSchemaConstants.VALUE);
+                userIds.add((String) valueAttribute.getValue());
+            }
+        }
+        //add the members to the created group.
+        try {
+            identityStore.updateUsersOfGroup(userStoreGroup.getUniqueGroupId(), userIds);
+        } catch (IdentityStoreException e) {
+            throw new CharonException("Error in adding members to the group", e);
+        }
+        log.info("Group: " + group.getDisplayName() + " is created through SCIM.");
+        //get the group again from the user store and send it to client.
+        return this.getGroup(userStoreGroup.getUniqueGroupId(), requiredAttributes);
     }
 
     @Override
-    public Group getGroup(String s, Map<String, Boolean> requiredAttributes) throws NotImplementedException,
+    public Group getGroup(String groupId, Map<String, Boolean> requiredAttributes) throws NotImplementedException,
             BadRequestException, CharonException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving group: " + groupId);
+        }
+        /*
+        try {
+            org.wso2.carbon.identity.mgt.bean.Group userStoreGroup = identityStore.getGroup(groupId);
+
+            //TODO:We need to pass the scim claim dialect for this method
+            List<Claim> claimList = userStoreGroup.get
+
+            Group scimGroup = getSCIMUser(userStoreUser, claimList);
+
+            log.info("Group: " + userStoreGroup.g + " is retrieved through SCIM.");
+
+            return scimGroup;
+
+        } catch (IdentityStoreException e) {
+           throw new CharonException("Error in getting the group : " + groupId, e);
+        } catch (GroupNotFoundException e) {
+            throw new NotFoundException("Group with the id :" + groupId + "does not exists.");
+        }
+        */
         return null;
     }
 
@@ -323,6 +387,39 @@ public class CarbonUserManager implements UserManager {
     }
 
     /*
+     * This method is to get the group model from the claims.
+     * @param claimsMap
+     * @return
+     */
+    private GroupModel getGroupModelFromClaims(Map<String, String> claims) {
+
+        GroupModel groupModel = new GroupModel();
+
+        List<Claim> claimList = new ArrayList<>();
+
+        for (Entry<String, String> claim : claims.entrySet()) {
+            //create claims for all entries and add it to claim list
+            Claim newClaim = new Claim();
+            newClaim.setClaimUri(claim.getKey());
+            newClaim.setValue(claim.getValue());
+            //add the right claim dialect for the claim.
+            if (claim.getKey().contains(SCIMCommonConstants.USER_DIALECT)) {
+                //claim dialect is the scim group dialect.
+                newClaim.setDialectUri(SCIMCommonConstants.USER_DIALECT);
+
+            } else if (claim.getKey().contains(SCIMCommonConstants.CORE_DIALECT)) {
+                //claim dialect is the scim core dialect.
+                newClaim.setDialectUri(SCIMCommonConstants.CORE_DIALECT);
+
+            }
+            claimList.add(newClaim);
+        }
+        //set the claim to group model.
+        groupModel.setClaims(claimList);
+        return groupModel;
+    }
+
+    /*
      * This method is to get the scim user from the claims.
      * @param userStoreUser
      * @param claimURIList
@@ -376,17 +473,29 @@ public class CarbonUserManager implements UserManager {
      */
     private List<Object> listWithPagination(int startIndex, int count) throws CharonException {
         try {
-            //get the user list accroding to the start index and the count values provided.
+            //get the user list according to the start index and the count values provided.
             //TODO : Add the domain of the store.
             List<org.wso2.carbon.identity.mgt.bean.User> userList = identityStore.listUsers(startIndex, count);
             List<Object> userObjectList = new ArrayList<>();
+
+            //we need to set the first item of the array to be the number of users in the given domain.
+            //TODO : Add this value form the identity Store.
+            userObjectList.add(100);
             //convert identity store users to objects.
             for (org.wso2.carbon.identity.mgt.bean.User user : userList) {
-                userObjectList.add(user);
+                //get the details of the users.
+                //TODO:We need to pass the scim claim dialect for this method
+                List<Claim> claimList = user.getClaims();
+                //TODO this is a temporary method. need to remove this once the claim management is completed.
+                claimList = ClaimMapper.getInstance().convertToScimDialect(claimList);
+
+                User scimUser = getSCIMUser(user, claimList);
+
+                userObjectList.add(scimUser);
             }
             return userObjectList;
 
-        } catch (IdentityStoreException e) {
+        } catch (IdentityStoreException | UserNotFoundException e) {
             throw new CharonException("Error in getting the user list with start index :"
                     + startIndex + " and " + "count of :" + count);
         }
@@ -415,7 +524,7 @@ public class CarbonUserManager implements UserManager {
             throw new NotImplementedException("Complex filters are not implemented.");
         }
         //we only support 'eq' filter
-        if (((ExpressionNode) (rootNode)).getOperation().equals("EQ")) {
+        if (((ExpressionNode) (rootNode)).getOperation().equalsIgnoreCase("eq")) {
             //create a claim for the asked eq related attribute
             Claim filterClaim = new Claim();
 
@@ -439,22 +548,36 @@ public class CarbonUserManager implements UserManager {
             try {
                 List<org.wso2.carbon.identity.mgt.bean.User> userList;
                 // get the user list from the user core.
+                //TODO : This is a temp method.. need to get rid of this after claim mapping is completed.
+                filterClaim = ClaimMapper.getInstance().convertToWso2Dialect(filterClaim);
+
                 userList = identityStore.listUsers(filterClaim, startIndex, count);
 
                 List<Object> userObjectList = new ArrayList<>();
+                //we need to set the first item of the array to be the number of users in the given domain.
+                //TODO : Add this value form the identity Store.
+                userObjectList.add(100);
                 //convert identity store users to objects.
                 for (org.wso2.carbon.identity.mgt.bean.User user : userList) {
-                    userObjectList.add(user);
+                    //get the details of the users.
+                    //TODO:We need to pass the scim claim dialect for this method
+                    List<Claim> claimList = user.getClaims();
+                    //TODO this is a temporary method. need to remove this once the claim management is completed.
+                    claimList = ClaimMapper.getInstance().convertToScimDialect(claimList);
+
+                    User scimUser = getSCIMUser(user, claimList);
+
+                    userObjectList.add(scimUser);
                 }
                 return userObjectList;
 
-            } catch (IdentityStoreException e) {
+            } catch (IdentityStoreException | UserNotFoundException e) {
                 throw new CharonException("Error in getting the user list with the filter and pagination.");
             }
 
         } else {
             throw new NotImplementedException("Filter type :" +
-                    ((ExpressionNode) (rootNode)).getOperation() + "is not supported.");
+                    ((ExpressionNode) (rootNode)).getOperation() + " is not supported.");
         }
     }
 

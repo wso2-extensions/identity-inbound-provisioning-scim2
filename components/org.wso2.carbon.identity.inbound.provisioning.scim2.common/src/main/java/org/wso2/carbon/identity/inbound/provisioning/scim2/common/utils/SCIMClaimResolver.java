@@ -64,7 +64,8 @@ public class SCIMClaimResolver {
         Map<String, Attribute> attributeList = scimObject.getAttributeList();
         for (Map.Entry<String, Attribute> attributeEntry : attributeList.entrySet()) {
             //we are treating groups separately
-            if (attributeEntry.getKey().equals(SCIMConstants.UserSchemaConstants.GROUP_URI)) {
+            if (attributeEntry.getKey().equals(SCIMConstants.UserSchemaConstants.GROUP_URI)
+                    || attributeEntry.getKey().equals(SCIMConstants.GroupSchemaConstants.MEMBERS_URI)) {
                 continue;
             }
             Attribute attribute = attributeEntry.getValue();
@@ -624,4 +625,6 @@ public class SCIMClaimResolver {
         }
         return resourceSchema;
     }
+
+
 }
