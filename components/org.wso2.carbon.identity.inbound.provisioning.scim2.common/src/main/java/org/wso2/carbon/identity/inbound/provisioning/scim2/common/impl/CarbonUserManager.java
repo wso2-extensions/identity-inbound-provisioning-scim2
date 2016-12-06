@@ -867,5 +867,6 @@ public class CarbonUserManager implements UserManager {
         identityStore.updateUsersOfGroup(oldGroup.getId(), newUserIds, oldUserIds);
     }
 
+
 }
 

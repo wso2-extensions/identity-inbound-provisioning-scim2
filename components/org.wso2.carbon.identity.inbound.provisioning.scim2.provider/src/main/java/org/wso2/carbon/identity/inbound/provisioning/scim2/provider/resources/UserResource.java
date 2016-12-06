@@ -242,8 +242,6 @@ public class UserResource extends AbstractResource {
                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder)
             throws FormatNotSupportedException, CharonException {
 
-
-
         // defaults to application/scim+json.
         if (format == null) {
             format = SCIMProviderConstants.APPLICATION_SCIM_JSON;

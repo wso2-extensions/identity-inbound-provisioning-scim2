@@ -181,7 +181,7 @@ public class GroupResource extends AbstractResource {
             @ApiResponse(code = 204, message = "Group is deleted"),
             @ApiResponse(code = 404, message = "Valid group is not found")})
 
-    public Response deleteUser(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
+    public Response deleteGroup(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
                                @PathParam(SCIMProviderConstants.ID) String id,
                                @ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format)
@@ -225,7 +225,7 @@ public class GroupResource extends AbstractResource {
             @ApiResponse(code = 200, message = "Group is updated"),
             @ApiResponse(code = 404, message = "Valid group is not found")})
 
-    public Response updateUser(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
+    public Response updateGroup(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
                                @PathParam(SCIMProviderConstants.ID) String id,
                                @ApiParam(value = SCIMProviderConstants.CONTENT_TYPE_HEADER_DESC, required = true)
                                @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
@@ -276,7 +276,7 @@ public class GroupResource extends AbstractResource {
             @ApiResponse(code = 200, message = "Valid groups are found"),
             @ApiResponse(code = 404, message = "Valid groups are not found")})
 
-    public Response getUsersByPost(@ApiParam(value = SCIMProviderConstants.CONTENT_TYPE_HEADER_DESC, required = true)
+    public Response getGroupsByPost(@ApiParam(value = SCIMProviderConstants.CONTENT_TYPE_HEADER_DESC, required = true)
                                    @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                    @ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
                                    @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
@@ -320,7 +320,7 @@ public class GroupResource extends AbstractResource {
             @ApiResponse(code = 200, message = "Valid groups are found"),
             @ApiResponse(code = 404, message = "Valid groups are not found")})
 
-    public Response getUser(@ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
+    public Response getGroup(@ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
                             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format,
                             @ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
@@ -337,7 +337,6 @@ public class GroupResource extends AbstractResource {
                             @ApiParam(value = SCIMProviderConstants.SORT_ORDER_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder)
             throws FormatNotSupportedException, CharonException {
-
 
 
         // defaults to application/scim+json.
