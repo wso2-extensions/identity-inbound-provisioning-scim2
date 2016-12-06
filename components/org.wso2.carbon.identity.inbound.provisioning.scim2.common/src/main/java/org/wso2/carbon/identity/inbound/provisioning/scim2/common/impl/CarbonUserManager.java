@@ -328,7 +328,7 @@ public class CarbonUserManager implements UserManager {
         } catch (IdentityStoreException e) {
            throw new CharonException("Error in getting the group : " + groupId, e);
         } catch (GroupNotFoundException e) {
-            throw new NotFoundException("Group with the id :" + groupId + "does not exists.");
+            throw new NotFoundException("Group with the id :" + groupId + " does not exists.");
         }
     }
 
@@ -568,7 +568,7 @@ public class CarbonUserManager implements UserManager {
             for (org.wso2.carbon.identity.mgt.bean.User user : userList) {
                 //get the userName of each member.
                 List<Claim> claimValueList = identityStore.getUser(user.getUniqueUserId()).getClaims(metaClaimList);
-                scimGroup.setMember(user.getUniqueUserId(), claimURIList.get(0).getValue());
+                scimGroup.setMember(user.getUniqueUserId(), claimValueList.get(0).getValue());
             }
             //set the id of the user from the unique user id.
             scimGroup.setId(userStoreGroup.getUniqueGroupId());
@@ -655,7 +655,7 @@ public class CarbonUserManager implements UserManager {
             }
             return groupObjectList;
 
-        } catch (IdentityStoreException | UserNotFoundException e) {
+        } catch (IdentityStoreException | GroupNotFoundException e) {
             throw new CharonException("Error in getting the user list with start index :"
                     + startIndex + " and " + "count of :" + count, e);
         }
