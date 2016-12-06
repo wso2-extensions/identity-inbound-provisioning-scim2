@@ -25,6 +25,7 @@ import io.swagger.annotations.Contact;
 import io.swagger.annotations.Info;
 import io.swagger.annotations.License;
 import io.swagger.annotations.SwaggerDefinition;
+import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.charon.core.v2.exceptions.CharonException;
@@ -32,6 +33,7 @@ import org.wso2.charon.core.v2.exceptions.FormatNotSupportedException;
 import org.wso2.charon.core.v2.extensions.UserManager;
 import org.wso2.charon.core.v2.protocol.SCIMResponse;
 import org.wso2.charon.core.v2.protocol.endpoints.MeResourceManager;
+import org.wso2.msf4j.Microservice;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -43,14 +45,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-/*
-@Component(
-        name = "org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources.UserResource",
-        service = Microservice.class,
-        immediate = true
-)
-
-*/
 
 /**
  * Endpoints of the MeResource in micro service. This will basically captures
@@ -58,6 +52,13 @@ import javax.ws.rs.core.Response;
  * clients can directly invoke operations through this endpoint without explicitly mentioning the resource id.
  *
  */
+
+@Component(
+        name = "org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources.MeResource",
+        service = Microservice.class,
+        immediate = true
+)
+
 
 @Api(value = "scim/v2/Me")
 @SwaggerDefinition(

@@ -25,11 +25,13 @@ import io.swagger.annotations.Contact;
 import io.swagger.annotations.Info;
 import io.swagger.annotations.License;
 import io.swagger.annotations.SwaggerDefinition;
+import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.charon.core.v2.exceptions.CharonException;
 import org.wso2.charon.core.v2.exceptions.FormatNotSupportedException;
 import org.wso2.charon.core.v2.protocol.SCIMResponse;
 import org.wso2.charon.core.v2.protocol.endpoints.ResourceTypeResourceManager;
+import org.wso2.msf4j.Microservice;
 
 
 import javax.ws.rs.GET;
@@ -44,6 +46,11 @@ import javax.ws.rs.core.Response;
  * the requests from the remote clients and hand over the request to respective operation performer.
  * Clients can view resource type configurations through this endpoint.
  */
+@Component(
+        name = "org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources.ResourceTypeResource",
+        service = Microservice.class,
+        immediate = true
+)
 
 @Api(value = "scim/v2/ResourceType")
 @SwaggerDefinition(

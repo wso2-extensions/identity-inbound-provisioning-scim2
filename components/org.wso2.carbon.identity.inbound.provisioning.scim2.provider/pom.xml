@@ -106,7 +106,7 @@
         </import.package>
 
         <carbon.component>
-            osgi.service; objectClass="org.wso2.msf4j.Microservice"
+            osgi.service; objectClass="org.wso2.msf4j.Microservice";serviceCount="5"
         </carbon.component>
         <osgi.framework.package.import.version.range>[1.8.0, 2.0.0)</osgi.framework.package.import.version.range>
         <org.osgi.service.permissionadmin.import.version.range>[1.2.0, 1.3.0)

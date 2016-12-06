@@ -266,6 +266,8 @@ public class CarbonUserManager implements UserManager {
 
         //create group model as that is what need to send to identity store api.
         GroupModel groupModel = getGroupModelFromClaims(claimsMap);
+        //TODO this is a temporary method. need to remove this once the claim management is completed.
+        groupModel = ClaimMapper.getInstance().convertMetaToWso2Dialect(groupModel);
 
         org.wso2.carbon.identity.mgt.bean.Group userStoreGroup = null;
         try {
@@ -318,6 +320,8 @@ public class CarbonUserManager implements UserManager {
 
             //TODO:We need to pass the scim claim dialect for this method
             List<Claim> claimList = userStoreGroup.getClaims();
+            //TODO this is a temporary method. need to remove this once the claim management is completed.
+            claimList = ClaimMapper.getInstance().convertGroupToScimDialect(claimList);
 
             Group scimGroup = getSCIMGroup(userStoreGroup, claimList);
 
@@ -467,9 +471,9 @@ public class CarbonUserManager implements UserManager {
             newClaim.setClaimUri(claim.getKey());
             newClaim.setValue(claim.getValue());
             //add the right claim dialect for the claim.
-            if (claim.getKey().contains(SCIMCommonConstants.USER_DIALECT)) {
+            if (claim.getKey().contains(SCIMCommonConstants.GROUP_DIALECT)) {
                 //claim dialect is the scim group dialect.
-                newClaim.setDialectUri(SCIMCommonConstants.USER_DIALECT);
+                newClaim.setDialectUri(SCIMCommonConstants.GROUP_DIALECT);
 
             } else if (claim.getKey().contains(SCIMCommonConstants.CORE_DIALECT)) {
                 //claim dialect is the scim core dialect.
