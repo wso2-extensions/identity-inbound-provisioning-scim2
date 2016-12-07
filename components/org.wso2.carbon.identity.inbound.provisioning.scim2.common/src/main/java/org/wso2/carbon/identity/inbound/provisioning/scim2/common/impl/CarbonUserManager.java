@@ -839,7 +839,7 @@ public class CarbonUserManager implements UserManager {
         List<String> newUserIds = new ArrayList<>();
 
         MultiValuedAttribute oldMembersAttribute = (MultiValuedAttribute)
-                newGroup.getAttribute(SCIMConstants.GroupSchemaConstants.MEMBERS);
+                oldGroup.getAttribute(SCIMConstants.GroupSchemaConstants.MEMBERS);
         //add the member ids to oldUserIds list
         if (oldMembersAttribute != null) {
             List<Attribute> membersValues = oldMembersAttribute.getAttributeValues();
@@ -854,7 +854,7 @@ public class CarbonUserManager implements UserManager {
         MultiValuedAttribute newMembersAttribute = (MultiValuedAttribute)
                 newGroup.getAttribute(SCIMConstants.GroupSchemaConstants.MEMBERS);
         //add the member ids to newUserIds list
-        if (oldMembersAttribute != null) {
+        if (newMembersAttribute != null) {
             List<Attribute> membersValues = newMembersAttribute.getAttributeValues();
             for (Attribute attribute : membersValues) {
                 ComplexAttribute attributeValue = (ComplexAttribute) attribute;
@@ -866,7 +866,6 @@ public class CarbonUserManager implements UserManager {
         //TODO : add the domain name here.
         identityStore.updateUsersOfGroup(oldGroup.getId(), newUserIds, oldUserIds);
     }
-
 
 }
 
