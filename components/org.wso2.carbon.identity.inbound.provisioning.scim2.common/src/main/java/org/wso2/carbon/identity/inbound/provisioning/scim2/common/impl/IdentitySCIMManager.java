@@ -153,6 +153,4 @@ public class IdentitySCIMManager {
         authList.add(auth2);
         CharonConfiguration.getInstance().setAuthenticationSchemes(authList);
     }
-
-
 }

@@ -35,16 +35,15 @@ import org.wso2.charon.core.v2.protocol.SCIMResponse;
 import org.wso2.charon.core.v2.protocol.endpoints.GroupResourceManager;
 import org.wso2.msf4j.Microservice;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
@@ -76,8 +75,7 @@ public class GroupResource extends AbstractResource {
 
     @GET
     @Path("/{id}")
-    @Produces(MediaType.APPLICATION_JSON)
-
+    @Produces({"application/json", "application/scim+json"})
     @ApiOperation(
             value = "Return the group with the given id",
             notes = "Returns HTTP 200 if the group is found.")
@@ -88,19 +86,11 @@ public class GroupResource extends AbstractResource {
 
     public Response getGroup(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
                             @PathParam(SCIMProviderConstants.ID) String id,
-                            @ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                             @ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes)
             throws FormatNotSupportedException, CharonException {
-
-        //Accept type validation checking.
-        if (!isValidOutputFormat(outputFormat)) {
-            String error = outputFormat + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
 
         try {
             // obtain the user store manager
@@ -125,33 +115,17 @@ public class GroupResource extends AbstractResource {
             notes = "Returns HTTP 201 if the group is successfully created.")
 
     @POST
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({"application/json", "application/scim+json"})
+    @Consumes("application/scim+json")
     @ApiResponses(value = {
             @ApiResponse(code = 201, message = "Valid group is created"),
             @ApiResponse(code = 404, message = "Group is not found")})
 
-    public Response createGroup(@ApiParam(value = SCIMProviderConstants.CONTENT_TYPE_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
-                               @ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
-                               @ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
-                               @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
-                               @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
-                               @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
-                               String resourceString) throws CharonException, FormatNotSupportedException {
-
-        // content-type header is compulsory in post request.
-        if (inputFormat == null) {
-            String error = SCIMProviderConstants.CONTENT_TYPE
-                    + " not present in the request header";
-            throw new FormatNotSupportedException(error);
-        }
-
-        //Accept type validation checking.
-        if (!isValidOutputFormat(outputFormat)) {
-            String error = outputFormat + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
+    public Response createGroup(@ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
+                                @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
+                                @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
+                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
+                                String resourceString) throws CharonException, FormatNotSupportedException {
 
         try {
             // obtain the user store manager
@@ -173,6 +147,7 @@ public class GroupResource extends AbstractResource {
 
     @DELETE
     @Path("/{id}")
+    @Produces({"application/json", "application/scim+json"})
     @ApiOperation(
             value = "Delete the group with the given id",
             notes = "Returns HTTP 204 if the group is successfully deleted.")
@@ -182,20 +157,8 @@ public class GroupResource extends AbstractResource {
             @ApiResponse(code = 404, message = "Valid group is not found")})
 
     public Response deleteGroup(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
-                               @PathParam(SCIMProviderConstants.ID) String id,
-                               @ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format)
+                               @PathParam(SCIMProviderConstants.ID) String id)
             throws FormatNotSupportedException, CharonException {
-
-        // defaults to application/scim+json.
-        if (format == null) {
-            format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
-        }
-
-        if (!isValidOutputFormat(format)) {
-            String error = format + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
 
         try {
             // obtain the user store manager
@@ -216,7 +179,9 @@ public class GroupResource extends AbstractResource {
 
     @PUT
     @Path("{id}")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({"application/json", "application/scim+json"})
+    @Consumes("application/scim+json")
+
     @ApiOperation(
             value = "Return the updated group",
             notes = "Returns HTTP 404 if the group is not found.")
@@ -227,27 +192,12 @@ public class GroupResource extends AbstractResource {
 
     public Response updateGroup(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
                                @PathParam(SCIMProviderConstants.ID) String id,
-                               @ApiParam(value = SCIMProviderConstants.CONTENT_TYPE_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
-                               @ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                @ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                                @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) throws FormatNotSupportedException, CharonException {
 
-        // content-type header is compulsory in post request.
-        if (inputFormat == null) {
-            String error = SCIMProviderConstants.CONTENT_TYPE
-                    + " not present in the request header";
-            throw new FormatNotSupportedException(error);
-        }
-
-        if (!isValidOutputFormat(outputFormat)) {
-            String error = outputFormat + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
         try {
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
@@ -267,7 +217,9 @@ public class GroupResource extends AbstractResource {
 
     @POST
     @Path("/.search")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({"application/json", "application/scim+json"})
+    @Consumes("application/scim+json")
+
     @ApiOperation(
             value = "Return groups according to the filter, sort and pagination parameters",
             notes = "Returns HTTP 404 if the groups are not found.")
@@ -276,24 +228,9 @@ public class GroupResource extends AbstractResource {
             @ApiResponse(code = 200, message = "Valid groups are found"),
             @ApiResponse(code = 404, message = "Valid groups are not found")})
 
-    public Response getGroupsByPost(@ApiParam(value = SCIMProviderConstants.CONTENT_TYPE_HEADER_DESC, required = true)
-                                   @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
-                                   @ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                                   @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
-                                   String resourceString)
+    public Response getGroupsByPost(String resourceString)
             throws FormatNotSupportedException, CharonException {
 
-        // content-type header is compulsory in post request.
-        if (inputFormat == null) {
-            String error = SCIMProviderConstants.CONTENT_TYPE
-                    + " not present in the request header";
-            throw new FormatNotSupportedException(error);
-        }
-
-        if (!isValidOutputFormat(outputFormat)) {
-            String error = outputFormat + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
         try {
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
@@ -311,7 +248,8 @@ public class GroupResource extends AbstractResource {
     }
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({"application/json", "application/scim+json"})
+
     @ApiOperation(
             value = "Return groups according to the filter, sort and pagination parameters",
             notes = "Returns HTTP 404 if the groups are not found.")
@@ -320,9 +258,7 @@ public class GroupResource extends AbstractResource {
             @ApiResponse(code = 200, message = "Valid groups are found"),
             @ApiResponse(code = 404, message = "Valid groups are not found")})
 
-    public Response getGroup(@ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format,
-                            @ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
+    public Response getGroup(@ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
@@ -337,16 +273,6 @@ public class GroupResource extends AbstractResource {
                             @ApiParam(value = SCIMProviderConstants.SORT_ORDER_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder)
             throws FormatNotSupportedException, CharonException {
-
-
-        // defaults to application/scim+json.
-        if (format == null) {
-            format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
-        }
-        if (!isValidOutputFormat(format)) {
-            String error = format + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
 
         try {
             // obtain the user store manager
