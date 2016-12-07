@@ -31,16 +31,18 @@ public class SCIMCommonConstants {
     public static final int GROUP = 2;
 
     public static final String USER_DIALECT = "urn:ietf:params:scim:schemas:core:2.0:User";
+    public static final String GROUP_DIALECT = "urn:ietf:params:scim:schemas:core:2.0:Group";
     public static final String CORE_DIALECT = "urn:ietf:params:scim:schemas:core:2.0";
 
-
+    public static final String USERS_LOCATION = "http://localhost:9090/scim/v2/Users";
+    public static final String GROUPS_LOCATION = "http://localhost:9090/scim/v2/Group";
     //ServiceProviderConfigResource endpoint related constants
 
     public static final String DOCUMENTATION_URL = "";
     public static final int MAX_OPERATIONS = 1000;
     public static final int MAX_PAYLOAD_SIZE = 1048576;
     public static final int MAX_RESULTS = 200;
-    public static final int COUNT_FOR_PAGINATION = 2;
+    public static final int COUNT_FOR_PAGINATION = 200;
 
     public static final String AUTHENTICATION_SCHEMES_NAME_1 = "OAuth Bearer Token";
     public static final String AUTHENTICATION_SCHEMES_DESCRIPTION_1 =

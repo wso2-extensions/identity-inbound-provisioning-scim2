@@ -63,16 +63,15 @@ public class SCIMClaimResolver {
         Map<String, String> claimsMap = new HashMap<>();
         Map<String, Attribute> attributeList = scimObject.getAttributeList();
         for (Map.Entry<String, Attribute> attributeEntry : attributeList.entrySet()) {
-            //we are treating groups separately
-            if (attributeEntry.getKey().equals(SCIMConstants.UserSchemaConstants.GROUP_URI)
-                    || attributeEntry.getKey().equals(SCIMConstants.GroupSchemaConstants.MEMBERS_URI)) {
+            //we are treating group members and user groups attributes separately
+            if (attributeEntry.getKey().equals(SCIMConstants.GroupSchemaConstants.MEMBERS)) {
+                continue;
+            } else if (attributeEntry.getKey().equals(SCIMConstants.UserSchemaConstants.GROUPS)) {
                 continue;
             }
+
             Attribute attribute = attributeEntry.getValue();
-            // if the attribute is password, skip it
-            if (SCIMConstants.UserSchemaConstants.PASSWORD.equals(attribute.getName())) {
-                continue;
-            }
+
             if (attribute instanceof SimpleAttribute) {
                 setClaimsForSimpleAttribute(attribute, claimsMap);
 
@@ -91,6 +90,10 @@ public class SCIMClaimResolver {
                     for (Attribute entry : attributes.values()) {
                         // if the attribute a simple attribute
                         if (entry instanceof SimpleAttribute) {
+                            //we treat meta location attribute separately.
+                            if (entry.getURI().equals(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) {
+                                continue;
+                            }
                             setClaimsForSimpleAttribute(entry, claimsMap);
 
                         } else if (entry instanceof MultiValuedAttribute) {

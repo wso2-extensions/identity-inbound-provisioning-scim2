@@ -52,6 +52,7 @@ import javax.ws.rs.core.Response;
  * the requests from the remote clients and hand over the request to respective operation performer.
  *
  */
+
 @Component(
         name = "org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources.UserResource",
         service = Microservice.class,
@@ -79,10 +80,10 @@ public class UserResource extends AbstractResource {
 
     @ApiOperation(
             value = "Return the user with the given id",
-            notes = "Returns HTTP 204 if the user is not found.")
+            notes = "Returns HTTP 200 if the user is found.")
 
     @ApiResponses(value = {
-            @ApiResponse(code = 204, message = "Valid user is found"),
+            @ApiResponse(code = 200, message = "Valid user is found"),
             @ApiResponse(code = 404, message = "Valid user is not found")})
 
     public Response getUser(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
@@ -114,7 +115,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
     }
 
@@ -165,7 +166,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(response);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
 
     }
@@ -209,7 +210,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
     }
 
@@ -241,8 +242,6 @@ public class UserResource extends AbstractResource {
                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder)
             throws FormatNotSupportedException, CharonException {
 
-
-
         // defaults to application/scim+json.
         if (format == null) {
             format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
@@ -265,7 +264,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
     }
 
@@ -310,7 +309,7 @@ public class UserResource extends AbstractResource {
             return buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            throw new CharonException(e.getDetail());
+            throw new CharonException(e.getDetail(), e);
         }
     }
 
@@ -353,15 +352,15 @@ public class UserResource extends AbstractResource {
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
             // create charon-SCIM user endpoint and hand-over the request.
-            UserResourceManager userResourceEndpoint = new UserResourceManager();
+            UserResourceManager userResourceManager = new UserResourceManager();
 
-            SCIMResponse response = userResourceEndpoint.updateWithPUT(
+            SCIMResponse response = userResourceManager.updateWithPUT(
                     id, resourceString, userManager, attribute, excludedAttributes);
 
             return buildResponse(response);
 
         } catch (CharonException e) {
-           throw new CharonException(e.getDetail());
+           throw new CharonException(e.getDetail(), e);
         }
     }
 
