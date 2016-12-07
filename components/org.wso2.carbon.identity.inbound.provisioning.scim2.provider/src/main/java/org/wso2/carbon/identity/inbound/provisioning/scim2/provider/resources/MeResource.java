@@ -34,6 +34,7 @@ import org.wso2.charon.core.v2.extensions.UserManager;
 import org.wso2.charon.core.v2.protocol.SCIMResponse;
 import org.wso2.charon.core.v2.protocol.endpoints.MeResourceManager;
 import org.wso2.msf4j.Microservice;
+import org.wso2.msf4j.Request;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -49,7 +50,6 @@ import javax.ws.rs.core.Response;
  * Endpoints of the MeResource in micro service. This will basically captures
  * the requests from the remote clients and hand over the request to respective operation performer.
  * clients can directly invoke operations through this endpoint without explicitly mentioning the resource id.
- *
  */
 
 @Component(
@@ -57,8 +57,6 @@ import javax.ws.rs.core.Response;
         service = Microservice.class,
         immediate = true
 )
-
-
 @Api(value = "scim/v2/Me")
 @SwaggerDefinition(
         info = @Info(
@@ -88,24 +86,33 @@ public class MeResource extends AbstractResource {
     public Response getUser(@ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
-                            @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes)
+                            @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
+                            @Context Request request)
             throws FormatNotSupportedException, CharonException {
 
         try {
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
-            // create charon-SCIM me endpoint and hand-over the request.
-            MeResourceManager meResourceManager = new MeResourceManager();
-            //TODO :Pass userID here
-            SCIMResponse scimResponse = meResourceManager.get("", userManager, attribute, excludedAttributes);
-            // needs to check the code of the response and return 200 0k or other error codes
-            // appropriately.
-            return buildResponse(scimResponse);
-
-        } catch (CharonException e) {
-            throw new CharonException(e.getDetail(), e);
+        Object authzUser = request.getProperty("authzUser");
+        String userUniqueId;
+        if (authzUser instanceof String) {
+            userUniqueId = (String) authzUser;
+        } else {
+            throw new CharonException("User id not found in the request.");
         }
+
+        // obtain the user store manager
+        UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+        // create charon-SCIM me endpoint and hand-over the request.
+        MeResourceManager meResourceManager = new MeResourceManager();
+
+        SCIMResponse scimResponse = meResourceManager.get(userUniqueId, userManager, attribute, excludedAttributes);
+        // needs to check the code of the response and return 200 0k or other error codes
+        // appropriately.
+        return buildResponse(scimResponse);
+
     }
 
 
@@ -155,7 +162,28 @@ public class MeResource extends AbstractResource {
             @ApiResponse(code = 404, message = "Valid user is not found")})
 
     public Response deleteUser()
+    public Response deleteUser(@ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
+                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format,
+                               @Context Request request)
             throws FormatNotSupportedException, CharonException {
+
+        // defaults to application/scim+json.
+        if (format == null) {
+            format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
+        }
+
+        if (!isValidOutputFormat(format)) {
+            String error = format + " is not supported.";
+            throw new FormatNotSupportedException(error);
+        }
+
+        Object authzUser = request.getProperty("authzUser");
+        String userUniqueId;
+        if (authzUser instanceof String) {
+            userUniqueId = (String) authzUser;
+        } else {
+            throw new CharonException("User id not found in the request.");
+        }
 
         try {
             // obtain the user store manager
@@ -163,8 +191,8 @@ public class MeResource extends AbstractResource {
 
             // create charon-SCIM me endpoint and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
-            //TODO : pass the userId here
-            SCIMResponse scimResponse = meResourceManager.delete("", userManager);
+
+            SCIMResponse scimResponse = meResourceManager.delete(userUniqueId, userManager);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
             return buildResponse(scimResponse);
@@ -190,7 +218,27 @@ public class MeResource extends AbstractResource {
                                @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
-                               String resourceString) throws FormatNotSupportedException, CharonException {
+                               String resourceString,
+                               @Context Request request) throws FormatNotSupportedException, CharonException {
+
+        // content-type header is compulsory in post request.
+        if (inputFormat == null) {
+            String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
+            throw new FormatNotSupportedException(error);
+        }
+
+        if (!isValidOutputFormat(outputFormat)) {
+            String error = outputFormat + " is not supported.";
+            throw new FormatNotSupportedException(error);
+        }
+
+        Object authzUser = request.getProperty("authzUser");
+        String userUniqueId;
+        if (authzUser instanceof String) {
+            userUniqueId = (String) authzUser;
+        } else {
+            throw new CharonException("User id not found in the request.");
+        }
 
         try {
             // obtain the user store manager
@@ -198,9 +246,9 @@ public class MeResource extends AbstractResource {
 
             // create charon-SCIM user endpoint and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
-            //TODO : Pass the userid here
+
             SCIMResponse response = meResourceManager.updateWithPUT(
-                    "", resourceString, userManager, attribute, excludedAttributes);
+                    userUniqueId, resourceString, userManager, attribute, excludedAttributes);
 
             return buildResponse(response);
 
