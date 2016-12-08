@@ -851,6 +851,5 @@ public class CarbonUserManager implements UserManager {
         //TODO : add the domain name here.
         identityStore.updateUsersOfGroup(oldGroup.getId(), newUserIds);
     }
-
 }
 
