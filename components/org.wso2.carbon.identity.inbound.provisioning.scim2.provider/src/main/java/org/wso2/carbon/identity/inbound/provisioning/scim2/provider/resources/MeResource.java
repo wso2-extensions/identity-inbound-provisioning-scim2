@@ -44,6 +44,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;;
 import javax.ws.rs.core.Response;
 
 /**
@@ -90,10 +91,6 @@ public class MeResource extends AbstractResource {
                             @Context Request request)
             throws FormatNotSupportedException, CharonException {
 
-        try {
-            // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
-
         Object authzUser = request.getProperty("authzUser");
         String userUniqueId;
         if (authzUser instanceof String) {
@@ -123,6 +120,7 @@ public class MeResource extends AbstractResource {
     @POST
     @Produces({"application/json", "application/scim+json"})
     @Consumes("application/scim+json")
+
     @ApiResponses(value = {
             @ApiResponse(code = 201, message = "Valid user is created"),
             @ApiResponse(code = 404, message = "User is not found")})
@@ -161,21 +159,9 @@ public class MeResource extends AbstractResource {
             @ApiResponse(code = 204, message = "User is deleted"),
             @ApiResponse(code = 404, message = "Valid user is not found")})
 
-    public Response deleteUser()
-    public Response deleteUser(@ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format,
-                               @Context Request request)
+    public Response deleteUser(@Context Request request)
             throws FormatNotSupportedException, CharonException {
 
-        // defaults to application/scim+json.
-        if (format == null) {
-            format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
-        }
-
-        if (!isValidOutputFormat(format)) {
-            String error = format + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
 
         Object authzUser = request.getProperty("authzUser");
         String userUniqueId;
@@ -220,17 +206,6 @@ public class MeResource extends AbstractResource {
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString,
                                @Context Request request) throws FormatNotSupportedException, CharonException {
-
-        // content-type header is compulsory in post request.
-        if (inputFormat == null) {
-            String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
-            throw new FormatNotSupportedException(error);
-        }
-
-        if (!isValidOutputFormat(outputFormat)) {
-            String error = outputFormat + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
 
         Object authzUser = request.getProperty("authzUser");
         String userUniqueId;
