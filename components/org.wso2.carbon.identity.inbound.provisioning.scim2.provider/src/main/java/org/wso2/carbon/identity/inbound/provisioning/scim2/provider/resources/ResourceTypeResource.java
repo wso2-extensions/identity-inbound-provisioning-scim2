@@ -18,7 +18,6 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.Contact;
@@ -26,7 +25,6 @@ import io.swagger.annotations.Info;
 import io.swagger.annotations.License;
 import io.swagger.annotations.SwaggerDefinition;
 import org.osgi.service.component.annotations.Component;
-import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.charon.core.v2.exceptions.CharonException;
 import org.wso2.charon.core.v2.exceptions.FormatNotSupportedException;
 import org.wso2.charon.core.v2.protocol.SCIMResponse;
@@ -35,10 +33,8 @@ import org.wso2.msf4j.Microservice;
 
 
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
@@ -68,7 +64,7 @@ import javax.ws.rs.core.Response;
 public class ResourceTypeResource extends AbstractResource {
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({"application/json", "application/scim+json"})
 
     @ApiOperation(
             value = "Return the ResourceType schema.",
@@ -78,15 +74,9 @@ public class ResourceTypeResource extends AbstractResource {
             @ApiResponse(code = 200, message = "Schema is found"),
             @ApiResponse(code = 404, message = "Schema is not found")})
 
-    public Response getUser(@ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat)
+    public Response getUser()
             throws FormatNotSupportedException, CharonException {
 
-        //Accept type validation checking.
-        if (!isValidOutputFormat(outputFormat)) {
-            String error = outputFormat + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
 
         // create charon-SCIM resourceType endpoint and hand-over the request.
         ResourceTypeResourceManager resourceTypeResourceManager = new ResourceTypeResourceManager();

@@ -36,16 +36,15 @@ import org.wso2.charon.core.v2.protocol.endpoints.MeResourceManager;
 import org.wso2.msf4j.Microservice;
 import org.wso2.msf4j.Request;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Context;;
 import javax.ws.rs.core.Response;
 
 /**
@@ -75,7 +74,7 @@ import javax.ws.rs.core.Response;
 public class MeResource extends AbstractResource {
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({"application/json", "application/scim+json"})
 
     @ApiOperation(
             value = "Return the authenticated user.",
@@ -85,20 +84,13 @@ public class MeResource extends AbstractResource {
             @ApiResponse(code = 200, message = "Valid user is found"),
             @ApiResponse(code = 404, message = "Valid user is not found")})
 
-    public Response getUser(@ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
-                            @ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
+    public Response getUser(@ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                             @Context Request request)
             throws FormatNotSupportedException, CharonException {
 
-        //Accept type validation checking.
-        if (!isValidOutputFormat(outputFormat)) {
-            String error = outputFormat + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
         Object authzUser = request.getProperty("authzUser");
         String userUniqueId;
         if (authzUser instanceof String) {
@@ -126,33 +118,18 @@ public class MeResource extends AbstractResource {
             notes = "Returns HTTP 201 if the user is successfully created.")
 
     @POST
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({"application/json", "application/scim+json"})
+    @Consumes("application/scim+json")
+
     @ApiResponses(value = {
             @ApiResponse(code = 201, message = "Valid user is created"),
             @ApiResponse(code = 404, message = "User is not found")})
 
-    public Response createUser(@ApiParam(value = SCIMProviderConstants.CONTENT_TYPE_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
-                               @ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
-                               @ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
+    public Response createUser(@ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                                @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) throws CharonException, FormatNotSupportedException {
-
-        // content-type header is compulsory in post request.
-        if (inputFormat == null) {
-            String error = SCIMProviderConstants.CONTENT_TYPE
-                    + " not present in the request header";
-            throw new FormatNotSupportedException(error);
-        }
-
-        //Accept type validation checking.
-        if (!isValidOutputFormat(outputFormat)) {
-            String error = outputFormat + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
 
         try {
             // obtain the user store manager
@@ -173,6 +150,7 @@ public class MeResource extends AbstractResource {
     }
 
     @DELETE
+    @Produces({"application/json", "application/scim+json"})
     @ApiOperation(
             value = "Delete the authenticated user.",
             notes = "Returns HTTP 204 if the user is successfully deleted.")
@@ -181,20 +159,9 @@ public class MeResource extends AbstractResource {
             @ApiResponse(code = 204, message = "User is deleted"),
             @ApiResponse(code = 404, message = "Valid user is not found")})
 
-    public Response deleteUser(@ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format,
-                               @Context Request request)
+    public Response deleteUser(@Context Request request)
             throws FormatNotSupportedException, CharonException {
 
-        // defaults to application/scim+json.
-        if (format == null) {
-            format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
-        }
-
-        if (!isValidOutputFormat(format)) {
-            String error = format + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
 
         Object authzUser = request.getProperty("authzUser");
         String userUniqueId;
@@ -223,7 +190,8 @@ public class MeResource extends AbstractResource {
 
 
     @PUT
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({"application/json", "application/scim+json"})
+    @Consumes("application/scim+json")
     @ApiOperation(
             value = "Return the updated user",
             notes = "Returns HTTP 404 if the user is not found.")
@@ -232,27 +200,12 @@ public class MeResource extends AbstractResource {
             @ApiResponse(code = 200, message = "User is updated"),
             @ApiResponse(code = 404, message = "Valid user is not found")})
 
-    public Response updateUser(@ApiParam(value = SCIMProviderConstants.CONTENT_TYPE_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
-                               @ApiParam(value = SCIMProviderConstants.ACCEPT_HEADER_DESC, required = true)
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
-                               @ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
+    public Response updateUser(@ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                                @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString,
                                @Context Request request) throws FormatNotSupportedException, CharonException {
-
-        // content-type header is compulsory in post request.
-        if (inputFormat == null) {
-            String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
-            throw new FormatNotSupportedException(error);
-        }
-
-        if (!isValidOutputFormat(outputFormat)) {
-            String error = outputFormat + " is not supported.";
-            throw new FormatNotSupportedException(error);
-        }
 
         Object authzUser = request.getProperty("authzUser");
         String userUniqueId;
