@@ -833,23 +833,8 @@ public class CarbonUserManager implements UserManager {
      * @throws IdentityStoreException
      */
     private void updateMemberList(Group oldGroup, Group newGroup) throws CharonException, IdentityStoreException {
-        // list to store the old user ids which will be removed from the group's members.
-        List<String> oldUserIds = new ArrayList<>();
         // list to store the new user ids which will be added to the group's members.
         List<String> newUserIds = new ArrayList<>();
-
-        MultiValuedAttribute oldMembersAttribute = (MultiValuedAttribute)
-                oldGroup.getAttribute(SCIMConstants.GroupSchemaConstants.MEMBERS);
-        //add the member ids to oldUserIds list
-        if (oldMembersAttribute != null) {
-            List<Attribute> membersValues = oldMembersAttribute.getAttributeValues();
-            for (Attribute attribute : membersValues) {
-                ComplexAttribute attributeValue = (ComplexAttribute) attribute;
-                SimpleAttribute valueAttribute = (SimpleAttribute)
-                        attributeValue.getSubAttribute(SCIMConstants.CommonSchemaConstants.VALUE);
-                oldUserIds.add((String) valueAttribute.getValue());
-            }
-        }
 
         MultiValuedAttribute newMembersAttribute = (MultiValuedAttribute)
                 newGroup.getAttribute(SCIMConstants.GroupSchemaConstants.MEMBERS);
@@ -864,8 +849,7 @@ public class CarbonUserManager implements UserManager {
             }
         }
         //TODO : add the domain name here.
-        identityStore.updateUsersOfGroup(oldGroup.getId(), newUserIds, oldUserIds);
+        identityStore.updateUsersOfGroup(oldGroup.getId(), newUserIds);
     }
-
 }
 
