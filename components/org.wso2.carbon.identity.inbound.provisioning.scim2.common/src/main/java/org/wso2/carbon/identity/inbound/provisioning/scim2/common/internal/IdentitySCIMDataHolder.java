@@ -16,7 +16,8 @@
 
 package org.wso2.carbon.identity.inbound.provisioning.scim2.common.internal;
 
-import org.wso2.carbon.identity.mgt.service.RealmService;
+
+import org.wso2.carbon.identity.mgt.RealmService;
 
 /**
  * Identity SCIM DataHolder which holds the RealmService instance.
