@@ -2,11 +2,11 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.claim;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.wso2.carbon.identity.mgt.bean.GroupBean;
+import org.wso2.carbon.identity.mgt.bean.UserBean;
 import org.wso2.carbon.identity.mgt.claim.Claim;
 import org.wso2.carbon.identity.mgt.claim.MetaClaim;
-import org.wso2.carbon.identity.mgt.model.GroupModel;
-import org.wso2.carbon.identity.mgt.model.UserModel;
-import org.wso2.carbon.identity.mgt.util.IdentityMgtConstants;
+import org.wso2.carbon.identity.mgt.impl.util.IdentityMgtConstants;
 import org.wso2.charon.core.v2.schema.SCIMConstants;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.introspector.BeanAccess;
@@ -95,33 +95,33 @@ public class ClaimMapper {
 
     }
 
-    public UserModel convertMetaToWso2Dialect(UserModel userModel) {
-        UserModel newUserModel = new UserModel();
+    public UserBean convertMetaToWso2Dialect(UserBean userBean) {
+        UserBean newUserBean = new UserBean();
         List<Claim> convertedClaims = new ArrayList<>();
-        for (Claim claim : userModel.getClaims()) {
+        for (Claim claim : userBean.getClaims()) {
             String uri = scimMap.get(claim.getClaimUri());
             if (uri != null) {
                 Claim newClaim = new Claim(IdentityMgtConstants.CLAIM_ROOT_DIALECT, uri, claim.getValue());
                 convertedClaims.add(newClaim);
             }
         }
-        newUserModel.setClaims(convertedClaims);
-        newUserModel.setCredentials(userModel.getCredentials());
-        return newUserModel;
+        newUserBean.setClaims(convertedClaims);
+        newUserBean.setCredentials(userBean.getCredentials());
+        return newUserBean;
     }
 
-    public GroupModel convertMetaToWso2Dialect(GroupModel groupModel) {
-        GroupModel newGroupModel = new GroupModel();
+    public GroupBean convertMetaToWso2Dialect(GroupBean groupBean) {
+        GroupBean newGroupBean = new GroupBean();
         List<Claim> convertedClaims = new ArrayList<>();
-        for (Claim claim : groupModel.getClaims()) {
+        for (Claim claim : groupBean.getClaims()) {
             String uri = scimMap.get(claim.getClaimUri());
             if (uri != null) {
                 Claim newClaim = new Claim(IdentityMgtConstants.CLAIM_ROOT_DIALECT, uri, claim.getValue());
                 convertedClaims.add(newClaim);
             }
         }
-        newGroupModel.setClaims(convertedClaims);
-        return newGroupModel;
+        newGroupBean.setClaims(convertedClaims);
+        return newGroupBean;
     }
 
     public List<Claim> convertMetaToWso2Dialect(List<Claim> claimList) {

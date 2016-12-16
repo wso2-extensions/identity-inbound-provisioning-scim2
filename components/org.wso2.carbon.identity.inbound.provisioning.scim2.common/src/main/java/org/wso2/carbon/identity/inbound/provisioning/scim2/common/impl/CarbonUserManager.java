@@ -21,14 +21,14 @@ import org.slf4j.LoggerFactory;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMClaimResolver;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.claim.ClaimMapper;
+import org.wso2.carbon.identity.mgt.IdentityStore;
+import org.wso2.carbon.identity.mgt.bean.GroupBean;
+import org.wso2.carbon.identity.mgt.bean.UserBean;
 import org.wso2.carbon.identity.mgt.claim.Claim;
 import org.wso2.carbon.identity.mgt.claim.MetaClaim;
 import org.wso2.carbon.identity.mgt.exception.GroupNotFoundException;
 import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
 import org.wso2.carbon.identity.mgt.exception.UserNotFoundException;
-import org.wso2.carbon.identity.mgt.model.GroupModel;
-import org.wso2.carbon.identity.mgt.model.UserModel;
-import org.wso2.carbon.identity.mgt.store.IdentityStore;
 import org.wso2.charon.core.v2.attributes.Attribute;
 import org.wso2.charon.core.v2.attributes.ComplexAttribute;
 import org.wso2.charon.core.v2.attributes.MultiValuedAttribute;
@@ -83,13 +83,13 @@ public class CarbonUserManager implements UserManager {
             Map<String, String> claimsMap = SCIMClaimResolver.getClaimsMap(user);
 
             //create user model as that is what need to send to identity store api.
-            UserModel userModel = getUserModelFromClaims(claimsMap);
+            UserBean userBean = getUserBeanFromClaims(claimsMap);
             //TODO this is a temporary method. need to remove this once the claim management is completed.
-            userModel = ClaimMapper.getInstance().convertMetaToWso2Dialect(userModel);
+            userBean = ClaimMapper.getInstance().convertMetaToWso2Dialect(userBean);
 
             //TODO : get the domain of the user store and call that method instead of this method.
             //add the user.
-            org.wso2.carbon.identity.mgt.bean.User userStoreUser = identityStore.addUser(userModel);
+            org.wso2.carbon.identity.mgt.User userStoreUser = identityStore.addUser(userBean);
 
             // list to store the group ids which will be used to create the group attribute in scim user.
             List<String> groupIds = new ArrayList<>();
@@ -130,7 +130,7 @@ public class CarbonUserManager implements UserManager {
             log.debug("Retrieving user: " + userId);
         }
         try {
-            org.wso2.carbon.identity.mgt.bean.User userStoreUser = identityStore.getUser(userId);
+            org.wso2.carbon.identity.mgt.User userStoreUser = identityStore.getUser(userId);
 
             //TODO:We need to pass the scim claim dialect for this method
             List<Claim> claimList = userStoreUser.getClaims();
@@ -209,7 +209,7 @@ public class CarbonUserManager implements UserManager {
             //get the claims map from the new scim user object.
             Map<String, String> claims = SCIMClaimResolver.getClaimsMap(user);
             //get the claim list to be updated.
-            List<Claim> claimList = getUserModelFromClaims(claims).getClaims();
+            List<Claim> claimList = getUserBeanFromClaims(claims).getClaims();
             //TODO this is a temporary method. need to remove this once the claim management is completed.
             claimList = ClaimMapper.getInstance().convertMetaToWso2Dialect(claimList);
             //set user updated claim values
@@ -265,15 +265,15 @@ public class CarbonUserManager implements UserManager {
         Map<String, String> claimsMap = SCIMClaimResolver.getClaimsMap(group);
 
         //create group model as that is what need to send to identity store api.
-        GroupModel groupModel = getGroupModelFromClaims(claimsMap);
+        GroupBean groupBean = getGroupBeanFromClaims(claimsMap);
         //TODO this is a temporary method. need to remove this once the claim management is completed.
-        groupModel = ClaimMapper.getInstance().convertMetaToWso2Dialect(groupModel);
+        groupBean = ClaimMapper.getInstance().convertMetaToWso2Dialect(groupBean);
 
-        org.wso2.carbon.identity.mgt.bean.Group userStoreGroup = null;
+        org.wso2.carbon.identity.mgt.Group userStoreGroup = null;
         try {
             //TODO : get the domain of the user store and call that method instead of this method.
             //add the group.
-            userStoreGroup = identityStore.addGroup(groupModel);
+            userStoreGroup = identityStore.addGroup(groupBean);
 
         } catch (IdentityStoreException e) {
             throw new CharonException("Error in creating the group.", e);
@@ -316,7 +316,7 @@ public class CarbonUserManager implements UserManager {
             log.debug("Retrieving group: " + groupId);
         }
         try {
-            org.wso2.carbon.identity.mgt.bean.Group userStoreGroup = identityStore.getGroup(groupId);
+            org.wso2.carbon.identity.mgt.Group userStoreGroup = identityStore.getGroup(groupId);
 
             //TODO:We need to pass the scim claim dialect for this method
             List<Claim> claimList = userStoreGroup.getClaims();
@@ -388,7 +388,7 @@ public class CarbonUserManager implements UserManager {
             //get the claims map from the new scim user object.
             Map<String, String> claims = SCIMClaimResolver.getClaimsMap(newGroup);
             //get the claim list to be updated.
-            List<Claim> claimList = getGroupModelFromClaims(claims).getClaims();
+            List<Claim> claimList = getGroupBeanFromClaims(claims).getClaims();
 
             //TODO this is a temporary method. need to remove this once the claim management is completed.
             claimList = ClaimMapper.getInstance().convertMetaToWso2Dialect(claimList);
@@ -422,9 +422,9 @@ public class CarbonUserManager implements UserManager {
      * @param claims
      * @return
      */
-    private UserModel getUserModelFromClaims(Map<String, String> claims) {
+    private UserBean getUserBeanFromClaims(Map<String, String> claims) {
 
-        UserModel userModel = new UserModel();
+        UserBean userBean = new UserBean();
 
         List<Claim> claimList = new ArrayList<>();
 
@@ -449,9 +449,9 @@ public class CarbonUserManager implements UserManager {
             claimList.add(newClaim);
         }
         //se the claim to user model.
-        userModel.setClaims(claimList);
+        userBean.setClaims(claimList);
 
-        return userModel;
+        return userBean;
     }
 
     /*
@@ -459,9 +459,9 @@ public class CarbonUserManager implements UserManager {
      * @param claimsMap
      * @return
      */
-    private GroupModel getGroupModelFromClaims(Map<String, String> claims) {
+    private GroupBean getGroupBeanFromClaims(Map<String, String> claims) {
 
-        GroupModel groupModel = new GroupModel();
+        GroupBean groupBean = new GroupBean();
 
         List<Claim> claimList = new ArrayList<>();
 
@@ -483,9 +483,9 @@ public class CarbonUserManager implements UserManager {
             claimList.add(newClaim);
         }
         //set the claim to group model.
-        groupModel.setClaims(claimList);
+        groupBean.setClaims(claimList);
 
-        return groupModel;
+        return groupBean;
     }
 
     /*
@@ -495,7 +495,7 @@ public class CarbonUserManager implements UserManager {
      * @return
      * @throws CharonException
      */
-    private User getSCIMUser(org.wso2.carbon.identity.mgt.bean.User userStoreUser,
+    private User getSCIMUser(org.wso2.carbon.identity.mgt.User userStoreUser,
                              List<Claim> claimURIList) throws CharonException {
 
         //map to keep the claim, value  pair.
@@ -507,13 +507,13 @@ public class CarbonUserManager implements UserManager {
 
         //get the groups of the user separately as we are going to make a scim user with the groups in it.
         try {
-            List<org.wso2.carbon.identity.mgt.bean.Group> groups =
+            List<org.wso2.carbon.identity.mgt.Group> groups =
                     identityStore.getGroupsOfUser(userStoreUser.getUniqueUserId());
 
             //construct the SCIM Object from the attributes
             User scimUser = (User) SCIMClaimResolver.constructSCIMObjectFromAttributes(attributeMap, 1);
             //set each group of the user
-            for (org.wso2.carbon.identity.mgt.bean.Group group : groups) {
+            for (org.wso2.carbon.identity.mgt.Group group : groups) {
                 if (group != null) { // can be null for non SCIM groups
                     scimUser.setGroup(null, group.getUniqueGroupId(), null);
                 }
@@ -542,7 +542,7 @@ public class CarbonUserManager implements UserManager {
      * @return
      * @throws CharonException
      */
-    private Group getSCIMGroup(org.wso2.carbon.identity.mgt.bean.Group userStoreGroup,
+    private Group getSCIMGroup(org.wso2.carbon.identity.mgt.Group userStoreGroup,
                              List<Claim> claimURIList) throws CharonException {
 
         //map to keep the claim, value  pair.
@@ -557,7 +557,7 @@ public class CarbonUserManager implements UserManager {
             //construct the SCIM Object from the attributes
             Group scimGroup = (Group) SCIMClaimResolver.constructSCIMObjectFromAttributes(attributeMap, 2);
 
-            List<org.wso2.carbon.identity.mgt.bean.User> userList = userStoreGroup.getUsers();
+            List<org.wso2.carbon.identity.mgt.User> userList = userStoreGroup.getUsers();
 
             //we need a list of meta claims to get the userName of each member of the group
             List<MetaClaim> metaClaimList = new ArrayList<>();
@@ -569,7 +569,7 @@ public class CarbonUserManager implements UserManager {
             metaClaimList = ClaimMapper.getInstance().convertMetaToWso2Dialect(metaClaimList, null);
 
             //set members of the group
-            for (org.wso2.carbon.identity.mgt.bean.User user : userList) {
+            for (org.wso2.carbon.identity.mgt.User user : userList) {
                 //get the userName of each member.
                 List<Claim> claimValueList = identityStore.getUser(user.getUniqueUserId()).getClaims(metaClaimList);
                 scimGroup.setMember(user.getUniqueUserId(), claimValueList.get(0).getValue());
@@ -600,14 +600,14 @@ public class CarbonUserManager implements UserManager {
         try {
             //get the user list according to the start index and the count values provided.
             //TODO : Add the domain of the store.
-            List<org.wso2.carbon.identity.mgt.bean.User> userList = identityStore.listUsers(startIndex, count);
+            List<org.wso2.carbon.identity.mgt.User> userList = identityStore.listUsers(startIndex, count);
             List<Object> userObjectList = new ArrayList<>();
 
             //we need to set the first item of the array to be the number of users in the given domain.
             //TODO : Add this value form the identity Store.
             userObjectList.add(100);
             //convert identity store users to objects.
-            for (org.wso2.carbon.identity.mgt.bean.User user : userList) {
+            for (org.wso2.carbon.identity.mgt.User user : userList) {
                 //get the details of the users.
                 //TODO:We need to pass the scim claim dialect for this method
                 List<Claim> claimList = user.getClaims();
@@ -637,7 +637,7 @@ public class CarbonUserManager implements UserManager {
         try {
             //get the group list according to the start index and the count values provided.
             //TODO : Add the domain of the store.
-            List<org.wso2.carbon.identity.mgt.bean.Group> groupList = identityStore.listGroups(startIndex, count);
+            List<org.wso2.carbon.identity.mgt.Group> groupList = identityStore.listGroups(startIndex, count);
 
             List<Object> groupObjectList = new ArrayList<>();
 
@@ -645,7 +645,7 @@ public class CarbonUserManager implements UserManager {
             //TODO : Add this value form the identity Store.
             groupObjectList.add(100);
             //convert identity store users to objects.
-            for (org.wso2.carbon.identity.mgt.bean.Group group : groupList) {
+            for (org.wso2.carbon.identity.mgt.Group group : groupList) {
                 //get the details of the users.
                 //TODO:We need to pass the scim claim dialect for this method
                 List<Claim> claimList = group.getClaims();
@@ -710,7 +710,7 @@ public class CarbonUserManager implements UserManager {
             }
 
             try {
-                List<org.wso2.carbon.identity.mgt.bean.User> userList;
+                List<org.wso2.carbon.identity.mgt.User> userList;
                 // get the user list from the user core.
                 //TODO : This is a temp method.. need to get rid of this after claim mapping is completed.
                 filterClaim = ClaimMapper.getInstance().convertMetaToWso2Dialect(filterClaim);
@@ -722,7 +722,7 @@ public class CarbonUserManager implements UserManager {
                 //TODO : Add this value form the identity Store.
                 userObjectList.add(100);
                 //convert identity store users to objects.
-                for (org.wso2.carbon.identity.mgt.bean.User user : userList) {
+                for (org.wso2.carbon.identity.mgt.User user : userList) {
                     //get the details of the users.
                     //TODO:We need to pass the scim claim dialect for this method
                     List<Claim> claimList = user.getClaims();
@@ -786,7 +786,7 @@ public class CarbonUserManager implements UserManager {
 
             }
             try {
-                List<org.wso2.carbon.identity.mgt.bean.Group> groupList;
+                List<org.wso2.carbon.identity.mgt.Group> groupList;
                 // get the group list from the user core.
                 //TODO : This is a temp method.. need to get rid of this after claim mapping is completed.
                 filterClaim = ClaimMapper.getInstance().convertMetaToWso2Dialect(filterClaim);
@@ -800,7 +800,7 @@ public class CarbonUserManager implements UserManager {
                 //total results.
                 groupObjectList.add(100);
                 //convert identity store users to objects.
-                for (org.wso2.carbon.identity.mgt.bean.Group group : groupList) {
+                for (org.wso2.carbon.identity.mgt.Group group : groupList) {
                     //get the details of the groups.
                     //TODO:We need to pass the scim claim dialect for this method
                     List<Claim> claimList = group.getClaims();
