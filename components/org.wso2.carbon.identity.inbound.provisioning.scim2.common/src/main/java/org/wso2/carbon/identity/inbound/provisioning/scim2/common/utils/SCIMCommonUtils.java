@@ -21,11 +21,6 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils;
  */
 public class SCIMCommonUtils {
 
-    private static String scimGroupLocation = "http://localhost:8080/scim/v2/Groups";
-    private static String scimUserLocation = "http://localhost:8080/scim/v2/Users";
-    private static String scimServiceProviderConfig = "http://localhost:8080/scim/v2/ServiceProviderConfig";
-    private static String scimResourceType = "http://localhost:8080/scim/v2/ResourceType";
-
     public static void init() {
         //to initialize scim urls once.
 //        if (scimUserLocation == null || scimGroupLocation == null || scimServiceProviderConfig == null) {
@@ -41,35 +36,19 @@ public class SCIMCommonUtils {
     }
 
     public static String getSCIMUserURL() {
-        if (scimUserLocation != null) {
-            return scimUserLocation;
-        }
-        init();
-        return scimUserLocation;
+        return SCIMCommonConstants.USERS_LOCATION;
     }
 
     public static String getSCIMGroupURL() {
-        if (scimGroupLocation != null) {
-            return scimGroupLocation;
-        }
-        init();
-        return scimGroupLocation;
+        return SCIMCommonConstants.GROUPS_LOCATION;
     }
 
     public static String getSCIMServiceProviderConfigURL() {
-        if (scimServiceProviderConfig != null) {
-            return scimServiceProviderConfig;
-        }
-        init();
-        return scimServiceProviderConfig;
+        return SCIMCommonConstants.SERVICE_PROVIDER_CONFIG_LOCATION;
     }
 
     public static String getSCIMResourceTypeURL() {
-        if (scimResourceType != null) {
-            return scimResourceType;
-        }
-        init();
-        return scimResourceType;
+        return SCIMCommonConstants.RESOURCE_TYPE_LOCATION;
     }
 
 }

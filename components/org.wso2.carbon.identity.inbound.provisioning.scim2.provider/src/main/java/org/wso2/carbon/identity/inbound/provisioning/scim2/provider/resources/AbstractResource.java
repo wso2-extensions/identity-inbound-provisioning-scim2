@@ -110,6 +110,8 @@ public class AbstractResource implements Microservice {
         if (scimResponse.getResponseMessage() != null) {
             responseBuilder.entity(scimResponse.getResponseMessage());
         }
+        //set the response status
+        responseBuilder.status(scimResponse.getResponseStatus());
         return responseBuilder.build();
     }
 
