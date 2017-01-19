@@ -46,7 +46,7 @@ public class ClaimMapper {
     }
 
     public void init() {
-        Path path = Paths.get(System.getProperty(CARBON_HOME), "conf", "identity", "scim-claim-mapper.yml");
+        Path path = Paths.get(System.getProperty(CARBON_HOME), "conf", "identity", "scim-claim-mapper.yaml");
 
 
         if (Files.exists(path)) {
