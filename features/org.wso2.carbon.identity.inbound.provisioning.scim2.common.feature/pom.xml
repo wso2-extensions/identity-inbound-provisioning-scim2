@@ -75,9 +75,8 @@
                                 <resource>
                                     <directory>resources</directory>
                                     <includes>
-                                        <!--<include>provisioning-config.xml</include>
-                                        <include>scim-schema-extension.config</include>-->
-                                        <include>conf/scim-claim-mapper.yaml</include>
+                                        <include>provisioning-config.xml</include>
+                                        <include>scim-schema-extension.config</include>
                                         <include>p2.inf</include>
                                         <include>build.properties</include>
                                     </includes>
