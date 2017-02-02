@@ -78,7 +78,7 @@
             org.wso2.carbon.identity.inbound.provisioning.scim2.common.*,
         </export.package>
         <import.package>
-            org.wso2.carbon.identity.mgt.*
+            org.wso2.carbon.identity.mgt.*;version="0.1.1"
         </import.package>
         <dynamic.import.package>*</dynamic.import.package>
     </properties>
