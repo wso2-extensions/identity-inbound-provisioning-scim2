@@ -82,18 +82,8 @@
             <type>zip</type>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.security.userstore</groupId>
-            <artifactId>org.wso2.carbon.security.store.connector.jdbc.feature</artifactId>
-            <type>zip</type>
-        </dependency>
-        <dependency>
             <groupId>org.wso2.carbon.identity.mgt</groupId>
             <artifactId>org.wso2.carbon.identity.mgt.feature</artifactId>
-            <type>zip</type>
-        </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.security.caas</groupId>
-            <artifactId>org.wso2.carbon.security.caas.feature</artifactId>
             <type>zip</type>
         </dependency>
         <dependency>
@@ -200,17 +190,6 @@
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>org.wso2.carbon.security.userstore</groupId>
-                                    <artifactId>org.wso2.carbon.security.store.connector.jdbc.feature</artifactId>
-                                    <version>${carbon.security.userstore.jdbc.version}</version>
-                                    <type>zip</type>
-                                    <overWrite>true</overWrite>
-                                    <outputDirectory>
-                                        ${basedir}/target/resources/dbscripts
-                                    </outputDirectory>
-                                    <includes>**/*.sql</includes>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.wso2.carbon.security.userstore</groupId>
                                     <artifactId>org.wso2.carbon.identity.mgt.store.connector.jdbc.feature</artifactId>
                                     <version>${carbon.security.userstore.jdbc.version}</version>
                                     <type>zip</type>
@@ -277,14 +256,6 @@
                                 <feature>
                                     <id>org.wso2.carbon.identity.mgt.store.connector.jdbc.feature</id>
                                     <version>${carbon.security.userstore.jdbc.version}</version>
-                                </feature>
-                                <feature>
-                                    <id>org.wso2.carbon.security.store.connector.jdbc.feature</id>
-                                    <version>${carbon.security.userstore.jdbc.version}</version>
-                                </feature>
-                                <feature>
-                                    <id>org.wso2.carbon.security.caas.feature</id>
-                                    <version>${carbon.security.caas.version}</version>
                                 </feature>
                                 <feature>
                                     <id>org.wso2.carbon.identity.mgt.feature</id>
@@ -393,10 +364,6 @@
                                 </feature>
                                 <feature>
                                     <id>org.wso2.carbon.identity.mgt.store.connector.jdbc.feature</id>
-                                    <version>${carbon.security.userstore.jdbc.version}</version>
-                                </feature>
-                                <feature>
-                                    <id>org.wso2.carbon.security.store.connector.jdbc.feature</id>
                                     <version>${carbon.security.userstore.jdbc.version}</version>
                                 </feature>
                                 <feature>
