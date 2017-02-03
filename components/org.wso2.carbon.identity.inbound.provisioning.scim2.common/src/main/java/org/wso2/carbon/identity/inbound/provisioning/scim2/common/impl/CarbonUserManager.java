@@ -110,7 +110,9 @@ public class CarbonUserManager implements UserManager {
                 //now add the user's groups explicitly.
                 identityStore.updateGroupsOfUser(userStoreUser.getUniqueUserId(), groupIds);
             }
-            log.info("User: " + user.getUserName() + " is created through SCIM.");
+            if (log.isDebugEnabled()) {
+                log.debug("User: " + user.getUserName() + " is created through SCIM.");
+            }
             //get the user again from the user store and send it to client.
             return this.getUser(userStoreUser.getUniqueUserId(), requiredAttributes);
 
@@ -139,7 +141,9 @@ public class CarbonUserManager implements UserManager {
 
             User scimUser = getSCIMUser(userStoreUser, claimList);
 
-            log.info("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
+            if (log.isDebugEnabled()) {
+                log.debug("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
+            }
 
             return scimUser;
 
@@ -161,7 +165,9 @@ public class CarbonUserManager implements UserManager {
         try {
             //TODO : think of adding the domain.
             identityStore.deleteUser(userId);
-            log.info("User with the id : " + userId + " is deleted through SCIM.");
+            if (log.isDebugEnabled()) {
+                log.debug("User with the id : " + userId + " is deleted through SCIM.");
+            }
 
         } catch (UserNotFoundException e) {
             throw new NotFoundException("User with the user id : " + userId + " does not exists.");
@@ -215,7 +221,9 @@ public class CarbonUserManager implements UserManager {
             //set user updated claim values
             identityStore.updateUserClaims(user.getId(), claimList);
 
-            log.info("User: " + user.getUserName() + " updated through SCIM.");
+            if (log.isDebugEnabled()) {
+                log.debug("User: " + user.getUserName() + " updated through SCIM.");
+            }
             //get the updated user from the user core and sent it to client.
             return this.getUser(user.getId(), requiredAttributes);
 
@@ -299,7 +307,9 @@ public class CarbonUserManager implements UserManager {
         } catch (IdentityStoreException e) {
             throw new CharonException("Error in adding members to the group", e);
         }
-        log.info("Group: " + group.getDisplayName() + " is created through SCIM.");
+        if (log.isDebugEnabled()) {
+            log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
+        }
         //get the group again from the user store and send it to client.
         try {
             return this.getGroup(userStoreGroup.getUniqueGroupId(), requiredAttributes);
@@ -325,7 +335,9 @@ public class CarbonUserManager implements UserManager {
 
             Group scimGroup = getSCIMGroup(userStoreGroup, claimList);
 
-            log.info("Group: " + scimGroup.getDisplayName() + " is retrieved through SCIM.");
+            if (log.isDebugEnabled()) {
+                log.debug("Group: " + scimGroup.getDisplayName() + " is retrieved through SCIM.");
+            }
 
             return scimGroup;
 
@@ -347,7 +359,9 @@ public class CarbonUserManager implements UserManager {
             //TODO : think of adding the domain.
             identityStore.deleteGroup(groupId);
 
-            log.info("User with the id : " + groupId + " is deleted through SCIM.");
+            if (log.isDebugEnabled()) {
+                log.debug("User with the id : " + groupId + " is deleted through SCIM.");
+            }
 
         } catch (GroupNotFoundException e) {
             throw new NotFoundException("Group with the group id : " + groupId + " does not exists.");
@@ -398,7 +412,9 @@ public class CarbonUserManager implements UserManager {
             //update the member list separately.
             updateMemberList(oldGroup, newGroup);
 
-            log.info("User: " + newGroup.getDisplayName() + " updated through SCIM.");
+            if (log.isDebugEnabled()) {
+                log.debug("User: " + newGroup.getDisplayName() + " updated through SCIM.");
+            }
             //get the updated group from the user core and sent it to client.
             return this.getGroup(newGroup.getId(), requiredAttributes);
 
