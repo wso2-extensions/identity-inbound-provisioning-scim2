@@ -74,7 +74,7 @@ import javax.ws.rs.core.Response;
 public class MeResource extends AbstractResource {
 
     @GET
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
 
     @ApiOperation(
             value = "Return the authenticated user.",
@@ -118,7 +118,7 @@ public class MeResource extends AbstractResource {
             notes = "Returns HTTP 201 if the user is successfully created.")
 
     @POST
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @Consumes("application/scim+json")
 
     @ApiResponses(value = {
@@ -150,7 +150,7 @@ public class MeResource extends AbstractResource {
     }
 
     @DELETE
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @ApiOperation(
             value = "Delete the authenticated user.",
             notes = "Returns HTTP 204 if the user is successfully deleted.")
@@ -190,7 +190,7 @@ public class MeResource extends AbstractResource {
 
 
     @PUT
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @Consumes("application/scim+json")
     @ApiOperation(
             value = "Return the updated user",

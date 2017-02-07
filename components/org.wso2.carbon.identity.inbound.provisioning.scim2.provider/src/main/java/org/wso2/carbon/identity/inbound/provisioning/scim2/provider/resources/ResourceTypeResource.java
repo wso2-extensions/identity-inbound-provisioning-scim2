@@ -64,7 +64,7 @@ import javax.ws.rs.core.Response;
 public class ResourceTypeResource extends AbstractResource {
 
     @GET
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
 
     @ApiOperation(
             value = "Return the ResourceType schema.",

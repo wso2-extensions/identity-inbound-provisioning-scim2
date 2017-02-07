@@ -63,7 +63,7 @@ import javax.ws.rs.core.Response;
 public class ServiceProviderConfigResource extends AbstractResource {
 
     @GET
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @ApiOperation(
             value = "Return the ServiceProviderConfig schema.",
             notes = "Returns HTTP 200 if the schema is found.")
