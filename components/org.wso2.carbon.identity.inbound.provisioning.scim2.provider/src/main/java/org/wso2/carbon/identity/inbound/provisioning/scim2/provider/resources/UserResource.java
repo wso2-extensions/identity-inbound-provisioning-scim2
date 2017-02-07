@@ -75,7 +75,7 @@ public class UserResource extends AbstractResource {
 
     @GET
     @Path("/{id}")
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
 
     @ApiOperation(
             value = "Return the user with the given id",
@@ -116,7 +116,7 @@ public class UserResource extends AbstractResource {
             notes = "Returns HTTP 201 if the user is successfully created.")
 
     @POST
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @Consumes("application/scim+json")
 
     @ApiResponses(value = {
@@ -149,7 +149,7 @@ public class UserResource extends AbstractResource {
 
     @DELETE
     @Path("/{id}")
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @ApiOperation(
             value = "Delete the user with the given id",
             notes = "Returns HTTP 204 if the user is successfully deleted.")
@@ -180,7 +180,7 @@ public class UserResource extends AbstractResource {
     }
 
     @GET
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @ApiOperation(
             value = "Return users according to the filter, sort and pagination parameters",
             notes = "Returns HTTP 404 if the users are not found.")
@@ -224,7 +224,7 @@ public class UserResource extends AbstractResource {
 
     @POST
     @Path("/.search")
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @Consumes("application/scim+json")
 
     @ApiOperation(
@@ -256,7 +256,7 @@ public class UserResource extends AbstractResource {
 
     @PUT
     @Path("{id}")
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @Consumes("application/scim+json")
     @ApiOperation(
             value = "Return the updated user",

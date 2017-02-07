@@ -75,7 +75,7 @@ public class GroupResource extends AbstractResource {
 
     @GET
     @Path("/{id}")
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @ApiOperation(
             value = "Return the group with the given id",
             notes = "Returns HTTP 200 if the group is found.")
@@ -115,7 +115,7 @@ public class GroupResource extends AbstractResource {
             notes = "Returns HTTP 201 if the group is successfully created.")
 
     @POST
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @Consumes("application/scim+json")
     @ApiResponses(value = {
             @ApiResponse(code = 201, message = "Valid group is created"),
@@ -147,7 +147,7 @@ public class GroupResource extends AbstractResource {
 
     @DELETE
     @Path("/{id}")
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @ApiOperation(
             value = "Delete the group with the given id",
             notes = "Returns HTTP 204 if the group is successfully deleted.")
@@ -179,7 +179,7 @@ public class GroupResource extends AbstractResource {
 
     @PUT
     @Path("{id}")
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @Consumes("application/scim+json")
 
     @ApiOperation(
@@ -217,7 +217,7 @@ public class GroupResource extends AbstractResource {
 
     @POST
     @Path("/.search")
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
     @Consumes("application/scim+json")
 
     @ApiOperation(
@@ -248,7 +248,7 @@ public class GroupResource extends AbstractResource {
     }
 
     @GET
-    @Produces({"application/json", "application/scim+json"})
+    @Produces({"application/scim+json"})
 
     @ApiOperation(
             value = "Return groups according to the filter, sort and pagination parameters",
