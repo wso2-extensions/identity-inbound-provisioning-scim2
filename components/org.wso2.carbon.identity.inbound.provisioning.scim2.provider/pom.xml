@@ -42,6 +42,10 @@
             <artifactId>org.wso2.charon.core.v2</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.msf4j</groupId>
+            <artifactId>msf4j-swagger</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
             <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.common</artifactId>
             <exclusions>
