@@ -620,8 +620,7 @@ public class CarbonUserManager implements UserManager {
             List<Object> userObjectList = new ArrayList<>();
 
             //we need to set the first item of the array to be the number of users in the given domain.
-            //TODO : Add this value form the identity Store.
-            userObjectList.add(100);
+            userObjectList.add(userList.size());
             //convert identity store users to objects.
             for (org.wso2.carbon.identity.mgt.User user : userList) {
                 //get the details of the users.
@@ -657,9 +656,8 @@ public class CarbonUserManager implements UserManager {
 
             List<Object> groupObjectList = new ArrayList<>();
 
-            //we need to set the first item of the array to be the number of users in the given domain.
-            //TODO : Add this value form the identity Store.
-            groupObjectList.add(100);
+            //we need to set the first item of the array to be the number of groups in the given domain.
+            groupObjectList.add(groupList.size());
             //convert identity store users to objects.
             for (org.wso2.carbon.identity.mgt.Group group : groupList) {
                 //get the details of the users.
@@ -735,8 +733,7 @@ public class CarbonUserManager implements UserManager {
 
                 List<Object> userObjectList = new ArrayList<>();
                 //we need to set the first item of the array to be the number of users in the given domain.
-                //TODO : Add this value form the identity Store.
-                userObjectList.add(100);
+                userObjectList.add(userList.size());
                 //convert identity store users to objects.
                 for (org.wso2.carbon.identity.mgt.User user : userList) {
                     //get the details of the users.
@@ -811,10 +808,9 @@ public class CarbonUserManager implements UserManager {
                 groupList = identityStore.listGroups(filterClaim, startIndex, count);
 
                 List<Object> groupObjectList = new ArrayList<>();
-                //we need to set the first item of the array to be the number of users in the given domain.
-                //TODO : Add this value from the identity Store.
+                //we need to set the first item of the array to be the number of groups in the given domain.
                 //total results.
-                groupObjectList.add(100);
+                groupObjectList.add(groupList.size());
                 //convert identity store users to objects.
                 for (org.wso2.carbon.identity.mgt.Group group : groupList) {
                     //get the details of the groups.
