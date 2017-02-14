@@ -28,11 +28,11 @@ import io.swagger.annotations.SwaggerDefinition;
 import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
-import org.wso2.charon.core.v2.exceptions.CharonException;
-import org.wso2.charon.core.v2.exceptions.FormatNotSupportedException;
-import org.wso2.charon.core.v2.extensions.UserManager;
-import org.wso2.charon.core.v2.protocol.SCIMResponse;
-import org.wso2.charon.core.v2.protocol.endpoints.MeResourceManager;
+import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
+import org.wso2.charon3.core.extensions.UserManager;
+import org.wso2.charon3.core.protocol.SCIMResponse;
+import org.wso2.charon3.core.protocol.endpoints.MeResourceManager;
 import org.wso2.msf4j.Microservice;
 import org.wso2.msf4j.Request;
 

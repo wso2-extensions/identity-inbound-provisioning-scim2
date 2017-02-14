@@ -41,7 +41,7 @@
         <!--</dependency>-->
         <dependency>
             <groupId>org.wso2.charon</groupId>
-            <artifactId>org.wso2.charon.core.v2</artifactId>
+            <artifactId>org.wso2.charon3.core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.json</groupId>
@@ -116,8 +116,8 @@
                                     <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
                                 </bundle>
                                 <bundle>
-                                    <symbolicName>org.wso2.charon.core.v2</symbolicName>
-                                    <version>3.0.0-SNAPSHOT</version>
+                                    <symbolicName>org.wso2.charon3.core</symbolicName>
+                                    <version>${charon.core.version}</version>
                                 </bundle>
                                 <bundle>
                                     <symbolicName>json</symbolicName>
