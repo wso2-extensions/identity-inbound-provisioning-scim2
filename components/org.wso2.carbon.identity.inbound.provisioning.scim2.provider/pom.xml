@@ -39,7 +39,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.charon</groupId>
-            <artifactId>org.wso2.charon.core.v2</artifactId>
+            <artifactId>org.wso2.charon3.core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
@@ -95,7 +95,7 @@
             org.wso2.carbon.identity.inbound.provisioning.scim2.provider.*;version="${project.version}"
         </export.package>
         <import.package>
-            org.wso2.charon.core.v2.*,
+            org.wso2.charon3.core.*,
             org.osgi.framework.*;version="${osgi.framework.import.version.range}",
             org.wso2.msf4j.*,
             javax.ws.rs.*,

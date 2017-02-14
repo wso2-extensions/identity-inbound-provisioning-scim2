@@ -1,7 +1,7 @@
 package org.wso2.carbon.identity.inbound.provisioning.scim2.provider.mappers;
 
 import org.osgi.service.component.annotations.Component;
-import org.wso2.charon.core.v2.exceptions.NotFoundException;
+import org.wso2.charon3.core.exceptions.NotFoundException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 

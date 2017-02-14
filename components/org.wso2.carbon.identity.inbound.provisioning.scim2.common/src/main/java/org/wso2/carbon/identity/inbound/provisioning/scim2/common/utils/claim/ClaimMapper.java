@@ -7,7 +7,7 @@ import org.wso2.carbon.identity.mgt.bean.UserBean;
 import org.wso2.carbon.identity.mgt.claim.Claim;
 import org.wso2.carbon.identity.mgt.claim.MetaClaim;
 import org.wso2.carbon.identity.mgt.impl.util.IdentityMgtConstants;
-import org.wso2.charon.core.v2.schema.SCIMConstants;
+import org.wso2.charon3.core.schema.SCIMConstants;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.introspector.BeanAccess;
 

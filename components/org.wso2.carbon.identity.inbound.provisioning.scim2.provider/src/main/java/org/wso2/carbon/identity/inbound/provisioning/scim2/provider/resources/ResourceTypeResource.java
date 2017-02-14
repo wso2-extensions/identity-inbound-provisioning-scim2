@@ -25,10 +25,10 @@ import io.swagger.annotations.Info;
 import io.swagger.annotations.License;
 import io.swagger.annotations.SwaggerDefinition;
 import org.osgi.service.component.annotations.Component;
-import org.wso2.charon.core.v2.exceptions.CharonException;
-import org.wso2.charon.core.v2.exceptions.FormatNotSupportedException;
-import org.wso2.charon.core.v2.protocol.SCIMResponse;
-import org.wso2.charon.core.v2.protocol.endpoints.ResourceTypeResourceManager;
+import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
+import org.wso2.charon3.core.protocol.SCIMResponse;
+import org.wso2.charon3.core.protocol.endpoints.ResourceTypeResourceManager;
 import org.wso2.msf4j.Microservice;
 
 
