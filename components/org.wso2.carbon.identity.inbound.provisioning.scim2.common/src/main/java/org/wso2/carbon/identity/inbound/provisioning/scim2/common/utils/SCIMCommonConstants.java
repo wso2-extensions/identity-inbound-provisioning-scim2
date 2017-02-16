@@ -63,5 +63,8 @@ public class SCIMCommonConstants {
     public static final String AUTHENTICATION_SCHEMES_TYPE_2 = "httpbasic";
     public static final Boolean AUTHENTICATION_SCHEMES_PRIMARY_2 = false;
 
+    //todo: domain separator need to be defined in common place
+    public static final String DOMAIN_SEPARATOR = "/";
+
 }
 
