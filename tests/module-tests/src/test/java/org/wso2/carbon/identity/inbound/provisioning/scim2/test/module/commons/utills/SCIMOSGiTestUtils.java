@@ -45,6 +45,10 @@ public class SCIMOSGiTestUtils {
                 .groupId("org.ops4j.pax.logging")
                 .artifactId("pax-logging-log4j2")
                 .versionAsInProject());
+        optionList.add(mavenBundle()
+                .groupId("org.ops4j.pax.logging")
+                .artifactId("pax-logging-api")
+                .versionAsInProject());
         optionList.add(mavenBundle().
                 artifactId("testng").
                 groupId("org.testng").versionAsInProject());
@@ -160,7 +164,7 @@ public class SCIMOSGiTestUtils {
                 .versionAsInProject());
         optionList.add(mavenBundle().
                 groupId("org.wso2.charon").
-                artifactId("org.wso2.charon.core.v2")
+                artifactId("org.wso2.charon3.core")
                 .versionAsInProject());
         optionList.add(mavenBundle().
                 groupId("io.swagger").
