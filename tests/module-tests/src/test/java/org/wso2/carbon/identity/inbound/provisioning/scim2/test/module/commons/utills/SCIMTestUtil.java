@@ -25,7 +25,7 @@ import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wso2.charon.core.v2.schema.SCIMConstants;
+import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;

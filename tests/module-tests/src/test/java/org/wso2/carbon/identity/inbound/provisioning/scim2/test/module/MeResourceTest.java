@@ -36,7 +36,7 @@ import org.wso2.carbon.identity.inbound.provisioning.scim2.test.module.commons.u
 import org.wso2.carbon.identity.inbound.provisioning.scim2.test.module.commons.utills.SCIMTestConstant;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.test.module.commons.utills.SCIMTestUtil;
 import org.wso2.carbon.kernel.utils.CarbonServerInfo;
-import org.wso2.charon.core.v2.schema.SCIMConstants;
+import org.wso2.charon3.core.schema.SCIMConstants;
 import java.net.HttpURLConnection;
 import java.nio.file.Paths;
 import java.util.List;
