@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMClaimResolver;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMCommonConstants;
+import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.claim.ClaimMapper;
 import org.wso2.carbon.identity.mgt.IdentityStore;
 import org.wso2.carbon.identity.mgt.bean.GroupBean;
@@ -76,6 +77,10 @@ public class CarbonUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug("Creating user: " + user.toString());
             }
+
+            String userStoreDomain = SCIMCommonUtils.extractDomainFromName(user.getUserName(), identityStore);
+            user.setUserName(SCIMCommonUtils.removeDomainFromName(user.getUserName()));
+
             //get the groups attribute as we are going to explicitly store the info of the user's groups
             MultiValuedAttribute groupsAttribute = (MultiValuedAttribute) (
                     user.getAttribute(SCIMConstants.UserSchemaConstants.GROUPS));
@@ -87,8 +92,11 @@ public class CarbonUserManager implements UserManager {
             //TODO this is a temporary method. need to remove this once the claim management is completed.
             userBean = ClaimMapper.getInstance().convertMetaToWso2Dialect(userBean);
 
-            //TODO : get the domain of the user store and call that method instead of this method.
-            //add the user.
+            if (identityStore.isUserExist(userBean.getClaims(), userStoreDomain)) {
+                throw new ConflictException("User with the name: " + user.getUserName() +
+                        " already exists in the system.");
+            }
+
             org.wso2.carbon.identity.mgt.User userStoreUser = identityStore.addUser(userBean);
 
             // list to store the group ids which will be used to create the group attribute in scim user.
