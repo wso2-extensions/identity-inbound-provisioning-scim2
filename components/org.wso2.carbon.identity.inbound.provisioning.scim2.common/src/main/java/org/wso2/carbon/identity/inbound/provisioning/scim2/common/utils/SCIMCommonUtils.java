@@ -57,10 +57,11 @@ public class SCIMCommonUtils {
     }
 
     /**
-     * Extract user store domain from domain qualified username. If username doesn't have domain return primary domain
-     * @param nameWithDomain
-     * @return
-     * @throws IdentityStoreException
+     * Extract user store domain from domain qualified name. If name doesn't have domain return primary domain
+     * @param nameWithDomain domain qualified name
+     * @param identityStore user store api
+     * @return domain append to name
+     * @throws IdentityStoreException if identityStore cannot retrieve primary domain
      */
     public static String extractDomainFromName(String nameWithDomain, IdentityStore identityStore) throws
             IdentityStoreException {
@@ -74,9 +75,9 @@ public class SCIMCommonUtils {
     }
 
     /**
-     * Remove user store domain from username. If user store domain does not exist, do nothing.
-     * @param name
-     * @return
+     * Remove user store domain from name. If user store domain does not exist, do nothing.
+     * @param name name of the entity
+     * @return domain removed name
      */
     public static String removeDomainFromName(String name) {
         int index;

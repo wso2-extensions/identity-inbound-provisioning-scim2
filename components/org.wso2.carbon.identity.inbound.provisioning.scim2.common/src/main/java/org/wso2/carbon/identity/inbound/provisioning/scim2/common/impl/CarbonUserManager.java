@@ -97,7 +97,7 @@ public class CarbonUserManager implements UserManager {
                         " already exists in the system.");
             }
 
-            org.wso2.carbon.identity.mgt.User userStoreUser = identityStore.addUser(userBean);
+            org.wso2.carbon.identity.mgt.User userStoreUser = identityStore.addUser(userBean, userStoreDomain);
 
             // list to store the group ids which will be used to create the group attribute in scim user.
             List<String> groupIds = new ArrayList<>();
@@ -125,10 +125,15 @@ public class CarbonUserManager implements UserManager {
             return this.getUser(userStoreUser.getUniqueUserId(), requiredAttributes);
 
         } catch (IdentityStoreException e) {
-            String errMsg = "User : " + user.getUserName() + " already exists.";
+            String errMsg = "Error occurred while adding user:" + user.getUserName() + "to user store";
+            //Charon wrap exception to SCIMResponse and does not log exceptions
+            log.error(errMsg, e);
             throw new ConflictException(errMsg);
         } catch (NotFoundException e) {
-            throw new CharonException("Error in retrieving the user from the user store.", e);
+            String errMsg = "Error in retrieving newly added user:" + user.getUserName() + " from user store";
+            //Charon wrap exception to SCIMResponse and does not log exceptions
+            log.error(errMsg, e);
+            throw new CharonException(errMsg, e);
         }
     }
 
@@ -277,52 +282,56 @@ public class CarbonUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Creating group: " + group.toString());
         }
-        //get the claim, value pair from the group object.
-        Map<String, String> claimsMap = SCIMClaimResolver.getClaimsMap(group);
-
-        //create group model as that is what need to send to identity store api.
-        GroupBean groupBean = getGroupBeanFromClaims(claimsMap);
-        //TODO this is a temporary method. need to remove this once the claim management is completed.
-        groupBean = ClaimMapper.getInstance().convertMetaToWso2Dialect(groupBean);
-
-        org.wso2.carbon.identity.mgt.Group userStoreGroup = null;
         try {
-            //TODO : get the domain of the user store and call that method instead of this method.
-            //add the group.
-            userStoreGroup = identityStore.addGroup(groupBean);
+            String userStoreDomain = SCIMCommonUtils.extractDomainFromName(group.getDisplayName(), identityStore);
+            group.setDisplayName(SCIMCommonUtils.removeDomainFromName(group.getDisplayName()));
+            //get the claim, value pair from the group object.
+            Map<String, String> claimsMap = SCIMClaimResolver.getClaimsMap(group);
 
-        } catch (IdentityStoreException e) {
-            throw new CharonException("Error in creating the group.", e);
-        }
-        // list to store the user ids which will be used to create the group's members.
-        List<String> userIds = new ArrayList<>();
+            //create group model as that is what need to send to identity store api.
+            GroupBean groupBean = getGroupBeanFromClaims(claimsMap);
+            //TODO this is a temporary method. need to remove this once the claim management is completed.
+            groupBean = ClaimMapper.getInstance().convertMetaToWso2Dialect(groupBean);
 
-        MultiValuedAttribute membersAttribute = (MultiValuedAttribute)
-                group.getAttribute(SCIMConstants.GroupSchemaConstants.MEMBERS);
-        //add the member ids to userIds list
-        if (membersAttribute != null) {
-            List<Attribute> membersValues = membersAttribute.getAttributeValues();
-            for (Attribute attribute : membersValues) {
-                ComplexAttribute attributeValue = (ComplexAttribute) attribute;
-                SimpleAttribute valueAttribute = (SimpleAttribute)
-                        attributeValue.getSubAttribute(SCIMConstants.CommonSchemaConstants.VALUE);
-                userIds.add((String) valueAttribute.getValue());
+            org.wso2.carbon.identity.mgt.Group userStoreGroup = null;
+
+            if (identityStore.isGroupExist(groupBean.getClaims(), userStoreDomain)) {
+                throw new ConflictException("Group with the name: " + group.getDisplayName() +
+                        " already exists in the system.");
             }
-        }
-        //add the members to the created group.
-        try {
+
+            userStoreGroup = identityStore.addGroup(groupBean, userStoreDomain);
+
+            // list to store the user ids which will be used to create the group's members.
+            List<String> userIds = new ArrayList<>();
+
+            MultiValuedAttribute membersAttribute = (MultiValuedAttribute)
+                    group.getAttribute(SCIMConstants.GroupSchemaConstants.MEMBERS);
+            //add the member ids to userIds list
+            if (membersAttribute != null) {
+                List<Attribute> membersValues = membersAttribute.getAttributeValues();
+                for (Attribute attribute : membersValues) {
+                    ComplexAttribute attributeValue = (ComplexAttribute) attribute;
+                    SimpleAttribute valueAttribute = (SimpleAttribute)
+                            attributeValue.getSubAttribute(SCIMConstants.CommonSchemaConstants.VALUE);
+                    userIds.add((String) valueAttribute.getValue());
+                }
+            }
+            //add the members to the created group.
             identityStore.updateUsersOfGroup(userStoreGroup.getUniqueGroupId(), userIds);
-        } catch (IdentityStoreException e) {
-            throw new CharonException("Error in adding members to the group", e);
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
-        }
-        //get the group again from the user store and send it to client.
-        try {
+
             return this.getGroup(userStoreGroup.getUniqueGroupId(), requiredAttributes);
+
+        } catch (IdentityStoreException e) {
+            String errMsg = "Error occurred while adding group:" + group.getDisplayName() + "to user store";
+            //Charon wrap exception to SCIMResponse and does not log exceptions
+            log.error(errMsg, e);
+            throw new ConflictException(errMsg);
         } catch (NotFoundException e) {
-            throw new CharonException("Error in retrieving the group from the user store.", e);
+            String errMsg = "Error in retrieving newly added group:" + group.getDisplayName() + " from user store";
+            //Charon wrap exception to SCIMResponse and does not log exceptions
+            log.error(errMsg, e);
+            throw new CharonException(errMsg, e);
         }
     }
 
