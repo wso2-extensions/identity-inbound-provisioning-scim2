@@ -48,6 +48,8 @@ import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.PasswordCallback;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -80,6 +82,8 @@ public class CarbonUserManager implements UserManager {
 
             String userStoreDomain = SCIMCommonUtils.extractDomainFromName(user.getUserName(), identityStore);
             user.setUserName(SCIMCommonUtils.removeDomainFromName(user.getUserName()));
+            char[] password = ((SimpleAttribute) (user.getAttribute(SCIMConstants.UserSchemaConstants.PASSWORD))).
+                    getStringValue().toCharArray();
 
             //get the groups attribute as we are going to explicitly store the info of the user's groups
             MultiValuedAttribute groupsAttribute = (MultiValuedAttribute) (
@@ -97,6 +101,11 @@ public class CarbonUserManager implements UserManager {
                         " already exists in the system.");
             }*/
 
+            PasswordCallback passwordCallback = new PasswordCallback(SCIMConstants.UserSchemaConstants.PASSWORD, false);
+            passwordCallback.setPassword(password);
+            List<Callback> callbackList = new ArrayList<>();
+            callbackList.add(passwordCallback);
+            userBean.setCredentials(callbackList);
             org.wso2.carbon.identity.mgt.User userStoreUser = identityStore.addUser(userBean, userStoreDomain);
 
             // list to store the group ids which will be used to create the group attribute in scim user.
