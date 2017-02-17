@@ -92,10 +92,10 @@ public class CarbonUserManager implements UserManager {
             //TODO this is a temporary method. need to remove this once the claim management is completed.
             userBean = ClaimMapper.getInstance().convertMetaToWso2Dialect(userBean);
 
-            if (identityStore.isUserExist(userBean.getClaims(), userStoreDomain)) {
+/*            if (identityStore.isUserExist(userBean.getClaims(), userStoreDomain)) {
                 throw new ConflictException("User with the name: " + user.getUserName() +
                         " already exists in the system.");
-            }
+            }*/
 
             org.wso2.carbon.identity.mgt.User userStoreUser = identityStore.addUser(userBean, userStoreDomain);
 
@@ -295,10 +295,10 @@ public class CarbonUserManager implements UserManager {
 
             org.wso2.carbon.identity.mgt.Group userStoreGroup = null;
 
-            if (identityStore.isGroupExist(groupBean.getClaims(), userStoreDomain)) {
+/*            if (identityStore.isGroupExist(groupBean.getClaims(), userStoreDomain)) {
                 throw new ConflictException("Group with the name: " + group.getDisplayName() +
                         " already exists in the system.");
-            }
+            }*/
 
             userStoreGroup = identityStore.addGroup(groupBean, userStoreDomain);
 

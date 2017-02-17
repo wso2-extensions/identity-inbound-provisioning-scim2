@@ -500,7 +500,7 @@
         <carbon.jndi.version>1.0.0</carbon.jndi.version>
         <carbon.datasources.version>1.0.0</carbon.datasources.version>
         <carbon.security.userstore.jdbc.version>0.1.1</carbon.security.userstore.jdbc.version>
-        <org.wso2.carbon.identity.mgt.version>0.1.16</org.wso2.carbon.identity.mgt.version>
+        <org.wso2.carbon.identity.mgt.version>0.1.1</org.wso2.carbon.identity.mgt.version>
         <com.h2database.h2.version>1.4.191</com.h2database.h2.version>
         <carbon.security.caas.version>1.0.0-m2</carbon.security.caas.version>
 
