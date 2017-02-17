@@ -53,6 +53,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.PasswordCallback;
 
 /**
  * This class is to deal with the carbon user core API. This uses identityStore defined API for
@@ -96,9 +98,20 @@ public class CarbonUserManager implements UserManager {
                 throw new ConflictException("User with the name: " + user.getUserName() +
                         " already exists in the system.");
             }*/
+            Attribute passwordAttribute = user.getAttribute(SCIMConstants.UserSchemaConstants.PASSWORD);
+            if (passwordAttribute != null) {
 
+                char[] password = ((SimpleAttribute) (user.getAttribute(SCIMConstants.UserSchemaConstants.PASSWORD))).
+                        getStringValue().toCharArray();
+
+                PasswordCallback passwordCallback = new PasswordCallback(SCIMConstants.UserSchemaConstants.PASSWORD,
+                        false);
+                passwordCallback.setPassword(password);
+                List<Callback> callbackList = new ArrayList<>();
+                callbackList.add(passwordCallback);
+                userBean.setCredentials(callbackList);
+            }
             org.wso2.carbon.identity.mgt.User userStoreUser = identityStore.addUser(userBean, userStoreDomain);
-
             // list to store the group ids which will be used to create the group attribute in scim user.
             List<String> groupIds = new ArrayList<>();
 
