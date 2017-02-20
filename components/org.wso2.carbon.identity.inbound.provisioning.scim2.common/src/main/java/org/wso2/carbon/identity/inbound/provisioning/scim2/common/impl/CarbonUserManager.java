@@ -189,7 +189,8 @@ public class CarbonUserManager implements UserManager {
             log.debug("Deleting user: " + userId);
         }
         try {
-            //TODO : think of adding the domain.
+            //todo: need to fix deleteUser method in IdentityStore properly and remove getUser method
+            identityStore.getUser(userId);
             identityStore.deleteUser(userId);
             if (log.isDebugEnabled()) {
                 log.debug("User with the id : " + userId + " is deleted through SCIM.");
@@ -386,7 +387,8 @@ public class CarbonUserManager implements UserManager {
             log.debug("Deleting Group: " + groupId);
         }
         try {
-            //TODO : think of adding the domain.
+            //todo: need to fix deleteGroup method in IdentityStore properly and remove getGroup method
+            identityStore.getGroup(groupId);
             identityStore.deleteGroup(groupId);
 
             if (log.isDebugEnabled()) {
