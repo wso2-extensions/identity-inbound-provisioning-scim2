@@ -26,7 +26,7 @@
     <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.parent</artifactId>
     <packaging>pom</packaging>
     <modelVersion>4.0.0</modelVersion>
-    <version>2.0.0</version>
+    <version>2.0.1-SNAPSHOT</version>
     <name>WSO2 Carbon - SCIM Provisioning Module</name>
     <description>
 
@@ -38,7 +38,7 @@
         <developerConnection>scm:git:https://github.com/wso2-extensions/identity-inbound-provisioning-scim2.git
         </developerConnection>
         <connection>scm:git:https://github.com/wso2-extensions/identity-inbound-provisioning-scim2.git</connection>
-      <tag>v2.0.0</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <dependencyManagement>
@@ -492,7 +492,7 @@
     </modules>
 
     <properties>
-        <org.wso2.carbon.identity.inbound.provisioning.scim2.version>2.0.0</org.wso2.carbon.identity.inbound.provisioning.scim2.version>
+        <org.wso2.carbon.identity.inbound.provisioning.scim2.version>2.0.1-SNAPSHOT</org.wso2.carbon.identity.inbound.provisioning.scim2.version>
 
         <org.osgi.core.version>6.0.0</org.osgi.core.version>
         <carbon.kernel.version>5.1.0</carbon.kernel.version>
