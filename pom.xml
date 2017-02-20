@@ -109,6 +109,11 @@
                 <version>${carbon.messaging.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon.identity.commons</groupId>
+                <artifactId>org.wso2.carbon.identity.commons</artifactId>
+                <version>${org.wso2.carbon.identity.commons.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.security.userstore</groupId>
                 <artifactId>org.wso2.carbon.identity.mgt.store.connector.jdbc</artifactId>
                 <version>${carbon.security.userstore.jdbc.version}</version>
@@ -190,26 +195,32 @@
                 <type>zip</type>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon.identity.commons</groupId>
+                <artifactId>org.wso2.carbon.identity.common.feature</artifactId>
+                <version>${org.wso2.carbon.identity.commons.version}</version>
+                <type>zip</type>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
                 <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.common</artifactId>
-                <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
                 <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.provider</artifactId>
-                <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
                 <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.common.feature</artifactId>
-                <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
+                <version>${project.version}</version>
                 <type>zip</type>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
                 <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.provider.feature</artifactId>
-                <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
+                <version>${project.version}</version>
                 <type>zip</type>
             </dependency>
             <dependency>
@@ -492,15 +503,15 @@
     </modules>
 
     <properties>
-        <org.wso2.carbon.identity.inbound.provisioning.scim2.version>2.0.0-SNAPSHOT</org.wso2.carbon.identity.inbound.provisioning.scim2.version>
-
         <org.osgi.core.version>6.0.0</org.osgi.core.version>
         <carbon.kernel.version>5.1.0</carbon.kernel.version>
         <org.wso2.carbon.caching.version>1.0.0</org.wso2.carbon.caching.version>
         <carbon.jndi.version>1.0.0</carbon.jndi.version>
         <carbon.datasources.version>1.0.0</carbon.datasources.version>
         <carbon.security.userstore.jdbc.version>0.1.1</carbon.security.userstore.jdbc.version>
-        <org.wso2.carbon.identity.mgt.version>0.1.1</org.wso2.carbon.identity.mgt.version>
+        <org.wso2.carbon.identity.mgt.version>0.1.16</org.wso2.carbon.identity.mgt.version>
+        <org.wso2.carbon.identity.commons.version>0.1.17</org.wso2.carbon.identity.commons.version>
+        <org.snakeyaml.version>1.16.0.wso2v1</org.snakeyaml.version>
         <com.h2database.h2.version>1.4.191</com.h2database.h2.version>
         <carbon.security.caas.version>1.0.0-m2</carbon.security.caas.version>
 
@@ -547,7 +558,6 @@
         <xalan.version>2.7.1.wso2v1</xalan.version>
         <org.jacoco.ant.version>0.7.5.201505241946</org.jacoco.ant.version>
         <maven.paxexam.plugin.version>1.2.4</maven.paxexam.plugin.version>
-
 
     </properties>
 

@@ -87,6 +87,11 @@
             <type>zip</type>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.commons</groupId>
+            <artifactId>org.wso2.carbon.identity.common.feature</artifactId>
+            <type>zip</type>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
             <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.common.feature</artifactId>
             <type>zip</type>
@@ -262,12 +267,16 @@
                                     <version>${org.wso2.carbon.identity.mgt.version}</version>
                                 </feature>
                                 <feature>
+                                    <id>org.wso2.carbon.identity.common.feature</id>
+                                    <version>${org.wso2.carbon.identity.commons.version}</version>
+                                </feature>
+                                <feature>
                                     <id>org.wso2.carbon.identity.inbound.provisioning.scim2.common.feature</id>
-                                    <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
+                                    <version>${project.version}</version>
                                 </feature>
                                 <feature>
                                     <id>org.wso2.carbon.identity.inbound.provisioning.scim2.provider.feature</id>
-                                    <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
+                                    <version>${project.version}</version>
                                 </feature>
                                 <feature>
                                     <id>org.wso2.carbon.transport.http.netty.feature</id>
@@ -370,6 +379,10 @@
                                     <id>org.wso2.carbon.identity.mgt.feature</id>
                                     <version>${org.wso2.carbon.identity.mgt.version}</version>
                                 </feature>
+                                <feature>
+                                    <id>org.wso2.carbon.identity.common.feature</id>
+                                    <version>${org.wso2.carbon.identity.commons.version}</version>
+                                </feature>
 
                                 <feature>
                                     <id>org.wso2.carbon.messaging.feature</id>
@@ -393,11 +406,11 @@
                                 </feature>
                                 <feature>
                                     <id>org.wso2.carbon.identity.inbound.provisioning.scim2.common.feature</id>
-                                    <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
+                                    <version>${project.version}</version>
                                 </feature>
                                 <feature>
                                     <id>org.wso2.carbon.identity.inbound.provisioning.scim2.provider.feature</id>
-                                    <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
+                                    <version>${project.version}</version>
                                 </feature>
                             </features>
                         </configuration>
