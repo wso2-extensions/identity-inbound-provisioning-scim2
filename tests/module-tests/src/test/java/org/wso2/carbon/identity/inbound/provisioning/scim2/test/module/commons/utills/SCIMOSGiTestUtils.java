@@ -156,9 +156,6 @@ public class SCIMOSGiTestUtils {
                 artifactId("org.wso2.carbon.identity.event")
                 .versionAsInProject());
         optionList.add(mavenBundle().
-                groupId("org.wso2.orbit.org.yaml").
-                artifactId("snakeyaml").versionAsInProject());
-        optionList.add(mavenBundle().
                 groupId("org.json").
                 artifactId("json")
                 .versionAsInProject());

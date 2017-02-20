@@ -150,11 +150,6 @@
             <groupId>org.jacoco</groupId>
             <artifactId>org.jacoco.ant</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.wso2.orbit.org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-            <version>${org.snakeyaml.version}</version>
-        </dependency>
 
         <!-- Other Dependencies-->
         <dependency>
