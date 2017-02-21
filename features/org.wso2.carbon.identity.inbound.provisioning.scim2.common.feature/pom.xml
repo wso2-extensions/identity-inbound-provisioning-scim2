@@ -113,7 +113,7 @@
                             <bundles>
                                 <bundle>
                                     <symbolicName>org.wso2.carbon.identity.inbound.provisioning.scim2.common</symbolicName>
-                                    <version>${org.wso2.carbon.identity.inbound.provisioning.scim2.version}</version>
+                                    <version>${project.version}</version>
                                 </bundle>
                                 <bundle>
                                     <symbolicName>org.wso2.charon3.core</symbolicName>

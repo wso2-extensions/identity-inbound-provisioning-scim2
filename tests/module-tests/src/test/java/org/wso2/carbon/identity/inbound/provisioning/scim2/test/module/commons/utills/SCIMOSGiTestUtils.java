@@ -42,6 +42,10 @@ public class SCIMOSGiTestUtils {
         List<Option> optionList = new ArrayList<>();
 
         optionList.add(mavenBundle()
+                .groupId("org.wso2.msf4j")
+                .artifactId("msf4j-core")
+                .versionAsInProject());
+        optionList.add(mavenBundle()
                 .groupId("org.ops4j.pax.logging")
                 .artifactId("pax-logging-log4j2")
                 .versionAsInProject());
@@ -117,9 +121,6 @@ public class SCIMOSGiTestUtils {
                 groupId("com.h2database").
                 artifactId("h2").versionAsInProject());
         optionList.add(mavenBundle().
-                groupId("org.wso2.msf4j").
-                artifactId("msf4j-core").versionAsInProject());
-        optionList.add(mavenBundle().
                 groupId("org.wso2.carbon.transport").
                 artifactId("org.wso2.carbon.transport.http.netty").versionAsInProject());
         optionList.add(mavenBundle().
@@ -147,8 +148,12 @@ public class SCIMOSGiTestUtils {
                 groupId("org.wso2.carbon.security.userstore").
                 artifactId("org.wso2.carbon.identity.mgt.store.connector.jdbc").versionAsInProject());
         optionList.add(mavenBundle().
-                groupId("org.wso2.carbon.identity.mgt").
-                artifactId("org.wso2.carbon.identity.mgt")
+                groupId("org.wso2.carbon.identity.commons").
+                artifactId("org.wso2.carbon.identity.commons")
+                .versionAsInProject());
+        optionList.add(mavenBundle().
+                groupId("org.wso2.carbon.identity.commons").
+                artifactId("org.wso2.carbon.identity.event")
                 .versionAsInProject());
         optionList.add(mavenBundle().
                 groupId("org.json").

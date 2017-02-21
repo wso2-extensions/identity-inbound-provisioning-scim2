@@ -72,6 +72,16 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.commons</groupId>
+            <artifactId>org.wso2.carbon.identity.event</artifactId>
+            <version>${org.wso2.carbon.identity.commons.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.commons</groupId>
+            <artifactId>org.wso2.carbon.identity.commons</artifactId>
+            <version>${org.wso2.carbon.identity.commons.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.msf4j</groupId>
             <artifactId>msf4j-core</artifactId>
         </dependency>
@@ -301,7 +311,7 @@
                             <systemProperties>
                                 <property>
                                     <name>carbon.home</name>
-                                    <value>${project.build.directory}/test-classes/carbon-home</value>
+                                    <value>${project.basedir}/src/test/resources/carbon-home</value>
                                 </property>
                             </systemProperties>
                             <suiteXmlFiles>
