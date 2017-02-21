@@ -38,6 +38,7 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.net.HttpURLConnection;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
 import javax.ws.rs.HttpMethod;
@@ -101,7 +102,8 @@ public class GroupResourceTest {
     @Test(dependsOnMethods = "testGetGroup", description = "Add a group with a user via SCIM")
     public void testAddGroupWithMembers() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Tom", "Luvis");
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Tom", "Luvis",
+                new ArrayList<String>() { { add("tom@gmail.com"); add("tom@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
         String content = SCIMTestUtil.getContent(urlConn);
         urlConn.disconnect();
@@ -122,7 +124,7 @@ public class GroupResourceTest {
         members.add(member);
 
         groupJsonObj.add(SCIMConstants.GroupSchemaConstants.MEMBERS, members);
-        urlConn = SCIMTestUtil.request(SCIMConstants.GROUP_ENDPOINT, HttpMethod.POST);
+        urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT, HttpMethod.POST);
         urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
         content = SCIMTestUtil.getContent(urlConn);
@@ -147,7 +149,8 @@ public class GroupResourceTest {
     public void testUpdateGroup() throws Exception {
 
         //Create a new User
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Tom", "Luvis");
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Sam", "Willision",
+                new ArrayList<String>() { { add("sam@gmail.com"); add("sam@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
         String content = SCIMTestUtil.getContent(urlConn);
         urlConn.disconnect();
@@ -167,8 +170,8 @@ public class GroupResourceTest {
         members.add(member);
         groupJsonObj.add(SCIMConstants.GroupSchemaConstants.MEMBERS, members);
 
-        //Send update request
-        urlConn = SCIMTestUtil.request(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID, HttpMethod.PUT);
+        //Send update validConnection
+        urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID, HttpMethod.PUT);
         urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
         urlConn.disconnect();
@@ -186,7 +189,7 @@ public class GroupResourceTest {
     @Test(dependsOnMethods = {"testUpdateGroup"}, description = "List groups with pagination via SCIM")
     public void testListAllGroupsWithPagination() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.request(SCIMConstants.GROUP_ENDPOINT + "?" +
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                 SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + 1 + "&count=" + 3, HttpMethod.GET);
         String content = SCIMTestUtil.getContent(urlConn);
         JsonObject result = GSON.fromJson(content, JsonObject.class);
@@ -197,7 +200,7 @@ public class GroupResourceTest {
     @Test(dependsOnMethods = {"testListAllGroupsWithPagination"}, description = "List all groups via SCIM")
     public void testGetAllGroups() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.request(SCIMConstants.GROUP_ENDPOINT, "GET");
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT, "GET");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
         String content = SCIMTestUtil.getContent(urlConn);
         urlConn.disconnect();
@@ -217,7 +220,7 @@ public class GroupResourceTest {
         searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, 1);
         searchFilter.addProperty("count", 10);
 
-        HttpURLConnection urlConn = SCIMTestUtil.request(SCIMConstants.GROUP_ENDPOINT + "/.search",
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
                 HttpMethod.POST);
         urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
 

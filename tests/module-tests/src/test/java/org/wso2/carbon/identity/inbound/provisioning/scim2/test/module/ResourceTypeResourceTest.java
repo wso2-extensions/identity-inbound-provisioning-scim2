@@ -69,7 +69,8 @@ public class ResourceTypeResourceTest {
     @Test
     public void testGetResourceTypes () throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.request(SCIMTestConstant.RESOURCE_TYPE_ENDPOINT, HttpMethod.GET);
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMTestConstant.RESOURCE_TYPE_ENDPOINT,
+                HttpMethod.GET);
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
     }
 }
