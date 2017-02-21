@@ -15,14 +15,13 @@
   ~ limitations under the License.
   -->
 
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <parent>
         <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
         <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.test</artifactId>
         <relativePath>../pom.xml</relativePath>
-        <version>2.0.0-SNAPSHOT</version>
+        <version>2.0.1-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -84,12 +83,12 @@
 
                                     <target xmlns:jacoco="antlib:org.jacoco.ant">
                                         <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml">
-                                            <classpath path="${project.build.directory}"/>
+                                            <classpath path="${project.build.directory}" />
                                         </taskdef>
                                         <jacoco:report>
                                             <executiondata>
                                                 <fileset dir="../module-tests/target">
-                                                    <include name="jacoco.exec"/>
+                                                    <include name="jacoco.exec" />
                                                 </fileset>
                                             </executiondata>
                                             <structure name="Identity Server Tests">
@@ -105,10 +104,10 @@
                                                     <fileset dir="../../components/org.wso2.carbon.identity.inbound.provisioning.scim2.provider/src" />
                                                 </sourcefiles>
                                             </structure>
-                                            <html destdir="${project.build.directory}/site/jacoco"/>
+                                            <html destdir="${project.build.directory}/site/jacoco" />
                                             <check>
                                                 <rule element="PACKAGE">
-                                                    <limit counter="LINE" value="COVEREDRATIO" minimum="0.20"/>
+                                                    <limit counter="LINE" value="COVEREDRATIO" minimum="0.20" />
                                                 </rule>
                                             </check>
                                         </jacoco:report>
