@@ -149,8 +149,8 @@ public class GroupResourceTest {
     public void testUpdateGroup() throws Exception {
 
         //Create a new User
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Sam", "Willision",
-                new ArrayList<String>() { { add("sam@gmail.com"); add("sam@yahoo.com"); } });
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Matt", "Damon",
+                new ArrayList<String>() { { add("matt@gmail.com"); add("matt@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
         String content = SCIMTestUtil.getContent(urlConn);
         urlConn.disconnect();
