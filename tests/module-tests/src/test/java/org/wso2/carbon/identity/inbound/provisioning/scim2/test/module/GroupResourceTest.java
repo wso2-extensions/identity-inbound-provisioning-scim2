@@ -147,7 +147,7 @@ public class GroupResourceTest {
     public void testUpdateGroup() throws Exception {
 
         //Create a new User
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Tom", "Luvis");
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Matt", "Damon");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
         String content = SCIMTestUtil.getContent(urlConn);
         urlConn.disconnect();
