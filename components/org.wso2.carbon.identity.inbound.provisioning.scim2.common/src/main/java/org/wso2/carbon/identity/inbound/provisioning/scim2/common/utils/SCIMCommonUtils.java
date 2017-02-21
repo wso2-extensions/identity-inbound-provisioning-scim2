@@ -16,9 +16,17 @@
 
 package org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.claim.ClaimMapper;
 import org.wso2.carbon.identity.mgt.IdentityStore;
 import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
+import org.wso2.charon3.core.config.SCIMConfigConstants;
+import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.InternalErrorException;
 
+import java.io.File;
 import java.util.Locale;
 
 /**
@@ -26,18 +34,17 @@ import java.util.Locale;
  */
 public class SCIMCommonUtils {
 
+    private static Logger log = LoggerFactory.getLogger(SCIMCommonUtils.class);
+
     public static void init() {
-        //to initialize scim urls once.
-//        if (scimUserLocation == null || scimGroupLocation == null || scimServiceProviderConfig == null) {
-//            String portOffSet = ServerConfiguration.getInstance().getFirstProperty("Ports.Offset");
-//            int httpsPort = 9443 + Integer.parseInt(portOffSet);
-//            String scimURL = "https://" + ServerConfiguration.getInstance().getFirstProperty("HostName")
-//                    + ":" + String.valueOf(httpsPort) + "/wso2/scim/v2/";
-//            scimUserLocation = scimURL + SCIMCommonConstants.USERS;
-//            scimGroupLocation = scimURL + SCIMCommonConstants.GROUPS;
-//            scimServiceProviderConfig = scimURL + SCIMCommonConstants.SERVICE_PROVIDER_CONFIG;
-//            scimResourceType = scimURL + SCIMCommonConstants.RESOURCE_TYPE;
-//        }
+
+        String schemaFilePath = System.getProperty(ClaimMapper.CARBON_HOME) + File.separator + "conf" +
+                File.separator + "identity" + File.separator + SCIMConfigConstants.SCIM_SCHEMA_EXTENSION_CONFIG;
+        try {
+            SCIMUserSchemaExtensionBuilder.getInstance().buildUserSchemaExtension(schemaFilePath);
+        } catch (CharonException | InternalErrorException e) {
+            log.error("Error in building User Schema Extension", e);
+        }
     }
 
     public static String getSCIMUserURL() {

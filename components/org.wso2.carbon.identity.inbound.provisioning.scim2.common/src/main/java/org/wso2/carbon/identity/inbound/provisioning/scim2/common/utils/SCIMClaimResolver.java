@@ -454,10 +454,17 @@ public class SCIMClaimResolver {
         //get immediate parent attribute name
         String immediateParentAttributeName = attributeNames[1];
 
-        String subAttributeURI = attributeEntry.getKey().replace("." + attributeNames[2], "");
+        String subAttributeURI = attributeEntry.getKey();
+        String parentAttributeURI = subAttributeURI.replace(":" + attributeNames[1], "");
+
+        if (!attributeEntry.getKey().contains("wso2Extension")) {
+            subAttributeURI = attributeEntry.getKey().replace("." + attributeNames[2], "");
+        } else {
+            parentAttributeURI = parentAttributeURI.replace("." + attributeNames[2], "");
+        }
+
         AttributeSchema subAttributeSchema = getAttributeSchema(subAttributeURI, scimObjectType);
 
-        String parentAttributeURI = subAttributeURI.replace(":" + attributeNames[1], "");
         AttributeSchema attributeSchema = getAttributeSchema(parentAttributeURI, scimObjectType);
 
                 /*differentiate between sub attribute of Complex attribute and a Multivalued attribute
