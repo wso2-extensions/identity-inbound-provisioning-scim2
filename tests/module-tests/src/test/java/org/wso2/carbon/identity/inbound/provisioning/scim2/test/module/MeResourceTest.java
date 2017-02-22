@@ -114,13 +114,13 @@ public class MeResourceTest {
         urlConn.disconnect();
     }
 
-    @Test(dependsOnMethods = { "testUpdateMe" }, description = "Delete my identity via SCIM")
+/*    @Test(dependsOnMethods = { "testUpdateMe" }, description = "Delete my identity via SCIM")
     public void testDeleteMe() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.request(SCIMTestConstant.ME_ENDPOINT, HttpMethod.DELETE);
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NO_CONTENT.getStatusCode());
         urlConn.disconnect();
-    }
+    }*/
 
     private JsonObject getUser() throws Exception {
 
