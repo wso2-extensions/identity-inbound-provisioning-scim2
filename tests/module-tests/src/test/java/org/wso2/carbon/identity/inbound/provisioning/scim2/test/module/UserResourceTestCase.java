@@ -269,7 +269,7 @@ public class UserResourceTestCase {
                 "Successfully retrieving \"Unsupported Media Type\" as the response.");
     }
 
-    /*@Test(groups = "addUsers", description = "Add User via SCIM specifying a attribute which is not in the schema.")
+    @Test(groups = "addUsers", description = "Add User via SCIM specifying a attribute which is not in the schema.")
     public void testAddUserWithInvalidAttribute() throws Exception {
         JsonObject nameJsonObj = new JsonObject();
         nameJsonObj.addProperty(SCIMConstants.UserSchemaConstants.FAMILY_NAME, "Abraham");
@@ -296,11 +296,9 @@ public class UserResourceTestCase {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT,
                 HttpMethod.POST);
         urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
-        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
-                "Successfully adding the user with invalid attribute.");
-        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
-                "Successfully retrieving \"Bad Request\" as the response.");
-    }*/
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed in adding the user with invalid attribute.");
+    }
 
     @Test(groups = "getUsers", dependsOnGroups = {"addUsers"}, description = "Get User via SCIM")
     public void testGetUser() throws Exception {
@@ -1064,7 +1062,7 @@ public class UserResourceTestCase {
 
     }
 
-    /*@Test(groups = "updateUsers", dependsOnGroups = {"searchUsers"},
+    @Test(groups = "updateUsers", dependsOnGroups = {"searchUsers"},
             description = "Update User with incorrect attributes via SCIM")
     public void testUpdateUserWithInvalidAttribute() throws Exception {
 
@@ -1078,12 +1076,9 @@ public class UserResourceTestCase {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/" + scimId,
                 HttpMethod.PUT);
         urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
-        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
-                "Successfully updating the user with an incorrect attribute.");
-        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
-                "Successfully retrieving \"Bad Request\" as the response.");
-        urlConn.disconnect();
-    }*/
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in updating the user with an incorrect attribute.");
+    }
 
     @Test(groups = "updateUsers", dependsOnGroups = {"searchUsers"},
             description = "Update User with incorrect scim ID via SCIM")
