@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.test.module;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import org.apache.commons.io.Charsets;
@@ -74,32 +75,159 @@ public class GroupResourceTest {
         return optionList.toArray(new Option[optionList.size()]);
     }
 
-    @Test(description = "Add a Group via SCIM")
+    @Test(groups = "addGroups", description = "Add a Group via SCIM")
     public void testAddGroup() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.createGroup("Marketing");
-        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
         String content = SCIMTestUtil.getContent(urlConn);
         urlConn.disconnect();
         JsonObject groupObj = GSON.fromJson(content, JsonObject.class);
         groupSCIMID = groupObj.get(SCIMConstants.CommonSchemaConstants.ID).toString().replace("\"", "");
-
+        Assert.assertNotNull(groupSCIMID, "Invalid scim group id.");
     }
 
-    @Test(dependsOnMethods = "testAddGroup", description = "Get a Group via SCIM")
-    public void testGetGroup() throws Exception {
-
-        HttpURLConnection urlConn = SCIMTestUtil.getGroup(groupSCIMID);
-        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
-        String content = SCIMTestUtil.getContent(urlConn);
-        urlConn.disconnect();
-        JsonObject groupObj = GSON.fromJson(content, JsonObject.class);
-        String displayName = groupObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).toString().replace("\"", "");
-        Assert.assertEquals(displayName, "Marketing");
-
+    @Test(groups = "addGroups", description = "Add Group via SCIM without Mandatory Attributes")
+    public void testAddUserWithoutMandatoryAttributes() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.createGroup(null);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Successfully added the group without mandatory attributes.");
     }
 
-    @Test(dependsOnMethods = "testGetGroup", description = "Add a group with a user via SCIM")
+    @Test (groups = "addGroups", dependsOnMethods = {"testAddGroup"}, description = "Add Existing Group via SCIM")
+    public void testAddExistingGroup() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.createGroup("Marketing");
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Successfully added an existing group.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CONFLICT.getStatusCode(),
+                "Successfully retrieving \"Conflict\" as the response.");
+    }
+
+    @Test(groups = "addGroups", description = "Add Group via SCIM with Invalid Admin Credentials")
+    public void testAddGroupWithInvalidCredentials() throws Exception {
+        JsonObject groupJsonObj = new JsonObject();
+
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "Finance");
+
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials(SCIMConstants.GROUP_ENDPOINT,
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Successfully added the group with invalid admin credentials.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
+                "Successfully retrieving \"Unauthorized\" as the response.");
+    }
+
+    @Test(groups = "addGroups", description = "Add Group via SCIM without Authorization Header")
+    public void testAddGroupWithoutAuthorizationHeader() throws Exception {
+        JsonObject groupJsonObj = new JsonObject();
+
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "HR");
+
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutAuthorizationHeader(SCIMConstants.GROUP_ENDPOINT,
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Successfully added the group without authorization header.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
+                "Successfully retrieving \"Unauthorized\" as the response.");
+    }
+
+    @Test(groups = "addGroups", description = "Add Group via SCIM with invalid Syntax in Json Payload.")
+    public void testAddGroupWithInvalidSyntaxInJsonPayload() throws Exception {
+        JsonObject groupJsonObj = new JsonObject();
+
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "Engineering-Tech");
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT,
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(groupJsonObj.toString().substring(0, groupJsonObj.toString().length() - 1)
+                .getBytes(Charsets.UTF_8));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Successfully added the group with invalid syntax in json payload.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
+                "Successfully retrieving \"Bad Request\" as the response.");
+    }
+
+    /*@Test(groups = "addGroups", description = "Add Group via SCIM with invalid Semantic in Json Payload.")
+    public void testAddGroupWithInvalidSemanticInJsonPayload() throws Exception {
+        JsonObject groupJsonObj = new JsonObject();
+
+        JsonObject nameJsonObj = new JsonObject();
+        nameJsonObj.addProperty(SCIMConstants.UserSchemaConstants.DISPLAY_NAME, "Engineering-1");
+
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.add(SCIMConstants.UserSchemaConstants.NAME, nameJsonObj);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT,
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Successfully added the group with invalid semantic in json payload.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
+                "Successfully retrieving \"Bad Request\" as the response.");
+    }*/
+
+    @Test(groups = "addGroups", description = "Add Group via SCIM without specifying 'Content-Type' header.")
+    public void testAddGroupWithoutContentTypeHeader() throws Exception {
+        JsonObject groupJsonObj = new JsonObject();
+
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "Engineering-2");
+
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutContentTypeHeader(SCIMConstants.GROUP_ENDPOINT,
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Successfully added the group without content type header.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNSUPPORTED_MEDIA_TYPE.getStatusCode(),
+                "Successfully retrieving \"Unsupported Media Type\" as the response.");
+    }
+
+    @Test(groups = "addGroups", description = "Add Group via SCIM specifying a attribute which is not in the schema.")
+    public void testAddGroupWithInvalidAttribute() throws Exception {
+        JsonObject groupJsonObj = new JsonObject();
+
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "Engineering-3");
+        groupJsonObj.addProperty("attribute", "test");
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT,
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed in adding the group with invalid attribute.");
+    }
+
+    @Test(groups = "addGroups", description = "Add a group with a user via SCIM")
     public void testAddGroupWithMembers() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.createUser("Tom", "Luvis",
@@ -131,21 +259,604 @@ public class GroupResourceTest {
         urlConn.disconnect();
 
         groupJsonObj = GSON.fromJson(content, JsonObject.class);
-        String id = groupJsonObj.get(SCIMConstants.CommonSchemaConstants.ID).toString().replace("\"", "");
+        String groupSCIMIDWithMembers = groupJsonObj.get(SCIMConstants.CommonSchemaConstants.ID).toString()
+                .replace("\"", "");
 
         //Get group object again to check members
 
-        urlConn = SCIMTestUtil.getGroup(id);
+        urlConn = SCIMTestUtil.getGroup(groupSCIMIDWithMembers);
         content = SCIMTestUtil.getContent(urlConn);
         groupJsonObj = GSON.fromJson(content, JsonObject.class);
 
         Assert.assertTrue((((JsonArray) groupJsonObj.get(SCIMConstants.GroupSchemaConstants.MEMBERS)).
                 size()) > 0);
-
     }
 
+    @Test(groups = "getGroups", dependsOnGroups = {"addGroups"}, description = "Get a Group via SCIM")
+    public void testGetGroup() throws Exception {
 
-    @Test(dependsOnMethods = {"testAddGroupWithMembers"}, description = "Update a group via SCIM")
+        HttpURLConnection urlConn = SCIMTestUtil.getGroup(groupSCIMID);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+        JsonObject groupJsonObj = GSON.fromJson(content, JsonObject.class);
+        String displayName = groupJsonObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).toString()
+                .replace("\"", "");
+        Assert.assertEquals(displayName, "Marketing");
+    }
+
+    @Test(groups = "getGroups", dependsOnGroups = {"addGroups"},
+            description = "Get Group via SCIM with invalid Group ID")
+    public void testGetGroupWithInvalidUserId() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.getUser(groupSCIMID.substring(0, groupSCIMID.length() - 1));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully retrieving a group for an invalid group ID.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NOT_FOUND.getStatusCode(),
+                "Successfully retrieving \"Not Found\" as the response.");
+    }
+
+    @Test(groups = "getGroups", dependsOnGroups = {"addGroups"},
+            description = "Get Group via SCIM with invalid Admin Credentials")
+    public void testGetGroupWithInvalidCredentials() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials
+                (SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID, HttpMethod.GET);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully retrieving a group with an invalid admin credentials.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
+                "Successfully retrieving \"Unauthorized\" as the response.");
+    }
+
+    @Test(groups = "getGroups", dependsOnGroups = {"addGroups"},
+            description = "Get Group via SCIM without Authorization Header")
+    public void testGetGroupWithoutAuthorizationHeader() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutAuthorizationHeader
+                (SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID, HttpMethod.GET);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully retrieving a group without an authorization header.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
+                "Successfully retrieving \"Unauthorized\" as the response.");
+    }
+
+    @Test(groups = "getGroups", dependsOnGroups = {"addGroups"},
+            description = "Get a Group with given exact attribute name")
+    public void testGetGroupWithValidAttribute() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID + "?"
+                        + SCIMConstants.OperationalConstants.ATTRIBUTES + "="
+                        + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
+                HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in retrieving the group with a valid attribute.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertNotNull(result.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME),
+                "Failed in retrieving the group with a valid attribute.");
+        Assert.assertNull(result.get(SCIMConstants.GroupSchemaConstants.DISPLAY),
+                "Failed in retrieving the group with a valid attribute.");
+    }
+
+    @Test(groups = "getGroups", dependsOnGroups = {"addGroups"},
+            description = "Get a Group with given invalid attribute")
+    public void testGetGroupWithInvalidAttribute() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID + "?"
+                + SCIMConstants.OperationalConstants.ATTRIBUTES + "=" + "description", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in retrieving the group with an invalid attribute.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertNotNull(result.get(SCIMConstants.CommonSchemaConstants.ID),
+                "Successfully retrieving the group with an invalid attribute.");
+        Assert.assertNull(result.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME),
+                "Successfully retrieving the group with an invalid attribute.");
+    }
+
+    @Test(groups = "getGroups", dependsOnGroups = {"addGroups"},
+            description = "Get a Group with given exact attribute type")
+    public void testGetGroupWithFilterExactAttribute() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID +
+                "?filter=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME + "+EQ+Marketing", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering the group with a exact attribute type.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertEquals(result.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).getAsString(), "Marketing",
+                "Failed in retrieving the correct group attributes.");
+    }
+
+    @Test(groups = "getGroups", dependsOnGroups = {"addGroups"},
+            description = "Get a Group with attribute value in uppercase")
+    public void testGetGroupWithFilterUpperCaseAttribute() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID +
+                "?filter=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME.toUpperCase() + "+EQ+Marketing",
+                HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering the group with an attribute type in upper case.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertEquals(result.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).getAsString(), "Marketing",
+                "Failed in retrieving the correct group attributes.");
+    }
+
+    @Test(groups = "getGroups", dependsOnGroups = {"addGroups"},
+            description = "Get a Group with given exact attribute value")
+    public void testGetGroupWithFilterLowerCaseAttribute() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID +
+                        "?filter=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME.toLowerCase() + "+EQ+Marketing",
+                HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering the group with an attribute type in lower case.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertEquals(result.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).getAsString(), "Marketing",
+                "Failed in retrieving the correct group attributes.");
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List groups for given indexes")
+    public void testListAllGroups() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT, HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in listing all the groups.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
+                size() > 0, "Failed in listing all the groups.");
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List Groups via SCIM with invalid Admin Credentials")
+    public void testListAllGroupsWithInvalidCredentials() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials
+                (SCIMConstants.GROUP_ENDPOINT, HttpMethod.GET);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully listing all the groups with invalid admin credentials.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
+                "Successfully retrieving \"Unauthorized\" as the response.");
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List Groups via SCIM without Authorization Header")
+    public void testListAllGroupsWithoutAuthorizationHeader() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutAuthorizationHeader
+                (SCIMConstants.GROUP_ENDPOINT, HttpMethod.GET);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully listing all the groups without authorization header.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
+                "Successfully retrieving \"Unauthorized\" as the response.");
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List Groups for given indexes")
+    public void testListAllGroupsWithPaginationIncludingCountAndStartIndex() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.createGroup("EngineeringQuality");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.createGroup("EngineeringQualityAssurance");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + 1 + "&count=" + 3, HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in listing all the groups with pagination.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
+                size() > 0, "Failed in listing all the groups with pagination.");
+        Assert.assertEquals(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).size(),
+                3, "Failed in listing the correct number of groups with pagination.");
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List Groups for given negative indexes")
+    public void testListAllGroupsWithPaginationIncludingNegativeStartIndex() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.createGroup("Engineering-5");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.createGroup("Engineering-6");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + -1 + "&count=" + 3, HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in listing all the groups with pagination.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        // As per the spec,value which is less than one for startIndex interpreted as "1" and count interpreted as "0"
+        // A value of "0" indicates that no resource results are to be returned except for "totalResults"
+        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
+                size() > 0, "Failed in listing all the groups with pagination.");
+        Assert.assertEquals(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).size(),
+                3, "Failed in listing the correct number of groups with pagination when startIndex parameter is a " +
+                        "negative value.");
+    }
+
+    /*@Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups for given negative count index")
+    public void testListAllGroupsWithPaginationIncludingNegativeCount() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.createGroup("Engineering-7");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.createGroup("Engineering-8");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + 1 + "&count=" + -3, HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in listing all the groups with pagination.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        // As per the spec,value which is less than one for startIndex interpreted as "1" and count interpreted as "0"
+        // A value of "0" indicates that no resource results are to be returned except for "totalResults"
+        Assert.assertEquals(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).size(),
+                0, "Failed in listing the correct number of groups with pagination when count parameter is a " +
+                        "negative values.");
+    }*/
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups for given exceeded count index")
+    public void testListAllGroupsWithPaginationIncludingExceededCount() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + 1 + "&count=" + 300, HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in listing all the groups with pagination.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
+                size() > 0, "Failed in listing all the groups with pagination.");
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups for given filter for a Single Valued Attribute")
+    public void testListAllUsersWithFilterForSingleValuedAttribute() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?filter=" +
+                SCIMConstants.GroupSchemaConstants.DISPLAY_NAME + "+EQ+Marketing", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering all the groups with a single valued attribute.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertTrue(((JsonArray) result.get("Resources")).size() > 0,
+                "Failed in filtering all the groups with a single valued attribute.");
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List users for given semantically " +
+            "invalid filter for a Single Valued Attribute")
+    public void testListAllGroupsWithSemanticallyInvalidFilterForSingleValuedAttribute() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?filter=" +
+                SCIMConstants.GroupSchemaConstants.DISPLAY_NAME + "+EQMarketing", HttpMethod.GET);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully filtering all the groups with a semantically invalid request for " +
+                        "single valued attribute.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
+                "Successfully retrieving \"Bad Request\" as the response.");
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups for given unsupported filter")
+    public void testListAllGroupsWithUnsupportedFilter() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?filter=" +
+                SCIMConstants.GroupSchemaConstants.DISPLAY_NAME + "+E+Silva", HttpMethod.GET);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully filtering all the groups with an unsupported filter.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
+                "Successfully retrieving \"Bad Request\" as the response.");
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups with given exact attribute name")
+    public void testListAllGroupsWithExactAttribute() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.OperationalConstants.ATTRIBUTES + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
+                HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in listing all the groups with an exact attribute.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertNotNull(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME),
+                    "Failed in retrieving actual attributes of the group.");
+            Assert.assertNull(resourceObj.get(SCIMConstants.GroupSchemaConstants.MEMBERS),
+                    "Failed in retrieving actual attributes of the group.");
+        }
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups with given invalid attribute")
+    public void testListAllGroupsWithInvalidAttribute() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.OperationalConstants.ATTRIBUTES + "=" + "description", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in listing all the groups with an invalid attribute.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertNotNull(resourceObj.get(SCIMConstants.ResourceTypeSchemaConstants.ID),
+                    "Failed in retrieving actual attributes of the group.");
+            Assert.assertNull(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME),
+                    "Failed in retrieving actual attributes of the group.");
+        }
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List groups with exclude attribute")
+    public void testListAllGroupsWithExcludeAttributes() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?excludedAttributes=" +
+                SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in listing all the groups with an excluded attribute.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertNotNull(resourceObj.get(SCIMConstants.CommonSchemaConstants.ID),
+                    "Failed in retrieving actual attributes of the group.");
+            Assert.assertNull(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME),
+                    "Failed in retrieving actual attributes of the group.");
+        }
+    }
+
+    /*@Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List Groups based on user resource type")
+    public void testFilterAllGroupsBasedOnUserResourceType() throws Exception {
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection("?" +
+                        SCIMConstants.OperationalConstants.FILTER + "=(meta.resourceType eq Group)", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering all the groups based on user resource type.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertNotNull(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME),
+                "Failed in retrieving actual attributes of the group.");
+            Assert.assertNull(resourceObj.get(SCIMConstants.UserSchemaConstants.USER_NAME),
+                    "Failed in retrieving actual attributes of the group.");
+        }
+    }*/
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups with given exact attribute value")
+    public void testFilterAllGroupsWithExactAttributeName() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
+                + "+EQ+Marketing", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering all the groups with an exact attribute.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertEquals(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).getAsString(),
+                    "Marketing", "Failed in retrieving actual attributes of the group.");
+        }
+    }
+
+    /*@Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups with given exact attribute value")
+    public void testFilterAllGroupsWithLowerCaseAttributeName() throws Exception {
+
+       HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+               SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
+               .toLowerCase() + "+EQ+Marketing", HttpMethod.GET);
+       Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+               "Failed in filtering all the groups with an exact attribute.");
+       String content = SCIMTestUtil.getContent(urlConn);
+       JsonObject result = GSON.fromJson(content, JsonObject.class);
+       JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+       for (JsonElement resource : resources) {
+           JsonObject resourceObj = ((JsonObject) resource);
+           Assert.assertEquals(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).getAsString(),
+                   "Marketing", "Failed in retrieving actual attributes of the group.");
+       }
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups with attribute value in uppercase")
+    public void testFilterAllGroupsWithUpperCaseAttributeName() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
+                .toUpperCase() + "+EQ+Marketing", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering all the groups with an exact attribute.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertEquals(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).getAsString(),
+                    "Marketing", "Failed in retrieving actual attributes of the group.");
+        }
+    }*/
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups with given exact attribute value")
+    public void testFilterAllGroupsWithLowerCaseAttributeOperator() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
+                + "+eq+Marketing", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering all the groups with an lower case attribute operator.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertEquals(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).getAsString(),
+                    "Marketing", "Failed in retrieving actual attributes of the group.");
+        }
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups with attribute value in uppercase")
+    public void testFilterAllGroupsWithUpperCaseAttributeOperator() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
+                + "+EQ+Marketing", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering all the groups with an upper case attribute operator.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertEquals(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).getAsString(),
+                    "Marketing", "Failed in retrieving actual attributes of the group.");
+        }
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+            description = "List groups with attribute value in multicase")
+    public void testFilterAllGroupsWithMultiCaseAttributeOperator() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
+                + "+eQ+Marketing", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in filtering all the groups with an multi case attribute operator.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertEquals(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).getAsString(),
+                    "Marketing", "Failed in retrieving actual attributes of the group.");
+        }
+    }
+
+    @Test(groups = "searchGroups", dependsOnGroups = {"listGroups"},
+            description = "Search groups with http POST via SCIM")
+    public void searchGroupsWithPostWithCount() throws Exception {
+
+        JsonObject searchFilter = new JsonObject();
+        JsonArray schemas = new JsonArray();
+        schemas.add(new JsonPrimitive("urn:ietf:params:scim:api:messages:2.0:SearchRequest"));
+        searchFilter.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, 1);
+        searchFilter.addProperty("count", 10);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
+
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
+                size() > 0);
+    }
+
+    @Test(groups = "searchGroups", dependsOnGroups = {"listGroups"}, description = "Search groups with http POST " +
+            "with attributes")
+    public void searchGroupsWithPostWithAttributes() throws Exception {
+
+        JsonObject searchFilter = new JsonObject();
+        JsonArray schemas = new JsonArray();
+        schemas.add(new JsonPrimitive("urn:ietf:params:scim:api:messages:2.0:SearchRequest"));
+        searchFilter.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, 1);
+        searchFilter.addProperty(SCIMConstants.OperationalConstants.COUNT, 3);
+
+        JsonArray attributesArray = new JsonArray();
+        attributesArray.add(new JsonPrimitive(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME));
+        searchFilter.add(SCIMConstants.OperationalConstants.ATTRIBUTES, attributesArray);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
+
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in searching users with POST request including attributes.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertNotNull(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME),
+                    "Failed in retrieving actual attributes of the group.");
+            Assert.assertNull(resourceObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY),
+                    "Failed in retrieving actual attributes of the group.");
+        }
+    }
+
+    @Test(groups = "searchGroups", dependsOnGroups = {"listGroups"}, description = "Search groups with http POST " +
+            "with excluding attributes")
+    public void searchGroupsWithPostWithExcludingAttributes() throws Exception {
+
+        JsonObject searchFilter = new JsonObject();
+        JsonArray schemas = new JsonArray();
+        schemas.add(new JsonPrimitive("urn:ietf:params:scim:api:messages:2.0:SearchRequest"));
+        searchFilter.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, 1);
+        searchFilter.addProperty(SCIMConstants.OperationalConstants.COUNT, 3);
+
+        JsonArray attributesArray = new JsonArray();
+        attributesArray.add(new JsonPrimitive(SCIMConstants.GroupSchemaConstants.MEMBERS));
+        searchFilter.add(SCIMConstants.OperationalConstants.EXCLUDED_ATTRIBUTES, attributesArray);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
+
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in searching users with POST request including attributes.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        JsonArray resources = ((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES));
+        for (JsonElement resource : resources) {
+            JsonObject resourceObj = ((JsonObject) resource);
+            Assert.assertNotNull(resourceObj.get(SCIMConstants.CommonSchemaConstants.ID),
+                    "Failed in retrieving actual attributes of the group.");
+            Assert.assertNull(resourceObj.get(SCIMConstants.GroupSchemaConstants.MEMBERS),
+                    "Failed in retrieving actual attributes of the group.");
+        }
+    }
+
+    @Test(groups = "updateGroups", dependsOnGroups = {"searchGroups"}, description = "Update a group via SCIM")
     public void testUpdateGroup() throws Exception {
 
         //Create a new User
@@ -183,61 +894,178 @@ public class GroupResourceTest {
         groupJsonObj = GSON.fromJson(content, JsonObject.class);
         Assert.assertTrue((((JsonArray) groupJsonObj.get(SCIMConstants.GroupSchemaConstants.MEMBERS)).
                 size()) > 0);
-
     }
 
-    @Test(dependsOnMethods = {"testUpdateGroup"}, description = "List groups with pagination via SCIM")
-    public void testListAllGroupsWithPagination() throws Exception {
+    @Test(groups = "updateGroups", dependsOnGroups = {"searchGroups"},
+            description = "Update Group with incorrect attributes via SCIM")
+    public void testUpdateGroupWithInvalidAttribute() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
-                SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + 1 + "&count=" + 3, HttpMethod.GET);
-        String content = SCIMTestUtil.getContent(urlConn);
-        JsonObject result = GSON.fromJson(content, JsonObject.class);
-        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
-                size() > 0);
+        JsonObject groupJsonObj = new JsonObject();
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "Engineering_9");
+        groupJsonObj.addProperty("attribute", "attribute_value");
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID,
+                HttpMethod.PUT);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in updating the group with an incorrect attribute.");
     }
 
-    @Test(dependsOnMethods = {"testListAllGroupsWithPagination"}, description = "List all groups via SCIM")
-    public void testGetAllGroups() throws Exception {
+    @Test(groups = "updateGroups", dependsOnGroups = {"searchGroups"},
+            description = "Update Group with incorrect scim ID via SCIM")
+    public void testUpdateGroupWithIncorrectScimID() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT, "GET");
-        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
-        String content = SCIMTestUtil.getContent(urlConn);
-        urlConn.disconnect();
-
-        JsonObject result = GSON.fromJson(content, JsonObject.class);
-        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
-                size() > 0);
-    }
-
-    @Test(dependsOnMethods = {"testGetAllGroups"}, description = "Filter groups with HTTP POST via SCIM")
-    public void getAllGroupsWithPost() throws Exception {
-
-        JsonObject searchFilter = new JsonObject();
+        JsonObject groupJsonObj = new JsonObject();
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
         JsonArray schemas = new JsonArray();
-        schemas.add(new JsonPrimitive("urn:ietf:params:scim:api:messages:2.0:SearchRequest"));
-        searchFilter.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
-        searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, 1);
-        searchFilter.addProperty("count", 10);
+        schemas.add(schema);
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "HRGroup2");
 
-        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
-                HttpMethod.POST);
-        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
-
-        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
-        String content = SCIMTestUtil.getContent(urlConn);
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" +
+                groupSCIMID.substring(0, groupSCIMID.length() - 2), HttpMethod.PUT);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully updating the group with an incorrect SCIM ID.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NOT_FOUND.getStatusCode(),
+                "Successfully retrieving \"Not Found\" as the response.");
         urlConn.disconnect();
-
-        JsonObject result = GSON.fromJson(content, JsonObject.class);
-        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
-                size() > 0);
     }
 
-    @Test(dependsOnMethods = {"testGetAllGroups"}, description = "Delete group via SCIM")
+    @Test(groups = "updateGroups", dependsOnGroups = {"searchGroups"},
+            description = "Update Group with invalid admin credentials via SCIM")
+    public void testUpdateGroupWithInvalidCredentials() throws Exception {
+
+        JsonObject groupJsonObj = new JsonObject();
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "HR-3");
+
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials(SCIMConstants.GROUP_ENDPOINT +
+                "/" + groupSCIMID, HttpMethod.PUT);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully updating the group with an invalid admin credentials.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
+                "Successfully retrieving \"Unauthorized\" as the response.");
+        urlConn.disconnect();
+    }
+
+    @Test(groups = "updateGroups", dependsOnGroups = {"searchGroups"},
+            description = "Update Group with incorrect content type via SCIM")
+    public void testUpdateGroupWithIncorrectContentType() throws Exception {
+
+        JsonObject groupJsonObj = new JsonObject();
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "HRGroup");
+
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithIncorrectContentTypeHeader(SCIMConstants.GROUP_ENDPOINT +
+                "/" + groupSCIMID, HttpMethod.PUT);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully updating the group with an incorrect Content Type.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNSUPPORTED_MEDIA_TYPE.getStatusCode(),
+                "Successfully retrieving \"Unsupported Media Type\" as the response.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.getGroup(groupSCIMID);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in retrieving the group.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+        JsonObject userObj = GSON.fromJson(content, JsonObject.class);
+        String familyName = userObj.get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME).toString();
+        Assert.assertNotEquals(familyName, "HRGroup", "Failed in retrieving actual attributes of the group.");
+    }
+
+    @Test(groups = "updateGroups", dependsOnGroups = {"searchGroups"},
+            description = "Update Group with incorrect method via SCIM")
+    public void testUpdateGroupWithIncorrectMethod() throws Exception {
+
+        JsonObject groupJsonObj = new JsonObject();
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "HR-5");
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID,
+                HttpMethod.OPTIONS);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully updating the group with an incorrect method.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.METHOD_NOT_ALLOWED.getStatusCode(),
+                "Successfully retrieving \"Method Not Found\" as the response.");
+        urlConn.disconnect();
+    }
+
+    @Test(groups = "updateGroups", dependsOnGroups = {"searchGroups"},
+            description = "Update Group with incorrect data content via SCIM")
+    public void testUpdateGroupWithIncorrectDataContent() throws Exception {
+
+        JsonObject groupJsonObj = new JsonObject();
+        JsonPrimitive schema = new JsonPrimitive("urn:ietf:params:scim:schemas:core:2.0:Group");
+        JsonArray schemas = new JsonArray();
+        schemas.add(schema);
+        groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, "HR-6");
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID,
+                HttpMethod.PUT);
+        urlConn.getOutputStream().write(groupJsonObj.toString().substring(0, groupJsonObj.toString().length() - 1)
+                .getBytes(Charsets.UTF_8));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Successfully updating the group with an incorrect data content.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
+                "Successfully retrieving \"Bad Request\" as the response.");
+        urlConn.disconnect();
+    }
+
+    @Test(dependsOnGroups = {"updateGroups"}, description = "Delete group via SCIM")
     public void testDeleteGroup() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.deleteGroup(groupSCIMID);
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NO_CONTENT.getStatusCode());
+        urlConn.disconnect();
+    }
+
+    @Test(dependsOnGroups = {"updateGroups"}, description = "Delete Group with incorrect identifier via SCIM")
+    public void testDeleteGroupWithIncorrectIdentifier() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.deleteUser(groupSCIMID.substring(0, groupSCIMID.length() - 1));
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.NO_CONTENT.getStatusCode(),
+                "Successfully deleting a group with incorrect Identifier.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NOT_FOUND.getStatusCode(),
+                "Successfully retrieving \"Not Found\" as the response.");
+        urlConn.disconnect();
+    }
+
+    @Test(dependsOnGroups = {"updateGroups"}, description = "Delete User with invalid credentials via SCIM")
+    public void testDeleteGroupWithInvalidCredentials() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials(SCIMConstants.GROUP_ENDPOINT +
+                "/" + groupSCIMID, HttpMethod.DELETE);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.NO_CONTENT.getStatusCode(),
+                "Successfully deleting a group with invalid admin credentials.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
+                "Successfully retrieving \"Unauthorized\" as the response.");
+        urlConn.disconnect();
+    }
+
+    @Test(dependsOnGroups = {"updateGroups"}, description = "Delete User with wrong method via SCIM")
+    public void testDeleteGroupWithWrongMethod() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/"
+                + groupSCIMID, HttpMethod.POST);
+        Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.NO_CONTENT.getStatusCode(),
+                "Successfully deleting a group with wrong method.");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.METHOD_NOT_ALLOWED.getStatusCode(),
+                "Successfully retrieving \"Method Not Allowed\" as the response.");
         urlConn.disconnect();
     }
 

@@ -105,6 +105,8 @@ domains:
       -
         attribute: "organization"
         claimUri: "http://wso2.org/claims/organization"
+        properties:
+          unique: "true"
       -
         attribute: "resourceType"
         claimUri: "http://wso2.org/claims/resourceType"
