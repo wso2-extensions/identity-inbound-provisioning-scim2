@@ -55,6 +55,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.PasswordCallback;
+import static org.wso2.carbon.kernel.utils.StringUtils.isNullOrEmpty;
 
 /**
  * This class is to deal with the carbon user core API. This uses identityStore defined API for
@@ -64,6 +65,8 @@ import javax.security.auth.callback.PasswordCallback;
 public class CarbonUserManager implements UserManager {
 
     private static Logger log = LoggerFactory.getLogger(CarbonUserManager.class);
+    private static final String ADMIN_USERNAME = "admin";
+    private static final String USERNAME_CLAIM = "http://wso2.org/claims/username";
 
     IdentityStore identityStore = null;
 
@@ -189,8 +192,15 @@ public class CarbonUserManager implements UserManager {
             log.debug("Deleting user: " + userId);
         }
         try {
-            //todo: need to fix deleteUser method in IdentityStore properly and remove getUser method
-            identityStore.getUser(userId);
+            org.wso2.carbon.identity.mgt.User user = identityStore.getUser(userId);
+            List<Claim> claims = user.getClaims();
+            for (Claim claim : claims) {
+                if (USERNAME_CLAIM.equals(claim.getClaimUri())) {
+                    if (ADMIN_USERNAME.equals(claim.getValue())) {
+                        throw new CharonException("Cannot Delete admin user from the System");
+                    }
+                }
+            }
             identityStore.deleteUser(userId);
             if (log.isDebugEnabled()) {
                 log.debug("User with the id : " + userId + " is deleted through SCIM.");
@@ -295,6 +305,10 @@ public class CarbonUserManager implements UserManager {
 
         if (log.isDebugEnabled()) {
             log.debug("Creating group: " + group.toString());
+        }
+
+        if (isNullOrEmpty(group.getDisplayName())) {
+            throw new BadRequestException("Please provide valid name for group displayName");
         }
         try {
             String userStoreDomain = SCIMCommonUtils.extractDomainFromName(group.getDisplayName(), identityStore);
@@ -647,7 +661,10 @@ public class CarbonUserManager implements UserManager {
     private List<Object> listUsersWithPagination(int startIndex, int count) throws CharonException {
         try {
             //get the user list according to the start index and the count values provided.
-            //TODO : Add the domain of the store.
+            //TODO : Add the domain of the store and need to fix IDENTITY-5784 to remove +1 from count
+            if (count > 1) {
+                count++;
+            }
             List<org.wso2.carbon.identity.mgt.User> userList = identityStore.listUsers(startIndex, count);
             List<Object> userObjectList = new ArrayList<>();
 
