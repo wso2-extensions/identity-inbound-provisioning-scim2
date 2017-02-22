@@ -62,6 +62,7 @@ public class SCIMTestUtil {
         }
     };
     private static String contentTypeHeader = "application/scim+json";
+    private static String incorrectContentTypeHeader = "application/scim+xml";
 
     /**
      * Create a user with sample attributes
@@ -173,7 +174,8 @@ public class SCIMTestUtil {
 
     public static HttpURLConnection connectionWithInvalidAdminCredentials(String path, String method)
             throws IOException {
-        String authorizationHeader = invalidAdminCredentials.get(USER_NAME) + ":" + validAdminCredentials.get(PASSWORD);
+        String authorizationHeader = invalidAdminCredentials.get(USER_NAME) + ":" +
+                invalidAdminCredentials.get(PASSWORD);
         return connection(path, method, false, authorizationHeader, contentTypeHeader);
     }
 
@@ -184,7 +186,14 @@ public class SCIMTestUtil {
 
     public static HttpURLConnection connectionWithoutContentTypeHeader(String path, String method)
             throws IOException {
-        return connection(path, method, false, null, null);
+        String authorizationHeader = validAdminCredentials.get(USER_NAME) + ":" + validAdminCredentials.get(PASSWORD);
+        return connection(path, method, false, authorizationHeader, null);
+    }
+
+    public static HttpURLConnection connectionWithIncorrectContentTypeHeader(String path, String method)
+            throws IOException {
+        String authorizationHeader = validAdminCredentials.get(USER_NAME) + ":" + validAdminCredentials.get(PASSWORD);
+        return connection(path, method, false, authorizationHeader, incorrectContentTypeHeader);
     }
 
     private static HttpURLConnection connection(String path, String method, boolean keepAlive,
