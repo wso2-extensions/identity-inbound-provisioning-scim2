@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.test.module.commons.
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -31,7 +30,7 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -107,7 +106,7 @@ public class SCIMTestUtil {
         }
 
         HttpURLConnection urlConn = validConnection(SCIMConstants.USER_ENDPOINT, HttpMethod.POST);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         return urlConn;
     }
 
@@ -130,7 +129,7 @@ public class SCIMTestUtil {
         groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, groupName);
 
         HttpURLConnection urlConn = validConnection(SCIMConstants.GROUP_ENDPOINT, HttpMethod.POST);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         return urlConn;
 
     }
@@ -229,8 +228,8 @@ public class SCIMTestUtil {
         }
 
         if (authorizationHeader != null) {
-            String temp = new String(Base64.getEncoder().encode(authorizationHeader.getBytes(Charset.forName("UTF-8"))),
-                    Charset.forName("UTF-8"));
+            String temp = new String(Base64.getEncoder().encode(authorizationHeader.getBytes(StandardCharsets.UTF_8)),
+                    StandardCharsets.UTF_8);
 
             authorizationHeader = "Basic " + temp;
             httpURLConnection.setRequestProperty(HttpHeaders.AUTHORIZATION, authorizationHeader);
@@ -244,6 +243,6 @@ public class SCIMTestUtil {
     }
 
     public static String getContent(HttpURLConnection urlConn) throws IOException {
-        return new String(IOUtils.toByteArray(urlConn.getInputStream()), Charsets.UTF_8);
+        return new String(IOUtils.toByteArray(urlConn.getInputStream()), StandardCharsets.UTF_8);
     }
 }

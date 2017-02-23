@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.test.module;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import org.apache.commons.io.Charsets;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -38,6 +37,7 @@ import org.wso2.carbon.identity.inbound.provisioning.scim2.test.module.commons.u
 import org.wso2.carbon.kernel.utils.CarbonServerInfo;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -87,7 +87,7 @@ public class MeResourceTest {
 
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMTestConstant.ME_ENDPOINT, HttpMethod.POST);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
         String content =  SCIMTestUtil.getContent(urlConn);
         urlConn.disconnect();
@@ -105,7 +105,7 @@ public class MeResourceTest {
         userJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMTestConstant.ME_ENDPOINT, HttpMethod.PUT);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
 
         JsonObject jsonObject = getUser();

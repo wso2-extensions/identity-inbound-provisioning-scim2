@@ -21,7 +21,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import org.apache.commons.io.Charsets;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -39,6 +38,7 @@ import org.wso2.carbon.kernel.utils.CarbonServerInfo;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -135,7 +135,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials(SCIMConstants.USER_ENDPOINT,
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the user with invalid admin credentials.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
@@ -167,7 +167,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutAuthorizationHeader(SCIMConstants.USER_ENDPOINT,
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the user without authorization header.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
@@ -199,7 +199,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT, HttpMethod.POST);
         urlConn.getOutputStream().write(userJsonObj.toString().substring(0, userJsonObj.toString().length() - 1)
-                .getBytes(Charsets.UTF_8));
+                .getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the user with invalid syntax in json payload.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
@@ -230,7 +230,7 @@ public class UserResourceTestCase {
         userJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT, HttpMethod.POST);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the user with invalid semantic in json payload.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
@@ -262,7 +262,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutContentTypeHeader
                 (SCIMConstants.USER_ENDPOINT, HttpMethod.POST);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the user without content type header.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNSUPPORTED_MEDIA_TYPE.getStatusCode(),
@@ -295,7 +295,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT,
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Failed in adding the user with invalid attribute.");
     }
@@ -456,7 +456,7 @@ public class UserResourceTestCase {
     }
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given indexes")
-    public void testListAllUsers() throws Exception {
+    public void testListUsers() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT, HttpMethod.GET);
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -471,7 +471,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List User via SCIM with invalid Admin Credentials")
-    public void testListAllUsersWithInvalidCredentials() throws Exception {
+    public void testListUsersWithInvalidCredentials() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials
                 (SCIMConstants.USER_ENDPOINT, HttpMethod.GET);
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -482,7 +482,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List User via SCIM without Authorization Header")
-    public void testListAllUsersWithoutAuthorizationHeader() throws Exception {
+    public void testListUsersWithoutAuthorizationHeader() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutAuthorizationHeader
                 (SCIMConstants.USER_ENDPOINT, HttpMethod.GET);
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -492,7 +492,7 @@ public class UserResourceTestCase {
     }
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given indexes")
-    public void testListAllUsersWithPaginationIncludingCountAndStartIndex() throws Exception {
+    public void testListUsersWithPagination() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.createUser("Smith", null, "Hunt",
                 new ArrayList<String>() { { add("smith@gmail.com"); add("smith@yahoo.com"); } });
@@ -521,7 +521,7 @@ public class UserResourceTestCase {
     }
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given negative indexes")
-    public void testListAllUsersWithPaginationIncludingNegativeStartIndex() throws Exception {
+    public void testListUsersWithPaginationInNegativeStartIndex() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.createUser("Adam", null, "Addison",
                 new ArrayList<String>() { { add("adam@gmail.com"); add("adam@yahoo.com"); } });
@@ -554,7 +554,7 @@ public class UserResourceTestCase {
 
     /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users for given negative count index")
-    public void testListAllUsersWithPaginationIncludingNegativeCount() throws Exception {
+    public void testListUsersWithPaginationInNegativeCount() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.createUser("Robin", null, "Hood",
                 new ArrayList<String>() { { add("robin@gmail.com"); add("robin@yahoo.com"); } });
@@ -585,7 +585,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users for given exceeded count index")
-    public void testListAllUsersWithPaginationIncludingExceededCount() throws Exception {
+    public void testListUsersWithPaginationInExceededCount() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + 1 + "&count=" + 300, HttpMethod.GET);
@@ -601,7 +601,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users for given filter for a Single Valued Attribute")
-    public void testListAllUsersWithFilterForSingleValuedAttribute() throws Exception {
+    public void testListUsersWithFilterForSingleValuedAttribute() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?filter=" +
                 SCIMConstants.UserSchemaConstants.USER_NAME + "+EQ+Devid", HttpMethod.GET);
@@ -617,7 +617,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given symantically " +
             "invalid filter for a Single Valued Attribute")
-    public void testListAllUsersWithSemanticallyInvalidFilterForSingleValuedAttribute() throws Exception {
+    public void testListUsersWithSemanticallyInvalidFilterForSingleValuedAttribute() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?filter=" +
                 SCIMConstants.UserSchemaConstants.USER_NAME + "+EQDevid", HttpMethod.GET);
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -629,7 +629,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users for given filter for a Complex Attribute")
-    public void testListAllUsersWithFilterForComplexAttribute() throws Exception {
+    public void testListUsersWithFilterForComplexAttribute() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?filter=" +
                 SCIMConstants.UserSchemaConstants.NAME + "." + SCIMConstants.UserSchemaConstants.FAMILY_NAME +
@@ -646,7 +646,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given symantically " +
             "invalid filter for a Complex Attribute")
-    public void testListAllUsersWithSemanticallyInvalidFilterForComplexAttribute() throws Exception {
+    public void testListUsersWithSemanticallyInvalidFilterForComplexAttribute() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?filter=" +
                 SCIMConstants.UserSchemaConstants.NAME + "." + SCIMConstants.UserSchemaConstants.FAMILY_NAME +
                 "+EQSilva", HttpMethod.GET);
@@ -659,7 +659,7 @@ public class UserResourceTestCase {
 
     /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users for given filter for a Multi Valued Attribute")
-    public void testListAllUsersWithFilterForMultiValuedAttribute() throws Exception {
+    public void testListUsersWithFilterForMultiValuedAttribute() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?filter=" +
                 SCIMConstants.UserSchemaConstants.EMAILS + "[" + SCIMConstants.CommonSchemaConstants.TYPE + " eq \""+
@@ -675,7 +675,7 @@ public class UserResourceTestCase {
 
     /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given symantically " +
             "invalid filter for a Multi Valued Attribute")
-    public void testListAllUsersWithSemanticallyInvalidFilterForMultiValuedAttribute() throws Exception {
+    public void testListUsersWithSemanticallyInvalidFilterForMultiValuedAttribute() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?filter=" +
                 SCIMConstants.UserSchemaConstants.EMAILS + "[" + SCIMConstants.CommonSchemaConstants.TYPE + " eq"+
                 SCIMConstants.UserSchemaConstants.WORK +"\"]", HttpMethod.GET);
@@ -687,7 +687,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users for given unsupported filter")
-    public void testListAllUsersWithUnsupportedFilter() throws Exception {
+    public void testListUsersWithUnsupportedFilter() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?filter=" +
                 SCIMConstants.UserSchemaConstants.NAME + "." + SCIMConstants.UserSchemaConstants.FAMILY_NAME +
@@ -700,7 +700,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users with given exact attribute name")
-    public void testListAllUsersWithExactAttribute() throws Exception {
+    public void testListUsersWithExactAttribute() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.ATTRIBUTES + "=" + SCIMConstants.UserSchemaConstants.
@@ -720,7 +720,7 @@ public class UserResourceTestCase {
     }
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users with given invalid attribute")
-    public void testListAllUsersWithInvalidAttribute() throws Exception {
+    public void testListUsersWithInvalidAttribute() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.ATTRIBUTES + "=" + "description", HttpMethod.GET);
@@ -739,7 +739,7 @@ public class UserResourceTestCase {
     }
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List Users with given invalid attribute")
-    public void testListAllUsersWithOptionalAttribute() throws Exception {
+    public void testListUsersWithOptionalAttribute() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.ATTRIBUTES + "=" + SCIMConstants.UserSchemaConstants.NAME + "." +
                 SCIMConstants.UserSchemaConstants.FAMILY_NAME, HttpMethod.GET);
@@ -760,7 +760,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List Users with given multi valued attribute")
-    public void testListAllUsersWithMultiValuedAttribute() throws Exception {
+    public void testListUsersWithMultiValuedAttribute() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                         SCIMConstants.OperationalConstants.ATTRIBUTES + "=" + SCIMConstants.UserSchemaConstants.EMAILS,
                 HttpMethod.GET);
@@ -786,7 +786,7 @@ public class UserResourceTestCase {
     }
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users with exclude attribute")
-    public void testListAllUsersWithExcludeAttributes() throws Exception {
+    public void testListUsersWithExcludeAttributes() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?excludedAttributes=" +
                 SCIMConstants.UserSchemaConstants.FAMILY_NAME, HttpMethod.GET);
@@ -806,7 +806,7 @@ public class UserResourceTestCase {
 
     /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List Users based on user resource type")
-    public void testFilterAllUsersBasedOnUserResourceType() throws Exception {
+    public void testFilterUsersBasedOnUserResourceType() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection("?" +
                         SCIMConstants.OperationalConstants.FILTER + "=(meta.resourceType eq User)", HttpMethod.GET);
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -825,7 +825,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users with given exact attribute value")
-    public void testFilterAllUsersWithExactAttributeName() throws Exception {
+    public void testFilterUsersWithExactAttributeName() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.UserSchemaConstants.USER_NAME
@@ -844,7 +844,7 @@ public class UserResourceTestCase {
 
    /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users with given exact attribute value")
-    public void testFilterAllUsersWithLowerCaseAttributeName() throws Exception {
+    public void testFilterUsersWithLowerCaseAttributeName() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "="
@@ -864,7 +864,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users with attribute value in uppercase")
-    public void testFilterAllUsersWithUpperCaseAttributeName() throws Exception {
+    public void testFilterUsersWithUpperCaseAttributeName() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.UserSchemaConstants.USER_NAME
@@ -883,7 +883,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users with given exact attribute value")
-    public void testFilterAllUsersWithLowerCaseAttributeOperator() throws Exception {
+    public void testFilterUsersWithLowerCaseAttributeOperator() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.UserSchemaConstants.USER_NAME
@@ -902,7 +902,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users with attribute value in uppercase")
-    public void testFilterAllUsersWithUpperCaseAttributeOperator() throws Exception {
+    public void testFilterUsersWithUpperCaseAttributeOperator() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.UserSchemaConstants.USER_NAME
@@ -921,7 +921,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users with attribute value in uppercase")
-    public void testFilterAllUsersWithMultiCaseAttributeOperator() throws Exception {
+    public void testFilterUsersWithMultiCaseAttributeOperator() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.UserSchemaConstants.USER_NAME
@@ -950,7 +950,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/.search",
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
 
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Failed in searching users with POST request including count and start index.");
@@ -979,7 +979,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/.search",
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
 
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Failed in searching users with POST request including attributes.");
@@ -1013,7 +1013,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/.search",
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
 
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Failed in searching users with POST request including excluding attributes.");
@@ -1043,7 +1043,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/" + scimId,
                 HttpMethod.PUT);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Failed in updating the user.");
         urlConn.disconnect();
@@ -1073,7 +1073,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/" + scimId,
                 HttpMethod.PUT);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Failed in updating the user with an incorrect attribute.");
     }
@@ -1091,7 +1091,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/" +
                         scimId.substring(0, scimId.length() - 2), HttpMethod.PUT);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Successfully updating the user with an incorrect SCIM ID.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NOT_FOUND.getStatusCode(),
@@ -1112,7 +1112,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials(SCIMConstants.USER_ENDPOINT + "/"
                 + scimId, HttpMethod.PUT);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Successfully updating the user with an invalid admin credentials.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
@@ -1133,7 +1133,7 @@ public class UserResourceTestCase {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithIncorrectContentTypeHeader(SCIMConstants.USER_ENDPOINT +
                 "/" + scimId, HttpMethod.PUT);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Successfully updating the user with an incorrect Content Type.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNSUPPORTED_MEDIA_TYPE.getStatusCode(),
@@ -1185,7 +1185,7 @@ public class UserResourceTestCase {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/" + scimId,
                 HttpMethod.PUT);
         urlConn.getOutputStream().write(userJsonObj.toString().substring(0, userJsonObj.toString().length() - 1)
-                .getBytes(Charsets.UTF_8));
+                .getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Successfully updating the user with an incorrect data content.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),

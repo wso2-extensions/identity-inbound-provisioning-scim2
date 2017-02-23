@@ -22,7 +22,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import org.apache.commons.io.Charsets;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -38,6 +37,7 @@ import org.wso2.carbon.kernel.utils.CarbonServerInfo;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,7 +117,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials(SCIMConstants.GROUP_ENDPOINT,
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the group with invalid admin credentials.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
@@ -137,7 +137,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutAuthorizationHeader(SCIMConstants.GROUP_ENDPOINT,
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the group without authorization header.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
@@ -158,7 +158,7 @@ public class GroupResourceTest {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT,
                 HttpMethod.POST);
         urlConn.getOutputStream().write(groupJsonObj.toString().substring(0, groupJsonObj.toString().length() - 1)
-                .getBytes(Charsets.UTF_8));
+                .getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the group with invalid syntax in json payload.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
@@ -181,7 +181,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT,
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the group with invalid semantic in json payload.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
@@ -201,7 +201,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutContentTypeHeader(SCIMConstants.GROUP_ENDPOINT,
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the group without content type header.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNSUPPORTED_MEDIA_TYPE.getStatusCode(),
@@ -222,7 +222,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT,
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Failed in adding the group with invalid attribute.");
     }
@@ -253,7 +253,7 @@ public class GroupResourceTest {
 
         groupJsonObj.add(SCIMConstants.GroupSchemaConstants.MEMBERS, members);
         urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT, HttpMethod.POST);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
         content = SCIMTestUtil.getContent(urlConn);
         urlConn.disconnect();
@@ -391,7 +391,7 @@ public class GroupResourceTest {
     }
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List groups for given indexes")
-    public void testListAllGroups() throws Exception {
+    public void testListGroups() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT, HttpMethod.GET);
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -406,7 +406,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List Groups via SCIM with invalid Admin Credentials")
-    public void testListAllGroupsWithInvalidCredentials() throws Exception {
+    public void testListGroupsWithInvalidCredentials() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials
                 (SCIMConstants.GROUP_ENDPOINT, HttpMethod.GET);
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -417,7 +417,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List Groups via SCIM without Authorization Header")
-    public void testListAllGroupsWithoutAuthorizationHeader() throws Exception {
+    public void testListGroupsWithoutAuthorizationHeader() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithoutAuthorizationHeader
                 (SCIMConstants.GROUP_ENDPOINT, HttpMethod.GET);
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -427,7 +427,7 @@ public class GroupResourceTest {
     }
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List Groups for given indexes")
-    public void testListAllGroupsWithPaginationIncludingCountAndStartIndex() throws Exception {
+    public void testListGroupsWithPagination() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.createGroup("EngineeringQuality");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
@@ -455,7 +455,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List Groups for given negative indexes")
-    public void testListAllGroupsWithPaginationIncludingNegativeStartIndex() throws Exception {
+    public void testListGroupsWithPaginationInNegativeStartIndex() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.createGroup("Engineering-5");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
@@ -486,7 +486,7 @@ public class GroupResourceTest {
 
     /*@Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups for given negative count index")
-    public void testListAllGroupsWithPaginationIncludingNegativeCount() throws Exception {
+    public void testListGroupsWithPaginationInNegativeCount() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.createGroup("Engineering-7");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
@@ -515,7 +515,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups for given exceeded count index")
-    public void testListAllGroupsWithPaginationIncludingExceededCount() throws Exception {
+    public void testListGroupsWithPaginationInExceededCount() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                 SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + 1 + "&count=" + 300, HttpMethod.GET);
@@ -531,7 +531,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups for given filter for a Single Valued Attribute")
-    public void testListAllUsersWithFilterForSingleValuedAttribute() throws Exception {
+    public void testListUsersWithFilterForSingleValuedAttribute() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?filter=" +
                 SCIMConstants.GroupSchemaConstants.DISPLAY_NAME + "+EQ+Marketing", HttpMethod.GET);
@@ -547,7 +547,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List users for given semantically " +
             "invalid filter for a Single Valued Attribute")
-    public void testListAllGroupsWithSemanticallyInvalidFilterForSingleValuedAttribute() throws Exception {
+    public void testListGroupsWithSemanticallyInvalidFilterForSingleValuedAttribute() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?filter=" +
                 SCIMConstants.GroupSchemaConstants.DISPLAY_NAME + "+EQMarketing", HttpMethod.GET);
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -559,7 +559,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups for given unsupported filter")
-    public void testListAllGroupsWithUnsupportedFilter() throws Exception {
+    public void testListGroupsWithUnsupportedFilter() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?filter=" +
                 SCIMConstants.GroupSchemaConstants.DISPLAY_NAME + "+E+Silva", HttpMethod.GET);
@@ -571,7 +571,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups with given exact attribute name")
-    public void testListAllGroupsWithExactAttribute() throws Exception {
+    public void testListGroupsWithExactAttribute() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.ATTRIBUTES + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
@@ -592,7 +592,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups with given invalid attribute")
-    public void testListAllGroupsWithInvalidAttribute() throws Exception {
+    public void testListGroupsWithInvalidAttribute() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.ATTRIBUTES + "=" + "description", HttpMethod.GET);
@@ -611,7 +611,7 @@ public class GroupResourceTest {
     }
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List groups with exclude attribute")
-    public void testListAllGroupsWithExcludeAttributes() throws Exception {
+    public void testListGroupsWithExcludeAttributes() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?excludedAttributes=" +
                 SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, HttpMethod.GET);
@@ -631,7 +631,7 @@ public class GroupResourceTest {
 
     /*@Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List Groups based on user resource type")
-    public void testFilterAllGroupsBasedOnUserResourceType() throws Exception {
+    public void testFilterGroupsBasedOnUserResourceType() throws Exception {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection("?" +
                         SCIMConstants.OperationalConstants.FILTER + "=(meta.resourceType eq Group)", HttpMethod.GET);
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
@@ -650,7 +650,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups with given exact attribute value")
-    public void testFilterAllGroupsWithExactAttributeName() throws Exception {
+    public void testFilterGroupsWithExactAttributeName() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
@@ -669,7 +669,7 @@ public class GroupResourceTest {
 
     /*@Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups with given exact attribute value")
-    public void testFilterAllGroupsWithLowerCaseAttributeName() throws Exception {
+    public void testFilterGroupsWithLowerCaseAttributeName() throws Exception {
 
        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
@@ -688,7 +688,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups with attribute value in uppercase")
-    public void testFilterAllGroupsWithUpperCaseAttributeName() throws Exception {
+    public void testFilterGroupsWithUpperCaseAttributeName() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
@@ -707,7 +707,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups with given exact attribute value")
-    public void testFilterAllGroupsWithLowerCaseAttributeOperator() throws Exception {
+    public void testFilterGroupsWithLowerCaseAttributeOperator() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
@@ -726,7 +726,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups with attribute value in uppercase")
-    public void testFilterAllGroupsWithUpperCaseAttributeOperator() throws Exception {
+    public void testFilterGroupsWithUpperCaseAttributeOperator() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
@@ -745,7 +745,7 @@ public class GroupResourceTest {
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups with attribute value in multicase")
-    public void testFilterAllGroupsWithMultiCaseAttributeOperator() throws Exception {
+    public void testFilterGroupsWithMultiCaseAttributeOperator() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
                 SCIMConstants.OperationalConstants.FILTER + "=" + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME
@@ -775,7 +775,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
 
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
         String content = SCIMTestUtil.getContent(urlConn);
@@ -803,7 +803,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
 
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Failed in searching users with POST request including attributes.");
@@ -838,7 +838,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
                 HttpMethod.POST);
-        urlConn.getOutputStream().write(searchFilter.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
 
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Failed in searching users with POST request including attributes.");
@@ -883,7 +883,7 @@ public class GroupResourceTest {
 
         //Send update validConnection
         urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID, HttpMethod.PUT);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
         urlConn.disconnect();
 
@@ -907,7 +907,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID,
                 HttpMethod.PUT);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Failed in updating the group with an incorrect attribute.");
     }
@@ -925,7 +925,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" +
                 groupSCIMID.substring(0, groupSCIMID.length() - 2), HttpMethod.PUT);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Successfully updating the group with an incorrect SCIM ID.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NOT_FOUND.getStatusCode(),
@@ -946,7 +946,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithInvalidAdminCredentials(SCIMConstants.GROUP_ENDPOINT +
                 "/" + groupSCIMID, HttpMethod.PUT);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Successfully updating the group with an invalid admin credentials.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNAUTHORIZED.getStatusCode(),
@@ -967,7 +967,7 @@ public class GroupResourceTest {
 
         HttpURLConnection urlConn = SCIMTestUtil.connectionWithIncorrectContentTypeHeader(SCIMConstants.GROUP_ENDPOINT +
                 "/" + groupSCIMID, HttpMethod.PUT);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Successfully updating the group with an incorrect Content Type.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.UNSUPPORTED_MEDIA_TYPE.getStatusCode(),
@@ -1018,7 +1018,7 @@ public class GroupResourceTest {
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID,
                 HttpMethod.PUT);
         urlConn.getOutputStream().write(groupJsonObj.toString().substring(0, groupJsonObj.toString().length() - 1)
-                .getBytes(Charsets.UTF_8));
+                .getBytes(StandardCharsets.UTF_8));
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
                 "Successfully updating the group with an incorrect data content.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
