@@ -194,13 +194,14 @@ public class CarbonUserManager implements UserManager {
         try {
             org.wso2.carbon.identity.mgt.User user = identityStore.getUser(userId);
             List<Claim> claims = user.getClaims();
-            for (Claim claim : claims) {
-                if (USERNAME_CLAIM.equals(claim.getClaimUri())) {
-                    if (ADMIN_USERNAME.equals(claim.getValue())) {
-                        throw new CharonException("Cannot Delete admin user from the System");
-                    }
-                }
+
+            boolean isAdminUser = claims.stream().anyMatch(claim -> USERNAME_CLAIM.equals(claim.getClaimUri()) &&
+                    ADMIN_USERNAME.equals(claim.getValue()));
+
+            if (isAdminUser) {
+                throw new CharonException("Cannot Delete admin user from the System");
             }
+
             identityStore.deleteUser(userId);
             if (log.isDebugEnabled()) {
                 log.debug("User with the id : " + userId + " is deleted through SCIM.");
