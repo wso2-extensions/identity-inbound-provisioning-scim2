@@ -68,11 +68,12 @@ public class SCIMTestUtil {
      * Create a user with sample attributes
      *
      * @param userName
+     * @param password
      * @param familyName
      * @return
      * @throws IOException
      */
-    public static HttpURLConnection createUser(String userName, String familyName, List<String> emails)
+    public static HttpURLConnection createUser(String userName, String password, String familyName, List<String> emails)
             throws IOException {
 
         JsonObject nameJsonObj = new JsonObject();
@@ -100,6 +101,9 @@ public class SCIMTestUtil {
         userJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
         if (StringUtils.isNotEmpty(userName)) {
             userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.USER_NAME, userName);
+        }
+        if (StringUtils.isNotEmpty(password)) {
+            userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.PASSWORD, password);
         }
 
         HttpURLConnection urlConn = validConnection(SCIMConstants.USER_ENDPOINT, HttpMethod.POST);
@@ -169,6 +173,12 @@ public class SCIMTestUtil {
 
     public static HttpURLConnection validConnection(String path, String method) throws IOException {
         String authorizationHeader = validAdminCredentials.get(USER_NAME) + ":" + validAdminCredentials.get(PASSWORD);
+        return connection(path, method, false, authorizationHeader, contentTypeHeader);
+    }
+
+    public static HttpURLConnection validConnection(String path, String method, String username, String password)
+            throws IOException {
+        String authorizationHeader = username + ":" + password;
         return connection(path, method, false, authorizationHeader, contentTypeHeader);
     }
 

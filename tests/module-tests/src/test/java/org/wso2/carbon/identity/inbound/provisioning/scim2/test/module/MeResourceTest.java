@@ -39,6 +39,7 @@ import org.wso2.carbon.kernel.utils.CarbonServerInfo;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import java.net.HttpURLConnection;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
 import javax.ws.rs.HttpMethod;
@@ -114,13 +115,18 @@ public class MeResourceTest {
         urlConn.disconnect();
     }
 
-    /*@Test(dependsOnMethods = { "testUpdateMe" }, description = "Delete my identity via SCIM")
+    @Test(dependsOnMethods = { "testUpdateMe" }, description = "Delete my identity via SCIM")
     public void testDeleteMe() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMTestConstant.ME_ENDPOINT, HttpMethod.DELETE);
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("admin2", "password", "admin2",
+                new ArrayList<String>() { { add("admin@gmail.com"); add("admin@yahoo.com"); } });
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the user.");
+
+        urlConn = SCIMTestUtil.validConnection(SCIMTestConstant.ME_ENDPOINT, HttpMethod.DELETE, "admin2", "password");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NO_CONTENT.getStatusCode());
         urlConn.disconnect();
-    }*/
+    }
 
     private JsonObject getUser() throws Exception {
 

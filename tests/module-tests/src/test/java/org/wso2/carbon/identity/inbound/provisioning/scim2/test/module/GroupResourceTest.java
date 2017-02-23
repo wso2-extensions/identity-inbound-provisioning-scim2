@@ -165,7 +165,7 @@ public class GroupResourceTest {
                 "Successfully retrieving \"Bad Request\" as the response.");
     }
 
-    /*@Test(groups = "addGroups", description = "Add Group via SCIM with invalid Semantic in Json Payload.")
+    @Test(groups = "addGroups", description = "Add Group via SCIM with invalid Semantic in Json Payload.")
     public void testAddGroupWithInvalidSemanticInJsonPayload() throws Exception {
         JsonObject groupJsonObj = new JsonObject();
 
@@ -186,7 +186,7 @@ public class GroupResourceTest {
                 "Successfully added the group with invalid semantic in json payload.");
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
                 "Successfully retrieving \"Bad Request\" as the response.");
-    }*/
+    }
 
     @Test(groups = "addGroups", description = "Add Group via SCIM without specifying 'Content-Type' header.")
     public void testAddGroupWithoutContentTypeHeader() throws Exception {
@@ -230,7 +230,7 @@ public class GroupResourceTest {
     @Test(groups = "addGroups", description = "Add a group with a user via SCIM")
     public void testAddGroupWithMembers() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Tom", "Luvis",
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Tom", null, "Luvis",
                 new ArrayList<String>() { { add("tom@gmail.com"); add("tom@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
         String content = SCIMTestUtil.getContent(urlConn);
@@ -860,7 +860,7 @@ public class GroupResourceTest {
     public void testUpdateGroup() throws Exception {
 
         //Create a new User
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Matt", "Damon",
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Matt", null, "Damon",
                 new ArrayList<String>() { { add("matt@gmail.com"); add("matt@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode());
         String content = SCIMTestUtil.getContent(urlConn);

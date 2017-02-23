@@ -80,7 +80,7 @@ public class UserResourceTestCase {
     @Test(groups = "addUsers", description = "Add User via SCIM")
     public void testAddUser() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Devid", "Silva",
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Devid", null, "Silva",
                 new ArrayList<String>() { { add("devid@gmail.com"); add("devid@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Failed to add the user.");
@@ -94,7 +94,7 @@ public class UserResourceTestCase {
 
     @Test(groups = "addUsers", description = "Add User via SCIM without Mandatory Attributes")
     public void testAddUserWithoutMandatoryAttributes() throws Exception {
-        HttpURLConnection urlConn = SCIMTestUtil.createUser(null, "Silva",
+        HttpURLConnection urlConn = SCIMTestUtil.createUser(null, null, "Silva",
                 new ArrayList<String>() { { add("silva@gmail.com"); add("silva@yahoo.com"); } });
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added the user without mandatory attributes.");
@@ -102,7 +102,7 @@ public class UserResourceTestCase {
 
     @Test (groups = "addUsers", dependsOnMethods = {"testAddUser"}, description = "Add Existing User via SCIM")
     public void testAddExistingUser() throws Exception {
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Devid", "Silva",
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Devid", null, "Silva",
                 new ArrayList<String>() { { add("devid@gmail.com"); add("devid@yahoo.com"); } });
         Assert.assertNotEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Successfully added an existing user.");
@@ -409,8 +409,7 @@ public class UserResourceTestCase {
         JsonArray emails = ((JsonArray) result.get(SCIMConstants.UserSchemaConstants.EMAILS));
         for (JsonElement email : emails) {
             JsonObject emailObj = ((JsonObject) email);
-            Assert.assertEquals(emailObj.get(SCIMConstants.CommonSchemaConstants.TYPE).getAsString(),
-                    SCIMConstants.UserSchemaConstants.HOME,
+            Assert.assertNotNull(emailObj.get(SCIMConstants.CommonSchemaConstants.TYPE),
                     "Failed in retrieving the user with a multi valued attribute.");
             Assert.assertNull(emailObj.get(SCIMConstants.UserSchemaConstants.USER_NAME),
                     "Failed in retrieving the user with a multi valued attribute.");
@@ -492,16 +491,16 @@ public class UserResourceTestCase {
                 "Successfully retrieving \"Unauthorized\" as the response.");
     }
 
-    /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given indexes")
+    @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given indexes")
     public void testListAllUsersWithPaginationIncludingCountAndStartIndex() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Smith", "Hunt",
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Smith", null, "Hunt",
                 new ArrayList<String>() { { add("smith@gmail.com"); add("smith@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Failed in creating the user.");
         urlConn.disconnect();
 
-        urlConn = SCIMTestUtil.createUser("Rajive", "Kumar",
+        urlConn = SCIMTestUtil.createUser("Rajive", null, "Kumar",
                 new ArrayList<String>() { { add("rajive@gmail.com"); add("rajive@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Failed in creating the user.");
@@ -519,18 +518,18 @@ public class UserResourceTestCase {
                 size() > 0, "Failed in listing all the users with pagination.");
         Assert.assertEquals(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).size(),
                 3, "Failed in listing the correct number of users with pagination.");
-    }*/
+    }
 
-    /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given negative indexes")
+    @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given negative indexes")
     public void testListAllUsersWithPaginationIncludingNegativeStartIndex() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Adam", "Addison",
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Adam", null, "Addison",
                 new ArrayList<String>() { { add("adam@gmail.com"); add("adam@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Failed in creating the user.");
         urlConn.disconnect();
 
-        urlConn = SCIMTestUtil.createUser("Alvin", "Andrew",
+        urlConn = SCIMTestUtil.createUser("Alvin", null, "Andrew",
                 new ArrayList<String>() { { add("alvin@gmail.com"); add("alvin@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Failed in creating the user.");
@@ -549,21 +548,21 @@ public class UserResourceTestCase {
         Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
                 size() > 0, "Failed in listing all the users with pagination.");
         Assert.assertEquals(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).size(),
-                3, "Failed in listing the correct number of users with pagination when startIndex parameter is a
-                negative value.");
-    }*/
+                3, "Failed in listing the correct number of users with pagination when startIndex parameter is a " +
+                        "negative value.");
+    }
 
     /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users for given negative count index")
     public void testListAllUsersWithPaginationIncludingNegativeCount() throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.createUser("Robin", "Hood",
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Robin", null, "Hood",
                 new ArrayList<String>() { { add("robin@gmail.com"); add("robin@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Failed in creating the user.");
         urlConn.disconnect();
 
-        urlConn = SCIMTestUtil.createUser("Keshava", "Madhava",
+        urlConn = SCIMTestUtil.createUser("Keshava", null, "Madhava",
                 new ArrayList<String>() { { add("keshava@gmail.com"); add("keshava@yahoo.com"); } });
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
                 "Failed in creating the user.");
@@ -777,8 +776,7 @@ public class UserResourceTestCase {
                 JsonArray emails = ((JsonArray) resourceObj.get(SCIMConstants.UserSchemaConstants.EMAILS));
                 for (JsonElement email : emails) {
                     JsonObject emailObj = ((JsonObject) email);
-                    Assert.assertEquals(emailObj.get(SCIMConstants.CommonSchemaConstants.TYPE).getAsString(),
-                            SCIMConstants.UserSchemaConstants.HOME,
+                    Assert.assertNotNull(emailObj.get(SCIMConstants.CommonSchemaConstants.TYPE),
                             "Failed in retrieving actual attributes of the user.");
                     Assert.assertNull(emailObj.get(SCIMConstants.UserSchemaConstants.USER_NAME),
                             "Failed in retrieving actual attributes of the user.");
@@ -940,7 +938,7 @@ public class UserResourceTestCase {
         }
     }
 
-    /*@Test(groups = "searchUsers", dependsOnGroups = {"listUsers"}, description = "Search users with http POST")
+    @Test(groups = "searchUsers", dependsOnGroups = {"listUsers"}, description = "Search users with http POST")
     public void searchUsersWithPostWithCount() throws Exception {
 
         JsonObject searchFilter = new JsonObject();
@@ -961,9 +959,9 @@ public class UserResourceTestCase {
 
         JsonObject result = GSON.fromJson(content, JsonObject.class);
         Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
-                size() == 2, "Failed in retrieving correct number of users when searching users with POST request
-                including count and start index.");
-    }*/
+                size() == 2, "Failed in retrieving correct number of users when searching users with POST request " +
+                "including count and start index.");
+    }
 
     @Test(groups = "searchUsers", dependsOnGroups = {"listUsers"}, description = "Search users with http POST " +
             "with attributes")
