@@ -21,8 +21,8 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.test.module.commons.
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -30,8 +30,11 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import javax.net.ssl.HttpsURLConnection;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.HttpHeaders;
@@ -42,29 +45,68 @@ import javax.ws.rs.core.HttpHeaders;
 public class SCIMTestUtil {
 
     private static Logger log = LoggerFactory.getLogger(SCIMTestUtil.class);
-    private static final String USER_NAME = "admin";
-    private static final String PASSWORD = "admin";
+    private static final String USER_NAME = "username";
+    private static final String PASSWORD = "password";
+
+    private static Map<String, String> validAdminCredentials = new HashMap<String, String>() {
+        {
+            put("username", "admin");
+            put("password", "admin");
+        }
+    };
+    private static Map<String, String> invalidAdminCredentials = new HashMap<String, String>() {
+        {
+            put("username", "admin");
+            put("password", "invalidPassword");
+        }
+    };
+    private static String contentTypeHeader = "application/scim+json";
+    private static String incorrectContentTypeHeader = "application/scim+xml";
 
     /**
      * Create a user with sample attributes
      *
      * @param userName
+     * @param password
      * @param familyName
      * @return
      * @throws IOException
      */
-    public static HttpURLConnection createUser(String userName, String familyName) throws IOException {
+    public static HttpURLConnection createUser(String userName, String password, String familyName, List<String> emails)
+            throws IOException {
 
         JsonObject nameJsonObj = new JsonObject();
-        nameJsonObj.addProperty(SCIMConstants.UserSchemaConstants.FAMILY_NAME, familyName);
+        if (StringUtils.isNotEmpty(familyName)) {
+            nameJsonObj.addProperty(SCIMConstants.UserSchemaConstants.FAMILY_NAME, familyName);
+        }
+
+        JsonArray mailJsonArray = new JsonArray();
+        if (emails != null && emails.size() != 0) {
+            JsonObject workJsonObj = new JsonObject();
+            workJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.TYPE, SCIMConstants.UserSchemaConstants.WORK);
+            workJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.VALUE, emails.get(0));
+            mailJsonArray.add(workJsonObj);
+
+            JsonObject homeJsonObj = new JsonObject();
+            homeJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.TYPE, SCIMConstants.UserSchemaConstants.HOME);
+            homeJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.VALUE, emails.get(1));
+            homeJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.PRIMARY, "true");
+            mailJsonArray.add(homeJsonObj);
+        }
 
         JsonObject userJsonObj = new JsonObject();
         userJsonObj.add(SCIMConstants.UserSchemaConstants.NAME, nameJsonObj);
+        userJsonObj.add(SCIMConstants.UserSchemaConstants.EMAILS, mailJsonArray);
         userJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
-        userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.USER_NAME, userName);
+        if (StringUtils.isNotEmpty(userName)) {
+            userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.USER_NAME, userName);
+        }
+        if (StringUtils.isNotEmpty(password)) {
+            userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.PASSWORD, password);
+        }
 
-        HttpURLConnection urlConn = request(SCIMConstants.USER_ENDPOINT, HttpMethod.POST);
-        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(Charsets.UTF_8));
+        HttpURLConnection urlConn = validConnection(SCIMConstants.USER_ENDPOINT, HttpMethod.POST);
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         return urlConn;
     }
 
@@ -86,8 +128,8 @@ public class SCIMTestUtil {
         groupJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
         groupJsonObj.addProperty(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME, groupName);
 
-        HttpURLConnection urlConn = request(SCIMConstants.GROUP_ENDPOINT, HttpMethod.POST);
-        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(Charsets.UTF_8));
+        HttpURLConnection urlConn = validConnection(SCIMConstants.GROUP_ENDPOINT, HttpMethod.POST);
+        urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         return urlConn;
 
     }
@@ -101,7 +143,7 @@ public class SCIMTestUtil {
      */
     public static HttpURLConnection getUser(String scimId) throws IOException {
 
-        return request(SCIMConstants.USER_ENDPOINT + "/" + scimId, HttpMethod.GET);
+        return validConnection(SCIMConstants.USER_ENDPOINT + "/" + scimId, HttpMethod.GET);
     }
 
     /**
@@ -113,26 +155,59 @@ public class SCIMTestUtil {
      */
     public static HttpURLConnection getGroup(String scimId) throws IOException {
 
-        return request(SCIMConstants.GROUP_ENDPOINT + "/" + scimId, HttpMethod.GET);
+        return validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + scimId, HttpMethod.GET);
     }
 
     public static HttpURLConnection deleteUser(String scimId) throws IOException {
 
-        return request(SCIMConstants.USER_ENDPOINT + "/" + scimId, HttpMethod.DELETE);
+        return validConnection(SCIMConstants.USER_ENDPOINT + "/" + scimId, HttpMethod.DELETE);
 
     }
 
     public static HttpURLConnection deleteGroup(String scimId) throws IOException {
 
-        return request(SCIMConstants.GROUP_ENDPOINT + "/" + scimId, HttpMethod.DELETE);
+        return validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + scimId, HttpMethod.DELETE);
 
     }
 
-    public static HttpURLConnection request(String path, String method) throws IOException {
-        return request(path, method, false);
+    public static HttpURLConnection validConnection(String path, String method) throws IOException {
+        String authorizationHeader = validAdminCredentials.get(USER_NAME) + ":" + validAdminCredentials.get(PASSWORD);
+        return connection(path, method, false, authorizationHeader, contentTypeHeader);
     }
 
-    private static HttpURLConnection request(String path, String method, boolean keepAlive) throws IOException {
+    public static HttpURLConnection validConnection(String path, String method, String username, String password)
+            throws IOException {
+        String authorizationHeader = username + ":" + password;
+        return connection(path, method, false, authorizationHeader, contentTypeHeader);
+    }
+
+    public static HttpURLConnection connectionWithInvalidAdminCredentials(String path, String method)
+            throws IOException {
+        String authorizationHeader = invalidAdminCredentials.get(USER_NAME) + ":" +
+                invalidAdminCredentials.get(PASSWORD);
+        return connection(path, method, false, authorizationHeader, contentTypeHeader);
+    }
+
+    public static HttpURLConnection connectionWithoutAuthorizationHeader(String path, String method)
+            throws IOException {
+        return connection(path, method, false, null, contentTypeHeader);
+    }
+
+    public static HttpURLConnection connectionWithoutContentTypeHeader(String path, String method)
+            throws IOException {
+        String authorizationHeader = validAdminCredentials.get(USER_NAME) + ":" + validAdminCredentials.get(PASSWORD);
+        return connection(path, method, false, authorizationHeader, null);
+    }
+
+    public static HttpURLConnection connectionWithIncorrectContentTypeHeader(String path, String method)
+            throws IOException {
+        String authorizationHeader = validAdminCredentials.get(USER_NAME) + ":" + validAdminCredentials.get(PASSWORD);
+        return connection(path, method, false, authorizationHeader, incorrectContentTypeHeader);
+    }
+
+    private static HttpURLConnection connection(String path, String method, boolean keepAlive,
+                                                String authorizationHeader, String contentTypeHeader)
+            throws IOException {
 
         URL url = new URL(SCIMTestConstant.BASE_URL + path);
 
@@ -152,21 +227,22 @@ public class SCIMTestUtil {
             httpURLConnection.setRequestProperty("CONNECTION", "CLOSE");
         }
 
-        String authorization = USER_NAME + ":" + PASSWORD;
+        if (authorizationHeader != null) {
+            String temp = new String(Base64.getEncoder().encode(authorizationHeader.getBytes(StandardCharsets.UTF_8)),
+                    StandardCharsets.UTF_8);
 
-
-        String temp = new String(Base64.getEncoder().encode(authorization.getBytes(Charset.forName("UTF-8"))),
-                Charset.forName("UTF-8"));
-
-        authorization = "Basic " + temp;
-        httpURLConnection.setRequestProperty(HttpHeaders.AUTHORIZATION, authorization);
-        httpURLConnection.setRequestProperty(HttpHeaders.CONTENT_TYPE, "application/scim+json");
+            authorizationHeader = "Basic " + temp;
+            httpURLConnection.setRequestProperty(HttpHeaders.AUTHORIZATION, authorizationHeader);
+        }
+        if (contentTypeHeader != null) {
+            httpURLConnection.setRequestProperty(HttpHeaders.CONTENT_TYPE, contentTypeHeader);
+        }
 
         return httpURLConnection;
 
     }
 
     public static String getContent(HttpURLConnection urlConn) throws IOException {
-        return new String(IOUtils.toByteArray(urlConn.getInputStream()), Charsets.UTF_8);
+        return new String(IOUtils.toByteArray(urlConn.getInputStream()), StandardCharsets.UTF_8);
     }
 }

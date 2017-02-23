@@ -70,7 +70,7 @@ public class ServiceProviderConfigResourceTest {
     @Test
     public void testGetServiceProviderConfig () throws Exception {
 
-        HttpURLConnection urlConn = SCIMTestUtil.request(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT,
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT,
                 HttpMethod.GET);
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
 
