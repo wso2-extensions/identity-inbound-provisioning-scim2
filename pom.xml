@@ -525,7 +525,7 @@
         <osgi.framework.import.version.range>[1.8.0, 2.0.0)</osgi.framework.import.version.range>
 
         <jacoco.version>0.7.7.201606060606</jacoco.version>
-        <charon.core.version>3.0.0</charon.core.version>
+        <charon.core.version>3.0.1</charon.core.version>
 
         <disruptor.wso2.version>3.3.2.wso2v2</disruptor.wso2.version>
         <netty.version>4.0.30.Final</netty.version>
