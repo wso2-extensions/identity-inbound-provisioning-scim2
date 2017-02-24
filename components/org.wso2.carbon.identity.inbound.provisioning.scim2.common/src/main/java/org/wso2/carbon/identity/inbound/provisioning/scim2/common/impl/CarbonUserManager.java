@@ -199,7 +199,7 @@ public class CarbonUserManager implements UserManager {
                     ADMIN_USERNAME.equals(claim.getValue()));
 
             if (isAdminUser) {
-                throw new CharonException("Cannot Delete admin user from the System");
+                throw new BadRequestException("Cannot Delete admin user from the System");
             }
 
             identityStore.deleteUser(userId);
