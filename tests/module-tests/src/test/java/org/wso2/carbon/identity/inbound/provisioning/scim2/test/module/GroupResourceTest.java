@@ -484,7 +484,7 @@ public class GroupResourceTest {
                         "negative value.");
     }
 
-    /*@Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups for given negative count index")
     public void testListGroupsWithPaginationInNegativeCount() throws Exception {
 
@@ -508,10 +508,10 @@ public class GroupResourceTest {
         JsonObject result = GSON.fromJson(content, JsonObject.class);
         // As per the spec,value which is less than one for startIndex interpreted as "1" and count interpreted as "0"
         // A value of "0" indicates that no resource results are to be returned except for "totalResults"
-        Assert.assertEquals(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).size(),
-                0, "Failed in listing the correct number of groups with pagination when count parameter is a " +
+        Assert.assertEquals((result.get("totalResults")).getAsInt(),
+                0, "Failed in retrieving the correct result with pagination when count parameter is a " +
                         "negative values.");
-    }*/
+    }
 
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List groups for given exceeded count index")
@@ -771,7 +771,7 @@ public class GroupResourceTest {
         schemas.add(new JsonPrimitive("urn:ietf:params:scim:api:messages:2.0:SearchRequest"));
         searchFilter.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
         searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, 1);
-        searchFilter.addProperty("count", 10);
+        searchFilter.addProperty("count", 2);
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
                 HttpMethod.POST);
@@ -783,7 +783,58 @@ public class GroupResourceTest {
 
         JsonObject result = GSON.fromJson(content, JsonObject.class);
         Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
-                size() > 0);
+                size() == 2, "Failed in retrieving correct number of groups when searching users with POST request " +
+                "including count and start index.");
+    }
+
+    @Test(groups = "searchGroups", dependsOnGroups = {"listGroups"},
+            description = "Search groups with http POST via SCIM in negative start index")
+    public void searchGroupsWithPostWithNegativeStartIndex() throws Exception {
+
+        JsonObject searchFilter = new JsonObject();
+        JsonArray schemas = new JsonArray();
+        schemas.add(new JsonPrimitive("urn:ietf:params:scim:api:messages:2.0:SearchRequest"));
+        searchFilter.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, -1);
+        searchFilter.addProperty("count", 2);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
+
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
+                size() == 2, "Failed in retrieving correct number of groups when searching users with POST request " +
+                "including count and start index.");
+    }
+
+    @Test(groups = "searchGroups", dependsOnGroups = {"listGroups"},
+            description = "Search groups with http POST via SCIM in negative count")
+    public void searchGroupsWithPostWithNegativeCount() throws Exception {
+
+        JsonObject searchFilter = new JsonObject();
+        JsonArray schemas = new JsonArray();
+        schemas.add(new JsonPrimitive("urn:ietf:params:scim:api:messages:2.0:SearchRequest"));
+        searchFilter.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, 1);
+        searchFilter.addProperty("count", -2);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/.search",
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
+
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertEquals((result.get("totalResults")).getAsInt(),
+                0, "Failed in retrieving the correct result when searching users with POST request " +
+                        "including negative count and start index.");
     }
 
     @Test(groups = "searchGroups", dependsOnGroups = {"listGroups"}, description = "Search groups with http POST " +

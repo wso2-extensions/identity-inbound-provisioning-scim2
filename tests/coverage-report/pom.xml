@@ -25,9 +25,9 @@
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>carbon-identity-mgt-coverage-report</artifactId>
-    <name>WSO2 Carbon Identity Management - Test coverage</name>
-    <description>Coverage reports for Carbon Identity Management</description>
+    <artifactId>identity-inbound-provisioning-scim2-coverage-report</artifactId>
+    <name>WSO2 Identity Inbound Provisioning SCIM2 - Test coverage</name>
+    <description>Coverage reports for Carbon Identity Inbound Provisioning SCIM2</description>
     <url>http://wso2.com</url>
 
 
@@ -117,7 +117,7 @@
                                             <html destdir="${project.build.directory}/site/jacoco" />
                                             <check>
                                                 <rule element="PACKAGE">
-                                                    <limit counter="LINE" value="COVEREDRATIO" minimum="0.20" />
+                                                    <limit counter="LINE" value="COVEREDRATIO" minimum="0.60" />
                                                 </rule>
                                             </check>
                                         </jacoco:report>
