@@ -103,6 +103,7 @@ public class MeResourceTest {
         JsonObject userJsonObj = new JsonObject();
         userJsonObj.add(SCIMConstants.UserSchemaConstants.NAME, nameJsonObj);
         userJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
+        userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.USER_NAME, "admin");
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMTestConstant.ME_ENDPOINT, HttpMethod.PUT);
         urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
