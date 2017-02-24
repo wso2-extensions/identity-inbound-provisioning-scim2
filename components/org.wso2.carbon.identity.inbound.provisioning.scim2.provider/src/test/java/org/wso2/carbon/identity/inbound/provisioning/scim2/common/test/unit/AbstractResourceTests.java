@@ -34,9 +34,24 @@ public class AbstractResourceTests {
         Assert.assertEquals(isValidOutput, Boolean.TRUE.booleanValue(), "Failed in retrieving correct result.");
     }
 
+    @Test
+    public void testIsValidOutputFormatWithInvalidOutput() {
+        AbstractResource abstractResource = new AbstractResource();
+        boolean isValidOutput = abstractResource.isValidOutputFormat("****");
+        Assert.assertEquals(isValidOutput, Boolean.FALSE.booleanValue(), "Failed in retrieving correct result.");
+    }
+
+    @Test
     public void testIsValidInputFormat() {
         AbstractResource abstractResource = new AbstractResource();
         boolean isValidOutput = abstractResource.isValidInputFormat(SCIMProviderConstants.APPLICATION_SCIM_JSON);
         Assert.assertEquals(isValidOutput, Boolean.TRUE.booleanValue(), "Failed in retrieving correct result.");
+    }
+
+    @Test
+    public void testIsValidInputFormatWithInvalidInput() {
+        AbstractResource abstractResource = new AbstractResource();
+        boolean isValidOutput = abstractResource.isValidInputFormat("****");
+        Assert.assertEquals(isValidOutput, Boolean.FALSE.booleanValue(), "Failed in retrieving correct result.");
     }
 }
