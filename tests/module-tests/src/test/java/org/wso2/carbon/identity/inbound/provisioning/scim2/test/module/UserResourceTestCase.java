@@ -1192,7 +1192,7 @@ public class UserResourceTestCase {
         JsonObject userJsonObj = new JsonObject();
         userJsonObj.add(SCIMConstants.UserSchemaConstants.NAME, nameJsonObj);
         userJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
-
+        userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.USER_NAME, "Devid");
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/" + scimId,
                 HttpMethod.PUT);
         urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
@@ -1222,6 +1222,7 @@ public class UserResourceTestCase {
         JsonObject userJsonObj = new JsonObject();
         userJsonObj.add(SCIMConstants.UserSchemaConstants.NAME, nameJsonObj);
         userJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
+        userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.USER_NAME, "Devid");
 
         HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/" + scimId,
                 HttpMethod.PUT);
