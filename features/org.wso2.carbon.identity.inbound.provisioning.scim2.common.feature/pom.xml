@@ -35,10 +35,6 @@
             <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
             <artifactId>org.wso2.carbon.identity.inbound.provisioning.scim2.common</artifactId>
         </dependency>
-        <!--<dependency>-->
-            <!--<groupId>org.wso2.carbon.identity.commons</groupId>-->
-            <!--<artifactId>org.wso2.carbon.identity.commons</artifactId>-->
-        <!--</dependency>-->
         <dependency>
             <groupId>org.wso2.charon</groupId>
             <artifactId>org.wso2.charon3.core</artifactId>
@@ -122,10 +118,6 @@
                                     <symbolicName>json</symbolicName>
                                     <version>20160810.0.0</version>
                                 </bundle>
-                                <!--<bundle>-->
-                                    <!--<symbolicName>org.wso2.carbon.identity.commons</symbolicName>-->
-                                    <!--<version>6-SNAPSHOT</version>-->
-                                <!--</bundle>-->
                             </bundles>
                         </configuration>
                     </execution>
