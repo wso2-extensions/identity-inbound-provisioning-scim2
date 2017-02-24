@@ -46,11 +46,11 @@ import javax.ws.rs.core.Response;
         immediate = true
 )
 
-@Api(value = "scim/v2/ResourceType")
+@Api(value = "scim/v2/ResourceTypes")
 @SwaggerDefinition(
         info = @Info(
-                title = "/ResourceType Endpoint Swagger Definition", version = "1.0",
-                description = "SCIM 2.0 /ResourceType endpoint",
+                title = "/ResourceTypes Endpoint Swagger Definition", version = "1.0",
+                description = "SCIM 2.0 /ResourceTypes endpoint",
                 license = @License(name = "Apache 2.0", url = "http://www.apache.org/licenses/LICENSE-2.0"),
                 contact = @Contact(
                         name = "WSO2 Identity Server Team",
@@ -58,14 +58,14 @@ import javax.ws.rs.core.Response;
                         url = "http://wso2.com"
                 ))
 )
-@Path("/scim/v2/ResourceType")
+@Path("/scim/v2/ResourceTypes")
 public class ResourceTypeResource extends AbstractResource {
 
     @GET
     @Produces({"application/scim+json"})
 
     @ApiOperation(
-            value = "Return the ResourceType schema.",
+            value = "Return the ResourceTypes schema.",
             notes = "Returns HTTP 200 if the schema is found.")
 
     @ApiResponses(value = {
