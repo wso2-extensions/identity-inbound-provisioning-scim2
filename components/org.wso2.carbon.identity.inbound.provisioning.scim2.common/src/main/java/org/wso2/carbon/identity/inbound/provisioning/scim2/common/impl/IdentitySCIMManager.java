@@ -22,9 +22,9 @@ import org.wso2.carbon.identity.inbound.provisioning.scim2.common.internal.Ident
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.mgt.RealmService;
+import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
 import org.wso2.charon3.core.config.CharonConfiguration;
 import org.wso2.charon3.core.encoder.JSONEncoder;
-import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -43,7 +43,7 @@ public class IdentitySCIMManager {
     private JSONEncoder encoder = null;
     private static Map<String, String> endpointURLs = new HashMap<String, String>();
 
-    private IdentitySCIMManager() throws CharonException {
+    private IdentitySCIMManager() {
         init();
     }
 
@@ -53,7 +53,7 @@ public class IdentitySCIMManager {
      *
      * @return
      */
-    public static IdentitySCIMManager getInstance() throws CharonException {
+    public static IdentitySCIMManager getInstance() {
         if (identitySCIMManager == null) {
             synchronized (IdentitySCIMManager.class) {
                 if (identitySCIMManager == null) {
@@ -71,7 +71,7 @@ public class IdentitySCIMManager {
     /*
      * Perform initialization at the deployment of the webapp.
      */
-    private void init() throws CharonException {
+    private void init() {
         //this is necessary to instantiate here as we need to encode exceptions if they occur.
         encoder = new JSONEncoder();
         //Define endpoint urls to be used in Location Header
@@ -96,7 +96,7 @@ public class IdentitySCIMManager {
     }
 
 
-    public UserManager getUserManager() throws CharonException {
+    public UserManager getUserManager() throws IdentityStoreException {
         CarbonUserManager carbonUserManager = null;
         RealmService realmService = (RealmService) IdentitySCIMDataHolder.getInstance().getRealmService();
         if (realmService != null) {
@@ -104,7 +104,7 @@ public class IdentitySCIMManager {
             return carbonUserManager;
         } else {
             String error = "Can not obtain carbon realm service..";
-            throw new CharonException(error);
+            throw new IdentityStoreException(error);
         }
     }
 

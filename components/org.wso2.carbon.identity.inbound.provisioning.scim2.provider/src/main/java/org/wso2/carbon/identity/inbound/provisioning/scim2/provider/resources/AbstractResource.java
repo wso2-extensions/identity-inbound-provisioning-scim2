@@ -19,11 +19,7 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
-import org.wso2.charon3.core.encoder.JSONEncoder;
-import org.wso2.charon3.core.exceptions.CharonException;
-import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.protocol.SCIMResponse;
-import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import org.wso2.msf4j.Microservice;
 import java.util.Map;
 import javax.ws.rs.core.Response;
@@ -56,38 +52,6 @@ public class AbstractResource implements Microservice {
         } else {
             return false;
         }
-    }
-
-    /*
-     * Build an error message for a Charon exception. We go with the
-     * JSON encoder as default if not specified.
-     *
-     * @param e CharonException
-     * @param encoder
-     * @return
-     */
-    protected Response handleCharonException(CharonException e, JSONEncoder encoder) {
-        if (logger.isDebugEnabled()) {
-            logger.debug(e.getMessage(), e);
-        }
-
-        return buildResponse(AbstractResourceManager.encodeSCIMException(e));
-    }
-
-    /*
-     * Build the error response if the requested input or output format is not supported. We go with JSON encoder as
-     * the encoder for the error response.
-     *
-     * @param e
-     * @return
-     */
-    protected Response handleFormatNotSupportedException(FormatNotSupportedException e) {
-        if (logger.isDebugEnabled()) {
-            logger.debug(e.getMessage(), e);
-        }
-
-        // use the default JSON encoder to build the error response.
-        return buildResponse(AbstractResourceManager.encodeSCIMException(e));
     }
 
     /*
