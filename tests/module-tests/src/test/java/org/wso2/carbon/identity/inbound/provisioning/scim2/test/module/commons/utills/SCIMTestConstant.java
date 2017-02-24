@@ -21,6 +21,6 @@ public class SCIMTestConstant {
 
     public static final String BASE_URL = "http://localhost:8080/scim/v2";
     public static final String ME_ENDPOINT = "/Me";
-    public static final String RESOURCE_TYPE_ENDPOINT = "/ResourceType";
+    public static final String RESOURCE_TYPE_ENDPOINT = "/ResourceTypes";
 
 }
