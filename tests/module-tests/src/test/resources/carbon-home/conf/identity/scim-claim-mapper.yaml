@@ -47,3 +47,9 @@ claims:
 -
   scimClaim: "urn:ietf:params:scim:schemas:core:2.0:Group:displayName"
   wso2Claim: "http://wso2.org/claims/organization"
+-
+  scimClaim: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:organization"
+  wso2Claim: "http://wso2.org/claims/title"
+-
+  scimClaim: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName"
+  wso2Claim: "http://wso2.org/claims/region"

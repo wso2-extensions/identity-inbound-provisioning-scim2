@@ -26,10 +26,10 @@ import io.swagger.annotations.Info;
 import io.swagger.annotations.License;
 import io.swagger.annotations.SwaggerDefinition;
 import org.osgi.service.component.annotations.Component;
+import org.wso2.carbon.identity.inbound.provisioning.scim2.common.exception.SCIMClientException;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
-import org.wso2.charon3.core.exceptions.CharonException;
-import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
+import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.UserResourceManager;
@@ -91,7 +91,7 @@ public class UserResource extends AbstractResource {
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes)
-            throws FormatNotSupportedException, CharonException {
+            throws SCIMClientException {
 
         try {
             // obtain the user store manager
@@ -105,8 +105,10 @@ public class UserResource extends AbstractResource {
             // appropriately.
             return buildResponse(scimResponse);
 
-        } catch (CharonException e) {
-            throw new CharonException(e.getDetail(), e);
+        } catch (IdentityStoreException e) {
+            throw new SCIMClientException(
+                    Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase().concat("\n").concat(e.getMessage()),
+                    e, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
     }
 
@@ -127,7 +129,7 @@ public class UserResource extends AbstractResource {
                                @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
-                               String resourceString) throws CharonException, FormatNotSupportedException {
+                               String resourceString) throws SCIMClientException {
 
         try {
             // obtain the user store manager
@@ -141,8 +143,10 @@ public class UserResource extends AbstractResource {
 
             return buildResponse(response);
 
-        } catch (CharonException e) {
-            throw new CharonException(e.getDetail(), e);
+        } catch (IdentityStoreException e) {
+            throw new SCIMClientException(
+                    Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase().concat("\n").concat(e.getMessage()),
+                    e, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
 
     }
@@ -160,7 +164,7 @@ public class UserResource extends AbstractResource {
 
     public Response deleteUser(@ApiParam(value = SCIMProviderConstants.ID_DESC, required = true)
                                @PathParam(SCIMProviderConstants.ID) String id)
-            throws FormatNotSupportedException, CharonException {
+            throws SCIMClientException {
 
         try {
             // obtain the user store manager
@@ -174,8 +178,10 @@ public class UserResource extends AbstractResource {
             // appropriately.
             return buildResponse(scimResponse);
 
-        } catch (CharonException e) {
-            throw new CharonException(e.getDetail(), e);
+        } catch (IdentityStoreException e) {
+            throw new SCIMClientException(
+                    Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase().concat("\n").concat(e.getMessage()),
+                    e, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
     }
 
@@ -203,7 +209,7 @@ public class UserResource extends AbstractResource {
                             @QueryParam(SCIMProviderConstants.SORT_BY) String sortBy,
                             @ApiParam(value = SCIMProviderConstants.SORT_ORDER_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder)
-            throws FormatNotSupportedException, CharonException {
+            throws SCIMClientException {
 
         try {
             // obtain the user store manager
@@ -217,8 +223,10 @@ public class UserResource extends AbstractResource {
 
             return buildResponse(scimResponse);
 
-        } catch (CharonException e) {
-            throw new CharonException(e.getDetail(), e);
+        } catch (IdentityStoreException e) {
+            throw new SCIMClientException(
+                    Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase().concat("\n").concat(e.getMessage()),
+                    e, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
     }
 
@@ -236,7 +244,7 @@ public class UserResource extends AbstractResource {
             @ApiResponse(code = 404, message = "Valid users are not found")})
 
     public Response getUsersByPost(String resourceString)
-            throws FormatNotSupportedException, CharonException {
+            throws SCIMClientException {
 
         try {
             // obtain the user store manager
@@ -249,8 +257,10 @@ public class UserResource extends AbstractResource {
 
             return buildResponse(scimResponse);
 
-        } catch (CharonException e) {
-            throw new CharonException(e.getDetail(), e);
+        } catch (IdentityStoreException e) {
+            throw new SCIMClientException(
+                    Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase().concat("\n").concat(e.getMessage()),
+                    e, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
     }
 
@@ -272,7 +282,7 @@ public class UserResource extends AbstractResource {
                                @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
-                               String resourceString) throws FormatNotSupportedException, CharonException {
+                               String resourceString) throws SCIMClientException {
 
         try {
             // obtain the user store manager
@@ -286,8 +296,10 @@ public class UserResource extends AbstractResource {
 
             return buildResponse(response);
 
-        } catch (CharonException e) {
-           throw new CharonException(e.getDetail(), e);
+        } catch (IdentityStoreException e) {
+            throw new SCIMClientException(
+                    Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase().concat("\n").concat(e.getMessage()),
+                    e, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
         }
     }
 

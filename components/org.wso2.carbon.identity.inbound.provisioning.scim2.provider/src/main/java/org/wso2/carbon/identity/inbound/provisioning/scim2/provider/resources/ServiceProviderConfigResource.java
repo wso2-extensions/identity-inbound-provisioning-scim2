@@ -25,8 +25,7 @@ import io.swagger.annotations.Info;
 import io.swagger.annotations.License;
 import io.swagger.annotations.SwaggerDefinition;
 import org.osgi.service.component.annotations.Component;
-import org.wso2.charon3.core.exceptions.CharonException;
-import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
+import org.wso2.carbon.identity.inbound.provisioning.scim2.common.exception.SCIMClientException;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.ServiceProviderConfigResourceManager;
 import org.wso2.msf4j.Microservice;
@@ -72,8 +71,7 @@ public class ServiceProviderConfigResource extends AbstractResource {
             @ApiResponse(code = 200, message = "Schema is found"),
             @ApiResponse(code = 404, message = "Schema is not found")})
 
-    public Response getUser()
-            throws FormatNotSupportedException, CharonException {
+    public Response getUser() throws SCIMClientException {
 
         // create charon-SCIM resourceType endpoint and hand-over the request.
         ServiceProviderConfigResourceManager serviceProviderConfigResourceManager =

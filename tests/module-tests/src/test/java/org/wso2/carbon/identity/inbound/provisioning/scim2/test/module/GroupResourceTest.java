@@ -881,7 +881,7 @@ public class GroupResourceTest {
         members.add(member);
         groupJsonObj.add(SCIMConstants.GroupSchemaConstants.MEMBERS, members);
 
-        //Send update validConnection
+        //Send update request
         urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "/" + groupSCIMID, HttpMethod.PUT);
         urlConn.getOutputStream().write(groupJsonObj.toString().getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode());
@@ -1030,7 +1030,13 @@ public class GroupResourceTest {
     public void testDeleteGroup() throws Exception {
 
         HttpURLConnection urlConn = SCIMTestUtil.deleteGroup(groupSCIMID);
-        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NO_CONTENT.getStatusCode());
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NO_CONTENT.getStatusCode(),
+                "Failed in deleting the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.getUser(groupSCIMID);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.NOT_FOUND.getStatusCode(),
+                "Successfully retrieving a deleted group.");
         urlConn.disconnect();
     }
 

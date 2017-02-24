@@ -59,12 +59,6 @@
             <artifactId>org.wso2.carbon.caching.feature</artifactId>
             <type>zip</type>
         </dependency>
-        <!--<dependency>-->
-            <!--<groupId>org.wso2.carbon.messaging</groupId>-->
-            <!--<artifactId>org.wso2.carbon.messaging.feature</artifactId>-->
-            <!--<version>${org.wso2.carbon.messaging.version}</version>-->
-            <!--<type>zip</type>-->
-        <!--</dependency>-->
         <dependency>
             <groupId>org.wso2.carbon.jndi</groupId>
             <artifactId>org.wso2.carbon.jndi.feature</artifactId>
@@ -245,10 +239,6 @@
                                     <id>org.wso2.carbon.caching.feature</id>
                                     <version>${org.wso2.carbon.caching.version}</version>
                                 </feature>
-                                <!--<feature>-->
-                                    <!--<id>org.wso2.carbon.messaging.feature</id>-->
-                                    <!--<version>${org.wso2.carbon.messaging.version}</version>-->
-                                <!--</feature>-->
                                 <feature>
                                     <id>org.wso2.carbon.jndi.feature</id>
                                     <version>${carbon.jndi.version}</version>
@@ -358,10 +348,6 @@
                                     <id>org.wso2.carbon.caching.feature</id>
                                     <version>${org.wso2.carbon.caching.version}</version>
                                 </feature>
-                                <!--<feature>-->
-                                    <!--<id>org.wso2.carbon.messaging.feature</id>-->
-                                    <!--<version>${org.wso2.carbon.messaging.version}</version>-->
-                                <!--</feature>-->
                                 <feature>
                                     <id>org.wso2.carbon.jndi.feature</id>
                                     <version>${carbon.jndi.version}</version>
@@ -421,23 +407,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <executions>
-                    <!--<execution>-->
-                        <!--<id>copy_scripts</id>-->
-                        <!--<phase>generate-resources</phase>-->
-                        <!--<goals>-->
-                            <!--<goal>run</goal>-->
-                        <!--</goals>-->
-                        <!--<configuration>-->
-                            <!--<tasks>-->
-                                <!--<mkdir dir="${basedir}/target/resources/dbscripts" />-->
-                                <!--<copy toDir="${basedir}/target/resources/dbscripts" flatten="true">-->
-                                    <!--<fileset dir="${project.build.directory}/maven-shared-archive-resources/temp/"-->
-                                             <!--includes="**/*.sql" />-->
-                                <!--</copy>-->
-                                <!--<delete dir="${project.build.directory}/maven-shared-archive-resources/temp/" />-->
-                            <!--</tasks>-->
-                        <!--</configuration>-->
-                    <!--</execution>-->
                     <execution>
                         <id>create-carbon-database</id>
                         <phase>generate-resources</phase>
@@ -458,7 +427,6 @@
                                         <include name="**/h2.sql" />
                                     </fileset>
                                     <fileset file="${basedir}/src/resources/test-data/h2.sql" />
-                                    <!--<fileset file="${basedir}/src/main/resources/dbscripts/simple-auth.sql" />-->
                                 </sql>
                                 <echo message="##################### END ########################" />
                             </target>

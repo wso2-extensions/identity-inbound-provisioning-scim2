@@ -54,6 +54,7 @@ public class UserResourceTestCase {
 
     private static final Gson GSON = new Gson();
     private static String scimId = null;
+    private static String scimIdExtensions = null;
 
     private static Logger log = LoggerFactory.getLogger(UserResourceTestCase.class);
 
@@ -89,7 +90,106 @@ public class UserResourceTestCase {
 
         JsonObject userObj = GSON.fromJson(content, JsonObject.class);
         scimId = userObj.get(SCIMConstants.CommonSchemaConstants.ID).toString().replace("\"", "");
-        Assert.assertNotNull(scimId, "Invalid scim user id.");
+        Assert.assertNotNull("Invalid scim user id.", scimId);
+    }
+
+    @Test(groups = "addUsers", description = "Add User with extensions in level two via SCIM")
+    public void testAddUserWithExtensionsInLevelTwo() throws Exception {
+
+        JsonObject nameJsonObj = new JsonObject();
+        nameJsonObj.addProperty(SCIMConstants.UserSchemaConstants.FAMILY_NAME, "Aubrey");
+
+        JsonArray mailJsonArray = new JsonArray();
+        JsonObject workJsonObj = new JsonObject();
+        workJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.TYPE, SCIMConstants.UserSchemaConstants.WORK);
+        workJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.VALUE, "baron@yahoo.com");
+        mailJsonArray.add(workJsonObj);
+
+        JsonObject homeJsonObj = new JsonObject();
+        homeJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.TYPE, SCIMConstants.UserSchemaConstants.HOME);
+        homeJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.VALUE, "baron@gmail.com");
+        homeJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.PRIMARY, "true");
+        mailJsonArray.add(homeJsonObj);
+
+        JsonObject wso2ExtensionObject = new JsonObject();
+        wso2ExtensionObject.addProperty("organization", "WSO2");
+
+        JsonObject userJsonObj = new JsonObject();
+        userJsonObj.add(SCIMConstants.UserSchemaConstants.NAME, nameJsonObj);
+        userJsonObj.add(SCIMConstants.UserSchemaConstants.EMAILS, mailJsonArray);
+        userJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
+        userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.USER_NAME, "Baron");
+        userJsonObj.add("EnterpriseUser", wso2ExtensionObject);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT,
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the user.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject userObj = GSON.fromJson(content, JsonObject.class);
+        scimIdExtensions = userObj.get(SCIMConstants.CommonSchemaConstants.ID).toString().replace("\"", "");
+        Assert.assertNotNull(scimIdExtensions, "Invalid scim user id.");
+        Assert.assertNotNull(userObj.get("EnterpriseUser").toString(),
+                "Failed to retrieve the extension attributes in the response");
+        Assert.assertNotNull(userObj.get("EnterpriseUser").getAsJsonObject().get("organization").toString(),
+                "Failed to retrieve the extension attributes in the response");
+        Assert.assertEquals(userObj.get("EnterpriseUser").getAsJsonObject().get("organization").toString(), "\"WSO2\"",
+                "Failed to retrieve the correct extension attribute values in the response");
+    }
+
+    @Test(groups = "addUsers", description = "Add User with extensions in level three via SCIM")
+    public void testAddUserWithExtensionsInLevelThree() throws Exception {
+
+        JsonObject nameJsonObj = new JsonObject();
+        nameJsonObj.addProperty(SCIMConstants.UserSchemaConstants.FAMILY_NAME, "Brock");
+
+        JsonArray mailJsonArray = new JsonArray();
+        JsonObject workJsonObj = new JsonObject();
+        workJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.TYPE, SCIMConstants.UserSchemaConstants.WORK);
+        workJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.VALUE, "brock@yahoo.com");
+        mailJsonArray.add(workJsonObj);
+
+        JsonObject homeJsonObj = new JsonObject();
+        homeJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.TYPE, SCIMConstants.UserSchemaConstants.HOME);
+        homeJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.VALUE, "brock@gmail.com");
+        homeJsonObj.addProperty(SCIMConstants.CommonSchemaConstants.PRIMARY, "true");
+        mailJsonArray.add(homeJsonObj);
+
+        JsonObject wso2ExtensionManagerObject = new JsonObject();
+        JsonObject wso2ExtensionManagerIdObject = new JsonObject();
+        wso2ExtensionManagerIdObject.addProperty("displayName", "manager_HR");
+        wso2ExtensionManagerObject.add("manager", wso2ExtensionManagerIdObject);
+
+        JsonObject userJsonObj = new JsonObject();
+        userJsonObj.add(SCIMConstants.UserSchemaConstants.NAME, nameJsonObj);
+        userJsonObj.add(SCIMConstants.UserSchemaConstants.EMAILS, mailJsonArray);
+        userJsonObj.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, new JsonArray());
+        userJsonObj.addProperty(SCIMConstants.UserSchemaConstants.USER_NAME, "Broderick");
+        userJsonObj.add("EnterpriseUser", wso2ExtensionManagerObject);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT,
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(userJsonObj.toString().getBytes(StandardCharsets.UTF_8));
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the user.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject userObj = GSON.fromJson(content, JsonObject.class);
+        scimIdExtensions = userObj.get(SCIMConstants.CommonSchemaConstants.ID).toString().replace("\"", "");
+        Assert.assertNotNull(scimIdExtensions, "Invalid scim user id.");
+        Assert.assertNotNull(userObj.get("EnterpriseUser").toString(),
+                "Failed to retrieve the extension attributes in the response");
+        Assert.assertNotNull(userObj.get("EnterpriseUser").getAsJsonObject().get("manager").toString(),
+                "Failed to retrieve the extension attributes in the response");
+        Assert.assertNotNull(userObj.get("EnterpriseUser").getAsJsonObject().get("manager").getAsJsonObject()
+                .get("displayName").toString(), "Failed to retrieve the extension attributes in the response");
+        Assert.assertEquals(userObj.get("EnterpriseUser").getAsJsonObject().get("manager").getAsJsonObject()
+                        .get("displayName").toString(), "\"manager_HR\"",
+                "Failed to retrieve the correct extension attribute values in the response");
     }
 
     @Test(groups = "addUsers", description = "Add User via SCIM without Mandatory Attributes")

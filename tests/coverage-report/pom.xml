@@ -87,14 +87,24 @@
                                         </taskdef>
                                         <jacoco:report>
                                             <executiondata>
+                                                <fileset dir="../../components/org.wso2.carbon.identity.inbound.provisioning.scim2.common/target">
+                                                    <include name="jacoco.exec" />
+                                                </fileset>
+                                                <fileset dir="../../components/org.wso2.carbon.identity.inbound.provisioning.scim2.provider/target">
+                                                    <include name="jacoco.exec" />
+                                                </fileset>
                                                 <fileset dir="../module-tests/target">
                                                     <include name="jacoco.exec" />
                                                 </fileset>
                                             </executiondata>
                                             <structure name="Identity Server Tests">
                                                 <classfiles>
-                                                    <fileset dir="../../components/org.wso2.carbon.identity.inbound.provisioning.scim2.common/target/classes" />
+                                                    <fileset dir="../../components/org.wso2.carbon.identity.inbound.provisioning.scim2.common/target/classes">
+                                                        <exclude name="**/*Exception.class" />
+                                                        <exclude name="**/*Constants.class" />
+                                                    </fileset>
                                                     <fileset dir="../../components/org.wso2.carbon.identity.inbound.provisioning.scim2.provider/target/classes">
+                                                        <exclude name="**/*Exception.class" />
                                                         <exclude name="**/*Constants.class" />
                                                     </fileset>
 
