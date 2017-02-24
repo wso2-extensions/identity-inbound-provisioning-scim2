@@ -652,7 +652,7 @@ public class UserResourceTestCase {
                         "negative value.");
     }
 
-    /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
+    @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users for given negative count index")
     public void testListUsersWithPaginationInNegativeCount() throws Exception {
 
@@ -678,10 +678,10 @@ public class UserResourceTestCase {
         JsonObject result = GSON.fromJson(content, JsonObject.class);
         // As per the spec,value which is less than one for startIndex interpreted as "1" and count interpreted as "0"
         // A value of "0" indicates that no resource results are to be returned except for "totalResults"
-        Assert.assertEquals(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).size(),
-                0, "Failed in listing the correct number of users with pagination when count parameter is a " +
+        Assert.assertEquals((result.get("totalResults")).getAsInt(),
+                0, "Failed in retrieving the correct result with pagination when count parameter is a " +
                         "negative values.");
-    }*/
+    }
 
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
             description = "List users for given exceeded count index")
@@ -1061,6 +1061,58 @@ public class UserResourceTestCase {
         Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
                 size() == 2, "Failed in retrieving correct number of users when searching users with POST request " +
                 "including count and start index.");
+    }
+
+    @Test(groups = "searchUsers", dependsOnGroups = {"listUsers"}, description = "Search users with http POST " +
+            "in negative start index")
+    public void searchUsersWithPostWithNegativeStartIndex() throws Exception {
+
+        JsonObject searchFilter = new JsonObject();
+        JsonArray schemas = new JsonArray();
+        schemas.add(new JsonPrimitive("urn:ietf:params:scim:api:messages:2.0:SearchRequest"));
+        searchFilter.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, -1);
+        searchFilter.addProperty(SCIMConstants.OperationalConstants.COUNT, 2);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/.search",
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
+
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in searching users with POST request including count and negative start index.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
+                size() == 2, "Failed in retrieving correct number of users when searching users with POST request " +
+                "including count and start index.");
+    }
+
+    @Test(groups = "searchUsers", dependsOnGroups = {"listUsers"}, description = "Search users with http POST " +
+            "in negative count")
+    public void searchUsersWithPostWithNegativeCount() throws Exception {
+
+        JsonObject searchFilter = new JsonObject();
+        JsonArray schemas = new JsonArray();
+        schemas.add(new JsonPrimitive("urn:ietf:params:scim:api:messages:2.0:SearchRequest"));
+        searchFilter.add(SCIMConstants.CommonSchemaConstants.SCHEMAS, schemas);
+        searchFilter.addProperty(SCIMConstants.ListedResourceSchemaConstants.START_INDEX, 1);
+        searchFilter.addProperty(SCIMConstants.OperationalConstants.COUNT, -2);
+
+        HttpURLConnection urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "/.search",
+                HttpMethod.POST);
+        urlConn.getOutputStream().write(searchFilter.toString().getBytes(StandardCharsets.UTF_8));
+
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.OK.getStatusCode(),
+                "Failed in searching users with POST request including negative count and start index.");
+        String content = SCIMTestUtil.getContent(urlConn);
+        urlConn.disconnect();
+
+        JsonObject result = GSON.fromJson(content, JsonObject.class);
+        Assert.assertEquals((result.get("totalResults")).getAsInt(),
+                0, "Failed in retrieving the correct result when searching users with POST request " +
+                        "including negative count and start index.");
     }
 
     @Test(groups = "searchUsers", dependsOnGroups = {"listUsers"}, description = "Search users with http POST " +

@@ -16,7 +16,7 @@
 
 package org.wso2.carbon.identity.inbound.provisioning.scim2.common.test.unit;
 
-import org.junit.Assert;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils.SCIMCommonUtils;
@@ -42,24 +42,24 @@ public class SCIMCommonUtilsTests {
 
         try {
             List<Domain> domains = new ArrayList<>();
-            Domain newDomain = new Domain(2, "Secondary", 2, new JDBCUniqueIdResolver());
+            Domain newDomain = new Domain(1, "PRIMARY", 1, new JDBCUniqueIdResolver());
             domains.add(newDomain);
             identityStore = new IdentityStoreImpl(domains);
         } catch (IdentityStoreException | DomainException e) {
-            Assert.assertNotNull("Failed in retrieving a IdentityStore instance.", identityStore);
+            Assert.assertNotNull(identityStore, "Failed in retrieving a IdentityStore instance.");
         }
     }
 
     @Test
     public void testRemoveDomainFromName() {
         String domainUnawareName = SCIMCommonUtils.removeDomainFromName("PRIMARY/user1");
-        Assert.assertNotEquals(domainUnawareName, "user1", "Failed in removing domain from the name.");
+        Assert.assertEquals(domainUnawareName, "user1", "Failed in removing domain from the name.");
     }
 
     @Test
     public void testRemoveDomainFromNameWithoutDomainSeparator() {
         String domainUnawareName = SCIMCommonUtils.removeDomainFromName("user1");
-        Assert.assertNotEquals(domainUnawareName, "user1", "Failed in removing domain from the name.");
+        Assert.assertEquals(domainUnawareName, "user1", "Failed in removing domain from the name.");
     }
 
     @Test
@@ -70,7 +70,7 @@ public class SCIMCommonUtilsTests {
         } catch (IdentityStoreException e) {
             return;
         }
-        Assert.assertNotEquals(domainName, "PRIMARY", "Failed in extracting domain from the name.");
+        Assert.assertEquals(domainName, "PRIMARY", "Failed in extracting domain from the name.");
     }
 
     @Test
@@ -81,6 +81,6 @@ public class SCIMCommonUtilsTests {
         } catch (IdentityStoreException e) {
             return;
         }
-        Assert.assertNotEquals(domainName, "PRIMARY", "Failed in extracting domain from the name.");
+        Assert.assertEquals(domainName, "PRIMARY", "Failed in extracting domain from the name.");
     }
 }

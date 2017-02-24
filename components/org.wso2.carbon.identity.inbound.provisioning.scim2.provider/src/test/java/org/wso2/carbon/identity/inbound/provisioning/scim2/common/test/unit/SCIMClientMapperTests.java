@@ -16,7 +16,7 @@
 
 package org.wso2.carbon.identity.inbound.provisioning.scim2.common.test.unit;
 
-import org.junit.Assert;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.exception.SCIMClientException;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.mappers.SCIMClientMapper;
@@ -40,9 +40,8 @@ public class SCIMClientMapperTests {
         SCIMClientMapper scimClientMapper = new SCIMClientMapper();
         Response response = scimClientMapper.toResponse(scimClientException);
 
-        Assert.assertNotNull("Failed to receive the Response object through SCIMClientMapper.", response);
-        Assert.assertEquals("Failed in correctly mapping the exception.",
-                Integer.toString(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode()),
-                Integer.toString(response.getStatus()));
+        Assert.assertNotNull(response, "Failed to receive the Response object through SCIMClientMapper.");
+        Assert.assertEquals(Integer.toString(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode()),
+                Integer.toString(response.getStatus()), "Failed in correctly mapping the exception.");
     }
 }
