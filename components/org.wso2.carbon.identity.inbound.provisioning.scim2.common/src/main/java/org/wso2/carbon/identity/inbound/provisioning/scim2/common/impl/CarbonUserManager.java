@@ -191,6 +191,7 @@ public class CarbonUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Deleting user: " + userId);
         }
+
         try {
             org.wso2.carbon.identity.mgt.User user = identityStore.getUser(userId);
             List<Claim> claims = user.getClaims();
