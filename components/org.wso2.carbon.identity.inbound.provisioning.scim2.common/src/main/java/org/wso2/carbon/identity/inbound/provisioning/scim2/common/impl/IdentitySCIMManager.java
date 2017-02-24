@@ -141,16 +141,8 @@ public class IdentitySCIMManager {
                 SCIMCommonConstants.AUTHENTICATION_SCHEMES_DOCUMENTATION_URL_1,
                 SCIMCommonConstants.AUTHENTICATION_SCHEMES_TYPE_1,
                 SCIMCommonConstants.AUTHENTICATION_SCHEMES_PRIMARY_1};
-
-        Object[] auth2 = {SCIMCommonConstants.AUTHENTICATION_SCHEMES_NAME_2,
-                SCIMCommonConstants.AUTHENTICATION_SCHEMES_DESCRIPTION_2,
-                SCIMCommonConstants.AUTHENTICATION_SCHEMES_SPEC_URI_2,
-                SCIMCommonConstants.AUTHENTICATION_SCHEMES_DOCUMENTATION_URL_2,
-                SCIMCommonConstants.AUTHENTICATION_SCHEMES_TYPE_2,
-                SCIMCommonConstants.AUTHENTICATION_SCHEMES_PRIMARY_2};
         ArrayList<Object[]> authList = new ArrayList<Object[]>();
         authList.add(auth1);
-        authList.add(auth2);
         CharonConfiguration.getInstance().setAuthenticationSchemes(authList);
     }
 }
