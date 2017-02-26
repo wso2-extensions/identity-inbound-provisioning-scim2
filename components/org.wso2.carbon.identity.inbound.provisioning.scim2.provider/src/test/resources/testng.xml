@@ -17,7 +17,7 @@ limitations under the License.
 <suite name="SCIM2-Test-Suite">
     <test name="SCIM2-tests" preserve-order="true" parallel="false">
         <classes>
-            <class name="org.wso2.carbon.identity.inbound.provisioning.scim2.common.test.unit.SCIMClientMapperTests"/>
+            <class name="org.wso2.carbon.identity.inbound.provisioning.scim2.common.test.unit.SCIMClientExceptionMapperTests"/>
             <class name="org.wso2.carbon.identity.inbound.provisioning.scim2.common.test.unit.AbstractResourceTests"/>
         </classes>
     </test>
