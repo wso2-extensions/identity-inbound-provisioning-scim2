@@ -28,10 +28,13 @@ import io.swagger.annotations.SwaggerDefinition;
 import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.exception.SCIMClientException;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.common.impl.IdentitySCIMManager;
+import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.ResourceUtil;
 import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
+import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
+import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import org.wso2.charon3.core.protocol.endpoints.GroupResourceManager;
 import org.wso2.msf4j.Microservice;
 
@@ -268,16 +271,16 @@ public class GroupResource extends AbstractResource {
             @ApiResponse(code = 200, message = "Valid groups are found"),
             @ApiResponse(code = 404, message = "Valid groups are not found")})
 
-    public Response getGroup(@ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
+    public Response getGroups(@ApiParam(value = SCIMProviderConstants.ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @ApiParam(value = SCIMProviderConstants.EXCLUDED_ATTRIBUTES_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                             @ApiParam(value = SCIMProviderConstants.FILTER_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.FILTER) String filter,
                             @ApiParam(value = SCIMProviderConstants.START_INDEX_DESC, required = false)
-                            @QueryParam(SCIMProviderConstants.START_INDEX) int startIndex,
+                            @QueryParam(SCIMProviderConstants.START_INDEX) String startIndexStr,
                             @ApiParam(value = SCIMProviderConstants.COUNT_DESC, required = false)
-                            @QueryParam(SCIMProviderConstants.COUNT) int count,
+                            @QueryParam(SCIMProviderConstants.COUNT) String countStr,
                             @ApiParam(value = SCIMProviderConstants.SORT_BY_DESC, required = false)
                             @QueryParam(SCIMProviderConstants.SORT_BY) String sortBy,
                             @ApiParam(value = SCIMProviderConstants.SORT_ORDER_DESC, required = false)
@@ -290,6 +293,8 @@ public class GroupResource extends AbstractResource {
 
             // create charon-SCIM group endpoint and hand-over the request.
             GroupResourceManager groupResourceManager = new GroupResourceManager();
+            int startIndex = ResourceUtil.processStartIndex(startIndexStr);
+            int count = ResourceUtil.processCount(countStr);
 
             SCIMResponse scimResponse = groupResourceManager.listWithGET(userManager, filter, startIndex, count,
                     sortBy, sortOrder, attribute, excludedAttributes);
@@ -300,6 +305,8 @@ public class GroupResource extends AbstractResource {
             throw new SCIMClientException(
                     Response.Status.INTERNAL_SERVER_ERROR.getReasonPhrase().concat("\n").concat(e.getMessage()),
                     e, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+        } catch (BadRequestException e) {
+            return buildResponse(AbstractResourceManager.encodeSCIMException(e));
         }
     }
 

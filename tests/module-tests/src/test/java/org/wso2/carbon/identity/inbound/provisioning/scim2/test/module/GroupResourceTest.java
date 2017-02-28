@@ -453,6 +453,47 @@ public class GroupResourceTest {
                 3, "Failed in listing the correct number of groups with pagination.");
     }
 
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List Groups with invalid count")
+    public void testListGroupsWithPaginationInvalidCount() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.createGroup("EngQuality");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.createGroup("EngQualityAssurance");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + 1 + "&count=" + "abc", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
+                "Failed in listing all the groups with pagination.");
+        urlConn.disconnect();
+    }
+
+    @Test(groups = "listGroups", dependsOnGroups = {"getGroups"}, description = "List Groups with invalid startIndex")
+    public void testListGroupsWithPaginationInvalidStartIndex() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.createGroup("EngineeringQualityGroup");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.createGroup("EngineeringQualityAssuranceGroup");
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed to add the group.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.validConnection(SCIMConstants.GROUP_ENDPOINT + "?" +
+                SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + "abc" + "&count=" + 3, HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
+                "Failed in listing all the groups with pagination.");
+        urlConn.disconnect();
+
+    }
+
     @Test(groups = "listGroups", dependsOnGroups = {"getGroups"},
             description = "List Groups for given negative indexes")
     public void testListGroupsWithPaginationInNegativeStartIndex() throws Exception {
