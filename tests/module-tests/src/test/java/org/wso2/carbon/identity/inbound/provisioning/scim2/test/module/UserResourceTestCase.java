@@ -620,6 +620,52 @@ public class UserResourceTestCase {
                 3, "Failed in listing the correct number of users with pagination.");
     }
 
+    @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given indexes with " +
+            "invalid count")
+    public void testListUsersWithPaginationWithInvalidCount() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Samith", null, "Hunt",
+                new ArrayList<String>() { { add("smith@gmail.com"); add("smith@yahoo.com"); } });
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed in creating the user.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.createUser("Rajith", null, "Kumar",
+                new ArrayList<String>() { { add("rajive@gmail.com"); add("rajive@yahoo.com"); } });
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed in creating the user.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
+                SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + 1 + "&count=" + "abc", HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
+                "Failed in listing all the users with pagination.");
+        urlConn.disconnect();
+    }
+
+    @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given indexes with " +
+            "invalid startIndex")
+    public void testListUsersWithPaginationWithInvalidStartIndex() throws Exception {
+
+        HttpURLConnection urlConn = SCIMTestUtil.createUser("Asiri", null, "Hunt",
+                new ArrayList<String>() { { add("smith@gmail.com"); add("smith@yahoo.com"); } });
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed in creating the user.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.createUser("Ranga", null, "Kumar",
+                new ArrayList<String>() { { add("rajive@gmail.com"); add("rajive@yahoo.com"); } });
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.CREATED.getStatusCode(),
+                "Failed in creating the user.");
+        urlConn.disconnect();
+
+        urlConn = SCIMTestUtil.validConnection(SCIMConstants.USER_ENDPOINT + "?" +
+                SCIMConstants.ListedResourceSchemaConstants.START_INDEX + "=" + "abc" + "&count=" + 3, HttpMethod.GET);
+        Assert.assertEquals(urlConn.getResponseCode(), Response.Status.BAD_REQUEST.getStatusCode(),
+                "Failed in listing all the users with pagination.");
+        urlConn.disconnect();
+    }
+
     @Test(groups = "listUsers", dependsOnGroups = {"getUsers"}, description = "List users for given negative indexes")
     public void testListUsersWithPaginationInNegativeStartIndex() throws Exception {
 
