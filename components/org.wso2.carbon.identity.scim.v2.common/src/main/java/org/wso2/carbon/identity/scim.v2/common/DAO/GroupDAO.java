@@ -138,13 +138,20 @@ public class GroupDAO {
                 prepStmt = connection.prepareStatement(SQLQueries.ADD_ATTRIBUTES_SQL);
                 prepStmt.setInt(1, tenantId);
                 prepStmt.setString(2, roleName);
+                int count = 0;
                 for (Map.Entry<String, String> entry : attributes.entrySet()) {
                     if (!isExistingAttribute(entry.getKey(),
                             SCIMCommonUtils.getGroupNameWithDomain(roleName), tenantId)) {
                         prepStmt.setString(3, entry.getKey());
                         prepStmt.setString(4, entry.getValue());
-                        prepStmt.execute();
-                        connection.commit();
+
+                        prepStmt.addBatch();
+                        count++;
+
+                        if (count == attributes.size()) {
+                            prepStmt.executeBatch();
+                            connection.commit();
+                        }
                     } else {
                         throw new IdentitySCIMException("Error when adding SCIM Attribute: "
                                 + entry.getKey()
@@ -176,17 +183,23 @@ public class GroupDAO {
 
                 prepStmt.setInt(2, tenantId);
                 prepStmt.setString(3, roleName);
-
+                int count = 0;
                 for (Map.Entry<String, String> entry : attributes.entrySet()) {
                     if (isExistingAttribute(entry.getKey(),
                             SCIMCommonUtils.getGroupNameWithDomain(roleName), tenantId)) {
                         prepStmt.setString(4, entry.getKey());
                         prepStmt.setString(1, entry.getValue());
-                        int count = prepStmt.executeUpdate();
-                        if (log.isDebugEnabled()) {
-                            log.debug("No. of records updated for updating SCIM Group : " + count);
+
+                        prepStmt.addBatch();
+                        count++;
+
+                        if (count == attributes.size()) {
+                            int[] return_count = prepStmt.executeBatch();
+                            if (log.isDebugEnabled()) {
+                                log.debug("No. of records updated for updating SCIM Group : " + return_count.length);
+                            }
+                            connection.commit();
                         }
-                        connection.commit();
                     } else {
                         throw new IdentitySCIMException("Error when adding SCIM Attribute: "
                                 + entry.getKey()
