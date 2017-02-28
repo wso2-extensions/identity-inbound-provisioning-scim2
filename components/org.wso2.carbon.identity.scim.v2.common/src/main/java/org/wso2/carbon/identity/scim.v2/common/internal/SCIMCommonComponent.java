@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.service.component.ComponentContext;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim.v2.common.listener.SCIMUserOperationListener;
 import org.wso2.carbon.identity.scim.v2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim.v2.common.utils.SCIMCommonUtils;
@@ -51,7 +52,7 @@ public class SCIMCommonComponent {
 
     protected void activate(ComponentContext ctx) {
         try {
-            String filePath = CarbonUtils.getCarbonConfigDirPath() + File.separator + "identity" + File.separator +
+            String filePath = IdentityUtil.getIdentityConfigDirPath() + File.separator +
                               SCIMCommonConstants.CHARON_CONFIG_NAME;
 
             SCIMConfigProcessor scimConfigProcessor = SCIMConfigProcessor.getInstance();

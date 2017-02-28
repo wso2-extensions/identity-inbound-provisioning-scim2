@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,10 +16,11 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.scim.v2.common.DAO;
+package org.wso2.carbon.identity.scim.v2.common.group;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.scim.v2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim.v2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim.v2.common.utils.SCIMCommonUtils;
 import org.wso2.charon3.core.exceptions.BadRequestException;
