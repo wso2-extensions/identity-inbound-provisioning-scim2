@@ -8,7 +8,4 @@ jdk:
   - oraclejdk8
 install: /bin/true
 script: mvn clean install
-cache:
-  directories:
-  - .autoconf
-  - $HOME/.m2
+
