@@ -6,7 +6,7 @@ before_install:
 language: java
 jdk:
   - oraclejdk8
-script: mvn install
+install: /bin/true
 cache:
   directories:
   - .autoconf
