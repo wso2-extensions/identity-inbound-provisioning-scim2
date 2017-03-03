@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Unit tests for SCIM Common Utils
+ * Unit tests for SCIM Common Utils.
  */
 public class SCIMCommonUtilsTests {
 
