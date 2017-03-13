@@ -1,0 +1,3 @@
+2017-03-03 12:13:41 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-192]

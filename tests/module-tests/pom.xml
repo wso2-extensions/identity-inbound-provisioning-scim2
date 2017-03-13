@@ -82,6 +82,14 @@
             <version>${org.wso2.carbon.identity.commons.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.lcm</groupId>
+            <artifactId>org.wso2.carbon.lcm.core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.lcm</groupId>
+            <artifactId>org.wso2.carbon.lcm.sql</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.msf4j</groupId>
             <artifactId>msf4j-core</artifactId>
         </dependency>

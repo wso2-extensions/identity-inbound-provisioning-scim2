@@ -1,0 +1,322 @@
+2017-03-08 10:41:16 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 10:42:53 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 10:45:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 10:45:34 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 10:48:41 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 10:49:49 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 10:51:15 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 10:52:20 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 10:56:15 database: flush
+org.h2.message.DbException: General error: "java.lang.IllegalStateException: The file is locked: nio:/home/upeksha/Upeksha/r_and_d/user_portal/is_with_uuf/scim2_repo_2/identity-inbound-provisioning-scim2/tests/module-tests/database/WSO2LIFECYCLE_DB.mv.db [1.4.191/7]" [50000-191]
+	at org.h2.message.DbException.get(DbException.java:168)
+	at org.h2.message.DbException.convert(DbException.java:295)
+	at org.h2.mvstore.db.MVTableEngine$1.uncaughtException(MVTableEngine.java:94)
+	at org.h2.mvstore.MVStore.panic(MVStore.java:373)
+	at org.h2.mvstore.MVStore.<init>(MVStore.java:356)
+	at org.h2.mvstore.MVStore$Builder.open(MVStore.java:2888)
+	at org.h2.mvstore.db.MVTableEngine$Store.open(MVTableEngine.java:154)
+	at org.h2.mvstore.db.MVTableEngine.init(MVTableEngine.java:99)
+	at org.h2.engine.Database.getPageStore(Database.java:2460)
+	at org.h2.engine.Database.open(Database.java:692)
+	at org.h2.engine.Database.openDatabase(Database.java:270)
+	at org.h2.engine.Database.<init>(Database.java:264)
+	at org.h2.engine.Engine.openSession(Engine.java:65)
+	at org.h2.engine.Engine.openSession(Engine.java:175)
+	at org.h2.engine.Engine.createSessionAndValidate(Engine.java:153)
+	at org.h2.engine.Engine.createSession(Engine.java:136)
+	at org.h2.engine.Engine.createSession(Engine.java:28)
+	at org.h2.engine.SessionRemote.connectEmbeddedOrServer(SessionRemote.java:349)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:107)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:91)
+	at org.h2.Driver.connect(Driver.java:72)
+	at com.zaxxer.hikari.util.DriverDataSource.getConnection(DriverDataSource.java:95)
+	at com.zaxxer.hikari.util.DriverDataSource.getConnection(DriverDataSource.java:101)
+	at com.zaxxer.hikari.pool.HikariPool.addConnection(HikariPool.java:496)
+	at com.zaxxer.hikari.pool.HikariPool.initializeConnections(HikariPool.java:565)
+	at com.zaxxer.hikari.pool.HikariPool.<init>(HikariPool.java:152)
+	at com.zaxxer.hikari.HikariDataSource.<init>(HikariDataSource.java:73)
+	at org.wso2.carbon.datasource.rdbms.hikari.HikariRDBMSDataSource.getDataSource(HikariRDBMSDataSource.java:56)
+	at org.wso2.carbon.datasource.rdbms.hikari.HikariDataSourceReader.createDataSource(HikariDataSourceReader.java:74)
+	at org.wso2.carbon.datasource.core.DataSourceBuilder.buildDataSourceObject(DataSourceBuilder.java:64)
+	at org.wso2.carbon.datasource.core.DataSourceBuilder.buildCarbonDataSource(DataSourceBuilder.java:44)
+	at org.wso2.carbon.datasource.core.DataSourceManager.initDataSource(DataSourceManager.java:163)
+	at org.wso2.carbon.datasource.core.DataSourceManager.initDataSources(DataSourceManager.java:137)
+	at org.wso2.carbon.datasource.core.internal.DataSourceListenerComponent.onAllRequiredCapabilitiesAvailable(DataSourceListenerComponent.java:98)
+	at org.wso2.carbon.kernel.internal.startupresolver.StartupComponentManager.lambda$notifySatisfiableComponents$27(StartupComponentManager.java:237)
+	at java.util.ArrayList.forEach(ArrayList.java:1249)
+	at org.wso2.carbon.kernel.internal.startupresolver.StartupComponentManager.notifySatisfiableComponents(StartupComponentManager.java:225)
+	at org.wso2.carbon.kernel.internal.startupresolver.StartupOrderResolver$1.run(StartupOrderResolver.java:186)
+	at java.util.TimerThread.mainLoop(Timer.java:555)
+	at java.util.TimerThread.run(Timer.java:505)
+Caused by: org.h2.jdbc.JdbcSQLException: General error: "java.lang.IllegalStateException: The file is locked: nio:/home/upeksha/Upeksha/r_and_d/user_portal/is_with_uuf/scim2_repo_2/identity-inbound-provisioning-scim2/tests/module-tests/database/WSO2LIFECYCLE_DB.mv.db [1.4.191/7]" [50000-191]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:345)
+	... 40 more
+Caused by: java.lang.IllegalStateException: The file is locked: nio:/home/upeksha/Upeksha/r_and_d/user_portal/is_with_uuf/scim2_repo_2/identity-inbound-provisioning-scim2/tests/module-tests/database/WSO2LIFECYCLE_DB.mv.db [1.4.191/7]
+	at org.h2.mvstore.DataUtils.newIllegalStateException(DataUtils.java:773)
+	at org.h2.mvstore.FileStore.open(FileStore.java:172)
+	at org.h2.mvstore.MVStore.<init>(MVStore.java:342)
+	... 35 more
+2017-03-08 10:57:06 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 10:57:59 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 11:05:38 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 11:07:38 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 11:08:47 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 11:33:37 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 17:35:43 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 17:36:34 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 17:38:15 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 17:40:37 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 17:41:26 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-08 17:43:42 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 12:13:36 database: flush
+org.h2.message.DbException: General error: "java.lang.IllegalStateException: The file is locked: nio:/home/upeksha/Upeksha/r_and_d/user_portal/is_with_uuf/scim2_repo_2/identity-inbound-provisioning-scim2/tests/module-tests/database/WSO2LIFECYCLE_DB.mv.db [1.4.191/7]" [50000-191]
+	at org.h2.message.DbException.get(DbException.java:168)
+	at org.h2.message.DbException.convert(DbException.java:295)
+	at org.h2.mvstore.db.MVTableEngine$1.uncaughtException(MVTableEngine.java:94)
+	at org.h2.mvstore.MVStore.panic(MVStore.java:373)
+	at org.h2.mvstore.MVStore.<init>(MVStore.java:356)
+	at org.h2.mvstore.MVStore$Builder.open(MVStore.java:2888)
+	at org.h2.mvstore.db.MVTableEngine$Store.open(MVTableEngine.java:154)
+	at org.h2.mvstore.db.MVTableEngine.init(MVTableEngine.java:99)
+	at org.h2.engine.Database.getPageStore(Database.java:2460)
+	at org.h2.engine.Database.open(Database.java:692)
+	at org.h2.engine.Database.openDatabase(Database.java:270)
+	at org.h2.engine.Database.<init>(Database.java:264)
+	at org.h2.engine.Engine.openSession(Engine.java:65)
+	at org.h2.engine.Engine.openSession(Engine.java:175)
+	at org.h2.engine.Engine.createSessionAndValidate(Engine.java:153)
+	at org.h2.engine.Engine.createSession(Engine.java:136)
+	at org.h2.engine.Engine.createSession(Engine.java:28)
+	at org.h2.engine.SessionRemote.connectEmbeddedOrServer(SessionRemote.java:349)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:107)
+	at org.h2.jdbc.JdbcConnection.<init>(JdbcConnection.java:91)
+	at org.h2.Driver.connect(Driver.java:72)
+	at com.zaxxer.hikari.util.DriverDataSource.getConnection(DriverDataSource.java:95)
+	at com.zaxxer.hikari.util.DriverDataSource.getConnection(DriverDataSource.java:101)
+	at com.zaxxer.hikari.pool.HikariPool.addConnection(HikariPool.java:496)
+	at com.zaxxer.hikari.pool.HikariPool.initializeConnections(HikariPool.java:565)
+	at com.zaxxer.hikari.pool.HikariPool.<init>(HikariPool.java:152)
+	at com.zaxxer.hikari.HikariDataSource.<init>(HikariDataSource.java:73)
+	at org.wso2.carbon.datasource.rdbms.hikari.HikariRDBMSDataSource.getDataSource(HikariRDBMSDataSource.java:56)
+	at org.wso2.carbon.datasource.rdbms.hikari.HikariDataSourceReader.createDataSource(HikariDataSourceReader.java:74)
+	at org.wso2.carbon.datasource.core.DataSourceBuilder.buildDataSourceObject(DataSourceBuilder.java:64)
+	at org.wso2.carbon.datasource.core.DataSourceBuilder.buildCarbonDataSource(DataSourceBuilder.java:44)
+	at org.wso2.carbon.datasource.core.DataSourceManager.initDataSource(DataSourceManager.java:163)
+	at org.wso2.carbon.datasource.core.DataSourceManager.initDataSources(DataSourceManager.java:137)
+	at org.wso2.carbon.datasource.core.internal.DataSourceListenerComponent.onAllRequiredCapabilitiesAvailable(DataSourceListenerComponent.java:98)
+	at org.wso2.carbon.kernel.internal.startupresolver.StartupComponentManager.lambda$notifySatisfiableComponents$27(StartupComponentManager.java:237)
+	at java.util.ArrayList.forEach(ArrayList.java:1249)
+	at org.wso2.carbon.kernel.internal.startupresolver.StartupComponentManager.notifySatisfiableComponents(StartupComponentManager.java:225)
+	at org.wso2.carbon.kernel.internal.startupresolver.StartupOrderResolver$1.run(StartupOrderResolver.java:186)
+	at java.util.TimerThread.mainLoop(Timer.java:555)
+	at java.util.TimerThread.run(Timer.java:505)
+Caused by: org.h2.jdbc.JdbcSQLException: General error: "java.lang.IllegalStateException: The file is locked: nio:/home/upeksha/Upeksha/r_and_d/user_portal/is_with_uuf/scim2_repo_2/identity-inbound-provisioning-scim2/tests/module-tests/database/WSO2LIFECYCLE_DB.mv.db [1.4.191/7]" [50000-191]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:345)
+	... 40 more
+Caused by: java.lang.IllegalStateException: The file is locked: nio:/home/upeksha/Upeksha/r_and_d/user_portal/is_with_uuf/scim2_repo_2/identity-inbound-provisioning-scim2/tests/module-tests/database/WSO2LIFECYCLE_DB.mv.db [1.4.191/7]
+	at org.h2.mvstore.DataUtils.newIllegalStateException(DataUtils.java:773)
+	at org.h2.mvstore.FileStore.open(FileStore.java:172)
+	at org.h2.mvstore.MVStore.<init>(MVStore.java:342)
+	... 35 more
+2017-03-10 12:20:42 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 12:23:10 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 12:24:53 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 12:25:41 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 12:28:37 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 12:30:50 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:16:52 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:17:25 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:20:50 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:22:21 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:23:49 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:34:12 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:36:07 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:41:34 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:44:14 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:47:51 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:52:39 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:54:24 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:56:29 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 13:59:02 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:33:44 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:34:30 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:35:31 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:36:50 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:38:35 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:41:26 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:43:17 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:44:04 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:46:47 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:47:59 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:48:58 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:54:22 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:57:33 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 14:59:05 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 15:03:59 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 15:07:24 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 15:10:24 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 15:31:11 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 16:25:02 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:24:13 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:27:28 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:29:39 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:34:03 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:36:45 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:44:25 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:49:35 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:54:03 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:54:57 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:57:07 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 17:58:58 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 18:06:37 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 18:12:54 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-10 18:15:49 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]
+2017-03-13 15:23:23 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLException: Table "LC_DEFINITIONS" not found; SQL statement:
+select 1 from LC_DEFINITIONS [42102-191]

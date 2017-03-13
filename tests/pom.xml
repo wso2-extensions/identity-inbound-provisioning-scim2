@@ -31,9 +31,9 @@
     <url>http://maven.apache.org</url>
 
     <modules>
-        <module>distribution</module>
+        <!--<module>distribution</module>-->
         <module>module-tests</module>
-        <module>coverage-report</module>
+        <!--<module>coverage-report</module>-->
     </modules>
 
 </project>

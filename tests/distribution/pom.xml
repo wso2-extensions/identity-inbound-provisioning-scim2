@@ -419,7 +419,7 @@
                                     <path refid="maven.compile.classpath" />
                                 </path>
                                 <echo message="########### Creating Carbon Database ##############" />
-                                <sql driver="org.h2.Driver" url="jdbc:h2:${basedir}/target/wso2carbon-kernel-${project.version}/database/WSO2CARBON_DB;MV_STORE=FALSE;create=true" userid="wso2carbon" password="wso2carbon" autocommit="true" onerror="continue">
+                                <sql driver="org.h2.Driver" url="jdbc:h2:${basedir}/target/wso2carbon-kernel-${project.version}/database/WSO2CARBON_DB;create=true" userid="wso2carbon" password="wso2carbon" autocommit="true" onerror="continue">
                                     <classpath>
                                         <path refid="h2.classpath" />
                                     </classpath>

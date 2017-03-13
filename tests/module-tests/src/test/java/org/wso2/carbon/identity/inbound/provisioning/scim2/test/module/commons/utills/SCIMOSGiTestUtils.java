@@ -183,6 +183,14 @@ public class SCIMOSGiTestUtils {
                 groupId("org.wso2.carbon.identity.mgt").
                 artifactId("org.wso2.carbon.identity.mgt.login.interceptor")
                 .versionAsInProject());
+        optionList.add(mavenBundle()
+                .groupId("org.wso2.carbon.lcm")
+                .artifactId("org.wso2.carbon.lcm.core")
+                .versionAsInProject());
+        optionList.add(mavenBundle()
+                .groupId("org.wso2.carbon.lcm")
+                .artifactId("org.wso2.carbon.lcm.sql")
+                .versionAsInProject());
 
         CarbonSysPropConfiguration sysPropConfiguration = new CarbonSysPropConfiguration();
         sysPropConfiguration.setCarbonHome(getCarbonHome());
