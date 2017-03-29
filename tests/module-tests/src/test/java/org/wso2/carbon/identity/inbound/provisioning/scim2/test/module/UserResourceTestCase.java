@@ -91,6 +91,11 @@ public class UserResourceTestCase {
         JsonObject userObj = GSON.fromJson(content, JsonObject.class);
         scimId = userObj.get(SCIMConstants.CommonSchemaConstants.ID).toString().replace("\"", "");
         Assert.assertNotNull("Invalid scim user id.", scimId);
+
+        Assert.assertNotNull(userObj.get("EnterpriseUser").toString(),
+                "Failed to retrieve the extension attributes in the response");
+        Assert.assertNotNull(userObj.get("EnterpriseUser").getAsJsonObject().get("state").toString(),
+                "Failed to retrieve the life cycle state attribute as an extension attribute in the response");
     }
 
     @Test(groups = "addUsers", description = "Add User with extensions in level two via SCIM")
@@ -138,6 +143,8 @@ public class UserResourceTestCase {
                 "Failed to retrieve the extension attributes in the response");
         Assert.assertEquals(userObj.get("EnterpriseUser").getAsJsonObject().get("organization").toString(), "\"WSO2\"",
                 "Failed to retrieve the correct extension attribute values in the response");
+        Assert.assertNotNull(userObj.get("EnterpriseUser").getAsJsonObject().get("state").toString(),
+                "Failed to retrieve the life cycle state attribute as an extension attribute in the response");
     }
 
     /*@Test(groups = "addUsers", description = "Add User with extensions in level three via SCIM")
@@ -190,6 +197,8 @@ public class UserResourceTestCase {
         Assert.assertEquals(userObj.get("EnterpriseUser").getAsJsonObject().get("manager").getAsJsonObject()
                         .get("displayName").toString(), "\"manager_HR\"",
                 "Failed to retrieve the correct extension attribute values in the response");
+        Assert.assertNotNull(userObj.get("EnterpriseUser").getAsJsonObject().get("state").toString(),
+                "Failed to retrieve the life cycle state attribute as an extension attribute in the response");
     }*/
 
     @Test(groups = "addUsers", description = "Add User via SCIM without Mandatory Attributes")
@@ -417,6 +426,9 @@ public class UserResourceTestCase {
         Assert.assertEquals(userName, "Devid", "Failure in retrieving the actual user attributes.");
         Assert.assertEquals(familyName, "Silva", "Failure in retrieving the actual user attributes.");
 
+        Assert.assertNotNull(userObj.get("EnterpriseUser").getAsJsonObject().get("state").toString(),
+                "Failed to retrieve the life cycle state attribute as an extension attribute in the response");
+
     }
 
     /*@Test(groups = "getUsers", dependsOnGroups = {"addUsers"}, description = "Get User via SCIM with invalid User ID")
@@ -567,6 +579,10 @@ public class UserResourceTestCase {
         JsonObject result = GSON.fromJson(content, JsonObject.class);
         Assert.assertTrue(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).
                 size() > 0, "Failed in listing all the users.");
+        Assert.assertNotNull(((JsonArray) result.get(SCIMConstants.ListedResourceSchemaConstants.RESOURCES)).get(0)
+                .getAsJsonObject().get("EnterpriseUser").getAsJsonObject().get("state").toString(),
+                "Failed to retrieve the life cycle state attribute as an extension attribute in the response");
+
     }
 
     /*@Test(groups = "listUsers", dependsOnGroups = {"getUsers"},
