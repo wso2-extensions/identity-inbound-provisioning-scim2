@@ -61,6 +61,14 @@ public class SCIMOSGiTestUtils {
                 .artifactId("json-smart")
                 .versionAsInProject());
         optionList.add(mavenBundle()
+                .groupId("org.wso2.carbon.lcm")
+                .artifactId("org.wso2.carbon.lcm.core")
+                .versionAsInProject());
+        optionList.add(mavenBundle()
+                .groupId("org.wso2.carbon.lcm")
+                .artifactId("org.wso2.carbon.lcm.sql")
+                .versionAsInProject());
+        optionList.add(mavenBundle()
                 .groupId("org.wso2.carbon.messaging")
                 .artifactId("org.wso2.carbon.messaging")
                 .versionAsInProject());
