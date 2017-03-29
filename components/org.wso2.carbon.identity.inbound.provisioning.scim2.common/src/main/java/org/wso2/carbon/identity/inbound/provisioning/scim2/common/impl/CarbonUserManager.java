@@ -564,6 +564,9 @@ public class CarbonUserManager implements UserManager {
         //map to keep the claim, value  pair.
         Map<String, String> attributeMap = new HashMap<>();
 
+        //Add the user life cycle state
+        attributeMap.put(SCIMCommonConstants.LIFE_CYCLE_STATE_URI, userStoreUser.getState());
+
         for (Claim claim : claimURIList) {
             attributeMap.put(claim.getClaimUri(), claim.getValue());
         }
