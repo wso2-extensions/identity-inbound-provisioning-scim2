@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.mgt.exception.IdentityStoreException;
 import javax.ws.rs.core.Response;
 
 /**
- * Unit tests for SCIM Client Mapper
+ * Unit tests for SCIM Client Mapper.
  */
 public class SCIMClientExceptionMapperTests {
 

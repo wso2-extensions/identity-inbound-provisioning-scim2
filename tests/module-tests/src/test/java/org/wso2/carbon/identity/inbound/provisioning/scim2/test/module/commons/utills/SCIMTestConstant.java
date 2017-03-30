@@ -17,10 +17,16 @@
  */
 package org.wso2.carbon.identity.inbound.provisioning.scim2.test.module.commons.utills;
 
+/**
+ * This class contains constants required for SCIM module tests.
+ */
 public class SCIMTestConstant {
 
     public static final String BASE_URL = "http://localhost:8080/scim/v2";
     public static final String ME_ENDPOINT = "/Me";
     public static final String RESOURCE_TYPE_ENDPOINT = "/ResourceTypes";
+
+    private SCIMTestConstant() {
+    }
 
 }

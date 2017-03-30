@@ -40,7 +40,7 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.HttpHeaders;
 
 /**
- * Utility functions for SCIM test cases
+ * Utility functions for SCIM test cases.
  */
 public class SCIMTestUtil {
 
@@ -64,7 +64,7 @@ public class SCIMTestUtil {
     private static String incorrectContentTypeHeader = "application/scim+xml";
 
     /**
-     * Create a user with sample attributes
+     * Create a user with sample attributes.
      *
      * @param userName
      * @param password
@@ -111,7 +111,7 @@ public class SCIMTestUtil {
     }
 
     /**
-     * Create a group
+     * Create a group.
      *
      * @param groupName
      * @return
@@ -135,7 +135,7 @@ public class SCIMTestUtil {
     }
 
     /**
-     * Get a user for given SCIM ID
+     * Get a user for given SCIM ID.
      *
      * @param scimId
      * @return
@@ -147,7 +147,7 @@ public class SCIMTestUtil {
     }
 
     /**
-     * Get a group for given SCIM ID
+     * Get a group for given SCIM ID.
      *
      * @param scimId
      * @return

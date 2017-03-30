@@ -23,7 +23,7 @@ import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.resources.Ab
 import org.wso2.carbon.identity.inbound.provisioning.scim2.provider.util.SCIMProviderConstants;
 
 /**
- * Unit tests for Abstract Resource
+ * Unit tests for Abstract Resource.
  */
 public class AbstractResourceTests {
 

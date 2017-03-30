@@ -21,12 +21,12 @@ import org.wso2.charon3.core.exceptions.BadRequestException;
 /*import static org.wso2.carbon.kernel.utils.StringUtils.isNullOrEmpty;*/
 
 /**
- * Provide utility to process startIndex and count
+ * Provide utility to process startIndex and count.
  */
 public class ResourceUtil {
 
     /**
-     * Assign startIndex to default value, if user haven't sent startIndex
+     * Assign startIndex to default value, if user haven't sent startIndex.
      * @param startIndexStr
      * @return
      * @throws BadRequestException
@@ -49,7 +49,7 @@ public class ResourceUtil {
     }
 
     /**
-     * Assign count value to default value, if user haven't sent count
+     * Assign count value to default value, if user haven't sent count.
      * @param countStr
      * @return
      * @throws BadRequestException
