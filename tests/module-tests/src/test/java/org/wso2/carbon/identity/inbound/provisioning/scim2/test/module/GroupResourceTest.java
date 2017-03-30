@@ -47,6 +47,9 @@ import javax.ws.rs.core.Response;
 
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 
+/**
+ * This test class contains test cases related to SCIM groups.
+ */
 @Listeners(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class GroupResourceTest {
