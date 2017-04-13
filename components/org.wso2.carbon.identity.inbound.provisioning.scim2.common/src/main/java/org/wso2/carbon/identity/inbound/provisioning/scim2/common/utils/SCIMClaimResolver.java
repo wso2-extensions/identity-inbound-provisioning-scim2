@@ -89,10 +89,8 @@ public class SCIMClaimResolver {
                 }
                 if (attributes != null) {
                     attributes.values().stream().forEach(LambdaExceptionUtils.rethrowConsumer(entry -> {
-                        if (entry instanceof SimpleAttribute) {
-                            if (entry.getURI().equals(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) {
-                                return;
-                            }
+                        if (entry instanceof SimpleAttribute && !(entry.getURI().equals(SCIMConstants.
+                                CommonSchemaConstants.LOCATION_URI))) {
 
                             setClaimsForSimpleAttribute(entry, claimsMap);
 
