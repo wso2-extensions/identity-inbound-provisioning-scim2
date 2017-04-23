@@ -45,6 +45,14 @@
             <artifactId>org.wso2.carbon.tools.core</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.lcm</groupId>
+            <artifactId>org.wso2.carbon.lcm.core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.lcm</groupId>
+            <artifactId>org.wso2.carbon.lcm.sql</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon</groupId>
             <artifactId>org.wso2.carbon.kernel.feature</artifactId>
             <type>zip</type>
@@ -291,6 +299,14 @@
                                     <id>org.wso2.carbon.metrics.das.core.feature</id>
                                     <version>${carbon.metrics.version}</version>
                                 </feature>
+                                <feature>
+                                    <id>org.wso2.carbon.lcm.core.feature</id>
+                                    <version>${org.wso2.carbon.lcm.version}</version>
+                                </feature>
+                                <feature>
+                                    <id>org.wso2.carbon.lcm.sql.feature</id>
+                                    <version>${org.wso2.carbon.lcm.version}</version>
+                                </feature>
                             </features>
                         </configuration>
                     </execution>
@@ -397,6 +413,14 @@
                                     <id>org.wso2.carbon.identity.inbound.provisioning.scim2.provider.feature</id>
                                     <version>${project.version}</version>
                                 </feature>
+                                <feature>
+                                    <id>org.wso2.carbon.lcm.core.feature</id>
+                                    <version>${org.wso2.carbon.lcm.version}</version>
+                                </feature>
+                                <feature>
+                                    <id>org.wso2.carbon.lcm.sql.feature</id>
+                                    <version>${org.wso2.carbon.lcm.version}</version>
+                                </feature>
                             </features>
                         </configuration>
                     </execution>
@@ -419,7 +443,7 @@
                                     <path refid="maven.compile.classpath" />
                                 </path>
                                 <echo message="########### Creating Carbon Database ##############" />
-                                <sql driver="org.h2.Driver" url="jdbc:h2:${basedir}/target/wso2carbon-kernel-${project.version}/database/WSO2CARBON_DB;MV_STORE=FALSE;create=true" userid="wso2carbon" password="wso2carbon" autocommit="true" onerror="continue">
+                                <sql driver="org.h2.Driver" url="jdbc:h2:${basedir}/target/wso2carbon-kernel-${project.version}/database/WSO2CARBON_DB;create=true" userid="wso2carbon" password="wso2carbon" autocommit="true" onerror="continue">
                                     <classpath>
                                         <path refid="h2.classpath" />
                                     </classpath>
