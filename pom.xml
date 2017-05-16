@@ -227,7 +227,7 @@
         <identity.framework.version>5.2.0</identity.framework.version>
         <junit.version>4.11</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
-        <charon.version>3.0.0-SNAPSHOT</charon.version>
+        <charon.version>3.0.0</charon.version>
 
         <!--Maven Plugin Version-->
         <maven.compiler.plugin.version>2.3.1</maven.compiler.plugin.version>
