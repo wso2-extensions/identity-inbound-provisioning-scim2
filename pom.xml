@@ -55,16 +55,6 @@
                 <artifactId>cxf-bundle</artifactId>
                 <version>${cxf-bundle.wso2.version}</version>
             </dependency>
-            <!--<dependency>-->
-                <!--<groupId>org.wso2.carbon.identity</groupId>-->
-                <!--<artifactId>org.wso2.carbon.identity.oauth.stub</artifactId>-->
-                <!--<version>${inbound.auth.oauth.version}</version>-->
-            <!--</dependency>-->
-            <!--<dependency>-->
-                <!--<groupId>org.wso2.carbon.identity</groupId>-->
-                <!--<artifactId>org.wso2.carbon.identity.oauth</artifactId>-->
-                <!--<version>${inbound.auth.oauth.version}</version>-->
-            <!--</dependency>-->
             <dependency>
                 <groupId>commons-collections.wso2</groupId>
                 <artifactId>commons-collections</artifactId>
@@ -86,12 +76,7 @@
                 <version>${carbon.kernel.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wso2.carbon.identity</groupId>
-                <artifactId>org.wso2.carbon.identity.core</artifactId>
-                <version>${identity.framework.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon.identity</groupId>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.application.common</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
@@ -100,31 +85,6 @@
                 <artifactId>junit</artifactId>
                 <scope>test</scope>
                 <version>${junit.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon.identity</groupId>
-                <artifactId>org.wso2.carbon.identity.provisioning</artifactId>
-                <version>${identity.framework.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.axis2.wso2</groupId>
-                <artifactId>axis2</artifactId>
-                <version>${axis2.wso2.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon</groupId>
-                <artifactId>org.wso2.carbon.ui</artifactId>
-                <version>${carbon.kernel.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon</groupId>
-                <artifactId>org.wso2.carbon.logging</artifactId>
-                <version>${carbon.kernel.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.axis2.wso2</groupId>
-                <artifactId>axis2-client</artifactId>
-                <version>${axis2.wso2.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-lang</groupId>
@@ -141,25 +101,25 @@
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.stub</artifactId>
                 <scope>provided</scope>
-                <version>5.2.0</version>
+                <version>${inbound.auth.oauth.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth</artifactId>
                 <scope>provided</scope>
-                <version>5.2.0</version>
+                <version>${inbound.auth.oauth.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.core</artifactId>
                 <scope>provided</scope>
-                <version>5.6.15</version>
+                <version>${identity.framework.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.provisioning</artifactId>
                 <scope>provided</scope>
-                <version>5.5.0</version>
+                <version>${identity.framework.version}</version>
             </dependency>
 
             <dependency>
@@ -252,10 +212,10 @@
     <properties>
         <jsr311-api.version>1.1.1</jsr311-api.version>
         <cxf-bundle.wso2.version>2.6.1.wso2v2</cxf-bundle.wso2.version>
-        <inbound.auth.oauth.version>5..0</inbound.auth.oauth.version>
+        <inbound.auth.oauth.version>5.2.0</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.4.7</carbon.kernel.version>
-        <identity.framework.version>5.2.0</identity.framework.version>
+        <identity.framework.version>5.6.15</identity.framework.version>
         <junit.version>4.11</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <charon.version>3.0.0</charon.version>
@@ -273,7 +233,6 @@
 
         <carbon.p2.plugin.version>1.5.3</carbon.p2.plugin.version>
 
-        <identity.framework.version>5.2.0</identity.framework.version>
         <identity.inbound.provisioning.scim.export.version>${project.version}
         </identity.inbound.provisioning.scim.export.version>
         <axiom.osgi.version.range>[1.2.11, 2.0.0)</axiom.osgi.version.range>
