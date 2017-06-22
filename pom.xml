@@ -36,9 +36,9 @@
     <url>http://wso2.org</url>
 
     <scm>
-        <url>https://github.com/wso2-extensions/identity-inbound-provisioning-scim.git</url>
-        <developerConnection>scm:git:https://github.com/wso2-extensions/identity-inbound-provisioning-scim.git</developerConnection>
-        <connection>scm:git:https://github.com/wso2-extensions/identity-inbound-provisioning-scim.git</connection>
+        <url>https://github.com/wso2-extensions/identity-inbound-provisioning-scim2.git</url>
+        <developerConnection>scm:git:https://github.com/wso2-extensions/identity-inbound-provisioning-scim2.git</developerConnection>
+        <connection>scm:git:https://github.com/wso2-extensions/identity-inbound-provisioning-scim2.git</connection>
         <tag>HEAD</tag>
     </scm>
 
