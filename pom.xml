@@ -127,6 +127,24 @@
                 <artifactId>org.wso2.carbon.identity.scim2.common</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
+                <artifactId>org.wso2.carbon.identity.scim2.provider</artifactId>
+                <version>${project.version}</version>
+                <type>war</type>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
+                <artifactId>org.wso2.carbon.identity.scim2.common.feature</artifactId>
+                <version>${project.version}</version>
+                <type>zip</type>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
+                <artifactId>org.wso2.carbon.identity.scim2.provider.feature</artifactId>
+                <version>${project.version}</version>
+                <type>zip</type>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -207,6 +225,9 @@
     <modules>
         <module>components/org.wso2.carbon.identity.scim2.common</module>
         <module>components/org.wso2.carbon.identity.scim2.provider</module>
+        <module>features/org.wso2.carbon.identity.scim2.common.feature</module>
+        <module>features/org.wso2.carbon.identity.scim2.provider.feature</module>
+        <module>features/org.wso2.carbon.identity.scim2.server.feature</module>
     </modules>
 
     <properties>
