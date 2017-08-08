@@ -68,59 +68,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                                       UserStoreManager userStoreManager)
             throws UserStoreException {
 
-        try {
-            if (!isEnable() || !userStoreManager.isSCIMEnabled()) {
-                return true;
-            }
-        } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
-        }
-
-        String domainName = userStoreManager.getRealmConfiguration().getUserStoreProperty(
-                UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME);
-        if(authenticated){
-            if (StringUtils.isNotEmpty(UserCoreUtil.getDomainFromThreadLocal())) {
-                if(!StringUtils.equals(UserCoreUtil.getDomainFromThreadLocal(), domainName)){
-                    return true;
-                }
-            } else if (!StringUtils.equals(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME, domainName)){
-                return true;
-            }
-        } else {
-            String usernameWithDomain = UserCoreUtil.addDomainToName(userName, domainName);
-            boolean isUserExistInCurrentDomain = userStoreManager.isExistingUser(usernameWithDomain);
-            if (!isUserExistInCurrentDomain) {
-                if (log.isDebugEnabled()) {
-                    log.debug("User, " + userName + " does not exist in " + domainName);
-                }
-                return true;
-            }
-        }
-
-        try {
-            String activeAttributeValue = userStoreManager.getUserClaimValue(userName,
-                    SCIMConstants.UserSchemaConstants.ACTIVE_URI, null);
-            boolean isUserActive = true;
-            if (activeAttributeValue != null) {
-                isUserActive = Boolean.parseBoolean(activeAttributeValue);
-                if (isUserActive) {
-                    return true;
-                } else {
-                    log.error("Trying to login from an inactive account of user: " + userName);
-                    return false;
-                }
-            }
-            return true;
-        } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            if (e.getMessage().contains("UserNotFound")){
-                if (log.isDebugEnabled()){
-                    log.debug("User " + userName + " not found in user store", e);
-                }
-                return false;
-            }
-            throw new UserStoreException(e);
-        }
-
+        return true;
     }
 
     @Override
