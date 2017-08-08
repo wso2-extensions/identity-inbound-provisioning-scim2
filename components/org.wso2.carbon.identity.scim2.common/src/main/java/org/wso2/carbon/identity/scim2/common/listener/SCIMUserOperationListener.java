@@ -96,31 +96,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 return true;
             }
         }
-
-        try {
-            String activeAttributeValue = userStoreManager.getUserClaimValue(userName,
-                    SCIMConstants.UserSchemaConstants.ACTIVE_URI, null);
-            boolean isUserActive = true;
-            if (activeAttributeValue != null) {
-                isUserActive = Boolean.parseBoolean(activeAttributeValue);
-                if (isUserActive) {
-                    return true;
-                } else {
-                    log.error("Trying to login from an inactive account of user: " + userName);
-                    return false;
-                }
-            }
-            return true;
-        } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            if (e.getMessage().contains("UserNotFound")){
-                if (log.isDebugEnabled()){
-                    log.debug("User " + userName + " not found in user store", e);
-                }
-                return false;
-            }
-            throw new UserStoreException(e);
-        }
-
+        return false;
     }
 
     @Override
