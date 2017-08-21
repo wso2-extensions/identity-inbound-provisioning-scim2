@@ -103,7 +103,7 @@ public class IdentitySCIMManager {
 
     public UserManager getUserManager(String userName) throws CharonException {
         SCIMUserManager scimUserManager = null;
-        String tenantDomain = MultitenantUtils.getTenantDomain(userName);
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String tenantLessUserName = MultitenantUtils.getTenantAwareUsername(userName);
         try {
             //get super tenant context and get realm service which is an osgi service
