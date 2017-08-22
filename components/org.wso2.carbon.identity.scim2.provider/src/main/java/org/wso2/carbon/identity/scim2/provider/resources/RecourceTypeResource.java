@@ -44,16 +44,12 @@ public class RecourceTypeResource extends AbstractResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getUser() {
 
-        String userName = SCIMProviderConstants.DEFAULT_USERNAME;
         JSONEncoder encoder = null;
         try {
             IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
 
             // obtain the encoder at this layer in case exceptions needs to be encoded.
             encoder = identitySCIMManager.getEncoder();
-
-            // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager(userName);
 
             // create charon-SCIM service provider config endpoint and hand-over the request.
             ResourceTypeResourceManager resourceTypeResourceManager = new ResourceTypeResourceManager();
