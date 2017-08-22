@@ -101,10 +101,9 @@ public class IdentitySCIMManager {
     }
 
 
-    public UserManager getUserManager(String userName) throws CharonException {
+    public UserManager getUserManager() throws CharonException {
         SCIMUserManager scimUserManager = null;
-        String tenantDomain = MultitenantUtils.getTenantDomain(userName);
-        String tenantLessUserName = MultitenantUtils.getTenantAwareUsername(userName);
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         try {
             //get super tenant context and get realm service which is an osgi service
             RealmService realmService = (RealmService)
@@ -117,18 +116,9 @@ public class IdentitySCIMManager {
                 if (userRealm != null) {
                     //get claim manager for manipulating attributes
                     claimManager = (ClaimManager) userRealm.getClaimManager();
-                    /*if the authenticated & authorized user is not set in the carbon context, set it,
-                    coz we are going to refer it later to identify the SCIM providers registered for a particular consumer.*/
-                    String authenticatedUser = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-                    if (authenticatedUser == null) {
-                        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(tenantLessUserName);
-                        if (log.isDebugEnabled()) {
-                            log.debug("User read from carbon context is null, hence setting " +
-                                    "authenticated user: " + tenantLessUserName);
-                        }
-                    }
+
                     scimUserManager = new SCIMUserManager((UserStoreManager) userRealm.getUserStoreManager(),
-                            userName, claimManager);
+                            tenantId, claimManager);
                 }
             } else {
                 String error = "Can not obtain carbon realm service..";
@@ -136,7 +126,7 @@ public class IdentitySCIMManager {
             }
             //get user store manager
         } catch (UserStoreException e) {
-            String error = "Error obtaining user realm for the user: " + userName;
+            String error = "Error obtaining user realm for tenant: " + tenantDomain;
             throw new CharonException(error, e);
         }
         return scimUserManager;

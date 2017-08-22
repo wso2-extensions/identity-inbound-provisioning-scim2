@@ -71,13 +71,13 @@ public class SCIMUserManager implements UserManager {
     private static Log log = LogFactory.getLog(SCIMUserManager.class);
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
-    private String consumerName;
+    private int tenantId;
 
-    public SCIMUserManager(UserStoreManager carbonUserStoreManager, String userName,
+    public SCIMUserManager(UserStoreManager carbonUserStoreManager, int tenantId,
                            ClaimManager claimManager) {
         carbonUM = carbonUserStoreManager;
-        consumerName = userName;
         carbonClaimManager = claimManager;
+        this.tenantId = tenantId;
     }
 
     @Override
@@ -114,9 +114,7 @@ public class SCIMUserManager implements UserManager {
         try {
             PrivilegedCarbonContext.startTenantFlow();
             PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
-            carbonContext.setTenantDomain(MultitenantUtils.getTenantDomain(consumerName));
-            carbonContext.getTenantId(true);
-            carbonContext.setUsername(MultitenantUtils.getTenantAwareUsername(consumerName));
+            carbonContext.setTenantId(tenantId);
 
             //Persist in carbon user store
             if (log.isDebugEnabled()) {
