@@ -44,14 +44,14 @@ public class SCIMCommonUtils {
      * called at user creation - it is supposed to do provisioning at user update. So we make use of
      * this thread local variable to skip the second lister.
      */
-    private static ThreadLocal threadLocalToSkipSetUserClaimsListeners = new ThreadLocal();
+    private static ThreadLocal<Boolean> threadLocalToSkipSetUserClaimsListeners = new ThreadLocal<>();
     /**
      * Provisioning to other providers is initiated at SCIMUserOperationListener which is invoked
      * by UserStoreManager. It doesn't have any clue about through which path the user management operation
      * came. If it came through SCIMEndPoint, we treat it differently when deciding SCIMConsumerId.
      * Therefore we need this thread local to signal the SCIMUserOperationListener to take the decision.
      */
-    private static ThreadLocal threadLocalIsManagedThroughSCIMEP = new ThreadLocal();
+    private static ThreadLocal<Boolean> threadLocalIsManagedThroughSCIMEP = new ThreadLocal<>();
 
 
     public static void init() {
@@ -114,7 +114,7 @@ public class SCIMCommonUtils {
     public static String getGroupNameWithDomain(String groupName) {
 
         if (groupName == null) {
-            return groupName;
+            return null;
         }
 
         if (groupName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
@@ -128,7 +128,7 @@ public class SCIMCommonUtils {
     public static String getPrimaryFreeGroupName(String groupName) {
 
         if (groupName == null) {
-            return groupName;
+            return null;
         }
 
         int index = groupName.indexOf(CarbonConstants.DOMAIN_SEPARATOR);
@@ -149,7 +149,7 @@ public class SCIMCommonUtils {
     }
 
     public static Boolean getThreadLocalToSkipSetUserClaimsListeners() {
-        return (Boolean) threadLocalToSkipSetUserClaimsListeners.get();
+        return threadLocalToSkipSetUserClaimsListeners.get();
     }
 
     public static void setThreadLocalToSkipSetUserClaimsListeners(Boolean value) {
@@ -161,7 +161,7 @@ public class SCIMCommonUtils {
     }
 
     public static Boolean getThreadLocalIsManagedThroughSCIMEP() {
-        return (Boolean) threadLocalIsManagedThroughSCIMEP.get();
+        return threadLocalIsManagedThroughSCIMEP.get();
     }
 
     public static void setThreadLocalIsManagedThroughSCIMEP(Boolean value) {
@@ -173,11 +173,9 @@ public class SCIMCommonUtils {
     }
 
     public static String getUserConsumerId() {
-        //String userName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String userName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String currentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String consumerId = UserCoreUtil.addTenantDomainToEntry(userName, currentTenantDomain);;
-        return consumerId;
+        return UserCoreUtil.addTenantDomainToEntry(userName, currentTenantDomain);
     }
 
 }
