@@ -19,9 +19,10 @@
 package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.wso2.carbon.CarbonConstants;
-import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 /**
  * This class is to be used as a Util class for SCIM common things.
@@ -56,10 +57,7 @@ public class SCIMCommonUtils {
     public static void init() {
         //to initialize scim urls once.
         if (scimUserLocation == null || scimGroupLocation == null || scimServiceProviderConfig == null) {
-            String portOffSet = ServerConfiguration.getInstance().getFirstProperty("Ports.Offset");
-            int httpsPort = 9443 + Integer.parseInt(portOffSet);
-            String scimURL = "https://" + ServerConfiguration.getInstance().getFirstProperty("HostName")
-                    + ":" + String.valueOf(httpsPort) + "/wso2/scim/v2/";
+            String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
             scimUserLocation = scimURL + SCIMCommonConstants.USERS;
             scimGroupLocation = scimURL + SCIMCommonConstants.GROUPS;
             scimServiceProviderConfig = scimURL + SCIMCommonConstants.SERVICE_PROVIDER_CONFIG;
@@ -178,7 +176,7 @@ public class SCIMCommonUtils {
         //String userName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String userName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String currentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        String consumerId = userName + "@" + currentTenantDomain;
+        String consumerId = UserCoreUtil.addTenantDomainToEntry(userName, currentTenantDomain);;
         return consumerId;
     }
 
