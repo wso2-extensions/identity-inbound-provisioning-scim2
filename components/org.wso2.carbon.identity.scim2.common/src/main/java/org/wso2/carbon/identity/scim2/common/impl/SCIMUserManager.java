@@ -127,6 +127,16 @@ public class SCIMUserManager implements UserManager {
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
             Map<String, String> claimsMap = AttributeMapper.getClaimsMap(user);
 
+            // Converting identity recovery clams to respective local claims
+            if (claimsMap.containsKey(SCIMConstants.UserSchemaConstants.ASK_PASSWORD_URI)) {
+                String attributeValue = claimsMap.remove(SCIMConstants.UserSchemaConstants.ASK_PASSWORD_URI);
+                claimsMap.put(SCIMCommonConstants.ASK_PASSWORD_CLAIM, attributeValue);
+            }
+            if (claimsMap.containsKey(SCIMConstants.UserSchemaConstants.VERIFY_EMAIL_URI)) {
+                String attributeValue = claimsMap.remove(SCIMConstants.UserSchemaConstants.VERIFY_EMAIL_URI);
+                claimsMap.put(SCIMCommonConstants.VERIFY_EMAIL_CLIAM, attributeValue);
+            }
+
                 /*skip groups attribute since we map groups attribute to actual groups in ldap.
                 and do not update it as an attribute in user schema*/
             if (claimsMap.containsKey(SCIMConstants.UserSchemaConstants.GROUP_URI)) {
