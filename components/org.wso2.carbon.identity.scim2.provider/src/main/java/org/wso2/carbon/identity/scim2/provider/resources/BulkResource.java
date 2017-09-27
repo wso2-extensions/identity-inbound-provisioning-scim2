@@ -41,7 +41,6 @@ public class BulkResource extends AbstractResource {
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                String resourceString) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
         JSONEncoder encoder = null;
         try {
 
@@ -67,7 +66,7 @@ public class BulkResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager(userName);
+            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
             // create charon-SCIM bulk endpoint and hand-over the request.
             BulkResourceManager bulkResourceManager = new BulkResourceManager();

@@ -71,12 +71,9 @@ public class SCIMUserManager implements UserManager {
     private static Log log = LogFactory.getLog(SCIMUserManager.class);
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
-    private String consumerName;
 
-    public SCIMUserManager(UserStoreManager carbonUserStoreManager, String userName,
-                           ClaimManager claimManager) {
+    public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
         carbonUM = carbonUserStoreManager;
-        consumerName = userName;
         carbonClaimManager = claimManager;
     }
 
@@ -112,11 +109,6 @@ public class SCIMUserManager implements UserManager {
         }
 
         try {
-            PrivilegedCarbonContext.startTenantFlow();
-            PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
-            carbonContext.setTenantDomain(MultitenantUtils.getTenantDomain(consumerName));
-            carbonContext.getTenantId(true);
-            carbonContext.setUsername(MultitenantUtils.getTenantAwareUsername(consumerName));
 
             //Persist in carbon user store
             if (log.isDebugEnabled()) {
@@ -157,8 +149,6 @@ public class SCIMUserManager implements UserManager {
             String errMsg = "Error in adding the user: " + user.getUserName() + " to the user store. ";
             errMsg += e.getMessage();
             throw new CharonException(errMsg, e);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         return user;
     }
