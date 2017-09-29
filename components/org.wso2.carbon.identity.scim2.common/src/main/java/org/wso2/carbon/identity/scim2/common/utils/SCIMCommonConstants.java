@@ -60,5 +60,12 @@ public class SCIMCommonConstants {
     public static final String BULK_MAX_PAYLOAD_SIZE = "bulk-maxPayloadSize";
     public static final String FILTER_MAX_RESULTS = "filter-maxResults";
 
+    public static final java.lang.String ASK_PASSWORD_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:askPassword";
+    public static final java.lang.String VERIFY_EMAIL_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:verifyEmail";
+
+    // Identity recovery claims
+    public static final String ASK_PASSWORD_CLAIM = "http://wso2.org/claims/identity/askPassword";
+    public static final String VERIFY_EMAIL_CLIAM = "http://wso2.org/claims/identity/verifyEmail";
+
 }
 
