@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.scim2.provider.resources;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
@@ -45,8 +46,7 @@ public class MeResource extends AbstractResource {
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String  excludedAttributes) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         JSONEncoder encoder = null;
         try {
             IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
@@ -67,7 +67,7 @@ public class MeResource extends AbstractResource {
             SCIMResponse scimResponse = meResourceManager.get(userName, userManager,attribute, excludedAttributes);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
-            return new SupportUtils().buildResponse(scimResponse);
+            return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
             return handleCharonException(e,encoder);
@@ -117,7 +117,7 @@ public class MeResource extends AbstractResource {
             SCIMResponse response = meResourceManager.create(resourceString, userManager,
                     attribute, excludedAttributes);
 
-            return new SupportUtils().buildResponse(response);
+            return SupportUtils.buildResponse(response);
 
         } catch (CharonException e) {
             return handleCharonException(e, encoder);
@@ -131,8 +131,7 @@ public class MeResource extends AbstractResource {
     public Response deleteUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         JSONEncoder encoder = null;
         try {
             IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
@@ -157,7 +156,7 @@ public class MeResource extends AbstractResource {
             SCIMResponse scimResponse = meResourceManager.delete(userName, userManager);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
-            return new SupportUtils().buildResponse(scimResponse);
+            return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
             return handleCharonException(e, encoder);
@@ -174,8 +173,7 @@ public class MeResource extends AbstractResource {
                                @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         JSONEncoder encoder = null;
         try {
             // obtain default charon manager
@@ -183,8 +181,7 @@ public class MeResource extends AbstractResource {
 
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
-                String error = SCIMProviderConstants.CONTENT_TYPE
-                        + " not present in the request header";
+                String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
                 throw new FormatNotSupportedException(error);
             }
 
@@ -209,7 +206,7 @@ public class MeResource extends AbstractResource {
             SCIMResponse response = meResourceManager.updateWithPUT(
                     userName, resourceString, userManager, attribute, excludedAttributes);
 
-            return new SupportUtils().buildResponse(response);
+            return SupportUtils.buildResponse(response);
 
         } catch (CharonException e) {
             return handleCharonException(e, encoder);
@@ -226,8 +223,7 @@ public class MeResource extends AbstractResource {
                               @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                               String resourceString) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         JSONEncoder encoder = null;
         try {
             // obtain default charon manager
@@ -235,8 +231,7 @@ public class MeResource extends AbstractResource {
 
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
-                String error = SCIMProviderConstants.CONTENT_TYPE
-                        + " not present in the request header";
+                String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
                 throw new FormatNotSupportedException(error);
             }
 
@@ -261,7 +256,7 @@ public class MeResource extends AbstractResource {
             SCIMResponse response = meResourceManager.updateWithPATCH(
                     userName, resourceString, userManager, attribute, excludedAttributes);
 
-            return new SupportUtils().buildResponse(response);
+            return SupportUtils.buildResponse(response);
 
         } catch (CharonException e) {
             return handleCharonException(e, encoder);

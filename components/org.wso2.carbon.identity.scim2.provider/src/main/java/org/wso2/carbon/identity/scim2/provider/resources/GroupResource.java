@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.scim2.provider.resources;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
@@ -51,8 +52,7 @@ public class GroupResource extends AbstractResource {
                              @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                              @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             if (!isValidOutputFormat(outputFormat)) {
                 String error = outputFormat + " is not supported.";
@@ -81,8 +81,7 @@ public class GroupResource extends AbstractResource {
                                     @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                     String resourceString) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -123,8 +122,7 @@ public class GroupResource extends AbstractResource {
                                 @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                 String resourceString) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -167,8 +165,7 @@ public class GroupResource extends AbstractResource {
                              @QueryParam(SCIMProviderConstants.SORT_BY) String sortBy,
                              @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             if (!isValidOutputFormat(outputFormat)) {
                 String error = outputFormat + " is not supported.";
@@ -198,8 +195,7 @@ public class GroupResource extends AbstractResource {
                                 @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                 @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             if (!isValidOutputFormat(outputFormat)) {
                 String error = outputFormat + " is not supported.";
@@ -227,8 +223,7 @@ public class GroupResource extends AbstractResource {
                                 @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                 String resourceString) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             // content-type header is compulsory in put request.
             if (inputFormat == null) {
@@ -272,8 +267,7 @@ public class GroupResource extends AbstractResource {
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
-        String userName = SupportUtils.getUserNameFromBase64EncodedString(authorizationHeader);
-
+        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             // content-type header is compulsory in patch request.
             if (inputFormat == null) {

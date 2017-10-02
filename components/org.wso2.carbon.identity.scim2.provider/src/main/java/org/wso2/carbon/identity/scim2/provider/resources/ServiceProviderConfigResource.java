@@ -53,12 +53,13 @@ public class ServiceProviderConfigResource extends AbstractResource {
             // obtain the user store manager
 
             // create charon-SCIM service provider config endpoint and hand-over the request.
-            ServiceProviderConfigResourceManager serviceProviderConfigResourceManager = new ServiceProviderConfigResourceManager();
+            ServiceProviderConfigResourceManager serviceProviderConfigResourceManager =
+                    new ServiceProviderConfigResourceManager();
 
             SCIMResponse scimResponse = serviceProviderConfigResourceManager.get(null, null, null, null);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
-            return new SupportUtils().buildResponse(scimResponse);
+            return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
             return handleCharonException(e,encoder);

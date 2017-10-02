@@ -158,7 +158,7 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Retrieving user: " + userId);
         }
-        User scimUser = null;
+        User scimUser;
         try {
             ClaimMapping[] coreClaims;
             ClaimMapping[] userClaims;
@@ -168,11 +168,6 @@ public class SCIMUserManager implements UserManager {
                     UserCoreConstants.DEFAULT_PROFILE);
 
             if (userNames == null || userNames.length == 0) {
-                if (log.isDebugEnabled()) {
-                    log.debug("User with SCIM id: " + userId + " does not exist in the system.");
-                }
-                return null;
-            } else if (userNames != null && userNames.length == 0) {
                 if (log.isDebugEnabled()) {
                     log.debug("User with SCIM id: " + userId + " does not exist in the system.");
                 }
@@ -421,7 +416,7 @@ public class SCIMUserManager implements UserManager {
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdmin(user.getUserName(), user.getPassword());
             }
-            log.info("User: " + user.getUserName() + " updated updated through SCIM.");
+            log.info("User: " + user.getUserName() + " updated through SCIM.");
             return getUser(user.getId(),requiredAttributes);
         } catch (UserStoreException e) {
             throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
@@ -522,12 +517,14 @@ public class SCIMUserManager implements UserManager {
 
 
     @Override
-    public User getMe(String userName, Map<String, Boolean> requiredAttributes)
-            throws CharonException, NotFoundException {
+    public User getMe(String userName,
+                      Map<String, Boolean> requiredAttributes) throws CharonException, NotFoundException {
+
         if (log.isDebugEnabled()) {
-            log.debug("Deleting user: " + userName);
+            log.debug("Getting user: " + userName);
         }
-        User scimUser = null;
+
+        User scimUser;
         ClaimMapping[] coreClaims;
         ClaimMapping[] userClaims;
         ClaimMapping[] extensionClaims = null;
@@ -621,7 +618,7 @@ public class SCIMUserManager implements UserManager {
 
             if(!isInternalOrApplicationGroup(domainName) && StringUtils.isNotBlank(domainName) && !isSCIMEnabled
                     (domainName)){
-                throw new CharonException("Cannot add user through scim to user store " + ". SCIM is not " +
+                throw new CharonException("Cannot create group through scim to user store " + ". SCIM is not " +
                         "enabled for user store " + domainName);
             }
             group.setDisplayName(roleNameWithDomain);
@@ -763,7 +760,7 @@ public class SCIMUserManager implements UserManager {
                 if(!isInternalOrApplicationGroup(userStoreDomainName) && StringUtils.isNotBlank(userStoreDomainName)
                         && !isSCIMEnabled
                         (userStoreDomainName)){
-                    throw new CharonException("Cannot add user through scim to user store " + ". SCIM is not " +
+                    throw new CharonException("Cannot delete user through scim to user store " + ". SCIM is not " +
                             "enabled for user store " + userStoreDomainName);
                 }
 
@@ -1094,7 +1091,7 @@ public class SCIMUserManager implements UserManager {
 
         String userStoreDomainName = IdentityUtil.extractDomainFromName(userName);
         if(StringUtils.isNotBlank(userStoreDomainName) && !isSCIMEnabled(userStoreDomainName)){
-            throw new CharonException("Cannot add user through scim to user store " + ". SCIM is not " +
+            throw new CharonException("Cannot get user through scim to user store " + ". SCIM is not " +
                     "enabled for user store " + userStoreDomainName);
         }
         try {

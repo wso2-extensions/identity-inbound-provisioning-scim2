@@ -69,7 +69,7 @@ public class UserResource extends AbstractResource {
             SCIMResponse scimResponse = userResourceManager.get(id, userManager,attribute, excludedAttributes);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
-            return new SupportUtils().buildResponse(scimResponse);
+            return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
             return handleCharonException(e,encoder);
@@ -120,7 +120,7 @@ public class UserResource extends AbstractResource {
             SCIMResponse response = userResourceManager.create(resourceString, userManager,
                     attribute, excludedAttributes);
 
-            return new SupportUtils().buildResponse(response);
+            return SupportUtils.buildResponse(response);
 
         } catch (CharonException e) {
             return handleCharonException(e, encoder);
@@ -159,7 +159,7 @@ public class UserResource extends AbstractResource {
             SCIMResponse scimResponse = userResourceManager.delete(id, userManager);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
-            return new SupportUtils().buildResponse(scimResponse);
+            return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
             return handleCharonException(e, encoder);
@@ -206,7 +206,7 @@ public class UserResource extends AbstractResource {
             scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
                     sortBy, sortOrder, attribute, excludedAttributes);
 
-            return new SupportUtils().buildResponse(scimResponse);
+            return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
             return handleCharonException(e, encoder);
         } catch (FormatNotSupportedException e) {
@@ -255,7 +255,7 @@ public class UserResource extends AbstractResource {
 
             scimResponse = userResourceManager.listWithPOST(resourceString, userManager);
 
-            return new SupportUtils().buildResponse(scimResponse);
+            return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
             return handleCharonException(e, encoder);
@@ -307,7 +307,7 @@ public class UserResource extends AbstractResource {
             SCIMResponse response = userResourceEndpoint.updateWithPUT(
                     id, resourceString, userManager, attribute, excludedAttributes);
 
-            return new SupportUtils().buildResponse(response);
+            return SupportUtils.buildResponse(response);
 
         } catch (CharonException e) {
             return handleCharonException(e, encoder);
@@ -360,7 +360,7 @@ public class UserResource extends AbstractResource {
             SCIMResponse response = userResourceEndpoint.updateWithPATCH(
                     id, resourceString, userManager, attribute, excludedAttributes);
 
-            return new SupportUtils().buildResponse(response);
+            return SupportUtils.buildResponse(response);
 
         } catch (CharonException e) {
             return handleCharonException(e, encoder);

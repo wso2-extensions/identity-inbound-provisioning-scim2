@@ -35,23 +35,15 @@ public class AbstractResource {
 
     //identify the output format
     public boolean isValidOutputFormat(String format) {
-        if (format == null || "*/*".equals(format) ||
+        return format == null || "*/*".equals(format) ||
                 format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION__JSON)
-                || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON) ) {
-            return true;
-        } else {
-            return false;
-        }
+                || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON);
     }
     //identify the input format
     public boolean isValidInputFormat(String format) {
-        if (format == null || "*/*".equals(format) ||
+        return format == null || "*/*".equals(format) ||
                 format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION__JSON)
-                || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON)) {
-            return true;
-        } else {
-            return false;
-        }
+                || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON);
     }
 
     /**
@@ -73,7 +65,7 @@ public class AbstractResource {
             encoder = defaultEncoder;
         }
 
-        return new SupportUtils().buildResponse(AbstractResourceManager.encodeSCIMException(e));
+        return SupportUtils.buildResponse(AbstractResourceManager.encodeSCIMException(e));
     }
 
     /**
@@ -88,7 +80,7 @@ public class AbstractResource {
         }
 
         // use the default JSON encoder to build the error response.
-        return new SupportUtils().buildResponse(
+        return SupportUtils.buildResponse(
                 AbstractResourceManager.encodeSCIMException(e));
     }
 }
