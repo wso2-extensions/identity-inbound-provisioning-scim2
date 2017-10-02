@@ -74,7 +74,7 @@ public class BulkResource extends AbstractResource {
             SCIMResponse scimResponse = bulkResourceManager.processBulkData(resourceString, userManager);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
-            return new SupportUtils().buildResponse(scimResponse);
+            return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
             return handleCharonException(e,encoder);

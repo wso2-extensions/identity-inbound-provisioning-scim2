@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.scim2.provider.util;
 
 import org.apache.axiom.om.util.Base64;
 import org.apache.commons.collections.MapUtils;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 
 import javax.ws.rs.core.Response;
@@ -29,6 +30,8 @@ import java.util.Map;
  * This class contains the common utils used at HTTP level
  */
 public class SupportUtils {
+
+    private SupportUtils() {}
 
     /**
      * build the jaxrs response
@@ -64,5 +67,16 @@ public class SupportUtils {
         String authHeader = new String(decodedAuthHeader);
         String userName = authHeader.split(":")[0];
         return userName;
+    }
+
+    /**
+     * Get the fully qualified username of the user authenticated at the SCIM Endpoint. The username will be set by
+     * the REST API Authentication valve (configured in identity.xml)
+     *
+     * @return tenant and userstore domain appended
+     */
+    public static String getAuthenticatedUsername() {
+        // Get authenticated username from the thread local.
+        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
     }
 }
