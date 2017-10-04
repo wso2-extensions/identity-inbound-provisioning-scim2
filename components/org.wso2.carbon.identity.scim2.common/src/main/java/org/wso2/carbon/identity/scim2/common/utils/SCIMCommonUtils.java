@@ -30,14 +30,8 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
  */
 public class SCIMCommonUtils {
 
-    private static String scimGroupLocation;
-    private static String scimUserLocation;
-    private static String scimServiceProviderConfig;
-    private static String scimResourceType;
-
     /**
      * Since we need perform provisioning through UserOperationEventListener implementation -
-     *
      * SCIMUserOperationListener- there can be cases where multiple methods in the listener are
      * called for same operation - such as when adding a user with claims, both postAddUserListener
      * as well as setClaimValuesListener are called. But we do not need setClaimValuesLister to be
@@ -53,61 +47,41 @@ public class SCIMCommonUtils {
      */
     private static ThreadLocal<Boolean> threadLocalIsManagedThroughSCIMEP = new ThreadLocal<>();
 
-
-    public static void init() {
-        //to initialize scim urls once.
-        if (scimUserLocation == null || scimGroupLocation == null || scimServiceProviderConfig == null) {
-            String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
-            scimUserLocation = scimURL + SCIMCommonConstants.USERS;
-            scimGroupLocation = scimURL + SCIMCommonConstants.GROUPS;
-            scimServiceProviderConfig = scimURL + SCIMCommonConstants.SERVICE_PROVIDER_CONFIG;
-            scimResourceType = scimURL + SCIMCommonConstants.RESOURCE_TYPE;
-        }
-    }
-
     public static String getSCIMUserURL(String id) {
-        return scimUserLocation + "/" + id;
+        return getSCIMUserURL() + "/" + id;
     }
 
     public static String getSCIMGroupURL(String id) {
-        return scimGroupLocation + "/" + id;
+        return getSCIMGroupURL() + "/" + id;
     }
 
     public static String getSCIMServiceProviderConfigURL(String id){
-        return scimServiceProviderConfig ;
+        return getSCIMServiceProviderConfigURL() ;
     }
 
     /*Handling ThreadLocals*/
 
     public static String getSCIMUserURL() {
-        if (scimUserLocation != null) {
-            return scimUserLocation;
-        }
-        init();
+        String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
+        String scimUserLocation = scimURL + SCIMCommonConstants.USERS;
         return scimUserLocation;
     }
 
     public static String getSCIMGroupURL() {
-        if (scimGroupLocation != null) {
-            return scimGroupLocation;
-        }
-        init();
+        String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
+        String scimGroupLocation = scimURL + SCIMCommonConstants.GROUPS;
         return scimGroupLocation;
     }
 
     public static String getSCIMServiceProviderConfigURL() {
-        if (scimServiceProviderConfig != null) {
-            return scimServiceProviderConfig;
-        }
-        init();
+        String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
+        String scimServiceProviderConfig = scimURL + SCIMCommonConstants.SERVICE_PROVIDER_CONFIG;
         return scimServiceProviderConfig;
     }
 
     public static String getSCIMResourceTypeURL() {
-        if (scimResourceType != null) {
-            return scimResourceType;
-        }
-        init();
+        String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
+        String scimResourceType = scimURL + SCIMCommonConstants.RESOURCE_TYPE;
         return scimResourceType;
     }
 
