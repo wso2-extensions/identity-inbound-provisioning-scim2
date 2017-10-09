@@ -20,22 +20,27 @@ package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.Assert;
+import org.testng.IObjectFactory;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
 
 
-@PrepareForTest({IdentityUtil.class})
+@PrepareForTest({IdentityUtil.class, UserCoreUtil.class})
 public class SCIMCommonUtilsTest extends PowerMockTestCase {
 
     private static final String ID = "8a439cf6-3c6b-47d2-94bf-34d072495af3";
@@ -45,9 +50,15 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
     private String scimServiceProviderConfig = SCIM_URL + SCIMCommonConstants.SERVICE_PROVIDER_CONFIG;
     private String scimResourceType = SCIM_URL + SCIMCommonConstants.RESOURCE_TYPE;
 
+    @ObjectFactory
+    public IObjectFactory getObjectFactory() {
+        return new org.powermock.modules.testng.PowerMockObjectFactory();
+    }
+
     @BeforeMethod
     public void setUp() throws Exception {
         mockStatic(IdentityUtil.class);
+        mockStatic(UserCoreUtil.class);
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(SCIM_URL);
     }
 
@@ -59,48 +70,47 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
     @Test
     public void testGetSCIMUserURL() throws Exception {
         String scimUserURL = SCIMCommonUtils.getSCIMUserURL(ID);
-        Assert.assertEquals(scimUserURL, scimUserLocation + "/" + ID);
+        assertEquals(scimUserURL, scimUserLocation + "/" + ID);
     }
 
     @Test
     public void testGetSCIMGroupURL() throws Exception {
         String scimGroupURL = SCIMCommonUtils.getSCIMGroupURL(ID);
-        Assert.assertEquals(scimGroupURL, scimGroupLocation + "/" + ID);
+        assertEquals(scimGroupURL, scimGroupLocation + "/" + ID);
     }
 
     @Test
     public void testGetSCIMServiceProviderConfigURL() throws Exception {
         String scimServiceProviderConfigURL = SCIMCommonUtils.getSCIMServiceProviderConfigURL(ID);
-        Assert.assertEquals(scimServiceProviderConfigURL, scimServiceProviderConfig);
+        assertEquals(scimServiceProviderConfigURL, scimServiceProviderConfig);
     }
 
     @Test
     public void testGetSCIMUserURL1() throws Exception {
         String scimUsersURL = SCIMCommonUtils.getSCIMUserURL();
-        Assert.assertEquals(scimUsersURL, scimUserLocation);
+        assertEquals(scimUsersURL, scimUserLocation);
     }
 
     @Test
     public void testGetSCIMGroupURL1() throws Exception {
         String scimGroupsURL = SCIMCommonUtils.getSCIMGroupURL();
-        Assert.assertEquals(scimGroupsURL, scimGroupLocation);
+        assertEquals(scimGroupsURL, scimGroupLocation);
     }
 
     @Test
     public void testGetSCIMServiceProviderConfigURL1() throws Exception {
         String scimServiceProviderConfigURL = SCIMCommonUtils.getSCIMServiceProviderConfigURL();
-        Assert.assertEquals(scimServiceProviderConfigURL, scimServiceProviderConfig);
+        assertEquals(scimServiceProviderConfigURL, scimServiceProviderConfig);
     }
 
     @Test
     public void testGetSCIMResourceTypeURL() throws Exception {
         String scimResourceTypeURL = SCIMCommonUtils.getSCIMResourceTypeURL();
-        Assert.assertEquals(scimResourceTypeURL, scimResourceType);
+        assertEquals(scimResourceTypeURL, scimResourceType);
     }
 
     @DataProvider(name = "groupNames")
     public Object[][] getGroupNames() {
-
         return new Object[][]{
                 {null, null},
                 {"TESTDOMAIN/testGroup", "TESTDOMAIN/testGroup"},
@@ -110,12 +120,11 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
 
     @Test(dataProvider = "groupNames")
     public void testGetGroupNameWithDomain(String paramValue, String expectedResult) throws Exception {
-        Assert.assertEquals(SCIMCommonUtils.getGroupNameWithDomain(paramValue), expectedResult);
+        assertEquals(SCIMCommonUtils.getGroupNameWithDomain(paramValue), expectedResult);
     }
 
     @DataProvider(name = "groupNamesWithDomain")
     public Object[][] getGroupNamesWithDomain() {
-
         return new Object[][]{
                 {null, null},
                 {"TESTDOMAIN/testGroup", "TESTDOMAIN/testGroup"},
@@ -126,7 +135,68 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
 
     @Test(dataProvider = "groupNamesWithDomain")
     public void testGetPrimaryFreeGroupName(String groupName, String expectedResult) throws Exception {
-        Assert.assertEquals(SCIMCommonUtils.getPrimaryFreeGroupName(groupName), expectedResult);
+        assertEquals(SCIMCommonUtils.getPrimaryFreeGroupName(groupName), expectedResult);
+    }
+
+    @DataProvider(name = "threadLocalData")
+    public Object[][] threadLocalData() {
+        return new Object[][]{
+                {true, true},
+                {false, false}
+        };
+    }
+
+    @Test
+    public void testUnsetThreadLocalToSkipSetUserClaimsListeners() throws Exception {
+        SCIMCommonUtils.unsetThreadLocalToSkipSetUserClaimsListeners();
+        assertNull(SCIMCommonUtils.getThreadLocalToSkipSetUserClaimsListeners());
+    }
+
+    @Test(dataProvider = "threadLocalData")
+    public void testGetThreadLocalToSkipSetUserClaimsListeners(Boolean value, Boolean expectedResult) throws Exception {
+        SCIMCommonUtils.setThreadLocalToSkipSetUserClaimsListeners(value);
+        assertEquals(SCIMCommonUtils.getThreadLocalToSkipSetUserClaimsListeners(), expectedResult);
+    }
+
+    @Test(dataProvider = "threadLocalData")
+    public void testSetThreadLocalToSkipSetUserClaimsListeners(Boolean value, Boolean expectedResult) throws Exception {
+        SCIMCommonUtils.setThreadLocalToSkipSetUserClaimsListeners(value);
+        assertEquals(SCIMCommonUtils.getThreadLocalToSkipSetUserClaimsListeners(), expectedResult);
+    }
+
+    @Test
+    public void testUnsetThreadLocalIsManagedThroughSCIMEP() throws Exception {
+        SCIMCommonUtils.unsetThreadLocalIsManagedThroughSCIMEP();
+        assertNull(SCIMCommonUtils.getThreadLocalIsManagedThroughSCIMEP());
+    }
+
+    @Test(dataProvider = "threadLocalData")
+    public void testGetThreadLocalIsManagedThroughSCIMEP(Boolean value, Boolean expectedResult) throws Exception {
+        SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(value);
+        assertEquals(SCIMCommonUtils.getThreadLocalIsManagedThroughSCIMEP(), expectedResult);
+    }
+
+    @Test(dataProvider = "threadLocalData")
+    public void testSetThreadLocalIsManagedThroughSCIMEP(Boolean value, Boolean expectedResult) throws Exception {
+        SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(value);
+        assertEquals(SCIMCommonUtils.getThreadLocalIsManagedThroughSCIMEP(), expectedResult);
+    }
+
+    @Test
+    public void testGetGlobalConsumerId() throws Exception {
+        String tenantDomain = "testTenantDomain";
+        CommonTestUtils.initPrivilegedCarbonContext(tenantDomain);
+
+        assertEquals(SCIMCommonUtils.getGlobalConsumerId(), tenantDomain);
+    }
+
+    @Test
+    public void testGetUserConsumerId() throws Exception {
+        String userConsumerId = "testConsumerId";
+        CommonTestUtils.initPrivilegedCarbonContext();
+        when(UserCoreUtil.addTenantDomainToEntry(anyString(), anyString())).thenReturn(userConsumerId);
+
+        assertEquals(SCIMCommonUtils.getUserConsumerId(), userConsumerId);
     }
 
 }
