@@ -83,9 +83,12 @@ public class GroupDAO {
         boolean isExistingGroup = false;
 
         try {
-            prepStmt = connection.prepareStatement(SQLQueries.CHECK_EXISTING_GROUP_SQL);
+            prepStmt = connection.prepareStatement(SQLQueries.CHECK_EXISTING_ATTRIBUTE_SQL);
             prepStmt.setInt(1, tenantId);
             prepStmt.setString(2, SCIMCommonUtils.getGroupNameWithDomain(groupName));
+
+            // Specifically checking SCIM 2.0 ID attribute to avoid conflict with SCIM 1.1
+            prepStmt.setString(3, SCIMConstants.CommonSchemaConstants.ID_URI);
 
             rSet = prepStmt.executeQuery();
             if (rSet.next()) {

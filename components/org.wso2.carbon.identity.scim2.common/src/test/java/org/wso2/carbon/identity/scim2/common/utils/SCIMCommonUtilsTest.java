@@ -49,6 +49,7 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
     public void setUp() throws Exception {
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(SCIM_URL);
+        when(IdentityUtil.getPrimaryDomainName()).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
     }
 
     @AfterMethod

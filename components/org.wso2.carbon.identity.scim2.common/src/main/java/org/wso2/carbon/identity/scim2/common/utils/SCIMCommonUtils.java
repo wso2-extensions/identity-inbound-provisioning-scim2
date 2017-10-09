@@ -18,10 +18,17 @@
 
 package org.wso2.carbon.identity.scim2.common.utils;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
+import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 /**
@@ -29,6 +36,8 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
  * TODO:rename class name.
  */
 public class SCIMCommonUtils {
+
+    private static Log log = LogFactory.getLog(SCIMCommonUtils.class);
 
     /**
      * Since we need perform provisioning through UserOperationEventListener implementation -
@@ -94,7 +103,7 @@ public class SCIMCommonUtils {
         if (groupName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
             return groupName;
         } else {
-            return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
+            return IdentityUtil.getPrimaryDomainName()
                     + CarbonConstants.DOMAIN_SEPARATOR + groupName;
         }
     }
@@ -150,6 +159,51 @@ public class SCIMCommonUtils {
         String userName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String currentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         return UserCoreUtil.addTenantDomainToEntry(userName, currentTenantDomain);
+    }
+
+    public static void addAdminGroup(int tenantId) throws UserStoreException {
+        try {
+            UserStoreManager userStoreManager = (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
+                    getTenantUserRealm(tenantId).getUserStoreManager();
+
+            if (userStoreManager.isSCIMEnabled()) {
+
+                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
+
+                String domainName = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
+                if (domainName == null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Domain name is null and setting default domain as "
+                                + IdentityUtil.getPrimaryDomainName());
+                    }
+                    domainName = IdentityUtil.getPrimaryDomainName();
+                }
+                String roleNameWithDomain = UserCoreUtil
+                        .addDomainToName(userStoreManager.getRealmConfiguration().getAdminRoleName(), domainName);
+                // UserCore Util functionality does not append primary
+                roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleNameWithDomain);
+
+                //query role name from identity table
+                try {
+                    if (!scimGroupHandler.isGroupExisting(roleNameWithDomain)) {
+                        //if no attributes - i.e: group added via mgt console, not via SCIM endpoint
+                        //add META
+                        if (log.isDebugEnabled()) {
+                            log.debug(
+                                    "Group does not exist, setting scim attribute group value: " + roleNameWithDomain);
+                        }
+                        scimGroupHandler.addMandatoryAttributes(roleNameWithDomain);
+                    }
+                } catch (IdentitySCIMException e) {
+                    throw new UserStoreException(
+                            "Error retrieving group information from SCIM Tables for tenant ID: " + userStoreManager
+                                    .getTenantId(), e);
+                }
+            }
+
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            throw new UserStoreException(e);
+        }
     }
 
 }
