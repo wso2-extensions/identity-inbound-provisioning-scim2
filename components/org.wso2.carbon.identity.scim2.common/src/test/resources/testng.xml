@@ -1,3 +1,4 @@
+
 <!--
   ~ Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
   ~
@@ -22,6 +23,7 @@
             <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtilsTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AttributeMapperTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AuthenticationSchemaTest"/>
+            <class name="org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListenerTest"/>
         </classes>
     </test>
 
