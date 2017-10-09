@@ -71,8 +71,6 @@ public class SCIMCommonComponent {
             ctx.getBundleContext().registerService(UserOperationEventListener.class.getName(),
                                                    scimUserOperationListener, null);
 
-            SCIMCommonUtils.init();
-
             if (logger.isDebugEnabled()) {
                 logger.debug("SCIM Common component activated successfully.");
             }

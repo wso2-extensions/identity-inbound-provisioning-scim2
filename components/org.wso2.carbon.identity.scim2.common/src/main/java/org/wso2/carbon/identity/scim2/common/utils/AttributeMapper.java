@@ -46,8 +46,6 @@ import java.util.*;
 public class AttributeMapper {
 
     private static Log log = LogFactory.getLog(AttributeMapper.class);
-    private static final boolean debug = log.isDebugEnabled();
-
 
     /**
      * Return claims as a map of <ClaimUri (which is mapped to SCIM attribute uri),ClaimValue>
@@ -179,7 +177,7 @@ public class AttributeMapper {
 
         // reading attributes list of the complex attribute
         ComplexAttribute entryOfComplexAttribute = (ComplexAttribute) entry;
-        Map<String, Attribute> entryAttributes = null;
+        Map<String, Attribute> entryAttributes;
         if (entryOfComplexAttribute.getSubAttributesList() != null &&
                 MapUtils.isNotEmpty(entryOfComplexAttribute.getSubAttributesList())) {
             entryAttributes = entryOfComplexAttribute.getSubAttributesList();
@@ -210,22 +208,26 @@ public class AttributeMapper {
         switch (scimObjectType) {
             case SCIMCommonConstants.GROUP:
                 scimObject = new Group();
-                log.debug("Building Group Object");
+                if (log.isDebugEnabled()) {
+                    log.debug("Building Group Object");
+                }
                 break;
             case SCIMCommonConstants.USER:
                 scimObject = new User();
-                log.debug("Building User Object");
+                if (log.isDebugEnabled()) {
+                    log.debug("Building User Object");
+                }
                 break;
             default:
                 break;
         }
         for (Map.Entry<String, String> attributeEntry : attributes.entrySet()) {
-            if(debug) {
-                log.info("AttributeKey: " + attributeEntry.getKey() + " AttributeValue:" +
+            if (log.isDebugEnabled()) {
+                log.debug("AttributeKey: " + attributeEntry.getKey() + " AttributeValue:" +
                         attributeEntry.getValue());
             }
             String attributeURI = attributeEntry.getKey();
-            String[] attributeNames = null;
+            String[] attributeNames;
 
             if(attributeURI.contains(SCIMConstants.CORE_SCHEMA_URI)){
                 String[] attributeURIParts = attributeURI.split(":");
