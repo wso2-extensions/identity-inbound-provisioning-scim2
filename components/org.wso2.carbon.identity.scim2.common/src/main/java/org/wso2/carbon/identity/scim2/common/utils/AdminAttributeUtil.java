@@ -71,14 +71,14 @@ public class AdminAttributeUtil {
                                                                                   tenantId);
                 //Validate for existing SCIM ID before do the update for admin user.
                 if (validateSCIMID) {
-                    String scim_id = userStoreManager.getUserClaimValue(adminUsername, SCIMConstants
+                    String scimId = userStoreManager.getUserClaimValue(adminUsername, SCIMConstants
                             .CommonSchemaConstants.ID_URI, UserCoreConstants.DEFAULT_PROFILE);
                     if (log.isDebugEnabled()) {
-                        log.debug("Existing SCIM ID : " + scim_id + " for Admin User : " + adminUsername + " in "
+                        log.debug("Existing SCIM ID : " + scimId + " for Admin User : " + adminUsername + " in "
                                   + "Tenant ID : " +
                                   tenantId);
                     }
-                    if (StringUtils.isEmpty(scim_id)) {
+                    if (StringUtils.isEmpty(scimId)) {
                         //Generate User Attributes.
                         Map<String, String> scimClaims = generateSCIMClaims(adminUsername);
                         userStoreManager
