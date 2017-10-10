@@ -18,17 +18,26 @@
 
 package org.wso2.carbon.identity.scim2.common.utils;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.charon3.core.schema.SCIMConstants;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * This class is to be used as a Util class for SCIM common things.
  * TODO:rename class name.
  */
 public class SCIMCommonUtils {
+
+    private static Log log = LogFactory.getLog(SCIMCommonUtils.class);
 
     /**
      * Since we need perform provisioning through UserOperationEventListener implementation -
@@ -94,7 +103,7 @@ public class SCIMCommonUtils {
         if (groupName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
             return groupName;
         } else {
-            return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME
+            return IdentityUtil.getPrimaryDomainName()
                     + CarbonConstants.DOMAIN_SEPARATOR + groupName;
         }
     }
@@ -152,4 +161,15 @@ public class SCIMCommonUtils {
         return UserCoreUtil.addTenantDomainToEntry(userName, currentTenantDomain);
     }
 
+    /**
+     * SCIM datetime format function.
+     *
+     * @param date
+     * @return
+     */
+    public static String formatDateTime(Date date) {
+        SimpleDateFormat sdf = new SimpleDateFormat(SCIMConstants.DATE_TIME_FORMAT);
+        String formattedDate = sdf.format(date);
+        return formattedDate;
+    }
 }
