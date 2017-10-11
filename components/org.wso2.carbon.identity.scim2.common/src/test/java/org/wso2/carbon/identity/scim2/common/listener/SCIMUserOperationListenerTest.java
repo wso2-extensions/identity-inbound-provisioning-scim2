@@ -8,6 +8,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.user.api.ClaimManager;
 import org.wso2.carbon.user.api.Permission;
 import org.wso2.carbon.user.api.Properties;
@@ -53,6 +54,8 @@ public class SCIMUserOperationListenerTest {
 
     @Test
     public void testGetExecutionOrderId() throws Exception {
+
+
     }
 
     @Test
@@ -72,9 +75,6 @@ public class SCIMUserOperationListenerTest {
     @Test
     public void testDoPreAddUser() throws Exception {
 
-        //when(userStoreManager.isSCIMEnabled()).thenReturn(true);
-
-        //Assert.assertTrue(new SCIMUserOperationListener().doPreAddUser(userName,credentials,roleList,claims,profile,userStoreManager));
     }
 
     @Test
@@ -114,6 +114,7 @@ public class SCIMUserOperationListenerTest {
 
     @Test
     public void testDoPostSetUserClaimValue() throws Exception {
+        Assert.assertTrue(new SCIMUserOperationListener().doPostSetUserClaimValue("Chiran",userStoreManager));
     }
 
     @Test
@@ -122,6 +123,7 @@ public class SCIMUserOperationListenerTest {
 
     @Test
     public void testDoPostSetUserClaimValues() throws Exception {
+        Assert.assertTrue(new SCIMUserOperationListener().doPostSetUserClaimValues(userName,claims,profile,userStoreManager));
     }
 
     @Test
@@ -142,6 +144,7 @@ public class SCIMUserOperationListenerTest {
 
     @Test
     public void testDoPreAddRole() throws Exception {
+
     }
 
     @Test
@@ -154,14 +157,17 @@ public class SCIMUserOperationListenerTest {
 
     @Test
     public void testDoPostDeleteRole() throws Exception {
+        Assert.assertTrue(new SCIMUserOperationListener().doPostDeleteRole("manager",userStoreManager));
     }
 
     @Test
     public void testDoPreUpdateRoleName() throws Exception {
+        Assert.assertTrue(new SCIMUserOperationListener().doPreUpdateRoleName("director","manager",userStoreManager));
     }
 
     @Test
     public void testDoPostUpdateRoleName() throws Exception {
+
     }
 
     @Test

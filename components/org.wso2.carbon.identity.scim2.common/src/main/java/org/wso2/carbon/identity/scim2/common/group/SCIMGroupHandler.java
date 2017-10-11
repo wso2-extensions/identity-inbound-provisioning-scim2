@@ -182,6 +182,7 @@ public class SCIMGroupHandler {
      * @return
      * @throws IdentitySCIMException
      */
+
     public boolean isGroupExisting(String groupName) throws IdentitySCIMException {
         GroupDAO groupDAO = new GroupDAO();
         return groupDAO.isExistingGroup(groupName, tenantId);
@@ -227,6 +228,7 @@ public class SCIMGroupHandler {
         return groupDAO.listSCIMGroups();
     }
 
-
-
 }
+
+
+
