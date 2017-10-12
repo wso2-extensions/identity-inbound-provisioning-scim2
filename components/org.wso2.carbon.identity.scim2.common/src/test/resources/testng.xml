@@ -15,13 +15,14 @@
   -->
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
 
-<suite name="Identity-connector-facebook-test-suite">
+<suite name="Identity-connector-facebook-test-suite" object-factory="org.powermock.modules.testng.PowerMockObjectFactory">
 
     <test name="facebook-authenticator-all" preserve-order="true" parallel="false">
         <classes>
             <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtilsTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AttributeMapperTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AuthenticationSchemaTest"/>
+            <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessorTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListenerTest"/>
         </classes>
     </test>
