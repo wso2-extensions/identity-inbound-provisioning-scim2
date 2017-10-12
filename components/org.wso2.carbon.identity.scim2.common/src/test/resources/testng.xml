@@ -24,6 +24,7 @@
             <class name="org.wso2.carbon.identity.scim2.common.utils.AuthenticationSchemaTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessorTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListenerTest"/>
+            <class name="org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManagerTest"/>
         </classes>
     </test>
 
