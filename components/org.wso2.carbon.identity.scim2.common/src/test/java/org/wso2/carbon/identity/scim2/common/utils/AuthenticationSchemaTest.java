@@ -18,13 +18,14 @@
 
 package org.wso2.carbon.identity.scim2.common.utils;
 
-import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.testng.Assert.assertEquals;
 
 public class AuthenticationSchemaTest {
 
@@ -56,74 +57,74 @@ public class AuthenticationSchemaTest {
 
     @Test
     public void testGetName() throws Exception {
-        Assert.assertEquals(authenticationSchema.getName(), dummyName);
+        assertEquals(authenticationSchema.getName(), dummyName);
     }
 
     @Test
     public void testSetName() throws Exception {
         dummyName = "dummyName2";
         authenticationSchema.setName(dummyName);
-        Assert.assertEquals(authenticationSchema.getName(), dummyName);
+        assertEquals(authenticationSchema.getName(), dummyName);
     }
 
     @Test
     public void testGetDescription() throws Exception {
-        Assert.assertEquals(authenticationSchema.getDescription(), dummyDescription);
+        assertEquals(authenticationSchema.getDescription(), dummyDescription);
     }
 
     @Test
     public void testSetDescription() throws Exception {
         dummyDescription = "dummyDescription2";
         authenticationSchema.setDescription(dummyDescription);
-        Assert.assertEquals(authenticationSchema.getDescription(), dummyDescription);
+        assertEquals(authenticationSchema.getDescription(), dummyDescription);
     }
 
     @Test
     public void testGetSpecUri() throws Exception {
-        Assert.assertEquals(authenticationSchema.getSpecUri(), dummySpecUri);
+        assertEquals(authenticationSchema.getSpecUri(), dummySpecUri);
     }
 
     @Test
     public void testSetSpecUri() throws Exception {
         dummySpecUri = "dummySpecUri2";
         authenticationSchema.setSpecUri(dummySpecUri);
-        Assert.assertEquals(authenticationSchema.getSpecUri(), dummySpecUri);
+        assertEquals(authenticationSchema.getSpecUri(), dummySpecUri);
     }
 
     @Test
     public void testGetDocumentationUri() throws Exception {
-        Assert.assertEquals(authenticationSchema.getDocumentationUri(), dummyDocumentationUri);
+        assertEquals(authenticationSchema.getDocumentationUri(), dummyDocumentationUri);
     }
 
     @Test
     public void testSetDocumentationUri() throws Exception {
         dummyDocumentationUri = "dummyDocumentationUri2";
         authenticationSchema.setDocumentationUri(dummyDocumentationUri);
-        Assert.assertEquals(authenticationSchema.getDocumentationUri(), dummyDocumentationUri);
+        assertEquals(authenticationSchema.getDocumentationUri(), dummyDocumentationUri);
     }
 
     @Test
     public void testGetType() throws Exception {
-        Assert.assertEquals(authenticationSchema.getType(), dummyType);
+        assertEquals(authenticationSchema.getType(), dummyType);
     }
 
     @Test
     public void testSetType() throws Exception {
         dummyType = "dummyType2";
         authenticationSchema.setType(dummyType);
-        Assert.assertEquals(authenticationSchema.getType(), dummyType);
+        assertEquals(authenticationSchema.getType(), dummyType);
     }
 
     @Test
     public void testGetPrimary() throws Exception {
-        Assert.assertEquals(authenticationSchema.getPrimary(), dummyPrimary);
+        assertEquals(authenticationSchema.getPrimary(), dummyPrimary);
     }
 
     @Test
     public void testSetPrimary() throws Exception {
         dummyPrimary = "dummyPrimary2";
         authenticationSchema.setPrimary(dummyPrimary);
-        Assert.assertEquals(authenticationSchema.getPrimary(), dummyPrimary);
+        assertEquals(authenticationSchema.getPrimary(), dummyPrimary);
     }
 
 }

@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.scim2.common.utils;
 
-import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -31,6 +30,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 
 public class AttributeMapperTest {
 
@@ -47,7 +48,6 @@ public class AttributeMapperTest {
 
     @Test
     public void testGetClaimsMap() throws Exception {
-
         String scimObjectString = "{\"schemas\":[\"urn:ietf:params:scim:schemas:core:2.0:User\"]," +
                 "\"id\":\"1819c223-7f76-453a-919d-413851904641\",\"externalId\":\"702984\",\"userName\":\"paul\"," +
                 "\"name\":{\"formatted\":\"Ms.BarbaraJJensen,III\",\"familyName\":\"Jensen\"," +
@@ -67,14 +67,13 @@ public class AttributeMapperTest {
         SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
         User user = (User) decoder.decodeResource(scimObjectString, schema, new User());
 
-        Assert.assertNotNull(AttributeMapper.getClaimsMap(user));
-        Assert.assertEquals(AttributeMapper.getClaimsMap(user).size(), 17);
+        assertNotNull(AttributeMapper.getClaimsMap(user));
+        assertEquals(AttributeMapper.getClaimsMap(user).size(), 17);
 
     }
 
     @Test
     public void testConstructSCIMObjectFromAttributes() throws Exception {
-
         Map<String, String> attributes = new HashMap<>();
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:emails.home", "paul@abc.com");
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.resourceType", "User");
@@ -90,7 +89,7 @@ public class AttributeMapperTest {
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:name.givenName", "Paul");
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:addresses.region", "CA");
 
-        Assert.assertNotNull(AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1));
+        assertNotNull(AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1));
 
     }
 

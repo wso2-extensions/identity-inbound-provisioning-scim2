@@ -18,14 +18,13 @@
 
 package org.wso2.carbon.identity.scim2.common.listener;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
+import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -58,46 +57,38 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPreAuthenticate(String s, Object o, UserStoreManager userStoreManager)
+    public boolean doPreAuthenticate(String s, Object o, UserStoreManager userStoreManager) throws UserStoreException {
+        return true;
+    }
+
+    @Override
+    public boolean doPostAuthenticate(String userName, boolean authenticated, UserStoreManager userStoreManager)
             throws UserStoreException {
         return true;
     }
 
     @Override
-    public boolean doPostAuthenticate(String userName, boolean authenticated,
-                                      UserStoreManager userStoreManager)
-            throws UserStoreException {
-
-        return true;
-    }
-
-    @Override
-    public boolean doPreAddUser(String userName, Object credential, String[] roleList,
-                                Map<String, String> claims, String profile,
-                                UserStoreManager userStoreManager) throws UserStoreException {
-
+    public boolean doPreAddUser(String userName, Object credential, String[] roleList, Map<String, String> claims,
+                                String profile, UserStoreManager userStoreManager) throws UserStoreException {
         try {
-            if (!isEnable() || !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
-        claims = this.getSCIMAttributes(userName, claims);
+        this.populateSCIMAttributes(userName, claims);
         return true;
     }
 
     @Override
-    public boolean doPostAddUser(String userName, Object credential, String[] roleList,
-                                 Map<String, String> claims, String profile,
-                                 UserStoreManager userStoreManager)
-            throws UserStoreException {
+    public boolean doPostAddUser(String userName, Object credential, String[] roleList, Map<String, String> claims,
+                                 String profile, UserStoreManager userStoreManager) throws UserStoreException {
         return true;
     }
 
     @Override
-    public boolean doPreUpdateCredential(String s, Object o, Object o1,
-                                         UserStoreManager userStoreManager)
+    public boolean doPreUpdateCredential(String s, Object o, Object o1, UserStoreManager userStoreManager)
             throws UserStoreException {
         return true;
     }
@@ -109,26 +100,23 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPreUpdateCredentialByAdmin(String s, Object o,
-                                                UserStoreManager userStoreManager)
+    public boolean doPreUpdateCredentialByAdmin(String s, Object o, UserStoreManager userStoreManager)
             throws UserStoreException {
         return true;
     }
 
     @Override
-    public boolean doPostUpdateCredentialByAdmin(String userName, Object credential,
-                                                 UserStoreManager userStoreManager)
+    public boolean doPostUpdateCredentialByAdmin(String userName, Object credential, UserStoreManager userStoreManager)
             throws UserStoreException {
-
         try {
-            if (!isEnable() || !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
 
-        //update last-modified-date
+        // Update last-modified-date.
         try {
             Date date = new Date();
             String lastModifiedDate = AttributeUtil.formatDateTime(date);
@@ -148,39 +136,32 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPreDeleteUser(String userName, UserStoreManager userStoreManager)
-            throws UserStoreException {
-
-            return true;
-
-    }
-
-    @Override
-    public boolean doPostDeleteUser(String s, UserStoreManager userStoreManager)
-            throws UserStoreException {
+    public boolean doPreDeleteUser(String userName, UserStoreManager userStoreManager) throws UserStoreException {
         return true;
     }
 
     @Override
-    public boolean doPreSetUserClaimValue(String s, String s1, String s2, String s3,
-                                          UserStoreManager userStoreManager)
-            throws UserStoreException {
+    public boolean doPostDeleteUser(String s, UserStoreManager userStoreManager) throws UserStoreException {
         return true;
     }
 
     @Override
-    public boolean doPostSetUserClaimValue(String s, UserStoreManager userStoreManager)
-            throws UserStoreException {
+    public boolean doPreSetUserClaimValue(String s, String s1, String s2, String s3, UserStoreManager
+            userStoreManager) throws UserStoreException {
+        return true;
+    }
+
+    @Override
+    public boolean doPostSetUserClaimValue(String s, UserStoreManager userStoreManager) throws UserStoreException {
         //TODO: need to set last modified time.
         return true;
     }
 
     @Override
-    public boolean doPreSetUserClaimValues(String userName, Map<String, String> claims,
-                                           String profileName, UserStoreManager userStoreManager)
-            throws UserStoreException {
+    public boolean doPreSetUserClaimValues(String userName, Map<String, String> claims, String profileName,
+                                           UserStoreManager userStoreManager) throws UserStoreException {
         try {
-            if (!isEnable() || !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -195,53 +176,44 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostSetUserClaimValues(String userName, Map<String, String> claims,
-                                            String profileName, UserStoreManager userStoreManager)
+    public boolean doPostSetUserClaimValues(String userName, Map<String, String> claims, String profileName,
+                                            UserStoreManager userStoreManager) throws UserStoreException {
+        return true;
+    }
+
+    @Override
+    public boolean doPreDeleteUserClaimValues(String s, String[] strings, String s1, UserStoreManager userStoreManager)
             throws UserStoreException {
         return true;
     }
 
     @Override
-    public boolean doPreDeleteUserClaimValues(String s, String[] strings, String s1,
-                                              UserStoreManager userStoreManager)
+    public boolean doPostDeleteUserClaimValues(String s, UserStoreManager userStoreManager) throws UserStoreException {
+        return true;
+    }
+
+    @Override
+    public boolean doPreDeleteUserClaimValue(String s, String s1, String s2, UserStoreManager userStoreManager)
             throws UserStoreException {
         return true;
     }
 
     @Override
-    public boolean doPostDeleteUserClaimValues(String s, UserStoreManager userStoreManager)
-            throws UserStoreException {
+    public boolean doPostDeleteUserClaimValue(String s, UserStoreManager userStoreManager) throws UserStoreException {
         return true;
     }
 
     @Override
-    public boolean doPreDeleteUserClaimValue(String s, String s1, String s2,
-                                             UserStoreManager userStoreManager)
-            throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPostDeleteUserClaimValue(String s, UserStoreManager userStoreManager)
-            throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPreAddRole(String s, String[] strings,
-                                org.wso2.carbon.user.api.Permission[] permissions,
+    public boolean doPreAddRole(String s, String[] strings, org.wso2.carbon.user.api.Permission[] permissions,
                                 UserStoreManager userStoreManager) throws UserStoreException {
-
         return true;
     }
 
     @Override
-    public boolean doPostAddRole(String roleName, String[] userList,
-                                 org.wso2.carbon.user.api.Permission[] permissions,
+    public boolean doPostAddRole(String roleName, String[] userList, org.wso2.carbon.user.api.Permission[] permissions,
                                  UserStoreManager userStoreManager) throws UserStoreException {
-
         try {
-            if (!isEnable() || !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -257,14 +229,14 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
             }
             String roleNameWithDomain = UserCoreUtil.addDomainToName(roleName, domainName);
-            // UserCore Util functionality does not append primary
+            // UserCore Util functionality does not append primary.
             roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleNameWithDomain);
 
-            //query role name from identity table
+            // Query role name from identity table.
             try {
                 if (!scimGroupHandler.isGroupExisting(roleNameWithDomain)) {
-                    //if no attributes - i.e: group added via mgt console, not via SCIM endpoint
-                    //add META
+                    // If no attributes - i.e: group added via mgt console, not via SCIM endpoint.
+                    // Add META.
                     scimGroupHandler.addMandatoryAttributes(roleNameWithDomain);
                 }
             } catch (IdentitySCIMException e) {
@@ -280,11 +252,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPreDeleteRole(String roleName, UserStoreManager userStoreManager)
-            throws UserStoreException {
+    public boolean doPreDeleteRole(String roleName, UserStoreManager userStoreManager) throws UserStoreException {
 
         try {
-            if (!isEnable() || !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -316,8 +287,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostDeleteRole(String roleName, UserStoreManager userStoreManager)
-            throws UserStoreException {
+    public boolean doPostDeleteRole(String roleName, UserStoreManager userStoreManager) throws UserStoreException {
         return true;
     }
 
@@ -328,12 +298,11 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostUpdateRoleName(String roleName, String newRoleName,
-                                        UserStoreManager userStoreManager)
+    public boolean doPostUpdateRoleName(String roleName, String newRoleName, UserStoreManager userStoreManager)
             throws UserStoreException {
 
         try {
-            if (!isEnable() || !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -367,34 +336,30 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
     @Override
     public boolean doPreUpdateUserListOfRole(String s, String[] strings, String[] strings1,
-                                             UserStoreManager userStoreManager)
-            throws UserStoreException {
+                                             UserStoreManager userStoreManager) throws UserStoreException {
         return true;
     }
 
     @Override
-    public boolean doPostUpdateUserListOfRole(String roleName, String[] deletedUsers,
-                                              String[] newUsers, UserStoreManager userStoreManager)
-            throws UserStoreException {
-
-            return true;
+    public boolean doPostUpdateUserListOfRole(String roleName, String[] deletedUsers, String[] newUsers,
+                                              UserStoreManager userStoreManager) throws UserStoreException {
+        return true;
 
     }
 
     @Override
     public boolean doPreUpdateRoleListOfUser(String s, String[] strings, String[] strings1,
-                                             UserStoreManager userStoreManager)
-            throws UserStoreException {
+                                             UserStoreManager userStoreManager) throws UserStoreException {
         return true;
     }
 
     @Override
     public boolean doPostUpdateRoleListOfUser(String s, String[] strings, String[] strings1,
-                                              UserStoreManager userStoreManager)
-            throws UserStoreException {
+                                              UserStoreManager userStoreManager) throws UserStoreException {
         return true;
     }
 
+    @Deprecated
     public Map<String, String> getSCIMAttributes(String userName, Map<String, String> claimsMap) {
         Map<String, String> attributes = null;
         if (claimsMap != null) {
@@ -416,7 +381,37 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
 
-        attributes.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, SCIMConstants.USER );
+        attributes.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, SCIMConstants.USER);
+
+        return attributes;
+    }
+
+    /**
+     * Populate SCIM Attributes map.
+     *
+     * @param userName  userName
+     * @param claimsMap claimsMap
+     * @return attributes map
+     */
+    public Map<String, String> populateSCIMAttributes(String userName, Map<String, String> claimsMap) {
+        Map<String, String> attributes;
+        if (claimsMap != null) {
+            attributes = claimsMap;
+        } else {
+            attributes = new HashMap<>();
+        }
+
+        if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.ID_URI)) {
+            String id = UUID.randomUUID().toString();
+            attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
+        }
+
+        Date date = new Date();
+        String createdDate = AttributeUtil.formatDateTime(date);
+        attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
+        attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
+        attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
+        attributes.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, SCIMConstants.USER);
 
         return attributes;
     }
