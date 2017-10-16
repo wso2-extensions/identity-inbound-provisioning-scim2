@@ -58,8 +58,7 @@ public class AdminAttributeUtil {
     public static void updateAdminUser(int tenantId, boolean validateSCIMID) {
 
         try {
-            UserStoreManager userStoreManager =
-                    (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
+            UserStoreManager userStoreManager = (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
                             getTenantUserRealm(tenantId).getUserStoreManager();
             if (log.isDebugEnabled()) {
                 log.debug("SCIM enable in Userstore level : " + userStoreManager.isSCIMEnabled() + ", for "

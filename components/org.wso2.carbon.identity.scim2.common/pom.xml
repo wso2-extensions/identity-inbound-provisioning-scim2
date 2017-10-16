@@ -21,7 +21,7 @@
         <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
         <artifactId>identity-inbound-provisioning-scim2</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>1.1.12-SNAPSHOT</version>
+        <version>1.1.13-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -130,6 +130,11 @@
             <groupId>org.powermock</groupId>
             <artifactId>powermock-api-mockito</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.jacoco</groupId>
+            <artifactId>org.jacoco.agent</artifactId>
+            <classifier>runtime</classifier>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -204,6 +209,9 @@
                     <suiteXmlFiles>
                         <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
+                    <systemPropertyVariables>
+                        <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>
@@ -220,19 +228,20 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>default-prepare-agent</id>
+                        <id>default-instrument</id>
                         <goals>
-                            <goal>prepare-agent</goal>
+                            <goal>instrument</goal>
                         </goals>
                     </execution>
                     <execution>
-                        <id>default-prepare-agent-integration</id>
+                        <id>default-restore-instrumented-classes</id>
                         <goals>
-                            <goal>prepare-agent-integration</goal>
+                            <goal>restore-instrumented-classes</goal>
                         </goals>
                     </execution>
                     <execution>
                         <id>default-report</id>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
