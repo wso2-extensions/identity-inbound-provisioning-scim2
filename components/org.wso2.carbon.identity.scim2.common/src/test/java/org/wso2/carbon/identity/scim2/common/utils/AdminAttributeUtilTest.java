@@ -25,7 +25,6 @@ import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -35,7 +34,6 @@ import org.wso2.carbon.stratos.common.util.ClaimsMgtUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -106,7 +104,7 @@ public class AdminAttributeUtilTest extends PowerMockTestCase {
         adminAttributeUtil.updateAdminUser(1, validateSCIMID);
         verify(userStoreManager).setUserClaimValues(anyString(), argument.capture(), anyString());
 
-        assertEquals(adminUsername, argument.getValue().get(SCIMConstants.UserSchemaConstants.USER_NAME_URI));
+        assertEquals(argument.getValue().get(SCIMConstants.UserSchemaConstants.USER_NAME_URI), adminUsername);
     }
 
     @Test(expectedExceptions = UserStoreException.class)
@@ -158,7 +156,7 @@ public class AdminAttributeUtilTest extends PowerMockTestCase {
         adminAttributeUtil.updateAdminGroup(1);
         verify(scimGroupHandler).addMandatoryAttributes(argument.capture());
 
-        assertEquals(roleNameWithDomain, argument.getValue());
+        assertEquals(argument.getValue(), roleNameWithDomain);
     }
 
     @Test(expectedExceptions = IdentitySCIMException.class)
