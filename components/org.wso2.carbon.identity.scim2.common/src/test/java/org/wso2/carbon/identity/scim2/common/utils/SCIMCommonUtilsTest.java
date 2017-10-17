@@ -27,6 +27,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -65,7 +66,7 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
 
     @AfterMethod
     public void tearDown() throws Exception {
-
+        System.clearProperty(CarbonBaseConstants.CARBON_HOME);
     }
 
     @Test
