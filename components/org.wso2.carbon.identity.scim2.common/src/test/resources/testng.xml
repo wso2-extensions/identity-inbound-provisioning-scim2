@@ -25,6 +25,7 @@
             <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessorTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandlerTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListenerTest"/>
+            <class name="org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManagerTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtilTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.impl.SCIMUserManagerTest"/>
         </classes>

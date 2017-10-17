@@ -22,6 +22,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AuthenticationSchema;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -106,8 +107,7 @@ public class IdentitySCIMManager {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         try {
             //get super tenant context and get realm service which is an osgi service
-            RealmService realmService = (RealmService)
-                    PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService(RealmService.class);
+            RealmService realmService = SCIMCommonComponentHolder.getRealmService();
             if (realmService != null) {
                 int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
                 //get tenant's user realm
