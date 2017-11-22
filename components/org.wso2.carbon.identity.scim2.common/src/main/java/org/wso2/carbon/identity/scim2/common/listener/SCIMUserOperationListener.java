@@ -37,6 +37,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * This is to perform SCIM related operation on User Operations.
@@ -71,7 +72,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPreAddUser(String userName, Object credential, String[] roleList, Map<String, String> claims,
                                 String profile, UserStoreManager userStoreManager) throws UserStoreException {
         try {
-            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -109,7 +110,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPostUpdateCredentialByAdmin(String userName, Object credential, UserStoreManager userStoreManager)
             throws UserStoreException {
         try {
-            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -161,7 +162,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPreSetUserClaimValues(String userName, Map<String, String> claims, String profileName,
                                            UserStoreManager userStoreManager) throws UserStoreException {
         try {
-            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -213,7 +214,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPostAddRole(String roleName, String[] userList, org.wso2.carbon.user.api.Permission[] permissions,
                                  UserStoreManager userStoreManager) throws UserStoreException {
         try {
-            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -255,7 +256,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPreDeleteRole(String roleName, UserStoreManager userStoreManager) throws UserStoreException {
 
         try {
-            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -302,7 +303,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             throws UserStoreException {
 
         try {
-            if (!isEnable() || userStoreManager != null && !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -361,29 +362,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
     @Deprecated
     public Map<String, String> getSCIMAttributes(String userName, Map<String, String> claimsMap) {
-        Map<String, String> attributes = null;
-        if (claimsMap != null) {
-            attributes = claimsMap;
-        } else {
-            attributes = new HashMap<>();
-        }
-
-        if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.ID_URI)) {
-            String id = UUID.randomUUID().toString();
-            attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
-        }
-
-        Date date = new Date();
-        String createdDate = AttributeUtil.formatDateTime(date);
-        attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
-
-        attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
-
-        attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
-
-        attributes.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, SCIMConstants.USER);
-
-        return attributes;
+        return populateSCIMAttributes(userName, claimsMap);
     }
 
     /**
@@ -401,7 +380,15 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             attributes = new HashMap<>();
         }
 
-        if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.ID_URI)) {
+        Pattern pattern = Pattern.compile("urn:.*scim:schemas:core:.\\.0:id");
+        boolean containsScimIdClaim = false;
+        for (String claimUri : attributes.keySet()) {
+            if (pattern.matcher(claimUri).matches()) {
+                containsScimIdClaim = true;
+                break;
+            }
+        }
+        if (!containsScimIdClaim) {
             String id = UUID.randomUUID().toString();
             attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
         }
