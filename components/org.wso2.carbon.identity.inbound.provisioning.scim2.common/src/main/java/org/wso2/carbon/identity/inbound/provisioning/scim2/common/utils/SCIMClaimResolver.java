@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.inbound.provisioning.scim2.common.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.wso2.carbon.kernel.utils.LambdaExceptionUtils;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.ComplexAttribute;
 import org.wso2.charon3.core.attributes.DefaultAttributeFactory;
@@ -87,22 +88,21 @@ public class SCIMClaimResolver {
                     attributes = complexAttribute.getSubAttributesList();
                 }
                 if (attributes != null) {
-                    for (Attribute entry : attributes.values()) {
-                        // if the attribute a simple attribute
-                        if (entry instanceof SimpleAttribute) {
-                            //we treat meta location attribute separately.
-                            if (entry.getURI().equals(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) {
-                                continue;
-                            }
+                    attributes.values().stream().forEach(LambdaExceptionUtils.rethrowConsumer(entry -> {
+                        if (entry instanceof SimpleAttribute && !(entry.getURI().equals(SCIMConstants.
+                                CommonSchemaConstants.LOCATION_URI))) {
+
                             setClaimsForSimpleAttribute(entry, claimsMap);
 
                         } else if (entry instanceof MultiValuedAttribute) {
+
                             setClaimsForMultivaluedAttribute(entry, claimsMap);
 
                         } else if (entry instanceof ComplexAttribute) {
+
                             setClaimsForComplexAttribute(entry, claimsMap);
                         }
-                    }
+                    }));
                 }
             }
         }
