@@ -960,18 +960,20 @@ public class SCIMUserManager implements UserManager {
             if (CollectionUtils.isNotEmpty(userIds)) {
                 String[] userNames = null;
                 for (Object userId : userIds) {
-                    userNames = carbonUM.getUserList(SCIMConstants.CommonSchemaConstants.ID_URI,
-                            UserCoreUtil.addDomainToName((String) userId, userStoreDomainForGroup),
-                            UserCoreConstants.DEFAULT_PROFILE);
-                    if (userNames == null || userNames.length == 0) {
-                        String error = "User: " + userId + " doesn't exist in the user store. " +
-                                "Hence, can not update the group: " + oldGroup.getDisplayName();
-                        throw new IdentitySCIMException(error);
-                    } else {
-                        if (!UserCoreUtil.isContain(UserCoreUtil.removeDomainFromName(userNames[0]),
-                                UserCoreUtil.removeDomainFromNames(userDisplayNames.toArray(
-                                        new String[userDisplayNames.size()])))) {
-                            throw new IdentitySCIMException("Given SCIM user Id and name not matching..");
+                    if (userId != null) {
+                        userNames = carbonUM.getUserList(SCIMConstants.CommonSchemaConstants.ID_URI,
+                                UserCoreUtil.addDomainToName((String) userId, userStoreDomainForGroup),
+                                UserCoreConstants.DEFAULT_PROFILE);
+                        if (userNames == null || userNames.length == 0) {
+                            String error = "User: " + userId + " doesn't exist in the user store. " +
+                                    "Hence, can not update the group: " + oldGroup.getDisplayName();
+                            throw new IdentitySCIMException(error);
+                        } else {
+                            if (!UserCoreUtil.isContain(UserCoreUtil.removeDomainFromName(userNames[0]),
+                                    UserCoreUtil.removeDomainFromNames(userDisplayNames.toArray(
+                                            new String[userDisplayNames.size()])))) {
+                                throw new IdentitySCIMException("Given SCIM user Id and name not matching..");
+                            }
                         }
                     }
                 }
