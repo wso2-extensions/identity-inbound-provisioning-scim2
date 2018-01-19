@@ -500,9 +500,9 @@ public class AttributeMapper {
             DefaultAttributeFactory.createAttribute(subSubAttributeSchema, simpleAttribute);
 
             // check if the super parent exist
-            boolean superParentExist = ((AbstractSCIMObject) scimObject).isAttributeExist(attributeNames[0]);
+            boolean superParentExist = ((AbstractSCIMObject) scimObject).isAttributeExist(attributeSchema.getName());
             if (superParentExist) {
-                ComplexAttribute superParentAttribute = (ComplexAttribute) ((AbstractSCIMObject) scimObject).getAttribute(attributeNames[0]);
+                ComplexAttribute superParentAttribute = (ComplexAttribute) ((AbstractSCIMObject) scimObject).getAttribute(attributeSchema.getName());
                 // check if the immediate parent exist
                 boolean immediateParentExist = superParentAttribute.isSubAttributeExist(immediateParentAttributeName);
                 if (immediateParentExist) {
@@ -522,10 +522,9 @@ public class AttributeMapper {
                 immediateParentAttribute.setSubAttribute(simpleAttribute);
                 DefaultAttributeFactory.createAttribute(subAttributeSchema, immediateParentAttribute);
                 // now super parent
-                AttributeSchema superParentAttributeSchema = getAttributeSchema(parentAttributeURI, scimObjectType);
-                ComplexAttribute superParentAttribute = new ComplexAttribute(superParentAttributeSchema.getName());
+                ComplexAttribute superParentAttribute = new ComplexAttribute(attributeSchema.getName());
                 superParentAttribute.setSubAttribute(immediateParentAttribute);
-                DefaultAttributeFactory.createAttribute(superParentAttributeSchema, superParentAttribute);
+                DefaultAttributeFactory.createAttribute(attributeSchema, superParentAttribute);
                 // now add the super to the scim object
                 ((AbstractSCIMObject) scimObject).setAttribute(superParentAttribute);
             }
