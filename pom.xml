@@ -51,7 +51,7 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>org.apache.cxf.wso2</groupId>
+                <groupId>org.wso2.orbit.org.apache.cxf</groupId>
                 <artifactId>cxf-bundle</artifactId>
                 <version>${cxf-bundle.wso2.version}</version>
             </dependency>
@@ -269,7 +269,7 @@
 
     <properties>
         <jsr311-api.version>1.1.1</jsr311-api.version>
-        <cxf-bundle.wso2.version>2.6.1.wso2v2</cxf-bundle.wso2.version>
+        <cxf-bundle.wso2.version>2.7.16.wso2v1</cxf-bundle.wso2.version>
         <inbound.auth.oauth.version>5.2.0</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.4.7</carbon.kernel.version>
