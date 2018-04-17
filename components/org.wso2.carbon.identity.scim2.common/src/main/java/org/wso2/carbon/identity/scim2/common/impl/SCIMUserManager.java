@@ -417,6 +417,9 @@ public class SCIMUserManager implements UserManager {
             log.info("User: " + user.getUserName() + " updated through SCIM.");
             return getUser(user.getId(),requiredAttributes);
         } catch (UserStoreException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while updating attributes of user: " + user.getUserName(), e);
+            }
             throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
         } catch (BadRequestException | CharonException e) {
             throw new CharonException("Error occured while trying to update the user");
@@ -1098,11 +1101,6 @@ public class SCIMUserManager implements UserManager {
             //obtain user claim values
             Map<String, String> attributes = carbonUM.getUserClaimValues(
                     userName, claimURIList.toArray(new String[claimURIList.size()]), null);
-
-            //skip simple type addresses claim because it is complex with sub types in the schema
-            if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
-                attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
-            }
 
             // Add username with domain name
             attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
