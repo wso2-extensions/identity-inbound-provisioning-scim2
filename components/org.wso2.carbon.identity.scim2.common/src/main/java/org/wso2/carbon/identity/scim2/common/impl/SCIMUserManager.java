@@ -469,26 +469,11 @@ public class SCIMUserManager implements UserManager {
                 if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
                     userNames = carbonUM.getUserListOfRole(attributeValue);
                 } else if (carbonUM instanceof AbstractUserStoreManager) {
-                    String[] roleNames = null;
-                    if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
-                        roleNames = ((AbstractUserStoreManager) carbonUM).getRoleNames(FILTERING_DELIMITER +
-                                        attributeValue + FILTERING_DELIMITER, MAX_ITEM_LIMIT_UNLIMITED, true, true,
-                                true);
-                    } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
-                        roleNames = ((AbstractUserStoreManager) carbonUM).getRoleNames(attributeValue + FILTERING_DELIMITER,
-                                MAX_ITEM_LIMIT_UNLIMITED, true, true, true);
-                    } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
-                        roleNames = ((AbstractUserStoreManager) carbonUM).getRoleNames(FILTERING_DELIMITER + attributeValue,
-                                MAX_ITEM_LIMIT_UNLIMITED, true, true, true);
-                    }
-
-                    Set<String> users = new HashSet<>();
-                    if (roleNames != null) {
-                        for (String roleName : roleNames) {
-                            users.addAll(Arrays.asList(carbonUM.getUserListOfRole(roleName)));
-                        }
-                    }
-                    userNames = users.toArray(new String[0]);
+                    String[] roleNames = getRoleNames(filterOperation, attributeValue);
+                    userNames = getUserListOfRoles(roleNames);
+                } else {
+                    String error = "Filter operator " + filterOperation + " is not supported by the user store.";
+                    throw new NotImplementedException(error);
                 }
             }
 
@@ -1286,13 +1271,13 @@ public class SCIMUserManager implements UserManager {
         return claimsList;
     }
 
+
     /*
      * This returns the only required attributes for value querying
      * @param claimURIList
      * @param requiredAttributes
      * @return
      */
-
     private List<String> getOnlyRequiredClaims(List<String> claimURIList, Map<String, Boolean> requiredAttributes) {
         List<String> requiredClaimList = new ArrayList<>();
         for(String requiredClaim : requiredAttributes.keySet()) {
@@ -1329,9 +1314,15 @@ public class SCIMUserManager implements UserManager {
 
     private String[] paginateUsers(String[] users, int limit, int offset) {
 
-        if (offset == 0) {
+        if (offset <= 0) {
             offset = 1;
         }
+
+        if (limit <= 0) {
+            // This is to support backward compatibility.
+            return users;
+        }
+
         if (users == null) {
             return new String[0];
         } else if (offset > users.length) {
@@ -1350,5 +1341,34 @@ public class SCIMUserManager implements UserManager {
                 && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)
                 && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)
                 && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW);
+    }
+
+    private String[] getUserListOfRoles(String[] roleNames) throws org.wso2.carbon.user.core.UserStoreException {
+
+        String[] userNames;
+        Set<String> users = new HashSet<>();
+        if (roleNames != null) {
+            for (String roleName : roleNames) {
+                users.addAll(Arrays.asList(carbonUM.getUserListOfRole(roleName)));
+            }
+        }
+        userNames = users.toArray(new String[0]);
+        return userNames;
+    }
+
+    private String[] getRoleNames(String filterOperation, String attributeValue) throws org.wso2.carbon.user.core
+            .UserStoreException {
+
+        String searchAttribute = null;
+        if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
+            searchAttribute = FILTERING_DELIMITER + attributeValue + FILTERING_DELIMITER;
+        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
+            searchAttribute = attributeValue + FILTERING_DELIMITER;
+        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
+            searchAttribute = FILTERING_DELIMITER + attributeValue;
+        }
+
+        return ((AbstractUserStoreManager) carbonUM).getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true,
+                true, true);
     }
 }
