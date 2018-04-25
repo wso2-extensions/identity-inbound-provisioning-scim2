@@ -36,6 +36,7 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
@@ -60,15 +61,19 @@ import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
 public class SCIMUserManager implements UserManager {
+
+    public static final String FILTERING_DELIMITER = "*";
     private static Log log = LogFactory.getLog(SCIMUserManager.class);
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
+    private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
 
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
         carbonUM = carbonUserStoreManager;
@@ -255,10 +260,8 @@ public class SCIMUserManager implements UserManager {
             throws CharonException, NotImplementedException, BadRequestException {
         if(sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        }  else if(startIndex != 1){
-            throw new NotImplementedException("Pagination is not supported");
         } else if(rootNode != null) {
-            return filterUsers(rootNode, requiredAttributes);
+            return filterUsers(rootNode, requiredAttributes, startIndex, count);
         } else {
             return listUsers(requiredAttributes);
         }
@@ -423,7 +426,7 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes)
+    private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, int limit)
             throws NotImplementedException, CharonException {
 
         if(node.getLeftNode() != null || node.getRightNode() != null){
@@ -435,10 +438,6 @@ public class SCIMUserManager implements UserManager {
         String filterOperation = ((ExpressionNode)node).getOperation();
         String attributeValue = ((ExpressionNode)node).getValue();
 
-        if(!filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)){
-            String error = "Filter operator "+ filterOperation +" is not implemented";
-            throw new NotImplementedException(error);
-        }
         if (log.isDebugEnabled()) {
             log.debug("Listing users by filter: " + attributeName + filterOperation +
                     attributeValue);
@@ -454,11 +453,46 @@ public class SCIMUserManager implements UserManager {
         try {
             String[] userNames = null;
             if (!SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
+
+                if (!filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
+                    String error = "Filter operator "+ filterOperation +" is not implemented non group filtering";
+                    throw new NotImplementedException(error);
+                }
                 //get the user name of the user with this id
                 userNames = carbonUM.getUserList(attributeName, attributeValue, UserCoreConstants.DEFAULT_PROFILE);
             } else {
-                userNames = carbonUM.getUserListOfRole(attributeValue);
+                if (isNotGroupFilteringSupported(filterOperation)) {
+                    String error = "Filter operator " + filterOperation + " is not implemented for group filtering";
+                    throw new NotImplementedException(error);
+                }
+
+                if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
+                    userNames = carbonUM.getUserListOfRole(attributeValue);
+                } else if (carbonUM instanceof AbstractUserStoreManager) {
+                    String[] roleNames = null;
+                    if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
+                        roleNames = ((AbstractUserStoreManager) carbonUM).getRoleNames(FILTERING_DELIMITER +
+                                        attributeValue + FILTERING_DELIMITER, MAX_ITEM_LIMIT_UNLIMITED, true, true,
+                                true);
+                    } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
+                        roleNames = ((AbstractUserStoreManager) carbonUM).getRoleNames(attributeValue + FILTERING_DELIMITER,
+                                MAX_ITEM_LIMIT_UNLIMITED, true, true, true);
+                    } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
+                        roleNames = ((AbstractUserStoreManager) carbonUM).getRoleNames(FILTERING_DELIMITER + attributeValue,
+                                MAX_ITEM_LIMIT_UNLIMITED, true, true, true);
+                    }
+
+                    Set<String> users = new HashSet<>();
+                    if (roleNames != null) {
+                        for (String roleName : roleNames) {
+                            users.addAll(Arrays.asList(carbonUM.getUserListOfRole(roleName)));
+                        }
+                    }
+                    userNames = users.toArray(new String[0]);
+                }
             }
+
+            userNames = paginateUsers(userNames, limit, offset);
 
             if (userNames == null || userNames.length == 0) {
                 if (log.isDebugEnabled()) {
@@ -512,7 +546,6 @@ public class SCIMUserManager implements UserManager {
         }
         return filteredUsers;
     }
-
 
     @Override
     public User getMe(String userName,
@@ -1259,6 +1292,7 @@ public class SCIMUserManager implements UserManager {
      * @param requiredAttributes
      * @return
      */
+
     private List<String> getOnlyRequiredClaims(List<String> claimURIList, Map<String, Boolean> requiredAttributes) {
         List<String> requiredClaimList = new ArrayList<>();
         for(String requiredClaim : requiredAttributes.keySet()) {
@@ -1291,5 +1325,30 @@ public class SCIMUserManager implements UserManager {
             }
         }
         return requiredClaimList;
+    }
+
+    private String[] paginateUsers(String[] users, int limit, int offset) {
+
+        if (offset == 0) {
+            offset = 1;
+        }
+        if (users == null) {
+            return new String[0];
+        } else if (offset > users.length) {
+            return new String[0];
+        } else if (users.length < limit + offset) {
+            limit = users.length - offset + 1;
+            return Arrays.copyOfRange(users, offset - 1, limit + offset - 1);
+        } else {
+            return Arrays.copyOfRange(users, offset - 1, limit + offset - 1);
+        }
+    }
+
+    private boolean isNotGroupFilteringSupported(String filterOperation) {
+
+        return !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)
+                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)
+                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)
+                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW);
     }
 }

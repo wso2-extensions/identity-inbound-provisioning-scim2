@@ -38,6 +38,9 @@ public class SCIMCommonConstants {
     public static final String SCIM_USER_CLAIM_DIALECT = "urn:ietf:params:scim:schemas:core:2.0:User";
 
     public static final String EQ = "eq";
+    public static final String CO = "co";
+    public static final String SW = "sw";
+    public static final String EW = "ew";
 
     public static final String APPLICATION_DOMAIN = "Application";
     public static final String INTERNAL_DOMAIN = "Internal";
