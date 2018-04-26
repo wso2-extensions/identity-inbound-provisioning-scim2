@@ -449,7 +449,8 @@ public class SCIMUserManager implements UserManager {
         ClaimMapping[] coreClaims;
         ClaimMapping[] extensionClaims = null;
 
-        User scimUser = null;
+        User scimUser;
+        int totalUserCount;
         try {
             String[] userNames = null;
             if (!SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
@@ -476,8 +477,6 @@ public class SCIMUserManager implements UserManager {
                     throw new NotImplementedException(error);
                 }
             }
-            int totalUserCount = userNames.length;
-            userNames = paginateUsers(userNames, limit, offset);
 
             if (userNames == null || userNames.length == 0) {
                 if (log.isDebugEnabled()) {
@@ -486,6 +485,9 @@ public class SCIMUserManager implements UserManager {
                 }
                 return filteredUsers;
             } else {
+                totalUserCount = userNames.length;
+                userNames = paginateUsers(userNames, limit, offset);
+
                 //get claims related to SCIM claim dialect
                 coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
                 userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
@@ -1313,6 +1315,8 @@ public class SCIMUserManager implements UserManager {
     }
 
     private String[] paginateUsers(String[] users, int limit, int offset) {
+
+        Arrays.sort(users);
 
         if (offset <= 0) {
             offset = 1;
