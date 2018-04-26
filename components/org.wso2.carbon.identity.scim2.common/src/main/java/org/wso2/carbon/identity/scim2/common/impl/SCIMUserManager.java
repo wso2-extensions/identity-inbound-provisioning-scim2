@@ -476,7 +476,7 @@ public class SCIMUserManager implements UserManager {
                     throw new NotImplementedException(error);
                 }
             }
-
+            int totalUserCount = userNames.length;
             userNames = paginateUsers(userNames, limit, offset);
 
             if (userNames == null || userNames.length == 0) {
@@ -524,7 +524,7 @@ public class SCIMUserManager implements UserManager {
                         attributeValue);
             }
             //set the total results
-            filteredUsers.set(0, filteredUsers.size() -1);
+            filteredUsers.set(0, totalUserCount);
         } catch (UserStoreException | CharonException e) {
             throw new CharonException("Error in filtering users by attribute name : " + attributeName + ", " +
                     "attribute value : " + attributeValue + " and filter operation " + filterOperation, e);
