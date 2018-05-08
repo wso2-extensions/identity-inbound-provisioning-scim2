@@ -33,10 +33,12 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.PaginatedUserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.model.UserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
@@ -62,6 +64,7 @@ import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +77,7 @@ public class SCIMUserManager implements UserManager {
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
+    private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
 
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
         carbonUM = carbonUserStoreManager;
@@ -306,18 +310,18 @@ public class SCIMUserManager implements UserManager {
                     }
                 }
                 List<String> requiredClaims = getOnlyRequiredClaims(claimURIList, requiredAttributes);
-                for (String userName : userNames) {
-                    if (userName.contains(UserCoreConstants.NAME_COMBINER)) {
-                        userName = userName.split("\\" + UserCoreConstants.NAME_COMBINER)[0];
+
+                if (isPaginatedUserStoreAvailable()) {
+                    if (carbonUM instanceof PaginatedUserStoreManager) {
+                        User[] scimUsers = this.getSCIMUsers(userNames, requiredClaims);
+                        users.addAll(Arrays.asList(scimUsers));
+                    } else {
+                        retriveSCIMUsers(users, userNames, requiredClaims);
                     }
-                    User scimUser = this.getSCIMUser(userName, requiredClaims);
-                    if (scimUser != null) {
-                        Map<String, Attribute> attrMap = scimUser.getAttributeList();
-                        if (attrMap != null && !attrMap.isEmpty()) {
-                            users.add(scimUser);
-                        }
-                    }
+                } else {
+                    retriveSCIMUsers(users, userNames, requiredClaims);
                 }
+
                 //set the totalResults value in index 0
                 users.set(0, users.size()-1);
             }
@@ -326,6 +330,22 @@ public class SCIMUserManager implements UserManager {
         }
         log.info("User list is retrieved through SCIM.");
         return users;
+    }
+
+    private void retriveSCIMUsers(List<Object> users, String[] userNames, List<String> requiredClaims)
+            throws CharonException {
+        for (String userName : userNames) {
+            if (userName.contains(UserCoreConstants.NAME_COMBINER)) {
+                userName = userName.split("\\" + UserCoreConstants.NAME_COMBINER)[0];
+            }
+            User scimUser = this.getSCIMUser(userName, requiredClaims);
+            if (scimUser != null) {
+                Map<String, Attribute> attrMap = scimUser.getAttributeList();
+                if (attrMap != null && !attrMap.isEmpty()) {
+                    users.add(scimUser);
+                }
+            }
+        }
     }
 
     @Override
@@ -509,18 +529,17 @@ public class SCIMUserManager implements UserManager {
                     }
                 }
                 List<String> requiredClaims = getOnlyRequiredClaims(claimURIList, requiredAttributes);
-                for (String userName : userNames) {
 
-                    if (CarbonConstants.REGISTRY_ANONNYMOUS_USERNAME.equals(userName)) {
-                        continue;
+                User[] scimUsers;
+                if (isPaginatedUserStoreAvailable()) {
+                    if (carbonUM instanceof PaginatedUserStoreManager) {
+                        scimUsers = this.getSCIMUsers(userNames, requiredClaims);
+                        filteredUsers.addAll(Arrays.asList(scimUsers));
+                    } else {
+                        addSCIMUsers(filteredUsers, userNames, requiredClaims);
                     }
-
-                    scimUser = this.getSCIMUser(userName, requiredClaims);
-                    //if SCIM-ID is not present in the attributes, skip
-                    if (scimUser != null && StringUtils.isBlank(scimUser.getId())) {
-                        continue;
-                    }
-                    filteredUsers.add(scimUser);
+                } else {
+                    addSCIMUsers(filteredUsers, userNames, requiredClaims);
                 }
                 log.info("Users filtered through SCIM for the filter: " + attributeName + filterOperation +
                         attributeValue);
@@ -532,6 +551,24 @@ public class SCIMUserManager implements UserManager {
                     "attribute value : " + attributeValue + " and filter operation " + filterOperation, e);
         }
         return filteredUsers;
+    }
+
+    private void addSCIMUsers(List<Object> filteredUsers, String[] userNames, List<String> requiredClaims)
+            throws CharonException {
+
+        User scimUser;
+        for (String userName : userNames) {
+            if (CarbonConstants.REGISTRY_ANONNYMOUS_USERNAME.equals(userName)) {
+                continue;
+            }
+
+            scimUser = this.getSCIMUser(userName, requiredClaims);
+            //if SCIM-ID is not present in the attributes, skip
+            if (scimUser != null && StringUtils.isBlank(scimUser.getId())) {
+                continue;
+            }
+            filteredUsers.add(scimUser);
+        }
     }
 
     @Override
@@ -1131,6 +1168,8 @@ public class SCIMUserManager implements UserManager {
             String[] roles = carbonUM.getRoleListOfUser(userName);
             //construct the SCIM Object from the attributes
             scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
+
+            Map<String, Group> groupMetaAttributesCache = new HashMap<>();
             //add groups of user:
             for (String role : roles) {
                 if (UserCoreUtil.isEveryoneRole(role, carbonUM.getRealmConfiguration())
@@ -1143,7 +1182,13 @@ public class SCIMUserManager implements UserManager {
                     // skip intenal roles
                     continue;
                 }
-                Group group = getGroupOnlyWithMetaAttributes(role);
+
+                Group group = groupMetaAttributesCache.get(role);
+                if (group == null && !groupMetaAttributesCache.containsKey(role)) {
+                    group = getGroupOnlyWithMetaAttributes(role);
+                    groupMetaAttributesCache.put(role, group);
+                }
+
                 if (group != null) { // can be null for non SCIM groups
                     scimUser.setGroup(null, group.getId(), role);
                 }
@@ -1152,6 +1197,101 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException("Error in getting user information for user: " + userName, e);
         }
         return scimUser;
+    }
+
+    /**
+     * get the specified user from the store
+     *
+     * @param userNames    Array of usernames
+     * @param claimURIList Requested claim list
+     * @return Array of SCIM User
+     * @throws CharonException CharonException
+     */
+    private User[] getSCIMUsers(String[] userNames, List<String> claimURIList) throws CharonException {
+
+        List<User> scimUsers = new ArrayList<>();
+
+        //obtain user claim values
+        UserClaimSearchEntry[] searchEntries;
+        Map<String, List<String>> usersRoles;
+
+        try {
+            searchEntries = ((AbstractUserStoreManager) carbonUM).getUsersClaimValues(
+                    userNames, claimURIList.toArray(new String[claimURIList.size()]), null);
+
+            usersRoles = ((AbstractUserStoreManager) carbonUM).getRoleListOfUsers(userNames);
+        } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            throw new CharonException("Error occurred while retrieving SCIM user information", e);
+        }
+
+        Map<String, Group> groupMetaAttributesCache = new HashMap<>();
+
+        for (String userName : userNames) {
+            User scimUser;
+            Map<String, String> attributes = new HashMap<>();
+            for (UserClaimSearchEntry entry : searchEntries) {
+                if (StringUtils.isNotBlank(entry.getUserName()) && entry.getUserName().equals(userName)) {
+                    attributes = entry.getClaims();
+                }
+            }
+
+            String userStoreDomainName = IdentityUtil.extractDomainFromName(userName);
+            if (StringUtils.isNotBlank(userStoreDomainName) && !isSCIMEnabled(userStoreDomainName)) {
+                throw new CharonException("Cannot get user through scim to user store " + ". SCIM is not " +
+                        "enabled for user store " + userStoreDomainName);
+            }
+
+            try {
+                //skip simple type addresses claim because it is complex with sub types in the schema
+                if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
+                    attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
+                }
+
+                // Add username with domain name
+                attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
+
+                //get groups of user and add it as groups attribute
+                List<String> roleList = usersRoles.get(userName);
+                String[] roles = new String[0];
+                if (CollectionUtils.isNotEmpty(roleList)) {
+                    roles = roleList.toArray(new String[0]);
+                }
+
+                //construct the SCIM Object from the attributes
+                scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
+
+                //add groups of user
+                for (String role : roles) {
+                    if (UserCoreUtil.isEveryoneRole(role, carbonUM.getRealmConfiguration())
+                            || UserCoreUtil.isPrimaryAdminRole(role, carbonUM.getRealmConfiguration())
+                            || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(role)
+                            || role.toLowerCase().startsWith((UserCoreConstants.INTERNAL_DOMAIN +
+                            CarbonConstants.DOMAIN_SEPARATOR).toLowerCase())) {
+                        // carbon specific roles do not possess SCIM info, hence
+                        // skipping them.
+                        // skip internal roles
+                        continue;
+                    }
+
+                    Group group = groupMetaAttributesCache.get(role);
+                    if (group == null && !groupMetaAttributesCache.containsKey(role)) {
+                        group = getGroupOnlyWithMetaAttributes(role);
+                        groupMetaAttributesCache.put(role, group);
+                    }
+
+                    if (group != null) { // can be null for non SCIM groups
+                        scimUser.setGroup(null, group.getId(), role);
+                    }
+                }
+            } catch (UserStoreException | CharonException | NotFoundException | IdentitySCIMException | BadRequestException e) {
+                throw new CharonException("Error in getting user information for user: " + userName, e);
+            }
+
+            if (scimUser != null) {
+                scimUsers.add(scimUser);
+            }
+        }
+        return scimUsers.toArray(new User[0]);
     }
 
     /**
@@ -1273,7 +1413,6 @@ public class SCIMUserManager implements UserManager {
         return claimsList;
     }
 
-
     /*
      * This returns the only required attributes for value querying
      * @param claimURIList
@@ -1375,4 +1514,13 @@ public class SCIMUserManager implements UserManager {
         return ((AbstractUserStoreManager) carbonUM).getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true,
                 true, true);
     }
+
+    private boolean isPaginatedUserStoreAvailable() {
+
+        String enablePaginatedUserStore = IdentityUtil.getProperty(ENABLE_PAGINATED_USER_STORE);
+        if (!StringUtils.isBlank(enablePaginatedUserStore)) {
+            return Boolean.parseBoolean(enablePaginatedUserStore);
+        } return false;
+    }
+
 }
