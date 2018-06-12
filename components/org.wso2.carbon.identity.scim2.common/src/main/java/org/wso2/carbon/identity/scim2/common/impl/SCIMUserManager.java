@@ -475,12 +475,18 @@ public class SCIMUserManager implements UserManager {
             String[] userNames = null;
             if (!SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
 
-                if (!filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
+                if (isNotGroupFilteringSupported(filterOperation)) {
                     String error = "Filter operator "+ filterOperation +" is not implemented non group filtering";
                     throw new NotImplementedException(error);
                 }
                 //get the user name of the user with this id
-                userNames = carbonUM.getUserList(attributeName, attributeValue, UserCoreConstants.DEFAULT_PROFILE);
+                if(filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
+                    userNames = carbonUM.getUserList(attributeName, attributeValue, UserCoreConstants.DEFAULT_PROFILE);
+                }
+                else{
+                    String[] roleNames = getRoleNames(filterOperation, attributeValue);
+                    userNames = getUserListOfRoles(roleNames);
+                }
             } else {
                 if (isNotGroupFilteringSupported(filterOperation)) {
                     String error = "Filter operator " + filterOperation + " is not implemented for group filtering";
@@ -890,7 +896,7 @@ public class SCIMUserManager implements UserManager {
         String filterOperation = ((ExpressionNode)node).getOperation();
         String attributeValue = ((ExpressionNode)node).getValue();
 
-        if(!filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)){
+        if(isNotGroupFilteringSupported(filterOperation)){
             String error = "Filter operator "+ filterOperation +" is not implemented";
             throw new NotImplementedException(error);
         }
@@ -904,28 +910,33 @@ public class SCIMUserManager implements UserManager {
         filteredGroups.add(0);
         Group group = null;
         try {
-            if (attributeValue != null && carbonUM.isExistingRole(attributeValue, false)) {
-                //skip internal roles
-                if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(attributeValue)) ||
-                        UserCoreUtil.isEveryoneRole(attributeValue, carbonUM.getRealmConfiguration()) ||
-                        UserCoreUtil.isPrimaryAdminRole(attributeValue, carbonUM.getRealmConfiguration())) {
-                    throw new IdentitySCIMException("Internal roles do not support SCIM.");
-                }
-                /********we expect only one result**********/
-                //construct the group name with domain -if not already provided, in order to support
-                //multiple user store feature with SCIM.
-                String groupNameWithDomain = null;
-                if (attributeValue.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
-                    groupNameWithDomain = attributeValue;
+            String[] roleList = getRoleNames(filterOperation, attributeValue);
+            for (String roleName : roleList) {
+                if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
+                    //skip internal roles
+                    if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName)) ||
+                            UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration()) ||
+                            UserCoreUtil.isPrimaryAdminRole(roleName, carbonUM.getRealmConfiguration())) {
+                        throw new IdentitySCIMException("Internal roles do not support SCIM.");
+                    }
+                    /********we expect only one result**********/
+                    //construct the group name with domain -if not already provided, in order to support
+                    //multiple user store feature with SCIM.
+                    String groupNameWithDomain = null;
+                    if (roleName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
+                        groupNameWithDomain = roleName;
+                    } else {
+                        groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                                + roleName;
+                    }
+                    group = getGroupWithName(groupNameWithDomain);
+                    filteredGroups.add(group);
                 } else {
-                    groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
-                            + attributeValue;
+                    //returning null will send a resource not found error to client by Charon.
+                    filteredGroups.clear();
+                    filteredGroups.add(0);
+                    return filteredGroups;
                 }
-                group = getGroupWithName(groupNameWithDomain);
-                filteredGroups.add(group);
-            } else {
-                //returning null will send a resource not found error to client by Charon.
-                return filteredGroups;
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             throw new CharonException("Error in filtering groups by attribute name : " + attributeName + ", " +
@@ -1509,6 +1520,8 @@ public class SCIMUserManager implements UserManager {
             searchAttribute = attributeValue + FILTERING_DELIMITER;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
             searchAttribute = FILTERING_DELIMITER + attributeValue;
+        } else if(filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
+            searchAttribute =  attributeValue;
         }
 
         return ((AbstractUserStoreManager) carbonUM).getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true,
