@@ -40,6 +40,8 @@ public class SQLQueries {
     public static final String CHECK_EXISTING_ATTRIBUTE_SQL =
             "SELECT TENANT_ID, ROLE_NAME, ATTR_NAME FROM IDN_SCIM_GROUP WHERE IDN_SCIM_GROUP.TENANT_ID=? AND " +
                     "IDN_SCIM_GROUP.ROLE_NAME=? AND IDN_SCIM_GROUP.ATTR_NAME=?";
-
+    public static final String LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE =
+            "SELECT ROLE_NAME FROM IDN_SCIM_GROUP WHERE IDN_SCIM_GROUP.TENANT_ID=? AND " +
+                    "IDN_SCIM_GROUP.ATTR_NAME=? AND ATTR_VALUE LIKE ?";
     private SQLQueries(){}
 }

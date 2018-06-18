@@ -30,8 +30,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -315,6 +317,39 @@ public class GroupDAO {
         } else {
             throw new IdentitySCIMException("Error when updating role name of the role: " + oldRoleName);
         }
+    }
+
+    public String[] getGroupNameList(String attributeName, String searchAttribute, Integer tenantId)
+            throws IdentitySCIMException {
+
+        List<String> roleList = new ArrayList<>();
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        ResultSet rSet = null;
+
+        try {
+            prepStmt = connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, attributeName);
+            prepStmt.setString(3, searchAttribute);
+
+            rSet = prepStmt.executeQuery();
+            while (rSet.next()) {
+                if (StringUtils.isNotEmpty(rSet.getString(1))) {
+                    roleList.add(rSet.getString(1));
+                }
+            }
+
+        } catch (SQLException e) {
+            log.error("Error when executing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
+                    "persistence store.", e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, rSet, prepStmt);
+        }
+
+        return roleList.toArray(new String[0]);
     }
 
 }
