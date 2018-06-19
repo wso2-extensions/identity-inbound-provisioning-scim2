@@ -318,7 +318,12 @@ public class GroupDAO {
             throw new IdentitySCIMException("Error when updating role name of the role: " + oldRoleName);
         }
     }
-
+    /**
+     * Lists the Groups created from SCIM with a attribute filter and search regex
+     *
+     * @return list of SCIM groups
+     * @throws IdentitySCIMException
+     */
     public String[] getGroupNameList(String attributeName, String searchAttribute, Integer tenantId)
             throws IdentitySCIMException {
 

@@ -908,11 +908,9 @@ public class SCIMUserManager implements UserManager {
                             UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration()) ||
                             UserCoreUtil.isPrimaryAdminRole(roleName, carbonUM.getRealmConfiguration())) {
                         continue;
-                        //throw new IdentitySCIMException("Internal roles do not support SCIM.");
                     }
-                    /********we expect only one result**********/
-                    //construct the group name with domain -if not already provided, in order to support
-                    //multiple user store feature with SCIM.
+                    /**construct the group name with domain -if not already provided, in order to support
+                    multiple user store feature with SCIM.**/
                     String groupNameWithDomain = null;
                     if (roleName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
                         groupNameWithDomain = roleName;
@@ -1511,8 +1509,8 @@ public class SCIMUserManager implements UserManager {
             searchAttribute = attributeValue + FILTERING_DELIMITER;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
             searchAttribute = FILTERING_DELIMITER + attributeValue;
-        } else if(filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
-            searchAttribute =  attributeValue;
+        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
+            searchAttribute = attributeValue;
         }
 
         return ((AbstractUserStoreManager) carbonUM).getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true,
@@ -1529,8 +1527,8 @@ public class SCIMUserManager implements UserManager {
             searchAttribute = attributeValue + FILTERING_DELIMITER;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
             searchAttribute = FILTERING_DELIMITER + attributeValue;
-        } else if(filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
-            searchAttribute =  attributeValue;
+        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
+            searchAttribute = attributeValue;
         }
 
         return  carbonUM.getUserList(attributeName, searchAttribute, UserCoreConstants.DEFAULT_PROFILE);
