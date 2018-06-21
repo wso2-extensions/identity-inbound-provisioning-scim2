@@ -898,7 +898,6 @@ public class SCIMUserManager implements UserManager {
         List<Object> filteredGroups = new ArrayList<>();
         //0th index is to store total number of results;
         filteredGroups.add(0);
-        Group group = null;
         try {
             String[] roleList = getGroupList(attributeName, filterOperation, attributeValue);
             for (String roleName : roleList) {
@@ -918,7 +917,7 @@ public class SCIMUserManager implements UserManager {
                         groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
                                 + roleName;
                     }
-                    group = getGroupWithName(groupNameWithDomain);
+                    Group group = getGroupWithName(groupNameWithDomain);
                     filteredGroups.add(group);
                 } else {
                     //returning null will send a resource not found error to client by Charon.
