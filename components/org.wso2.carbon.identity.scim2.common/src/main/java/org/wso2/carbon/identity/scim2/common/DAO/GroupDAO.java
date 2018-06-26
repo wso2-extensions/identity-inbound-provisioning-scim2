@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.scim2.common.DAO;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -342,7 +343,12 @@ public class GroupDAO {
             rSet = prepStmt.executeQuery();
             while (rSet.next()) {
                 if (StringUtils.isNotEmpty(rSet.getString(1))) {
-                    roleList.add(rSet.getString(1));
+                    if (rSet.getString(1).contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+                        String[] parts = rSet.getString(1).split(CarbonConstants.DOMAIN_SEPARATOR);
+                        roleList.add(parts[parts.length - 1]);
+                    } else {
+                        roleList.add(rSet.getString(1));
+                    }
                 }
             }
 
