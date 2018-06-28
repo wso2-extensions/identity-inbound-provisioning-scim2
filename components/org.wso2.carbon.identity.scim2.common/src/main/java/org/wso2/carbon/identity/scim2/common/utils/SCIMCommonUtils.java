@@ -18,18 +18,28 @@
 
 package org.wso2.carbon.identity.scim2.common.utils;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.model.ThreadLocalProvisioningServiceProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This class is to be used as a Util class for SCIM common things.
@@ -171,5 +181,113 @@ public class SCIMCommonUtils {
         SimpleDateFormat sdf = new SimpleDateFormat(SCIMConstants.DATE_TIME_FORMAT);
         String formattedDate = sdf.format(date);
         return formattedDate;
+    }
+
+
+    /**
+     * Converts claims in SCIM dialect to local WSO2 dialect.
+     *
+     * @param claimsMap         Map of SCIM claims and claim values.
+     * @return                  map of Local WSO2 Claims and corresponding claim values.
+     * @throws UserStoreException
+     */
+    public static Map<String, String> convertSCIMtoLocalDialect(Map<String, String> claimsMap)
+            throws UserStoreException {
+
+        // Retrieve SCIM to Local Claim Mappings.
+        Map<String, String> scimToLocalClaimMappings;
+        Map<String, String> claimsInLocalDialect = new HashMap<>();
+        scimToLocalClaimMappings = getSCIMtoLocalMappings();
+        if (MapUtils.isNotEmpty(scimToLocalClaimMappings)) {
+            for (Map.Entry entry : claimsMap.entrySet()) {
+                String scimClaimtUri = (String) entry.getKey();
+                String localClaimUri = scimToLocalClaimMappings.get(scimClaimtUri);
+                if (StringUtils.isNotEmpty(localClaimUri)) {
+                    claimsInLocalDialect.put(localClaimUri, (String) entry.getValue());
+                }
+            }
+        }
+
+        return claimsInLocalDialect;
+    }
+
+    /**
+     * Converts claims in local WSO2 dialect to SCIM dialect.
+     *
+     * @param claimsMap         Map of local claims and claim values.
+     * @return                  map of SCIM claims and corresponding claim values.
+     * @throws UserStoreException
+     */
+    public static Map<String, String> convertLocalToSCIMDialect(Map<String, String> claimsMap)
+            throws UserStoreException {
+
+        // Retrieve Local to SCIM Claim Mappings.
+        Map<String, String> scimToLocalClaimMappings;
+        Map<String, String> claimsInSCIMDialect = new HashMap<>();
+        scimToLocalClaimMappings = getSCIMtoLocalMappings();
+        if (MapUtils.isNotEmpty(scimToLocalClaimMappings)) {
+            for (Map.Entry entry : scimToLocalClaimMappings.entrySet()) {
+                String claimValue = claimsMap.get(entry.getValue());
+                if (StringUtils.isNotEmpty(claimValue)) {
+                    String scimClaimUri = (String) entry.getKey();
+                    claimsInSCIMDialect.put(scimClaimUri, claimValue);
+                }
+            }
+        }
+        return claimsInSCIMDialect;
+    }
+
+    /**
+     * Retrieves SCIM to Local Claim Mappings.
+     *
+     * @return Map of SCIM claims and corresponding Local WSO2 claims.
+     * @throws UserStoreException
+     */
+    public static Map<String, String> getSCIMtoLocalMappings() throws UserStoreException {
+
+        String spTenantDomain = getTenantDomainFromSP();
+
+        Map<String, String> scimToLocalClaimMap = new HashMap<>();
+        try {
+            Map<String, String> coreClaims = ClaimMetadataHandler.getInstance()
+                    .getMappingsMapFromOtherDialectToCarbon(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT, null,
+                            spTenantDomain, false);
+            scimToLocalClaimMap.putAll(coreClaims);
+            Map<String, String> userClaims = ClaimMetadataHandler.getInstance()
+                    .getMappingsMapFromOtherDialectToCarbon(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT, null,
+                            spTenantDomain, false);
+            scimToLocalClaimMap.putAll(userClaims);
+            if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null){
+                Map<String, String> extensionClaims = ClaimMetadataHandler.getInstance()
+                        .getMappingsMapFromOtherDialectToCarbon(SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI(), null,
+                                spTenantDomain, false);
+                scimToLocalClaimMap.putAll(extensionClaims);
+            }
+            return scimToLocalClaimMap;
+        } catch (ClaimMetadataException e) {
+            throw new UserStoreException(
+                    "Error occurred while retrieving SCIM to Local claim mappings for tenant domain : " +
+                            spTenantDomain , e);
+        }
+    }
+
+    /**
+     * This is used to get tenant domain of thread local service provider.
+     *
+     * @return Service provider's tenant domain.
+     */
+    private static String getTenantDomainFromSP() {
+
+        String tenantDomain;
+        ThreadLocalProvisioningServiceProvider threadLocalSP = IdentityApplicationManagementUtil
+                .getThreadLocalProvisioningServiceProvider();
+        if (threadLocalSP != null) {
+            return threadLocalSP.getTenantDomain();
+        } else if (PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain() != null) {
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        } else {
+            tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        return tenantDomain;
     }
 }

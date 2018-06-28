@@ -107,6 +107,14 @@
             <artifactId>org.wso2.carbon.identity.application.common</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.provisioning</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.claim.metadata.mgt</artifactId>
+        </dependency>
+        <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
         </dependency>
@@ -192,6 +200,8 @@
 
                             org.wso2.carbon.identity.base; version="${identity.framework.version}",
                             org.wso2.carbon.identity.core.*; version="${identity.framework.version}",
+                            org.wso2.carbon.identity.provisioning.*; version="${identity.framework.version}",
+                            org.wso2.carbon.identity.claim.metadata.mgt.*; version="${identity.framework.version}",
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.scim2.common.internal,

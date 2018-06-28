@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -126,20 +127,17 @@ public class SCIMUserManager implements UserManager {
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
             Map<String, String> claimsMap = AttributeMapper.getClaimsMap(user);
 
-            // Converting identity recovery clams to respective local claims
-            if (claimsMap.containsKey(SCIMCommonConstants.ASK_PASSWORD_URI)) {
-                String attributeValue = claimsMap.remove(SCIMCommonConstants.ASK_PASSWORD_URI);
-                claimsMap.put(SCIMCommonConstants.ASK_PASSWORD_CLAIM, attributeValue);
-            }
-            if (claimsMap.containsKey(SCIMCommonConstants.VERIFY_EMAIL_URI)) {
-                String attributeValue = claimsMap.remove(SCIMCommonConstants.VERIFY_EMAIL_URI);
-                claimsMap.put(SCIMCommonConstants.VERIFY_EMAIL_CLIAM, attributeValue);
-            }
-
                 /*skip groups attribute since we map groups attribute to actual groups in ldap.
                 and do not update it as an attribute in user schema*/
             if (claimsMap.containsKey(SCIMConstants.UserSchemaConstants.GROUP_URI)) {
                 claimsMap.remove(SCIMConstants.UserSchemaConstants.GROUP_URI);
+            }
+
+            /* Skip roles list since we map SCIM groups to local roles internally. It shouldn't be allowed to
+                manipulate SCIM groups from user endpoint as this attribute has a mutability of "readOnly". Group
+                changes must be applied via Group Resource */
+            if (claimsMap.containsKey(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT)) {
+                claimsMap.remove(SCIMConstants.UserSchemaConstants.ROLES_URI);
             }
 
             if (carbonUM.isExistingUser(user.getUserName())) {
@@ -149,7 +147,8 @@ public class SCIMUserManager implements UserManager {
             if (claimsMap.containsKey(SCIMConstants.UserSchemaConstants.USER_NAME_URI)) {
                 claimsMap.remove(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
             }
-            carbonUM.addUser(user.getUserName(), user.getPassword(), null, claimsMap, null);
+            Map<String, String> claimsInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap);
+            carbonUM.addUser(user.getUserName(), user.getPassword(), null, claimsInLocalDialect, null);
             log.info("User: " + user.getUserName() + " is created through SCIM.");
 
         } catch (UserStoreException e) {
@@ -167,12 +166,13 @@ public class SCIMUserManager implements UserManager {
         }
         User scimUser;
         try {
-            ClaimMapping[] coreClaims;
-            ClaimMapping[] userClaims;
-            ClaimMapping[] extensionClaims = null;
             //get the user name of the user with this id
-            String[] userNames = carbonUM.getUserList(SCIMConstants.CommonSchemaConstants.ID_URI, userId,
-                    UserCoreConstants.DEFAULT_PROFILE);
+            String userIdLocalClaim = SCIMCommonUtils.getSCIMtoLocalMappings().get(SCIMConstants
+                    .CommonSchemaConstants.ID_URI);
+            String[] userNames = null;
+            if (StringUtils.isNotBlank(userIdLocalClaim)) {
+                userNames = carbonUM.getUserList(userIdLocalClaim, userId, UserCoreConstants.DEFAULT_PROFILE);
+            }
 
             if (userNames == null || userNames.length == 0) {
                 if (log.isDebugEnabled()) {
@@ -181,27 +181,20 @@ public class SCIMUserManager implements UserManager {
                 return null;
             } else {
                 //get Claims related to SCIM claim dialect
-                coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
-                userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
-                if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null){
-                    extensionClaims = carbonClaimManager.getAllClaimMappings(
-                            SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
-                }
-                List<String> claimURIList = new ArrayList<>();
-                for (ClaimMapping claim : coreClaims) {
-                    claimURIList.add(claim.getClaim().getClaimUri());
-                }
-                for (ClaimMapping claim : userClaims) {
-                    claimURIList.add(claim.getClaim().getClaimUri());
-                }
-                if(extensionClaims != null) {
-                    for (ClaimMapping claim : extensionClaims) {
-                        claimURIList.add(claim.getClaim().getClaimUri());
+                Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+                List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
+                List<String> requiredClaimsInLocalDialect;
+                if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
+                    scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
+                    requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("SCIM to Local Claim mappings list is empty.");
                     }
+                    requiredClaimsInLocalDialect = new ArrayList<>();
                 }
-                List<String> requiredClaims = getOnlyRequiredClaims(claimURIList, requiredAttributes);
                 //we assume (since id is unique per user) only one user exists for a given id
-                scimUser = this.getSCIMUser(userNames[0], requiredClaims);
+                scimUser = this.getSCIMUser(userNames[0], requiredClaimsInLocalDialect);
                 //set the schemas of the scim user
                 scimUser.setSchemas();
                 log.info("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
@@ -226,8 +219,11 @@ public class SCIMUserManager implements UserManager {
             /*set thread local property to signal the downstream SCIMUserOperationListener
                 about the provisioning route.*/
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
-            userNames = carbonUM.getUserList(SCIMConstants.CommonSchemaConstants.ID_URI, userId,
-                    UserCoreConstants.DEFAULT_PROFILE);
+            String userIdLocalClaim = SCIMCommonUtils.getSCIMtoLocalMappings().get(SCIMConstants
+                    .CommonSchemaConstants.ID_URI);
+            if (StringUtils.isNotBlank(userIdLocalClaim)) {
+                userNames = carbonUM.getUserList(userIdLocalClaim, userId, UserCoreConstants.DEFAULT_PROFILE);
+            }
             String userStoreDomainFromSP = null;
             try {
                 userStoreDomainFromSP = getUserStoreDomainFromSP();
@@ -287,39 +283,35 @@ public class SCIMUserManager implements UserManager {
         //0th index is to store total number of results;
         users.add(0);
         try {
-            String[] userNames = carbonUM.getUserList(SCIMConstants.CommonSchemaConstants.ID_URI, "*", null);
+            String userIdLocalClaim = SCIMCommonUtils.getSCIMtoLocalMappings().get(SCIMConstants
+                    .CommonSchemaConstants.ID_URI);
+            String[] userNames = null;
+            if (StringUtils.isNotBlank(userIdLocalClaim)) {
+                userNames = carbonUM.getUserList(userIdLocalClaim, "*", null);
+            }
             if (userNames != null && userNames.length != 0) {
-                //get Claims related to SCIM claim dialect
-                coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
-                userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
-                if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null){
-                    extensionClaims = carbonClaimManager.getAllClaimMappings(
-                            SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
-                }
-
-                List<String> claimURIList = new ArrayList<>();
-                for (ClaimMapping claim : coreClaims) {
-                    claimURIList.add(claim.getClaim().getClaimUri());
-                }
-                for (ClaimMapping claim : userClaims) {
-                    claimURIList.add(claim.getClaim().getClaimUri());
-                }
-                if(extensionClaims != null) {
-                    for (ClaimMapping claim : extensionClaims) {
-                        claimURIList.add(claim.getClaim().getClaimUri());
+                Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+                List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
+                List<String> requiredClaimsInLocalDialect;
+                if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
+                    scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
+                    requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("SCIM to Local Claim mappings list is empty.");
                     }
+                    requiredClaimsInLocalDialect = new ArrayList<>();
                 }
-                List<String> requiredClaims = getOnlyRequiredClaims(claimURIList, requiredAttributes);
 
                 if (isPaginatedUserStoreAvailable()) {
                     if (carbonUM instanceof PaginatedUserStoreManager) {
-                        User[] scimUsers = this.getSCIMUsers(userNames, requiredClaims);
+                        User[] scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect);
                         users.addAll(Arrays.asList(scimUsers));
                     } else {
-                        retriveSCIMUsers(users, userNames, requiredClaims);
+                        retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect);
                     }
                 } else {
-                    retriveSCIMUsers(users, userNames, requiredClaims);
+                    retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect);
                 }
 
                 //set the totalResults value in index 0
@@ -389,50 +381,43 @@ public class SCIMUserManager implements UserManager {
             if (claims.containsKey(SCIMConstants.UserSchemaConstants.GROUP_URI)) {
                 claims.remove(SCIMConstants.UserSchemaConstants.GROUP_URI);
             }
+            
+                /* Skip roles list since we map SCIM groups to local roles internally. It shouldn't be allowed to
+                manipulate SCIM groups from user endpoint as this attribute has a mutability of "readOnly". Group
+                changes must be applied via Group Resource */
+            if (claims.containsKey(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT)) {
+                claims.remove(SCIMConstants.UserSchemaConstants.ROLES_URI);
+            }
 
             if (claims.containsKey(SCIMConstants.UserSchemaConstants.USER_NAME_URI)) {
                 claims.remove(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
             }
 
-            ClaimMapping[] coreClaimList;
-            ClaimMapping[] userClaimList;
-            ClaimMapping[] extensionClaims = null;
-            coreClaimList = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
-            userClaimList = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
-            if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null){
-                extensionClaims = carbonClaimManager.getAllClaimMappings(
-                        SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
-            }
-
-            List<String> claimURIList = new ArrayList<>();
-            for (ClaimMapping claim : coreClaimList) {
-                claimURIList.add(claim.getClaim().getClaimUri());
-            }
-            for (ClaimMapping claim : userClaimList) {
-                claimURIList.add(claim.getClaim().getClaimUri());
-            }
-            if(extensionClaims != null) {
-                for (ClaimMapping claim : extensionClaims) {
-                    claimURIList.add(claim.getClaim().getClaimUri());
+            Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
+            List<String> requiredClaimsInLocalDialect;
+            if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
+                scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
+                requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM to Local Claim mappings list is empty.");
                 }
+                requiredClaimsInLocalDialect = new ArrayList<>();
             }
-            List<String> requiredClaims = getOnlyRequiredClaims(claimURIList, requiredAttributes);
 
-            Map<String, String> oldClaimList = carbonUM.getUserClaimValues(user.getUserName(), requiredClaims
+            Map<String, String> oldClaimList = carbonUM.getUserClaimValues(user.getUserName(), requiredClaimsInLocalDialect
                     .toArray(new String[requiredClaims.size()]), null);
 
             for (Map.Entry<String, String> entry : oldClaimList.entrySet()) {
-                if (!entry.getKey().equals(SCIMConstants.CommonSchemaConstants.ID_URI) &&
-                        !entry.getKey().equals(SCIMConstants.UserSchemaConstants.USER_NAME_URI) &&
-                        !entry.getKey().equals(SCIMConstants.CommonSchemaConstants.CREATED_URI) &&
-                        !entry.getKey().equals(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI) &&
-                        !entry.getKey().equals(SCIMConstants.CommonSchemaConstants.LOCATION_URI) &&
-                        !entry.getKey().equals(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI)) {
+                if (!isImmutableClaim(entry.getKey())) {
                     carbonUM.deleteUserClaimValue(user.getUserName(), entry.getKey(), null);
                 }
             }
+            // Get user claims mapped from SCIM dialect to WSO2 dialect.
+            Map<String, String> claimValuesInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claims);
             //set user claim values
-            carbonUM.setUserClaimValues(user.getUserName(), claims, null);
+            carbonUM.setUserClaimValues(user.getUserName(), claimValuesInLocalDialect, null);
             //if password is updated, set it separately
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdmin(user.getUserName(), user.getPassword());
@@ -508,38 +493,29 @@ public class SCIMUserManager implements UserManager {
                 totalUserCount = userNames.length;
                 userNames = paginateUsers(userNames, limit, offset);
 
-                //get claims related to SCIM claim dialect
-                coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
-                userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
-                if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null){
-                    extensionClaims = carbonClaimManager.getAllClaimMappings(
-                            SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
-                }
-
-                List<String> claimURIList = new ArrayList<>();
-                for (ClaimMapping claim : coreClaims) {
-                    claimURIList.add(claim.getClaim().getClaimUri());
-                }
-                for (ClaimMapping claim : userClaims) {
-                    claimURIList.add(claim.getClaim().getClaimUri());
-                }
-                if(extensionClaims != null) {
-                    for (ClaimMapping claim : extensionClaims) {
-                        claimURIList.add(claim.getClaim().getClaimUri());
+                Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+                List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
+                List<String> requiredClaimsInLocalDialect;
+                if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
+                    scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
+                    requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("SCIM to Local Claim mappings list is empty.");
                     }
+                    requiredClaimsInLocalDialect = new ArrayList<>();
                 }
-                List<String> requiredClaims = getOnlyRequiredClaims(claimURIList, requiredAttributes);
 
                 User[] scimUsers;
                 if (isPaginatedUserStoreAvailable()) {
                     if (carbonUM instanceof PaginatedUserStoreManager) {
-                        scimUsers = this.getSCIMUsers(userNames, requiredClaims);
+                        scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect);
                         filteredUsers.addAll(Arrays.asList(scimUsers));
                     } else {
-                        addSCIMUsers(filteredUsers, userNames, requiredClaims);
+                        addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect);
                     }
                 } else {
-                    addSCIMUsers(filteredUsers, userNames, requiredClaims);
+                    addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect);
                 }
                 log.info("Users filtered through SCIM for the filter: " + attributeName + filterOperation +
                         attributeValue);
@@ -580,33 +556,23 @@ public class SCIMUserManager implements UserManager {
         }
 
         User scimUser;
-        ClaimMapping[] coreClaims;
-        ClaimMapping[] userClaims;
-        ClaimMapping[] extensionClaims = null;
 
         try {
             //get Claims related to SCIM claim dialect
-            coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
-            userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
-            if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null){
-                extensionClaims = carbonClaimManager.getAllClaimMappings(
-                        SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
-            }
-            List<String> claimURIList = new ArrayList<>();
-            for (ClaimMapping claim : coreClaims) {
-                claimURIList.add(claim.getClaim().getClaimUri());
-            }
-            for (ClaimMapping claim : userClaims) {
-                claimURIList.add(claim.getClaim().getClaimUri());
-            }
-            if(extensionClaims != null) {
-                for (ClaimMapping claim : extensionClaims) {
-                    claimURIList.add(claim.getClaim().getClaimUri());
+            Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
+            List<String> requiredClaimsInLocalDialect;
+            if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
+                scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
+                requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM to Local Claim mappings list is empty.");
                 }
+                requiredClaimsInLocalDialect = new ArrayList<>();
             }
-            List<String> requiredClaims = getOnlyRequiredClaims(claimURIList, requiredAttributes);
             //we assume (since id is unique per user) only one user exists for a given id
-            scimUser = this.getSCIMUser(userName, requiredClaims);
+            scimUser = this.getSCIMUser(userName, requiredClaimsInLocalDialect);
 
             if(scimUser == null){
                 log.debug("User with userName : " + userName + " does not exist in the system.");
@@ -693,8 +659,13 @@ public class SCIMUserManager implements UserManager {
             if (CollectionUtils.isNotEmpty(userIds)) {
                 List<String> members = new ArrayList<>();
                 for (Object userId : userIds) {
-                    String[] userNames = carbonUM.getUserList(SCIMConstants.CommonSchemaConstants.ID_URI, (String) userId,
-                            UserCoreConstants.DEFAULT_PROFILE);
+                    String userIdLocalClaim = SCIMCommonUtils.getSCIMtoLocalMappings().get(SCIMConstants
+                            .CommonSchemaConstants.ID_URI);
+                    String[] userNames = null;
+                    if (StringUtils.isNotBlank(userIdLocalClaim)) {
+                        userNames = carbonUM.getUserList(userIdLocalClaim, (String) userId, UserCoreConstants
+                                .DEFAULT_PROFILE);
+                    }
                     if (userNames == null || userNames.length == 0) {
                         String error = "User: " + userId + " doesn't exist in the user store. " +
                                 "Hence, can not create the group: " + group.getDisplayName();
@@ -1018,9 +989,12 @@ public class SCIMUserManager implements UserManager {
                 String[] userNames = null;
                 for (Object userId : userIds) {
                     if (userId != null) {
-                        userNames = carbonUM.getUserList(SCIMConstants.CommonSchemaConstants.ID_URI,
-                                UserCoreUtil.addDomainToName((String) userId, userStoreDomainForGroup),
-                                UserCoreConstants.DEFAULT_PROFILE);
+                        String userIdLocalClaim = SCIMCommonUtils.getSCIMtoLocalMappings().get(SCIMConstants
+                                .CommonSchemaConstants.ID_URI);
+                        if (StringUtils.isNotBlank(userIdLocalClaim)) {
+                            userNames = carbonUM.getUserList(userIdLocalClaim, UserCoreUtil.addDomainToName((String)
+                                            userId, userStoreDomainForGroup), UserCoreConstants.DEFAULT_PROFILE);
+                        }
                         if (userNames == null || userNames.length == 0) {
                             String error = "User: " + userId + " doesn't exist in the user store. " +
                                     "Hence, can not update the group: " + oldGroup.getDisplayName();
@@ -1153,8 +1127,9 @@ public class SCIMUserManager implements UserManager {
         }
         try {
             //obtain user claim values
-            Map<String, String> attributes = carbonUM.getUserClaimValues(
+            Map<String, String> userClaimValues = carbonUM.getUserClaimValues(
                     userName, claimURIList.toArray(new String[claimURIList.size()]), null);
+            Map<String, String> attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues);
 
             //skip simple type addresses claim because it is complex with sub types in the schema
             if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
@@ -1228,11 +1203,17 @@ public class SCIMUserManager implements UserManager {
 
         for (String userName : userNames) {
             User scimUser;
-            Map<String, String> attributes = new HashMap<>();
+            Map<String, String> userClaimValues = new HashMap<>();
             for (UserClaimSearchEntry entry : searchEntries) {
                 if (StringUtils.isNotBlank(entry.getUserName()) && entry.getUserName().equals(userName)) {
-                    attributes = entry.getClaims();
+                    userClaimValues = entry.getClaims();
                 }
+            }
+            Map<String, String> attributes;
+            try {
+                attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues);
+            } catch (UserStoreException e) {
+                throw new CharonException("Error in converting local claims to SCIM dialect for user: " + userName, e);
             }
 
             String userStoreDomainName = IdentityUtil.extractDomainFromName(userName);
@@ -1419,7 +1400,7 @@ public class SCIMUserManager implements UserManager {
      * @param requiredAttributes
      * @return
      */
-    private List<String> getOnlyRequiredClaims(List<String> claimURIList, Map<String, Boolean> requiredAttributes) {
+    private List<String> getOnlyRequiredClaims(Set<String> claimURIList, Map<String, Boolean> requiredAttributes) {
         List<String> requiredClaimList = new ArrayList<>();
         for(String requiredClaim : requiredAttributes.keySet()) {
             if(requiredAttributes.get(requiredClaim)) {
@@ -1523,4 +1504,23 @@ public class SCIMUserManager implements UserManager {
         } return false;
     }
 
+    /**
+     * Check whether claim is an immutable claim.
+     *
+     * @param claim claim URI.
+     * @return
+     */
+    private boolean isImmutableClaim(String claim) throws UserStoreException {
+
+        Map<String, String> claimMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
+
+        return claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.ID_URI)) ||
+                claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.USER_NAME_URI)) ||
+                claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT)) ||
+                claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.CREATED_URI)) ||
+                claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI)) ||
+                claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) ||
+                claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI)) ||
+                claim.contains(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI);
+    }
 }
