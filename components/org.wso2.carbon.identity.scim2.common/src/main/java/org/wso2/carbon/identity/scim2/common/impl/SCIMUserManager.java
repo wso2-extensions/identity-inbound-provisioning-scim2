@@ -194,7 +194,7 @@ public class SCIMUserManager implements UserManager {
                     requiredClaimsInLocalDialect = new ArrayList<>();
                 }
                 //we assume (since id is unique per user) only one user exists for a given id
-                scimUser = this.getSCIMUser(userNames[0], requiredClaimsInLocalDialect);
+                scimUser = this.getSCIMUser(userNames[0], requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                 //set the schemas of the scim user
                 scimUser.setSchemas();
                 log.info("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
@@ -283,14 +283,14 @@ public class SCIMUserManager implements UserManager {
         //0th index is to store total number of results;
         users.add(0);
         try {
-            String userIdLocalClaim = SCIMCommonUtils.getSCIMtoLocalMappings().get(SCIMConstants
+            Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            String userIdLocalClaim = scimToLocalClaimsMap.get(SCIMConstants
                     .CommonSchemaConstants.ID_URI);
             String[] userNames = null;
             if (StringUtils.isNotBlank(userIdLocalClaim)) {
                 userNames = carbonUM.getUserList(userIdLocalClaim, "*", null);
             }
             if (userNames != null && userNames.length != 0) {
-                Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
                 List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
                 List<String> requiredClaimsInLocalDialect;
                 if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
@@ -305,13 +305,13 @@ public class SCIMUserManager implements UserManager {
 
                 if (isPaginatedUserStoreAvailable()) {
                     if (carbonUM instanceof PaginatedUserStoreManager) {
-                        User[] scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect);
+                        User[] scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                         users.addAll(Arrays.asList(scimUsers));
                     } else {
-                        retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect);
+                        retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                     }
                 } else {
-                    retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect);
+                    retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                 }
 
                 //set the totalResults value in index 0
@@ -324,13 +324,14 @@ public class SCIMUserManager implements UserManager {
         return users;
     }
 
-    private void retriveSCIMUsers(List<Object> users, String[] userNames, List<String> requiredClaims)
+    private void retriveSCIMUsers(List<Object> users, String[] userNames, List<String> requiredClaims, Map<String,
+            String> scimToLocalClaimsMap)
             throws CharonException {
         for (String userName : userNames) {
             if (userName.contains(UserCoreConstants.NAME_COMBINER)) {
                 userName = userName.split("\\" + UserCoreConstants.NAME_COMBINER)[0];
             }
-            User scimUser = this.getSCIMUser(userName, requiredClaims);
+            User scimUser = this.getSCIMUser(userName, requiredClaims, scimToLocalClaimsMap);
             if (scimUser != null) {
                 Map<String, Attribute> attrMap = scimUser.getAttributeList();
                 if (attrMap != null && !attrMap.isEmpty()) {
@@ -509,13 +510,13 @@ public class SCIMUserManager implements UserManager {
                 User[] scimUsers;
                 if (isPaginatedUserStoreAvailable()) {
                     if (carbonUM instanceof PaginatedUserStoreManager) {
-                        scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect);
+                        scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                         filteredUsers.addAll(Arrays.asList(scimUsers));
                     } else {
-                        addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect);
+                        addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                     }
                 } else {
-                    addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect);
+                    addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                 }
                 log.info("Users filtered through SCIM for the filter: " + attributeName + filterOperation +
                         attributeValue);
@@ -529,7 +530,8 @@ public class SCIMUserManager implements UserManager {
         return filteredUsers;
     }
 
-    private void addSCIMUsers(List<Object> filteredUsers, String[] userNames, List<String> requiredClaims)
+    private void addSCIMUsers(List<Object> filteredUsers, String[] userNames, List<String> requiredClaims,
+                              Map<String, String> scimToLocalClaimsMap)
             throws CharonException {
 
         User scimUser;
@@ -538,7 +540,7 @@ public class SCIMUserManager implements UserManager {
                 continue;
             }
 
-            scimUser = this.getSCIMUser(userName, requiredClaims);
+            scimUser = this.getSCIMUser(userName, requiredClaims, scimToLocalClaimsMap);
             //if SCIM-ID is not present in the attributes, skip
             if (scimUser != null && StringUtils.isBlank(scimUser.getId())) {
                 continue;
@@ -572,7 +574,7 @@ public class SCIMUserManager implements UserManager {
                 requiredClaimsInLocalDialect = new ArrayList<>();
             }
             //we assume (since id is unique per user) only one user exists for a given id
-            scimUser = this.getSCIMUser(userName, requiredClaimsInLocalDialect);
+            scimUser = this.getSCIMUser(userName, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
 
             if(scimUser == null){
                 log.debug("User with userName : " + userName + " does not exist in the system.");
@@ -1117,7 +1119,8 @@ public class SCIMUserManager implements UserManager {
      * @return
      * @throws CharonException
      */
-    private User getSCIMUser(String userName, List<String> claimURIList) throws CharonException {
+    private User getSCIMUser(String userName, List<String> claimURIList, Map<String, String> scimToLocalClaimsMap)
+            throws CharonException {
         User scimUser = null;
 
         String userStoreDomainName = IdentityUtil.extractDomainFromName(userName);
@@ -1129,7 +1132,8 @@ public class SCIMUserManager implements UserManager {
             //obtain user claim values
             Map<String, String> userClaimValues = carbonUM.getUserClaimValues(
                     userName, claimURIList.toArray(new String[claimURIList.size()]), null);
-            Map<String, String> attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues);
+            Map<String, String> attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues,
+                    scimToLocalClaimsMap);
 
             //skip simple type addresses claim because it is complex with sub types in the schema
             if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
@@ -1182,7 +1186,8 @@ public class SCIMUserManager implements UserManager {
      * @return Array of SCIM User
      * @throws CharonException CharonException
      */
-    private User[] getSCIMUsers(String[] userNames, List<String> claimURIList) throws CharonException {
+    private User[] getSCIMUsers(String[] userNames, List<String> claimURIList, Map<String, String>
+            scimToLocalClaimsMap) throws CharonException {
 
         List<User> scimUsers = new ArrayList<>();
 
@@ -1211,7 +1216,7 @@ public class SCIMUserManager implements UserManager {
             }
             Map<String, String> attributes;
             try {
-                attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues);
+                attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues, scimToLocalClaimsMap);
             } catch (UserStoreException e) {
                 throw new CharonException("Error in converting local claims to SCIM dialect for user: " + userName, e);
             }

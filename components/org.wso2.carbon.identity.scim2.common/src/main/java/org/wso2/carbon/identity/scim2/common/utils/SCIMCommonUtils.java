@@ -218,13 +218,14 @@ public class SCIMCommonUtils {
      * @return                  map of SCIM claims and corresponding claim values.
      * @throws UserStoreException
      */
-    public static Map<String, String> convertLocalToSCIMDialect(Map<String, String> claimsMap)
-            throws UserStoreException {
+    public static Map<String, String> convertLocalToSCIMDialect(Map<String, String> claimsMap, Map<String, String>
+            scimToLocalClaimMappings) throws UserStoreException {
 
-        // Retrieve Local to SCIM Claim Mappings.
-        Map<String, String> scimToLocalClaimMappings;
+        if (MapUtils.isEmpty(scimToLocalClaimMappings)) {
+            // Retrieve Local to SCIM Claim Mappings from db.
+            scimToLocalClaimMappings = getSCIMtoLocalMappings();
+        }
         Map<String, String> claimsInSCIMDialect = new HashMap<>();
-        scimToLocalClaimMappings = getSCIMtoLocalMappings();
         if (MapUtils.isNotEmpty(scimToLocalClaimMappings)) {
             for (Map.Entry entry : scimToLocalClaimMappings.entrySet()) {
                 String claimValue = claimsMap.get(entry.getValue());
