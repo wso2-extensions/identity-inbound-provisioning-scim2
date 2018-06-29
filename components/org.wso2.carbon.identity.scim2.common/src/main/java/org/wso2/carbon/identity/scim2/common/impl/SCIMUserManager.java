@@ -1498,20 +1498,25 @@ public class SCIMUserManager implements UserManager {
         return userNames;
     }
 
-    private String[] getRoleNames(String filterOperation, String attributeValue) throws org.wso2.carbon.user.core
-            .UserStoreException {
+    private String getSearchAttribute(String filterOperation, String attributeValue, String delimiter) {
 
         String searchAttribute = null;
         if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
-            searchAttribute = FILTERING_DELIMITER + attributeValue + FILTERING_DELIMITER;
+            searchAttribute = delimiter + attributeValue + delimiter;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
-            searchAttribute = attributeValue + FILTERING_DELIMITER;
+            searchAttribute = attributeValue + delimiter;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
-            searchAttribute = FILTERING_DELIMITER + attributeValue;
+            searchAttribute = delimiter + attributeValue;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
             searchAttribute = attributeValue;
         }
+        return searchAttribute;
+    }
 
+    private String[] getRoleNames(String filterOperation, String attributeValue) throws org.wso2.carbon.user.core
+            .UserStoreException {
+
+        String searchAttribute = getSearchAttribute(filterOperation, attributeValue, FILTERING_DELIMITER);
         return ((AbstractUserStoreManager) carbonUM).getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true,
                 true, true);
     }
@@ -1519,17 +1524,7 @@ public class SCIMUserManager implements UserManager {
     private String[] getUserNames(String attributeName, String filterOperation, String attributeValue)
             throws org.wso2.carbon.user.core.UserStoreException {
 
-        String searchAttribute = null;
-        if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
-            searchAttribute = FILTERING_DELIMITER + attributeValue + FILTERING_DELIMITER;
-        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
-            searchAttribute = attributeValue + FILTERING_DELIMITER;
-        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
-            searchAttribute = FILTERING_DELIMITER + attributeValue;
-        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
-            searchAttribute = attributeValue;
-        }
-
+        String searchAttribute = getSearchAttribute(filterOperation, attributeValue, FILTERING_DELIMITER);
         return  carbonUM.getUserList(attributeName, searchAttribute, UserCoreConstants.DEFAULT_PROFILE);
     }
 
@@ -1567,17 +1562,7 @@ public class SCIMUserManager implements UserManager {
     private String[] getGroupNamesFromDB(String attributeName, String filterOperation, String attributeValue)
             throws org.wso2.carbon.user.core.UserStoreException, IdentitySCIMException {
 
-        String searchAttribute = null;
-        if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
-            searchAttribute = SQL_FILTERING_DELIMITER + attributeValue + SQL_FILTERING_DELIMITER;
-        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
-            searchAttribute = attributeValue + SQL_FILTERING_DELIMITER;
-        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
-            searchAttribute = SQL_FILTERING_DELIMITER + attributeValue;
-        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
-            searchAttribute = attributeValue;
-        }
-
+        String searchAttribute = getSearchAttribute(filterOperation, attributeValue, SQL_FILTERING_DELIMITER);
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         return groupHandler.getGroupListFromAttributeName(attributeName, searchAttribute);
     }
