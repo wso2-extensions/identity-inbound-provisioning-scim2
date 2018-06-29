@@ -909,7 +909,7 @@ public class SCIMUserManager implements UserManager {
                         continue;
                     }
                     /**construct the group name with domain -if not already provided, in order to support
-                    multiple user store feature with SCIM.**/
+                     multiple user store feature with SCIM.**/
                     String groupNameWithDomain = null;
                     if (roleName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
                         groupNameWithDomain = roleName;
@@ -1525,7 +1525,7 @@ public class SCIMUserManager implements UserManager {
             throws org.wso2.carbon.user.core.UserStoreException {
 
         String searchAttribute = getSearchAttribute(filterOperation, attributeValue, FILTERING_DELIMITER);
-        return  carbonUM.getUserList(attributeName, searchAttribute, UserCoreConstants.DEFAULT_PROFILE);
+        return carbonUM.getUserList(attributeName, searchAttribute, UserCoreConstants.DEFAULT_PROFILE);
     }
 
     private String[] getGroupList(String attributeName, String filterOperation, String attributeValue)
@@ -1537,8 +1537,7 @@ public class SCIMUserManager implements UserManager {
             String[] userList;
             if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_URI)) {
                 userList = getUserNames(SCIMConstants.UserSchemaConstants.USER_NAME_URI, filterOperation, attributeValue);
-            }
-            else {
+            } else {
                 userList = getUserNames(SCIMConstants.CommonSchemaConstants.ID_URI, filterOperation, attributeValue);
             }
             List<String> fullRoleList = new ArrayList<>();
