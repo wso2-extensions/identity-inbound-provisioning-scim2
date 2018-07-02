@@ -27,10 +27,15 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -43,9 +48,12 @@ import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.schema.SCIMAttributeSchema;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
+import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -58,7 +66,8 @@ import static org.testng.Assert.assertNotNull;
 /*
  * Unit tests for SCIMUserManager
  */
-@PrepareForTest({SCIMGroupHandler.class, IdentityUtil.class, SCIMUserSchemaExtensionBuilder.class, SCIMAttributeSchema.class, AttributeMapper.class})
+@PrepareForTest({SCIMGroupHandler.class, IdentityUtil.class, SCIMUserSchemaExtensionBuilder.class,
+SCIMAttributeSchema.class, AttributeMapper.class, ClaimMetadataHandler.class})
 @PowerMockIgnore("java.sql.*")
 public class SCIMUserManagerTest extends PowerMockTestCase {
 
@@ -79,6 +88,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Mock
     private User mockedUser;
+
+    @Mock
+    private ClaimMetadataHandler mockClaimMetadataHandler;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -164,7 +176,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedRealmConfig.getEveryOneRoleName()).thenReturn("roleName");
         when(mockedUserStoreManager.getTenantId()).thenReturn(1234567);
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
-
+        CommonTestUtils.initPrivilegedCarbonContext(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        mockStatic(ClaimMetadataHandler.class);
+        when(ClaimMetadataHandler.getInstance()).thenReturn(mockClaimMetadataHandler);
+        when(mockClaimMetadataHandler.getMappingsFromOtherDialectToCarbon(anyString(), anySet(), anyString()))
+                .thenReturn(new HashSet<ExternalClaim>());
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
         assertNotNull(scimUserManager.getMe("testUserName", required));
     }

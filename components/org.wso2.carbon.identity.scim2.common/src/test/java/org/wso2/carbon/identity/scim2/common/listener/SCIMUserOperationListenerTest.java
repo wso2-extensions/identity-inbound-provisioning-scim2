@@ -398,11 +398,27 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
     @Test(dataProvider = "testSCIMAttributesData")
     public void testGetSCIMAttributes(Map<String, String> claimsMap) throws Exception {
+        mockStatic(SCIMCommonUtils.class);
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, "http://wso2.org/claims/created");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, "http://wso2.org/claims/modified");
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, "http://wso2.org/claims/username");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, "http://wso2.org/claims/resourceType");
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         assertNotNull(scimUserOperationListener.getSCIMAttributes(userName, claimsMap));
     }
 
     @Test(dataProvider = "testSCIMAttributesData")
     public void testPopulateSCIMAttributes(Map<String, String> claimsMap) throws Exception {
+        mockStatic(SCIMCommonUtils.class);
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, "http://wso2.org/claims/created");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, "http://wso2.org/claims/modified");
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, "http://wso2.org/claims/username");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, "http://wso2.org/claims/resourceType");
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         assertNotNull(scimUserOperationListener.populateSCIMAttributes(userName, claimsMap));
     }
 

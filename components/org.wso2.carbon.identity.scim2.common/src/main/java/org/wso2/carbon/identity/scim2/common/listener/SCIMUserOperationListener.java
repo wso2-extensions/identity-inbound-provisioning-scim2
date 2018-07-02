@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.listener;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
@@ -401,25 +402,42 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             attributes = new HashMap<>();
         }
 
-        Pattern pattern = Pattern.compile("urn:.*scim:schemas:core:.\\.0:id");
-        boolean containsScimIdClaim = false;
-        for (String claimUri : attributes.keySet()) {
-            if (pattern.matcher(claimUri).matches()) {
-                containsScimIdClaim = true;
-                break;
-            }
-        }
-        if (!containsScimIdClaim) {
-            String id = UUID.randomUUID().toString();
-            attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
-        }
+        try {
+            Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
+            String userIdLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.ID_URI);
+            String createdLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.CREATED_URI);
+            String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
+            String usernameLocalClaimUri = scimToLocalMappings.get(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
+            String resourceTypeLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants
+                    .RESOURCE_TYPE_URI);
 
-        Date date = new Date();
-        String createdDate = AttributeUtil.formatDateTime(date);
-        attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
-        attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
-        attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
-        attributes.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, SCIMConstants.USER);
+            Pattern pattern = Pattern.compile("urn:.*scim:schemas:core:.\\.0:id");
+            boolean containsScimIdClaim = false;
+            for (String claimUri : attributes.keySet()) {
+                if (pattern.matcher(claimUri).matches()) {
+                    containsScimIdClaim = true;
+                    break;
+                }
+                if (StringUtils.equals(claimUri, userIdLocalClaimUri)) {
+                    containsScimIdClaim = true;
+                    break;
+                }
+            }
+            if (!containsScimIdClaim) {
+                String id = UUID.randomUUID().toString();
+                attributes.put(userIdLocalClaimUri, id);
+            }
+
+            Date date = new Date();
+            String createdDate = AttributeUtil.formatDateTime(date);
+            attributes.put(createdLocalClaimUri, createdDate);
+            attributes.put(modifiedLocalClaimUri, createdDate);
+            attributes.put(usernameLocalClaimUri, userName);
+            attributes.put(resourceTypeLocalClaimUri, SCIMConstants.USER);
+
+        } catch (UserStoreException ex) {
+            log.error("Error occurred while retrieving SCIM-to-Local claims map.", ex);
+        }
 
         return attributes;
     }
