@@ -236,7 +236,8 @@ public class SCIMGroupHandler {
      * @return list of SCIM groups
      * @throws IdentitySCIMException
      */
-    public String[] getGroupListFromAttributeName(String attributeName, String searchAttribute) throws IdentitySCIMException {
+    public String[] getGroupListFromAttributeName(String attributeName, String searchAttribute)
+            throws IdentitySCIMException {
 
         GroupDAO groupDAO = new GroupDAO();
         return groupDAO.getGroupNameList(attributeName, searchAttribute, this.tenantId);

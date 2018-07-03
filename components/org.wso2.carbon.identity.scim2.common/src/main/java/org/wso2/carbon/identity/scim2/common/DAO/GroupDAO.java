@@ -325,42 +325,46 @@ public class GroupDAO {
      * @return list of SCIM groups
      * @throws IdentitySCIMException
      */
-    public String[] getGroupNameList(String attributeName, String searchAttribute, Integer tenantId)
+    public String[] getGroupNameList(String searchAttributeName, String searchAttributeValue, Integer tenantId)
             throws IdentitySCIMException {
 
         List<String> roleList = new ArrayList<>();
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
-        PreparedStatement prepStmt = null;
-        ResultSet rSet = null;
 
-        try {
-            prepStmt = connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
+        try ( PreparedStatement prepStmt =
+                      connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE)) {
+
             prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, attributeName);
-            prepStmt.setString(3, searchAttribute);
+            prepStmt.setString(2, searchAttributeName);
+            prepStmt.setString(3, searchAttributeValue);
 
-            rSet = prepStmt.executeQuery();
-            while (rSet.next()) {
-                if (StringUtils.isNotEmpty(rSet.getString(1))) {
-                    if (rSet.getString(1).contains(CarbonConstants.DOMAIN_SEPARATOR)) {
-                        String[] parts = rSet.getString(1).split(CarbonConstants.DOMAIN_SEPARATOR);
-                        roleList.add(parts[parts.length - 1]);
-                    } else {
-                        roleList.add(rSet.getString(1));
+            try (ResultSet rSet = prepStmt.executeQuery()){
+                while (rSet.next()) {
+                    String roleName = rSet.getString(1);
+                    if (StringUtils.isNotEmpty(roleName)) {
+                        if (roleName.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+                            String[] parts = roleName.split(CarbonConstants.DOMAIN_SEPARATOR);
+                            roleList.add(parts[parts.length - 1]);
+                        } else {
+                            roleList.add(roleName);
+                        }
                     }
                 }
+            }
+            catch (SQLException e) {
+                log.error("Error when executing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
+                throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
+                        "persistence store.", e);
             }
 
         } catch (SQLException e) {
             log.error("Error when executing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
             throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
                     "persistence store.", e);
-        } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, rSet, prepStmt);
         }
 
-        return roleList.toArray(new String[0]);
+        return roleList.toArray(new String[roleList.size()]);
     }
 
 }

@@ -461,7 +461,7 @@ public class SCIMUserManager implements UserManager {
             String[] userNames = null;
 
             if (isNotGroupFilteringSupported(filterOperation)) {
-                String error = "Filter operator "+ filterOperation +" is not implemented non group filtering";
+                String error = "System does not support filter operator "+ filterOperation;
                 throw new NotImplementedException(error);
             }
 
@@ -1529,12 +1529,14 @@ public class SCIMUserManager implements UserManager {
             List<String> fullRoleList = new ArrayList<>();
             List<String> currentRoleList;
 
-            for (String userName : userList) {
-                String[] roles = carbonUM.getRoleListOfUser(userName);
-                currentRoleList = Arrays.asList(roles);
-                fullRoleList.addAll(currentRoleList);
+            if (userList != null) {
+                for (String userName : userList) {
+                    String[] roles = carbonUM.getRoleListOfUser(userName);
+                    currentRoleList = Arrays.asList(roles);
+                    fullRoleList.addAll(currentRoleList);
+                }
             }
-            userRoleList = fullRoleList.toArray(new String[0]);
+            userRoleList = fullRoleList.toArray(new String[fullRoleList.size()]);
 
         } else if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI)) {
             userRoleList = getRoleNames(filterOperation, attributeValue);
