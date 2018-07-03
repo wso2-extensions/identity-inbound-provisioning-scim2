@@ -21,7 +21,7 @@
         <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
         <artifactId>identity-inbound-provisioning-scim2</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>1.2.1-SNAPSHOT</version>
+        <version>1.2.2-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -105,6 +105,14 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.application.common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.provisioning</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.claim.metadata.mgt</artifactId>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>
@@ -192,6 +200,8 @@
 
                             org.wso2.carbon.identity.base; version="${identity.framework.version}",
                             org.wso2.carbon.identity.core.*; version="${identity.framework.version}",
+                            org.wso2.carbon.identity.provisioning.*; version="${identity.framework.version}",
+                            org.wso2.carbon.identity.claim.metadata.mgt.*; version="${identity.framework.version}",
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.scim2.common.internal,
