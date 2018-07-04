@@ -461,7 +461,7 @@ public class SCIMUserManager implements UserManager {
             String[] userNames = null;
 
             if (isNotGroupFilteringSupported(filterOperation)) {
-                String error = "System does not support filter operator "+ filterOperation;
+                String error = "System does not support filter operator " + filterOperation;
                 throw new NotImplementedException(error);
             }
 
@@ -859,8 +859,8 @@ public class SCIMUserManager implements UserManager {
         String filterOperation = ((ExpressionNode)node).getOperation();
         String attributeValue = ((ExpressionNode)node).getValue();
 
-        if(isNotGroupFilteringSupported(filterOperation)){
-            String error = "Filter operator "+ filterOperation +" is not implemented";
+        if (isNotGroupFilteringSupported(filterOperation)) {
+            String error = "Filter operator " + filterOperation + " is not implemented";
             throw new NotImplementedException(error);
         }
 
@@ -911,7 +911,7 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException("Error in retrieving SCIM Group.", e);
         }
         //set the totalResults value in index 0
-        filteredGroups.set(0, filteredGroups.size()-1);
+        filteredGroups.set(0, filteredGroups.size() - 1);
         return filteredGroups;
     }
 
