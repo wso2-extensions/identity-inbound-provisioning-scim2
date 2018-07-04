@@ -258,9 +258,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     public Object[][] groupNameWithFilters() throws Exception {
 
         return new Object[][]{
-                {"filter "+SCIMConstants.CommonSchemaConstants.CREATED_URI+" eq 2018/12/01",
+                {"filter " + SCIMConstants.CommonSchemaConstants.CREATED_URI + " eq 2018/12/01",
                         "testRole", "testDomainName"},
-                {"filter "+SCIMConstants.GroupSchemaConstants.DISPLAY_URI+" eq testUser",
+                {"filter " + SCIMConstants.GroupSchemaConstants.DISPLAY_URI + " eq testUser",
                         "testRole", "testDomainName"}
         };
     }

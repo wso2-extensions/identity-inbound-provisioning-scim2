@@ -332,14 +332,14 @@ public class GroupDAO {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
 
-        try ( PreparedStatement prepStmt =
-                      connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE)) {
+        try (PreparedStatement prepStmt =
+                     connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE)) {
 
             prepStmt.setInt(1, tenantId);
             prepStmt.setString(2, searchAttributeName);
             prepStmt.setString(3, searchAttributeValue);
 
-            try (ResultSet rSet = prepStmt.executeQuery()){
+            try (ResultSet rSet = prepStmt.executeQuery()) {
                 while (rSet.next()) {
                     String roleName = rSet.getString(1);
                     if (StringUtils.isNotEmpty(roleName)) {
@@ -351,8 +351,7 @@ public class GroupDAO {
                         }
                     }
                 }
-            }
-            catch (SQLException e) {
+            } catch (SQLException e) {
                 log.error("Error when executing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
                 throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
                         "persistence store.", e);
