@@ -44,7 +44,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
-import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
@@ -460,8 +459,8 @@ public class SCIMUserManager implements UserManager {
         try {
             String[] userNames = null;
 
-            if (isNotGroupFilteringSupported(filterOperation)) {
-                String error = "System does not support filter operator " + filterOperation;
+            if (isNotFilteringSupported(filterOperation)) {
+                String error = "System does not support filter operator: " + filterOperation;
                 throw new NotImplementedException(error);
             }
 
@@ -859,8 +858,8 @@ public class SCIMUserManager implements UserManager {
         String filterOperation = ((ExpressionNode)node).getOperation();
         String attributeValue = ((ExpressionNode)node).getValue();
 
-        if (isNotGroupFilteringSupported(filterOperation)) {
-            String error = "Filter operator " + filterOperation + " is not implemented";
+        if (isNotFilteringSupported(filterOperation)) {
+            String error = "System does not support filter operator: " + filterOperation;
             throw new NotImplementedException(error);
         }
 
@@ -1463,7 +1462,7 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private boolean isNotGroupFilteringSupported(String filterOperation) {
+    private boolean isNotFilteringSupported(String filterOperation) {
 
         return !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)
                 && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)

@@ -329,9 +329,7 @@ public class GroupDAO {
             throws IdentitySCIMException {
 
         List<String> roleList = new ArrayList<>();
-
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-
             try (PreparedStatement prepStmt =
                          connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE)) {
 
@@ -351,22 +349,13 @@ public class GroupDAO {
                             }
                         }
                     }
-                } catch (SQLException e) {
-                    log.error("Error when executing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
-                    throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
-                            "persistence store.", e);
                 }
-
-            } catch (SQLException e) {
-                log.error("Error when preparing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
-                throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
-                        "persistence store.", e);
             }
         } catch (SQLException e) {
-            log.error("Error when retrieving the connection : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
-            throw new IdentitySCIMException("Error when retrieving the connection ", e);
+            log.error("Error when executing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
+                    "persistence store.", e);
         }
         return roleList.toArray(new String[roleList.size()]);
     }
-
 }
