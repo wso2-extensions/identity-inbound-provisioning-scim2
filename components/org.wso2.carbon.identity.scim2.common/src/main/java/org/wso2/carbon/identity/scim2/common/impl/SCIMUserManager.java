@@ -872,30 +872,32 @@ public class SCIMUserManager implements UserManager {
         filteredGroups.add(0);
         try {
             String[] roleList = getGroupList(attributeName, filterOperation, attributeValue);
-            for (String roleName : roleList) {
-                if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
-                    //skip internal roles
-                    if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName)) ||
-                            UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration()) ||
-                            UserCoreUtil.isPrimaryAdminRole(roleName, carbonUM.getRealmConfiguration())) {
-                        continue;
-                    }
-                    /**construct the group name with domain -if not already provided, in order to support
-                     multiple user store feature with SCIM.**/
-                    String groupNameWithDomain = null;
-                    if (roleName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
-                        groupNameWithDomain = roleName;
+            if (roleList != null) {
+                for (String roleName : roleList) {
+                    if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
+                        //skip internal roles
+                        if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName)) ||
+                                UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration()) ||
+                                UserCoreUtil.isPrimaryAdminRole(roleName, carbonUM.getRealmConfiguration())) {
+                            continue;
+                        }
+                        /**construct the group name with domain -if not already provided, in order to support
+                         multiple user store feature with SCIM.**/
+                        String groupNameWithDomain = null;
+                        if (roleName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
+                            groupNameWithDomain = roleName;
+                        } else {
+                            groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                                    + roleName;
+                        }
+                        Group group = getGroupWithName(groupNameWithDomain);
+                        filteredGroups.add(group);
                     } else {
-                        groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
-                                + roleName;
+                        //returning null will send a resource not found error to client by Charon.
+                        filteredGroups.clear();
+                        filteredGroups.add(0);
+                        return filteredGroups;
                     }
-                    Group group = getGroupWithName(groupNameWithDomain);
-                    filteredGroups.add(group);
-                } else {
-                    //returning null will send a resource not found error to client by Charon.
-                    filteredGroups.clear();
-                    filteredGroups.add(0);
-                    return filteredGroups;
                 }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
@@ -1535,6 +1537,11 @@ public class SCIMUserManager implements UserManager {
                     fullRoleList.addAll(currentRoleList);
                 }
             }
+            Set<String> hs = new HashSet<>();
+            hs.addAll(fullRoleList);
+            fullRoleList.clear();
+            fullRoleList.addAll(hs);
+
             userRoleList = fullRoleList.toArray(new String[fullRoleList.size()]);
 
         } else if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI)) {
@@ -1542,6 +1549,7 @@ public class SCIMUserManager implements UserManager {
         } else {
             userRoleList = getGroupNamesFromDB(attributeName, filterOperation, attributeValue);
         }
+
         return userRoleList;
     }
 
