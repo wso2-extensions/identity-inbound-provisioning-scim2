@@ -79,7 +79,6 @@ public class SCIMUserManager implements UserManager {
     private ClaimManager carbonClaimManager = null;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
-    private static final String INTERNAL = "internal";
 
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
         carbonUM = carbonUserStoreManager;
@@ -873,30 +872,32 @@ public class SCIMUserManager implements UserManager {
         filteredGroups.add(0);
         try {
             String[] roleList = getGroupList(attributeName, filterOperation, attributeValue);
-            for (String roleName : roleList) {
-                if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
-                    //skip internal roles
-                    if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName)) ||
-                            UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration()) ||
-                            UserCoreUtil.isPrimaryAdminRole(roleName, carbonUM.getRealmConfiguration())) {
-                        continue;
-                    }
-                    /**construct the group name with domain -if not already provided, in order to support
-                     multiple user store feature with SCIM.**/
-                    String groupNameWithDomain = null;
-                    if (roleName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
-                        groupNameWithDomain = roleName;
+            if (roleList != null) {
+                for (String roleName : roleList) {
+                    if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
+                        //skip internal roles
+                        if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName)) ||
+                                UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration()) ||
+                                UserCoreUtil.isPrimaryAdminRole(roleName, carbonUM.getRealmConfiguration())) {
+                            continue;
+                        }
+                        /**construct the group name with domain -if not already provided, in order to support
+                         multiple user store feature with SCIM.**/
+                        String groupNameWithDomain = null;
+                        if (roleName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
+                            groupNameWithDomain = roleName;
+                        } else {
+                            groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                                    + roleName;
+                        }
+                        Group group = getGroupWithName(groupNameWithDomain);
+                        filteredGroups.add(group);
                     } else {
-                        groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
-                                + roleName;
+                        //returning null will send a resource not found error to client by Charon.
+                        filteredGroups.clear();
+                        filteredGroups.add(0);
+                        return filteredGroups;
                     }
-                    Group group = getGroupWithName(groupNameWithDomain);
-                    filteredGroups.add(group);
-                } else {
-                    //returning null will send a resource not found error to client by Charon.
-                    filteredGroups.clear();
-                    filteredGroups.add(0);
-                    return filteredGroups;
                 }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
@@ -1581,26 +1582,8 @@ public class SCIMUserManager implements UserManager {
         } else {
             userRoleList = getGroupNamesFromDB(attributeName, filterOperation, attributeValue);
         }
-        userRoleList = bypassInternalRoles(userRoleList);
 
         return userRoleList;
-    }
-
-    /**
-     * remove internal roles from the group list
-     * @param userRoleList user role list
-     * @return list of roles without internal roles
-     */
-    private String[] bypassInternalRoles(String[] userRoleList) {
-        List<String> resultWithoutInternalRoles = new ArrayList<>();
-        if (userRoleList != null) {
-            for (String userRole : userRoleList) {
-                if (!userRole.toLowerCase().contains(INTERNAL)) {
-                    resultWithoutInternalRoles.add(userRole);
-                }
-            }
-        }
-        return resultWithoutInternalRoles.toArray(new String[resultWithoutInternalRoles.size()]);
     }
 
     /**
