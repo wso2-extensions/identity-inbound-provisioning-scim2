@@ -79,6 +79,7 @@ public class SCIMUserManager implements UserManager {
     private ClaimManager carbonClaimManager = null;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
+    private static final String INTERNAL = "internal";
 
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
         carbonUM = carbonUserStoreManager;
@@ -872,32 +873,30 @@ public class SCIMUserManager implements UserManager {
         filteredGroups.add(0);
         try {
             String[] roleList = getGroupList(attributeName, filterOperation, attributeValue);
-            if (roleList != null) {
-                for (String roleName : roleList) {
-                    if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
-                        //skip internal roles
-                        if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName)) ||
-                                UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration()) ||
-                                UserCoreUtil.isPrimaryAdminRole(roleName, carbonUM.getRealmConfiguration())) {
-                            continue;
-                        }
-                        /**construct the group name with domain -if not already provided, in order to support
-                         multiple user store feature with SCIM.**/
-                        String groupNameWithDomain = null;
-                        if (roleName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
-                            groupNameWithDomain = roleName;
-                        } else {
-                            groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
-                                    + roleName;
-                        }
-                        Group group = getGroupWithName(groupNameWithDomain);
-                        filteredGroups.add(group);
-                    } else {
-                        //returning null will send a resource not found error to client by Charon.
-                        filteredGroups.clear();
-                        filteredGroups.add(0);
-                        return filteredGroups;
+            for (String roleName : roleList) {
+                if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
+                    //skip internal roles
+                    if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName)) ||
+                            UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration()) ||
+                            UserCoreUtil.isPrimaryAdminRole(roleName, carbonUM.getRealmConfiguration())) {
+                        continue;
                     }
+                    /**construct the group name with domain -if not already provided, in order to support
+                     multiple user store feature with SCIM.**/
+                    String groupNameWithDomain = null;
+                    if (roleName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
+                        groupNameWithDomain = roleName;
+                    } else {
+                        groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                                + roleName;
+                    }
+                    Group group = getGroupWithName(groupNameWithDomain);
+                    filteredGroups.add(group);
+                } else {
+                    //returning null will send a resource not found error to client by Charon.
+                    filteredGroups.clear();
+                    filteredGroups.add(0);
+                    return filteredGroups;
                 }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
@@ -1464,6 +1463,11 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    /**
+     * check whether the filtering is supported
+     * @param filterOperation operator use for filtering
+     * @return boolean to check whether operator is supported
+     */
     private boolean isNotFilteringSupported(String filterOperation) {
 
         return !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)
@@ -1485,6 +1489,13 @@ public class SCIMUserManager implements UserManager {
         return userNames;
     }
 
+    /**
+     * get the search value after appending the delimiters
+     * @param filterOperation operator value
+     * @param attributeValue search value
+     * @param delimiter delimiter for based on search type
+     * @return search attribute
+     */
     private String getSearchAttribute(String filterOperation, String attributeValue, String delimiter) {
 
         String searchAttribute = null;
@@ -1500,6 +1511,14 @@ public class SCIMUserManager implements UserManager {
         return searchAttribute;
     }
 
+    /**
+     * get list of roles that matches the search criteria
+     * @param filterOperation operator value
+     * @param attributeValue search value
+     * @return list of role names
+     * @throws org.wso2.carbon.user.core
+    .UserStoreException
+     */
     private String[] getRoleNames(String filterOperation, String attributeValue) throws org.wso2.carbon.user.core
             .UserStoreException {
 
@@ -1508,6 +1527,14 @@ public class SCIMUserManager implements UserManager {
                 true, true);
     }
 
+    /**
+     * get list of user that matches the search criteria
+     * @param attributeName field name for search
+     * @param filterOperation operator
+     * @param attributeValue search value
+     * @return list of users
+     * @throws org.wso2.carbon.user.core.UserStoreException
+     */
     private String[] getUserNames(String attributeName, String filterOperation, String attributeValue)
             throws org.wso2.carbon.user.core.UserStoreException {
 
@@ -1515,6 +1542,15 @@ public class SCIMUserManager implements UserManager {
         return carbonUM.getUserList(attributeName, searchAttribute, UserCoreConstants.DEFAULT_PROFILE);
     }
 
+    /**
+     * get the list of groups that matches the search criteria
+     * @param attributeName attribute which is used to search
+     * @param filterOperation operator value
+     * @param attributeValue search value
+     * @return list of user groups
+     * @throws org.wso2.carbon.user.core.UserStoreException
+     * @throws IdentitySCIMException
+     */
     private String[] getGroupList(String attributeName, String filterOperation, String attributeValue)
             throws org.wso2.carbon.user.core.UserStoreException, IdentitySCIMException {
 
@@ -1527,7 +1563,7 @@ public class SCIMUserManager implements UserManager {
             } else {
                 userList = getUserNames(SCIMConstants.CommonSchemaConstants.ID_URI, filterOperation, attributeValue);
             }
-            List<String> fullRoleList = new ArrayList<>();
+            Set<String> fullRoleList = new HashSet<>();
             List<String> currentRoleList;
 
             if (userList != null) {
@@ -1537,10 +1573,6 @@ public class SCIMUserManager implements UserManager {
                     fullRoleList.addAll(currentRoleList);
                 }
             }
-            Set<String> hs = new HashSet<>();
-            hs.addAll(fullRoleList);
-            fullRoleList.clear();
-            fullRoleList.addAll(hs);
 
             userRoleList = fullRoleList.toArray(new String[fullRoleList.size()]);
 
@@ -1549,10 +1581,37 @@ public class SCIMUserManager implements UserManager {
         } else {
             userRoleList = getGroupNamesFromDB(attributeName, filterOperation, attributeValue);
         }
+        userRoleList = bypassInternalRoles(userRoleList);
 
         return userRoleList;
     }
 
+    /**
+     * remove internal roles from the group list
+     * @param userRoleList user role list
+     * @return list of roles without internal roles
+     */
+    private String[] bypassInternalRoles(String[] userRoleList) {
+        List<String> resultWithoutInternalRoles = new ArrayList<>();
+        if (userRoleList != null) {
+            for (String userRole : userRoleList) {
+                if (!userRole.toLowerCase().contains(INTERNAL)) {
+                    resultWithoutInternalRoles.add(userRole);
+                }
+            }
+        }
+        return resultWithoutInternalRoles.toArray(new String[resultWithoutInternalRoles.size()]);
+    }
+
+    /**
+     * return when search using meta data; list of groups
+     * @param attributeName attribute which is used to search
+     * @param filterOperation operator value
+     * @param attributeValue search value
+     * @return list of groups
+     * @throws org.wso2.carbon.user.core.UserStoreException
+     * @throws IdentitySCIMException
+     */
     private String[] getGroupNamesFromDB(String attributeName, String filterOperation, String attributeValue)
             throws org.wso2.carbon.user.core.UserStoreException, IdentitySCIMException {
 

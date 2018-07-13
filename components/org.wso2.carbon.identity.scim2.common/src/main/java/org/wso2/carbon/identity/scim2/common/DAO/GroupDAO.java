@@ -341,7 +341,7 @@ public class GroupDAO {
                     while (rSet.next()) {
                         String roleName = rSet.getString(1);
                         if (StringUtils.isNotEmpty(roleName)) {
-                            if (!roleName.contains("Internal") && roleName.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+                            if (roleName.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
                                 String[] parts = roleName.split(CarbonConstants.DOMAIN_SEPARATOR);
                                 roleList.add(parts[parts.length - 1]);
                             } else {
