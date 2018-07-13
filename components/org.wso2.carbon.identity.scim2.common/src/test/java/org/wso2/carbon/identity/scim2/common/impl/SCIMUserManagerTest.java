@@ -41,18 +41,28 @@ import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.schema.SCIMAttributeSchema;
+import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
+import org.wso2.charon3.core.utils.codeutils.Node;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.HashSet;
 import java.util.Map;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -90,7 +100,14 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     private User mockedUser;
 
     @Mock
+    private RealmConfiguration mockRealmConfig;
+
+    @Mock
+    private IdentityUtil mockIdentityUtil;
+
+    @Mock
     private ClaimMetadataHandler mockClaimMetadataHandler;
+
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -235,6 +252,52 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         return new Object[][]{
                 {"testRole", "testDomainName"}
         };
+    }
+
+    @DataProvider(name = "groupNameWithFilters")
+    public Object[][] groupNameWithFilters() throws Exception {
+
+        return new Object[][]{
+                {"filter " + SCIMConstants.CommonSchemaConstants.CREATED_URI + " eq 2018/12/01",
+                        "testRole", "testDomainName"},
+                {"filter " + SCIMConstants.GroupSchemaConstants.DISPLAY_URI + " eq testUser",
+                        "testRole", "testDomainName"}
+        };
+    }
+
+    @Test(dataProvider = "groupNameWithFilters")
+    public void testListGroupsWithFilter(String filter, String roleName, String userStoreDomain) throws Exception {
+
+        ExpressionNode node = new ExpressionNode(filter);
+        List<String> list = new ArrayList<>();
+        list.add(roleName);
+        Map<String, Boolean> requiredAttributes = null;
+        whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
+        when(mockedGroupDAO.getGroupNameList(anyString(), anyString(), anyInt())).thenReturn(list.toArray(new String[0]));
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
+
+        when(mockedUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockRealmConfig);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getUserList(anyString(), anyString(),
+                anyString())).thenReturn(list.toArray(new String[0]));
+        when(mockedUserStoreManager.getRoleListOfUser(anyString())).thenReturn(list.toArray(new String[0]));
+
+        whenNew(RealmConfiguration.class).withAnyArguments().thenReturn(mockRealmConfig);
+        when(mockRealmConfig.getAdminRoleName()).thenReturn("admin");
+        when(mockRealmConfig.isPrimary()).thenReturn(false);
+        when(mockRealmConfig.getUserStoreProperty(anyString())).thenReturn("value");
+        when(mockRealmConfig.getEveryOneRoleName()).thenReturn("admin");
+
+        when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("value");
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
+                requiredAttributes);
+
+        assertEquals(roleList.size(), 2);
+
     }
 
     @ObjectFactory
