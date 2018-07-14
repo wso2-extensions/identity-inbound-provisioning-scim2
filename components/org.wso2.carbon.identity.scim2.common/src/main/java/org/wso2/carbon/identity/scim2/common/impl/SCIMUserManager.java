@@ -463,8 +463,8 @@ public class SCIMUserManager implements UserManager {
         ClaimMapping[] userClaims;
         ClaimMapping[] coreClaims;
         ClaimMapping[] extensionClaims = null;
-
         int totalUserCount = 0;
+
         try {
             String[] userNames = null;
             while (carbonUM != null) {
@@ -497,6 +497,7 @@ public class SCIMUserManager implements UserManager {
                             getUserList(getCondition(node, attributes), domainName, UserCoreConstants.DEFAULT_PROFILE,
                                     limit, offset, sortBy, sortOrder);
                 }
+
                 if (userNames == null || userNames.length == 0) {
                     if (log.isDebugEnabled()) {
                         log.debug("Users does not exits for given multi attributes filter in the system.");
@@ -505,6 +506,7 @@ public class SCIMUserManager implements UserManager {
                 } else {
                     totalUserCount += userNames.length;
 //                userNames = paginateUsers(userNames, limit, offset);
+
                     //get claims related to SCIM claim dialect
                     coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
                     userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
@@ -538,7 +540,6 @@ public class SCIMUserManager implements UserManager {
                     } else {
                         addSCIMUsers(filteredUsers, userNames, requiredClaims);
                     }
-                    log.info("Users filtered through SCIM for the multi attributes filter. ");
                 }
                 carbonUM = carbonUM.getSecondaryUserStoreManager();
             }
