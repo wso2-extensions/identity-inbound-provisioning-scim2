@@ -21,17 +21,21 @@ package org.wso2.carbon.identity.scim2.common.DAO;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -316,5 +320,44 @@ public class GroupDAO {
             throw new IdentitySCIMException("Error when updating role name of the role: " + oldRoleName);
         }
     }
+    /**
+     * Lists the Groups created from SCIM with a attribute filter and search regex
+     *
+     * @return list of SCIM groups
+     * @throws IdentitySCIMException
+     */
+    public String[] getGroupNameList(String searchAttributeName, String searchAttributeValue, Integer tenantId)
+            throws IdentitySCIMException {
 
+        List<String> roleList = new ArrayList<>();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            try (PreparedStatement prepStmt =
+                         connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE)) {
+
+                prepStmt.setInt(1, tenantId);
+                prepStmt.setString(2, searchAttributeName);
+                prepStmt.setString(3, searchAttributeValue);
+
+                try (ResultSet rSet = prepStmt.executeQuery()) {
+                    while (rSet.next()) {
+                        String roleName = rSet.getString(1);
+                        if (StringUtils.isNotEmpty(roleName)) {
+                            if (!roleName.toLowerCase().contains(UserCoreConstants.INTERNAL_DOMAIN.toLowerCase())
+                                    && roleName.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+                                String[] parts = roleName.split(CarbonConstants.DOMAIN_SEPARATOR);
+                                roleList.add(parts[parts.length - 1]);
+                            } else {
+                                roleList.add(roleName);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error when executing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
+                    "persistence store.", e);
+        }
+        return roleList.toArray(new String[roleList.size()]);
+    }
 }

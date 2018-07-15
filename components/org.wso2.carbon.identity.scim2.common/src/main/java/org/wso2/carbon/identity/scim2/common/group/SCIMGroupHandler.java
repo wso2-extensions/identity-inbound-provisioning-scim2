@@ -27,10 +27,14 @@ import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
+import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -226,7 +230,16 @@ public class SCIMGroupHandler {
         GroupDAO groupDAO = new GroupDAO();
         return groupDAO.listSCIMGroups();
     }
+    /**
+     * Lists the Groups created from SCIM with a attribute filter and search regex
+     *
+     * @return list of SCIM groups
+     * @throws IdentitySCIMException
+     */
+    public String[] getGroupListFromAttributeName(String attributeName, String searchAttribute)
+            throws IdentitySCIMException {
 
-
-
+        GroupDAO groupDAO = new GroupDAO();
+        return groupDAO.getGroupNameList(attributeName, searchAttribute, this.tenantId);
+    }
 }
