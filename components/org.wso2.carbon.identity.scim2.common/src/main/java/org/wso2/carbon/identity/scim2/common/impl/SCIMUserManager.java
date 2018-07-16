@@ -456,7 +456,7 @@ public class SCIMUserManager implements UserManager {
             String[] userNames = null;
             while (carbonUM != null) {
                 // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
-                if (carbonUM instanceof PaginatedUserStoreManager && carbonUM instanceof AbstractUserStoreManager) {
+                if (carbonUM instanceof AbstractUserStoreManager) {
 
                     String domainName = carbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
                     coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
