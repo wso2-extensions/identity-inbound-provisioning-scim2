@@ -494,7 +494,8 @@ public class SCIMUserManager implements UserManager {
                     totalUserCount += userNames.length;
 
                     Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
-                    List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
+                    List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(),
+                            requiredAttributes);
                     List<String> requiredClaimsInLocalDialect;
                     if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
                         scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
@@ -509,7 +510,8 @@ public class SCIMUserManager implements UserManager {
                     User[] scimUsers;
                     if (isPaginatedUserStoreAvailable()) {
                         if (carbonUM instanceof PaginatedUserStoreManager) {
-                            scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
+                            scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect,
+                                    scimToLocalClaimsMap);
                             filteredUsers.addAll(Arrays.asList(scimUsers));
                         } else {
                             addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
