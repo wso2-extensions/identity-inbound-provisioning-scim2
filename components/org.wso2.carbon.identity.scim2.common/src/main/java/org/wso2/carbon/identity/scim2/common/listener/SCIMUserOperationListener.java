@@ -162,7 +162,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPreSetUserClaimValues(String userName, Map<String, String> claims, String profileName,
                                            UserStoreManager userStoreManager) throws UserStoreException {
         try {
-            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled() || userStoreManager
+                    .isReadOnly()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
