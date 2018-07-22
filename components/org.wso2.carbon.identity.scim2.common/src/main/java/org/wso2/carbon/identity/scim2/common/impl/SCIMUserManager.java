@@ -39,11 +39,18 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.model.Condition;
+import org.wso2.carbon.user.core.model.ExpressionAttribute;
+import org.wso2.carbon.user.core.model.ExpressionCondition;
+import org.wso2.carbon.user.core.model.ExpressionOperation;
+import org.wso2.carbon.user.core.model.OperationalCondition;
+import org.wso2.carbon.user.core.model.OperationalOperation;
 import org.wso2.carbon.user.core.model.UserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
+import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
@@ -60,6 +67,7 @@ import org.wso2.charon3.core.utils.AttributeUtil;
 import org.wso2.charon3.core.utils.ResourceManagerUtil;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
+import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.util.ArrayList;
@@ -258,10 +266,11 @@ public class SCIMUserManager implements UserManager {
     public List<Object> listUsersWithGET(Node rootNode, int startIndex, int count, String sortBy,
                                          String sortOrder, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
-        if(sortBy != null || sortOrder != null) {
+
+        if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        } else if(rootNode != null) {
-            return filterUsers(rootNode, requiredAttributes, startIndex, count);
+        } else if (rootNode != null) {
+            return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder);
         } else {
             return listUsers(requiredAttributes);
         }
@@ -432,95 +441,91 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, int limit)
-            throws NotImplementedException, CharonException {
+    private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, int limit,
+                                     String sortBy, String sortOrder) throws CharonException {
 
-        if(node.getLeftNode() != null || node.getRightNode() != null){
-            String error = "Complex filters are not supported yet";
-            throw new NotImplementedException(error);
-        }
-
-        String attributeName = ((ExpressionNode)node).getAttributeValue();
-        String filterOperation = ((ExpressionNode)node).getOperation();
-        String attributeValue = ((ExpressionNode)node).getValue();
-
-        if (log.isDebugEnabled()) {
-            log.debug("Listing users by filter: " + attributeName + filterOperation +
-                    attributeValue);
-        }
         List<Object> filteredUsers = new ArrayList<>();
         //0th index is to store total number of results
         filteredUsers.add(0);
         ClaimMapping[] userClaims;
         ClaimMapping[] coreClaims;
         ClaimMapping[] extensionClaims = null;
+        int totalUserCount = 0;
 
-        int totalUserCount;
         try {
             String[] userNames = null;
+            while (carbonUM != null) {
+                // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
+                if (carbonUM instanceof AbstractUserStoreManager) {
 
-            if (isNotFilteringSupported(filterOperation)) {
-                String error = "System does not support filter operator: " + filterOperation;
-                throw new NotImplementedException(error);
-            }
-
-            if (!SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
-                //get the user name of the user with this id
-                userNames = getUserNames(attributeName, filterOperation, attributeValue);
-            } else {
-                if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
-                    userNames = carbonUM.getUserListOfRole(attributeValue);
-                } else if (carbonUM instanceof AbstractUserStoreManager) {
-                    String[] roleNames = getRoleNames(filterOperation, attributeValue);
-                    userNames = getUserListOfRoles(roleNames);
-                } else {
-                    String error = "Filter operator " + filterOperation + " is not supported by the user store.";
-                    throw new NotImplementedException(error);
-                }
-            }
-
-            if (userNames == null || userNames.length == 0) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Users with filter: " + attributeName + filterOperation +
-                            attributeValue + " does not exist in the system.");
-                }
-                return filteredUsers;
-            } else {
-                totalUserCount = userNames.length;
-                userNames = paginateUsers(userNames, limit, offset);
-
-                Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
-                List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
-                List<String> requiredClaimsInLocalDialect;
-                if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
-                    scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
-                    requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("SCIM to Local Claim mappings list is empty.");
+                    String domainName = carbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
+                    coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
+                    userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
+                    if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+                        extensionClaims = carbonClaimManager.getAllClaimMappings(
+                                SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
                     }
-                    requiredClaimsInLocalDialect = new ArrayList<>();
+                    Map<String, String> attributes = new HashMap<>();
+                    for (ClaimMapping claim : coreClaims) {
+                        attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
+                    }
+                    for (ClaimMapping claim : userClaims) {
+                        attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
+                    }
+                    if (extensionClaims != null) {
+                        for (ClaimMapping claim : extensionClaims) {
+                            attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
+                        }
+                    }
+                    if (log.isDebugEnabled()) {
+                        log.debug("Invoking the do get user list for domain: " + domainName);
+                    }
+                    userNames = ((PaginatedUserStoreManager) carbonUM).
+                            getUserList(getCondition(node, attributes), domainName, UserCoreConstants.DEFAULT_PROFILE,
+                                    limit, offset, sortBy, sortOrder);
                 }
 
-                User[] scimUsers;
-                if (isPaginatedUserStoreAvailable()) {
-                    if (carbonUM instanceof PaginatedUserStoreManager) {
-                        scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
-                        filteredUsers.addAll(Arrays.asList(scimUsers));
+                if (userNames == null || userNames.length == 0) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Users does not exits for given multi attributes filter in the system.");
+                    }
+                    return filteredUsers;
+                } else {
+                    totalUserCount += userNames.length;
+
+                    Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+                    List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(),
+                            requiredAttributes);
+                    List<String> requiredClaimsInLocalDialect;
+                    if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
+                        scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
+                        requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug("SCIM to Local Claim mappings list is empty.");
+                        }
+                        requiredClaimsInLocalDialect = new ArrayList<>();
+                    }
+
+                    User[] scimUsers;
+                    if (isPaginatedUserStoreAvailable()) {
+                        if (carbonUM instanceof PaginatedUserStoreManager) {
+                            scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect,
+                                    scimToLocalClaimsMap);
+                            filteredUsers.addAll(Arrays.asList(scimUsers));
+                        } else {
+                            addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
+                        }
                     } else {
                         addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                     }
-                } else {
-                    addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                 }
-                log.info("Users filtered through SCIM for the filter: " + attributeName + filterOperation +
-                        attributeValue);
+                carbonUM = carbonUM.getSecondaryUserStoreManager();
             }
             //set the total results
             filteredUsers.set(0, totalUserCount);
         } catch (UserStoreException | CharonException e) {
-            throw new CharonException("Error in filtering users by attribute name : " + attributeName + ", " +
-                    "attribute value : " + attributeValue + " and filter operation " + filterOperation, e);
+            throw new CharonException("Error in filtering users by multi attributes ", e);
         }
         return filteredUsers;
     }
@@ -541,6 +546,52 @@ public class SCIMUserManager implements UserManager {
                 continue;
             }
             filteredUsers.add(scimUser);
+        }
+    }
+
+    private Condition getCondition(Node node, Map<String, String> attributes) throws CharonException {
+
+        if (node instanceof ExpressionNode) {
+            String operation = ((ExpressionNode) node).getOperation();
+            String attributeName = ((ExpressionNode) node).getAttributeValue();
+            String attributeValue = ((ExpressionNode) node).getValue();
+
+            String conditionOperation;
+            String conditionAttributeName;
+
+            if (SCIMCommonConstants.EQ.equals(operation)) {
+                conditionOperation = ExpressionOperation.EQ.toString();
+            } else if (SCIMCommonConstants.SW.equals(operation)) {
+                conditionOperation = ExpressionOperation.SW.toString();
+            } else if (SCIMCommonConstants.EW.equals(operation)) {
+                conditionOperation = ExpressionOperation.EW.toString();
+            } else if (SCIMCommonConstants.CO.equals(operation)) {
+                conditionOperation = ExpressionOperation.CO.toString();
+            } else {
+                conditionOperation = operation;
+            }
+
+            if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
+                conditionAttributeName = ExpressionAttribute.ROLE.toString();
+            } else if (SCIMConstants.UserSchemaConstants.USER_NAME_URI.equals(attributeName)) {
+                conditionAttributeName = ExpressionAttribute.USERNAME.toString();
+            } else if (attributes.get(attributeName) != null) {
+                conditionAttributeName = attributes.get(attributeName);
+            } else {
+                throw new CharonException("Unsupported attribute: " + attributeName);
+            }
+            return new ExpressionCondition(conditionOperation, conditionAttributeName, attributeValue);
+        } else if (node instanceof OperationNode) {
+            Condition leftCondition = getCondition(node.getLeftNode(), attributes);
+            Condition rightCondition = getCondition(node.getRightNode(), attributes);
+            String operation = ((OperationNode) node).getOperation();
+            if (OperationalOperation.AND.toString().equalsIgnoreCase(operation)) {
+                return new OperationalCondition(OperationalOperation.AND.toString(), leftCondition, rightCondition);
+            } else {
+                throw new CharonException("Unsupported Operation: " + operation);
+            }
+        } else {
+            throw new CharonException("Unsupported Operation");
         }
     }
 
