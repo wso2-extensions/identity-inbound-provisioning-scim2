@@ -39,11 +39,18 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.model.Condition;
+import org.wso2.carbon.user.core.model.ExpressionAttribute;
+import org.wso2.carbon.user.core.model.ExpressionCondition;
+import org.wso2.carbon.user.core.model.ExpressionOperation;
+import org.wso2.carbon.user.core.model.OperationalCondition;
+import org.wso2.carbon.user.core.model.OperationalOperation;
 import org.wso2.carbon.user.core.model.UserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
+import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
@@ -60,6 +67,7 @@ import org.wso2.charon3.core.utils.AttributeUtil;
 import org.wso2.charon3.core.utils.ResourceManagerUtil;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
+import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.util.ArrayList;
@@ -261,8 +269,8 @@ public class SCIMUserManager implements UserManager {
 
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        } else if(rootNode != null) {
-            return filterUsers(rootNode, requiredAttributes, startIndex, count);
+        } else if (rootNode != null) {
+            return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
         } else {
             return listUsers(requiredAttributes);
         }
@@ -272,7 +280,8 @@ public class SCIMUserManager implements UserManager {
     public List<Object> listUsersWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
         return listUsersWithGET(searchRequest.getFilter(), searchRequest.getStartIndex(), searchRequest.getCount(),
-                searchRequest.getSortBy(), searchRequest.getSortOder(), requiredAttributes);
+                searchRequest.getSortBy(), searchRequest.getSortOder(), searchRequest.getDomainName(),
+                requiredAttributes);
     }
 
     private List<Object> listUsers(Map<String, Boolean> requiredAttributes) throws CharonException {
@@ -433,37 +442,30 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, int limit)
+    private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, int limit,
+                                     String sortBy, String sortOrder, String domainName)
             throws NotImplementedException, CharonException {
 
-        if(node.getLeftNode() != null || node.getRightNode() != null){
-            String error = "Complex filters are not supported yet";
-            throw new NotImplementedException(error);
-        }
-
-        String attributeName = ((ExpressionNode)node).getAttributeValue();
-        String filterOperation = ((ExpressionNode)node).getOperation();
-        String attributeValue = ((ExpressionNode)node).getValue();
-
-        if (log.isDebugEnabled()) {
-            log.debug("Listing users by filter: " + attributeName + filterOperation +
-                    attributeValue);
-        }
         List<Object> filteredUsers = new ArrayList<>();
         //0th index is to store total number of results
         filteredUsers.add(0);
-        ClaimMapping[] userClaims;
-        ClaimMapping[] coreClaims;
-        ClaimMapping[] extensionClaims = null;
+        String[] userNames;
 
-        int totalUserCount;
-        try {
-            String[] userNames = null;
+        if (node instanceof ExpressionNode) {
+            String attributeName = ((ExpressionNode) node).getAttributeValue();
+            String filterOperation = ((ExpressionNode) node).getOperation();
+            String attributeValue = ((ExpressionNode) node).getValue();
 
-            if (isNotFilteringSupported(filterOperation)) {
-                String error = "System does not support filter operator: " + filterOperation;
-                throw new NotImplementedException(error);
+            if (log.isDebugEnabled()) {
+                log.debug("Listing users by filter: " + attributeName + filterOperation +
+                        attributeValue);
             }
+
+            try {
+                if (isNotFilteringSupported(filterOperation)) {
+                    String error = "System does not support filter operator: " + filterOperation;
+                    throw new NotImplementedException(error);
+                }
 
                 if (!SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
                     //get the user name of the user with this id
@@ -496,41 +498,27 @@ public class SCIMUserManager implements UserManager {
                 filteredUsers.set(0, userNames.length);
                 filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
             } else {
-                totalUserCount = userNames.length;
-                userNames = paginateUsers(userNames, limit, offset);
-
-                Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
-                List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
-                List<String> requiredClaimsInLocalDialect;
-                if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
-                    scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
-                    requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("SCIM to Local Claim mappings list is empty.");
+                int totalUserCount = 0;
+                //If the pagination is not provided, ignore the provided domainName and perform filtering
+                //on all available user stores.
+                while (carbonUM != null) {
+                    // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
+                    if (carbonUM instanceof AbstractUserStoreManager) {
+                        domainName = carbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
+                        limit = UserCoreConstants.MAX_USER_ROLE_LIST;
+                        userNames = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit,
+                                sortBy, sortOrder, domainName);
+                        totalUserCount += userNames.length;
+                        filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
                     }
-                    requiredClaimsInLocalDialect = new ArrayList<>();
+                    carbonUM = carbonUM.getSecondaryUserStoreManager();
                 }
-
-                User[] scimUsers;
-                if (isPaginatedUserStoreAvailable()) {
-                    if (carbonUM instanceof PaginatedUserStoreManager) {
-                        scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
-                        filteredUsers.addAll(Arrays.asList(scimUsers));
-                    } else {
-                        addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
-                    }
-                } else {
-                    addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
-                }
-                log.info("Users filtered through SCIM for the filter: " + attributeName + filterOperation +
-                        attributeValue);
+                //set the total results
+                filteredUsers.set(0, totalUserCount);
             }
-            //set the total results
-            filteredUsers.set(0, totalUserCount);
-        } catch (UserStoreException | CharonException e) {
-            throw new CharonException("Error in filtering users by attribute name : " + attributeName + ", " +
-                    "attribute value : " + attributeValue + " and filter operation " + filterOperation, e);
+            return filteredUsers;
+        } else {
+            throw new CharonException("Unsupported Operation");
         }
     }
 
@@ -957,7 +945,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public List<Object> listGroupsWithGET(Node rootNode, int startIndex,
-                                          int count, String sortBy, String sortOrder,
+                                          int count, String sortBy, String sortOrder, String domainName,
                                           Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
         if(sortBy != null || sortOrder != null) {
@@ -1230,7 +1218,8 @@ public class SCIMUserManager implements UserManager {
     public List<Object> listGroupsWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
             throws BadRequestException, NotImplementedException, CharonException {
         return listGroupsWithGET(searchRequest.getFilter(), searchRequest.getStartIndex(), searchRequest.getCount(),
-                searchRequest.getSortBy(), searchRequest.getSortOder(), requiredAttributes);
+                searchRequest.getSortBy(), searchRequest.getSortOder(), searchRequest.getDomainName(),
+                requiredAttributes);
     }
 
 

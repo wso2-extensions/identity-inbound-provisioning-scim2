@@ -186,6 +186,7 @@ public class GroupResource extends AbstractResource {
         requestAttributes.put(SCIMProviderConstants.COUNT, count);
         requestAttributes.put(SCIMProviderConstants.SORT_BY, sortBy);
         requestAttributes.put(SCIMProviderConstants.SORT_ORDER, sortOrder);
+        requestAttributes.put(SCIMProviderConstants.DOMAIN, domainName);
         requestAttributes.put(SCIMProviderConstants.SEARCH, "0");
         return processRequest(requestAttributes);
     }
@@ -338,9 +339,10 @@ public class GroupResource extends AbstractResource {
 
                 String sortBy = requestAttributes.get(SCIMProviderConstants.SORT_BY);
                 String sortOrder = requestAttributes.get(SCIMProviderConstants.SORT_ORDER);
+                String domainName = requestAttributes.get(SCIMProviderConstants.DOMAIN);
 
                 scimResponse = groupResourceManager.listWithGET(userManager, filter, startIndex,
-                        count, sortBy, sortOrder, attributes, excludedAttributes);
+                        count, sortBy, sortOrder, domainName, attributes, excludedAttributes);
 
             } else if (GET.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager.get(id, userManager, attributes, excludedAttributes);

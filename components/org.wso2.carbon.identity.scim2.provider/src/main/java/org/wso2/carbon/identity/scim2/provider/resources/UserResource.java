@@ -205,7 +205,7 @@ public class UserResource extends AbstractResource {
             SCIMResponse scimResponse = null;
 
             scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
-                    sortBy, sortOrder, attribute, excludedAttributes);
+                    sortBy, sortOrder, domainName, attribute, excludedAttributes);
 
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
