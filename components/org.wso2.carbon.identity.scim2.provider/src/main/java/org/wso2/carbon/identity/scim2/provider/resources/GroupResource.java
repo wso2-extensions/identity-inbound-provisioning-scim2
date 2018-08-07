@@ -163,7 +163,8 @@ public class GroupResource extends AbstractResource {
                              @QueryParam(SCIMProviderConstants.START_INDEX) String startIndex,
                              @QueryParam(SCIMProviderConstants.COUNT) String count,
                              @QueryParam(SCIMProviderConstants.SORT_BY) String sortBy,
-                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder) {
+                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder,
+                             @QueryParam(SCIMProviderConstants.DOMAIN) String domainName) {
 
         String userName = SupportUtils.getAuthenticatedUsername();
         try {

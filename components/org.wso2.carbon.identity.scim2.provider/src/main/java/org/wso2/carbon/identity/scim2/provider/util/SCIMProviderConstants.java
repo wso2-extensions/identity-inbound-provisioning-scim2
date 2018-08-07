@@ -33,6 +33,7 @@ public class SCIMProviderConstants {
     public static final String APPLICATION__JSON = "application/json";
     public static final String ACCEPT_HEADER = "Accept";
     public static final String ID = "id";
+    public static final String DOMAIN = "domain";
 
     public static final String RESOURCE_STRING = "RESOURCE_STRING";
     public static final String HTTP_VERB = "HTTP_VERB";
