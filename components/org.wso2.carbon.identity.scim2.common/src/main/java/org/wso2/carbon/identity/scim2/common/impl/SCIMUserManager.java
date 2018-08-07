@@ -621,7 +621,8 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private List<Object> getFilteredUserDetails(String[] userNames, Map<String, Boolean> requiredAttributes) throws CharonException {
+    private List<Object> getFilteredUserDetails(String[] userNames, Map<String, Boolean> requiredAttributes)
+            throws CharonException {
 
         List<Object> filteredUsers = new ArrayList<>();
 
