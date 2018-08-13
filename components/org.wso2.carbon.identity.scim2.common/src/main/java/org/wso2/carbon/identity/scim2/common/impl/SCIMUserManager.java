@@ -442,6 +442,20 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    /**
+     * Filter users using multi-attribute filters or single attribute filters with pagination.
+     *
+     * @param node
+     * @param requiredAttributes
+     * @param offset
+     * @param limit
+     * @param sortBy
+     * @param sortOrder
+     * @param domainName
+     * @return
+     * @throws NotImplementedException
+     * @throws CharonException
+     */
     private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, int limit,
                                      String sortBy, String sortOrder, String domainName)
             throws NotImplementedException, CharonException {
@@ -451,20 +465,21 @@ public class SCIMUserManager implements UserManager {
         filteredUsers.add(0);
         String[] userNames;
 
+        //Handle single attribute search
         if (node instanceof ExpressionNode) {
             String attributeName = ((ExpressionNode) node).getAttributeValue();
             String filterOperation = ((ExpressionNode) node).getOperation();
             String attributeValue = ((ExpressionNode) node).getValue();
 
             if (log.isDebugEnabled()) {
-                log.debug("Listing users by filter: " + attributeName + filterOperation +
-                        attributeValue);
+                log.debug(String.format("Listing users by filter: %s %s %s",
+                        attributeName, filterOperation, attributeValue));
             }
 
             try {
                 if (isNotFilteringSupported(filterOperation)) {
-                    String error = "System does not support filter operator: " + filterOperation;
-                    throw new NotImplementedException(error);
+                    throw new NotImplementedException(String.format("System does not support filter operator: %s",
+                            filterOperation));
                 }
 
                 if (!SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
@@ -477,36 +492,73 @@ public class SCIMUserManager implements UserManager {
                         String[] roleNames = getRoleNames(filterOperation, attributeValue);
                         userNames = getUserListOfRoles(roleNames);
                     } else {
-                        String error = "Filter operator " + filterOperation + " is not supported by the user store.";
-                        throw new NotImplementedException(error);
+                        throw new NotImplementedException(String.format("Filter operator %s is not supported " +
+                                "by the user store.", filterOperation));
                     }
                 }
             } catch (UserStoreException e) {
-                throw new CharonException("Error in filtering users by attribute name : " + attributeName + ", " +
-                        "attribute value : " + attributeValue + " and filter operation " + filterOperation, e);
+                throw new CharonException(String.format("Error in filtering users by attribute name: %s, " +
+                                "attribute value: %s and filter operation %s", attributeName, attributeValue,
+                        filterOperation), e);
             }
+
             userNames = paginateUsers(userNames, limit, offset);
             filteredUsers.set(0, userNames.length);
             filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
             return filteredUsers;
 
         } else if (node instanceof OperationNode) {
-            //Support multi attribute filtering with pagination if found.
-            if (limit > 0) {
-                userNames = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit, sortBy,
+            // Support multi attribute filtering.
+            List<Object> xx = getMultiAttributeFilteredUsers(node, requiredAttributes, offset, limit, sortBy, sortOrder,
+                    domainName, filteredUsers);
+            return xx;
+        } else {
+            throw new CharonException("Unsupported Operation");
+        }
+    }
+
+    /**
+     * This method support multi-attribute filters with paginated search for user(s).
+     *
+     * @param node
+     * @param requiredAttributes
+     * @param offset
+     * @param limit
+     * @param sortBy
+     * @param sortOrder
+     * @param domainName
+     * @param filteredUsers
+     * @return
+     * @throws CharonException
+     */
+    private List<Object> getMultiAttributeFilteredUsers(Node node, Map<String, Boolean> requiredAttributes,
+                                                        int offset, int limit, String sortBy, String sortOrder,
+                                                        String domainName, List<Object> filteredUsers)
+            throws CharonException {
+
+        String[] userNames;
+
+        // Handle pagination.
+        if (limit > 0) {
+            userNames = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit, sortBy,
+                    sortOrder, domainName);
+            filteredUsers.set(0, userNames.length);
+            filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
+        } else {
+            int maxLimit = getMaxLimit();
+            if (StringUtils.isNotEmpty(domainName)) {
+                userNames = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy,
                         sortOrder, domainName);
                 filteredUsers.set(0, userNames.length);
                 filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
             } else {
                 int totalUserCount = 0;
-                //If the pagination is not provided, ignore the provided domainName and perform filtering
-                //on all available user stores.
+                // If pagination and domain name are not given, then perform filtering on all available user stores.
                 while (carbonUM != null) {
                     // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
                     if (carbonUM instanceof AbstractUserStoreManager) {
                         domainName = carbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
-                        limit = UserCoreConstants.MAX_USER_ROLE_LIST;
-                        userNames = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit,
+                        userNames = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit,
                                 sortBy, sortOrder, domainName);
                         totalUserCount += userNames.length;
                         filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
@@ -516,12 +568,37 @@ public class SCIMUserManager implements UserManager {
                 //set the total results
                 filteredUsers.set(0, totalUserCount);
             }
-            return filteredUsers;
-        } else {
-            throw new CharonException("Unsupported Operation");
         }
+        return filteredUsers;
     }
 
+    /**
+     * Get maximum user limit to retrieve.
+     *
+     * @return
+     */
+    private int getMaxLimit() {
+
+        int givenMax;
+
+        try {
+            givenMax = Integer.parseInt(carbonUM.getRealmConfiguration().getUserStoreProperty(
+                    "MaxUserNameListLength"));
+        } catch (Exception e) {
+            givenMax = UserCoreConstants.MAX_USER_ROLE_LIST;
+        }
+
+        return givenMax;
+    }
+
+    /**
+     * Generate condition tree for given filters.
+     *
+     * @param node
+     * @param attributes
+     * @return
+     * @throws CharonException
+     */
     private Condition getCondition(Node node, Map<String, String> attributes) throws CharonException {
 
         if (node instanceof ExpressionNode) {
@@ -568,6 +645,13 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    /**
+     * Get all attributes for given domain.
+     *
+     * @param domainName
+     * @return
+     * @throws UserStoreException
+     */
     private Map<String, String> getAllAttributes(String domainName) throws UserStoreException {
 
         ClaimMapping[] userClaims;
@@ -599,6 +683,18 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    /**
+     * Perform multi attribute filtering.
+     *
+     * @param node
+     * @param offset
+     * @param limit
+     * @param sortBy
+     * @param sortOrder
+     * @param domainName
+     * @return
+     * @throws CharonException
+     */
     private String[] getFilteredUsersFromMultiAttributeFiltering(Node node, int offset, int limit, String sortBy,
                                                                  String sortOrder, String domainName)
             throws CharonException {
@@ -621,6 +717,14 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    /**
+     * Get required claim details for filtered user.
+     *
+     * @param userNames
+     * @param requiredAttributes
+     * @return
+     * @throws CharonException
+     */
     private List<Object> getFilteredUserDetails(String[] userNames, Map<String, Boolean> requiredAttributes)
             throws CharonException {
 
