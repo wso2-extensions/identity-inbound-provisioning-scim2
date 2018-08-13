@@ -509,9 +509,8 @@ public class SCIMUserManager implements UserManager {
 
         } else if (node instanceof OperationNode) {
             // Support multi attribute filtering.
-            List<Object> xx = getMultiAttributeFilteredUsers(node, requiredAttributes, offset, limit, sortBy, sortOrder,
+            return getMultiAttributeFilteredUsers(node, requiredAttributes, offset, limit, sortBy, sortOrder,
                     domainName, filteredUsers);
-            return xx;
         } else {
             throw new CharonException("Unsupported Operation");
         }
