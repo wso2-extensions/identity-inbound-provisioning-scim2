@@ -6,7 +6,6 @@ info:
   contact:
     name: WSO2 Identity Server Team
     url: 'http://wso2.com'
-    email: vindula@wso2.com
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0'
