@@ -3,8 +3,8 @@ info:
   version: '1.0'
   title: SCIM 2.0 Endpoint Swagger Definition
   description: |
-      SCIM 2.0 endpoints
-      It is written with [swagger 2](http://swagger.io/).
+    SCIM 2.0 endpoints
+    It is written with [swagger 2](http://swagger.io/).
   contact:
     name: WSO2 Identity Server Team
     url: 'http://wso2.com'
@@ -50,10 +50,10 @@ paths:
       responses:
         '200':
           description: Valid user is found
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
     post:
       tags:
         - Me Endpoint
@@ -90,10 +90,10 @@ paths:
       responses:
         '201':
           description: Valid user is created
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
     put:
       tags:
         - Me Endpoint
@@ -129,10 +129,32 @@ paths:
       responses:
         '200':
           description: User is updated
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
+    delete:
+      tags:
+        - Me Endpoint
+      summary: Delete the authenticated user.
+      description: Returns HTTP 204 if the user is successfully deleted.
+      operationId: deleteUserMe
+      x-wso2-request: |
+         curl -v -k --user  [username]:[password] -X DELETE https://localhost:9443/scim2/Me
+      x-wso2-curl: |
+         curl -v -k --user kim:kimwso2 -X DELETE https://localhost:9443/scim2/Me
+      x-wso2-response: |
+        HTTP/1.1 501 Not Implemented
+      produces:
+        - application/scim+json
+      parameters: []
+      responses:
+        '204':
+          description: User is deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
     patch:
       tags:
         - Me Endpoint
@@ -168,10 +190,10 @@ paths:
       responses:
         '200':
           description: User is updated
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
   /Groups:
     get:
       tags:
@@ -235,10 +257,10 @@ paths:
       responses:
         '200':
           description: Valid groups are found
-        '404':
-          description: Valid groups are not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid groups are not found
     post:
       tags:
         - Groups Endpoint
@@ -274,10 +296,10 @@ paths:
       responses:
         '201':
           description: Valid group is created
-        '404':
-          description: Group is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Group is not found
   /Groups/.search:
     post:
       tags:
@@ -304,10 +326,10 @@ paths:
       responses:
         '200':
           description: Valid groups are found
-        '404':
-          description: Valid groups are not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid groups are not found
   '/Groups/{id}':
     get:
       tags:
@@ -342,10 +364,10 @@ paths:
       responses:
         '200':
           description: Valid group is found
-        '404':
-          description: Valid group is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid group is not found
     put:
       tags:
         - Groups Endpoint
@@ -386,10 +408,10 @@ paths:
       responses:
         '200':
           description: Group is updated
-        '404':
-          description: Valid group is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid group is not found
     delete:
       tags:
         - Groups Endpoint
@@ -413,10 +435,10 @@ paths:
       responses:
         '204':
           description: Group is deleted
-        '404':
-          description: Valid group is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid group is not found
     patch:
       tags:
         - Groups Endpoint
@@ -457,10 +479,10 @@ paths:
       responses:
         '200':
           description: Group is updated
-        '404':
-          description: Valid group is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid group is not found
   /Users:
     get:
       tags:
@@ -524,10 +546,10 @@ paths:
       responses:
         '200':
           description: Valid users are found
-        '404':
-          description: Valid users are not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid users are not found
     post:
       tags:
         - Users Endpoint
@@ -561,10 +583,10 @@ paths:
       responses:
         '201':
           description: Valid user is created
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
   /Users/.search:
     post:
       tags:
@@ -591,10 +613,10 @@ paths:
       responses:
         '200':
           description: Valid users are found
-        '404':
-          description: Valid users are not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid users are not found
   '/Users/{id}':
     get:
       tags:
@@ -629,10 +651,10 @@ paths:
       responses:
         '200':
           description: Valid user is found
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
     put:
       tags:
         - Users Endpoint
@@ -673,10 +695,10 @@ paths:
       responses:
         '200':
           description: User is updated
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
     delete:
       tags:
         - Users Endpoint
@@ -700,10 +722,10 @@ paths:
       responses:
         '204':
           description: User is deleted
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
     patch:
       tags:
         - Users Endpoint
@@ -744,10 +766,10 @@ paths:
       responses:
         '200':
           description: User is updated
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
   /Bulk:
     post:
       tags:
@@ -774,10 +796,10 @@ paths:
       responses:
         '201':
           description: Valid user is created
-        '404':
-          description: Valid user is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Valid user is not found
   /ResourceType:
     get:
       tags:
@@ -797,10 +819,10 @@ paths:
       responses:
         '200':
           description: Schema is found
-        '404':
-          description: Schema is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Schema is not found
   /ServiceProviderConfig:
     get:
       tags:
@@ -820,7 +842,7 @@ paths:
       responses:
         '200':
           description: Schema is found
-        '404':
-          description: Schema is not found
         '401':
           description: Unauthorized
+        '404':
+          description: Schema is not found
