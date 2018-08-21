@@ -59,7 +59,7 @@ paths:
         - Me Endpoint
       summary: Return the user which was anonymously created
       description: |
-        Returns HTTP 201 if the user is successfully created. 
+        Returns HTTP 201 if the user is successfully created. By default, these endpoints are secured. In order to invoke createMe we need to make secured to false in the identity.xml. For more details, refer [this](https://docs.wso2.com/display/IS530/Authenticating+and+Authorizing+REST+APIs) link.
       operationId: createUserMe
       x-wso2-request: |
         curl -v -k  --data '{"schemas":[],"name:{"familyName":[last name],"givenName":[name]},"userName":[username],"password":[password],"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}],"EnterpriseUser":{"employeeNumber":[employee ID],"manager":{"value":[manager's name]}}}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
@@ -488,7 +488,8 @@ paths:
       tags:
         - Users Endpoint
       summary: Return users according to the filter, sort and pagination parameters
-      description: Returns HTTP 404 if the users are not found.
+      description: |
+        Returns HTTP 404 if the users are not found. Pagination is not supported across the user stores and LDAP multi attribute group filtering. But filtering support across multiple user stores.
       operationId: getUser
       x-wso2-request: |
         curl -v -k --user [username]:[password]  'https://localhost:9443/scim2/Users?startIndex=[value]&count=[value]&domain=[value]&filter=[query]&attributes=[attribute names]'
@@ -511,7 +512,8 @@ paths:
           type: string
         - name: filter
           in: query
-          description: Filter expression for filtering
+          description: |
+            Filter expression for filtering. Supported filters are ‘Ew’, ‘Ew’, ‘Co’, ‘Sw’, ‘and’.
           required: false
           type: string
         - name: startIndex
