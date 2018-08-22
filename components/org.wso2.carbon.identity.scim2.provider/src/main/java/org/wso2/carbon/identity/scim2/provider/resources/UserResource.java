@@ -178,7 +178,8 @@ public class UserResource extends AbstractResource {
                             @QueryParam (SCIMProviderConstants.START_INDEX) int startIndex,
                             @QueryParam (SCIMProviderConstants.COUNT) int count,
                             @QueryParam (SCIMProviderConstants.SORT_BY) String sortBy,
-                            @QueryParam (SCIMProviderConstants.SORT_ORDER) String sortOrder) {
+                            @QueryParam (SCIMProviderConstants.SORT_ORDER) String sortOrder,
+                            @QueryParam (SCIMProviderConstants.DOMAIN) String domainName) {
 
         JSONEncoder encoder = null;
         try {
@@ -204,7 +205,7 @@ public class UserResource extends AbstractResource {
             SCIMResponse scimResponse = null;
 
             scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
-                    sortBy, sortOrder, attribute, excludedAttributes);
+                    sortBy, sortOrder, domainName, attribute, excludedAttributes);
 
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
