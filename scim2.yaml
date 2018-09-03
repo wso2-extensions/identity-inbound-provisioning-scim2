@@ -25,8 +25,8 @@ paths:
     get:
       tags:
         - Me Endpoint
-      summary: Return the authenticated user.
-      description: Returns HTTP 200 if the user is found.
+      summary: Get Me
+      description: This API returns the user details of the currently authenticated user.
       operationId: getUserMe
       x-wso2-request: |
         curl -v -k --user [username]:[password] https://localhost:9443/scim2/Me
@@ -57,9 +57,9 @@ paths:
     post:
       tags:
         - Me Endpoint
-      summary: Return the user which was anonymously created
+      summary: Create Me
       description: |
-        Returns HTTP 201 if the user is successfully created. By default, these endpoints are secured. In order to invoke createMe we need to make secured to false in the identity.xml. For more details, refer [this](https://docs.wso2.com/display/IS530/Authenticating+and+Authorizing+REST+APIs) link.
+        This API is used to register a user anonymously. It returns an HTTP 201 response if the user is successfully created. These endpoints are secured by default. Therefore, to invoke this API anonymously, set the secured property for the SCIM2 resource in the identity.xml to false. For more information, see [Authenticating and Authorizing REST APIs](https://docs.wso2.com/display/IS530/Authenticating+and+Authorizing+REST+APIs).
       operationId: createUserMe
       x-wso2-request: |
         curl -v -k  --data '{"schemas":[],"name:{"familyName":[last name],"givenName":[name]},"userName":[username],"password":[password],"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}],"EnterpriseUser":{"employeeNumber":[employee ID],"manager":{"value":[manager's name]}}}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
@@ -97,8 +97,8 @@ paths:
     put:
       tags:
         - Me Endpoint
-      summary: Return the updated user
-      description: Returns HTTP 404 if the user is not found.
+      summary: Update Me - PUT 
+      description: This API uses a PUT operation to update user details. It returns HTTP 404 if the user is not found.
       operationId: updateUserMe
       x-wso2-request: |
         curl -v -k --user [username]:[password] -X PUT -d '{"schemas":[],"name":{"familyName":[last name],"givenName":[name]},"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
@@ -136,8 +136,8 @@ paths:
     delete:
       tags:
         - Me Endpoint
-      summary: Delete the authenticated user.
-      description: Returns HTTP 204 if the user is successfully deleted.
+      summary: Delete Me
+      description: This API is used to delete the currently authenticated user. It returns HTTP 204 if the user is successfully deleted.
       operationId: deleteUserMe
       x-wso2-request: |
          curl -v -k --user  [username]:[password] -X DELETE https://localhost:9443/scim2/Me
@@ -158,8 +158,8 @@ paths:
     patch:
       tags:
         - Me Endpoint
-      summary: Return the updated user
-      description: Returns HTTP 404 if the user is not found.
+      summary: Update Me - PATCH 
+      description: This API uses a PATCH operation to update user details Returns HTTP 404 if the user is not found.
       operationId: patchUserMe
       x-wso2-request: |
         curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op":[operation],"value":{[attributeName]:[attribute value]}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
@@ -198,8 +198,8 @@ paths:
     get:
       tags:
         - Groups Endpoint
-      summary: Return groups according to the filter, sort and pagination parameters
-      description: Returns HTTP 404 if the groups are not found.
+      summary: Filter Groups
+      description: This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
       operationId: getGroup
       x-wso2-request: |
         curl -v -k --user [username]:[password] 'https://localhost:9443/scim2/Groups?startIndex=[value]&count=[value]&filter=[query]&attributes=[attribute names]'
@@ -264,8 +264,8 @@ paths:
     post:
       tags:
         - Groups Endpoint
-      summary: Return the group which was created
-      description: Returns HTTP 201 if the group is successfully created.
+      summary: Create Group 
+      description: This API creates a group and returns the details of the created group including its unique ID. It returns HTTP 201 if the group is successfully created.
       operationId: createGroup
       x-wso2-request: |
         curl -v -k --user [username]:[password] --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"displayName": [group name], "members": [{"value": [user ID],"$ref":[ref url],"display": [user name] }]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups
@@ -304,8 +304,8 @@ paths:
     post:
       tags:
         - Groups Endpoint
-      summary: Return groups according to the filter, sort and pagination parameters
-      description: Returns HTTP 404 if the groups are not found.
+      summary: Search Groups 
+      description: This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
       operationId: getGroupsByPost
       x-wso2-request: |
         curl -v -k --user [username]:[password] --data '{"schemas": [],"startIndex": [value], "filter": [query]}' --header "Content-Type:application/scim+json" https://localhost:9443/scim2/Groups/.search
@@ -334,8 +334,8 @@ paths:
     get:
       tags:
         - Groups Endpoint
-      summary: Return the group with the given id
-      description: Returns HTTP 200 if the group is found.
+      summary: Get Group by ID
+      description: This API returns the group details of a particular group using its unique ID. It returns HTTP 200 if the group is found.
       operationId: getGroup by id
       x-wso2-request: |
         curl -v -k --user [username]:[password]  https://localhost:9443/scim2/Groups/[group ID]
@@ -348,7 +348,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Unique id of the resource type.
+          description: Unique ID of the resource type.
           required: true
           type: string
         - name: attributes
@@ -371,8 +371,8 @@ paths:
     put:
       tags:
         - Groups Endpoint
-      summary: Return the updated group
-      description: Returns HTTP 404 if the group is not found.
+      summary: Update Group - PUT
+      description: This API updates the group details and returns the updated group details using a PUT operation. It returns HTTP 404 if the group is not found.
       operationId: updateGroup
       x-wso2-request: |
         curl -v -k --user[username]:[password] -X PUT -d '{"displayName":[group name],"members":[{"value":[user ID],"display":[user's name]}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/[group ID]
@@ -387,7 +387,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Unique id of the resource type.
+          description: Unique ID of the resource type.
           required: true
           type: string
         - name: attributes
@@ -415,8 +415,8 @@ paths:
     delete:
       tags:
         - Groups Endpoint
-      summary: Delete the group with the given id
-      description: Returns HTTP 204 if the group is successfully deleted.
+      summary: Delete Group
+      description: This API deletes a particular group using its unique ID. It returns HTTP 204 if the group is successfully deleted.
       operationId: deleteGroup
       x-wso2-request: |
         curl -v -k --user [username]:[password] -X DELETE https://localhost:9443/scim2/Groups/[group ID] -H "Accept: application/json"
@@ -429,7 +429,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Unique id of the resource type.
+          description: Unique ID of the resource type.
           required: true
           type: string
       responses:
@@ -442,8 +442,8 @@ paths:
     patch:
       tags:
         - Groups Endpoint
-      summary: Return the updated group
-      description: Returns HTTP 404 if the group is not found.
+      summary: Update Group - PATCH
+      description: This API updates the group details and returns the updated group details using a PATCH operation. It returns HTTP 404 if the group is not found.
       operationId: patchGroup
       x-wso2-request: |
         curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op": [operation],"value":{"members":[{"display": [name],"$ref": [ref],"value": [member user ID] }] } }]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/[group ID]
@@ -487,9 +487,9 @@ paths:
     get:
       tags:
         - Users Endpoint
-      summary: Return users according to the filter, sort and pagination parameters
+      summary: Filter Users
       description: |
-        Returns HTTP 404 if the users are not found. Pagination is not supported across the user stores and LDAP multi attribute group filtering. But filtering support across multiple user stores.
+        This API returns users according to the filter, sort and pagination parameters. It returns HTTP 404 if the users are not found. Pagination is not supported across user stores and LDAP multi-attribute group filtering. However, filtering is supported across multiple user stores.
       operationId: getUser
       x-wso2-request: |
         curl -v -k --user [username]:[password]  'https://localhost:9443/scim2/Users?startIndex=[value]&count=[value]&domain=[value]&filter=[query]&attributes=[attribute names]'
@@ -532,7 +532,7 @@ paths:
           in: query
           description: |-
             Specifies the attribute whose value
-            SHALL be used to order the returned responses
+            SHALL be used to order the returned responses.
           required: false
           type: string
         - name: sortOder
@@ -555,8 +555,8 @@ paths:
     post:
       tags:
         - Users Endpoint
-      summary: Return the user which was created
-      description: Returns HTTP 201 if the user is successfully created.
+      summary: Create User
+      description: This API creates a user and returns the user details along with the user's unique ID. It returns HTTP 201 if the user is successfully created.
       operationId: createUser
       x-wso2-request: |
         curl -v -k --user [username]:[password] --data '{"schemas":[],"name":{"familyName":[last name],"givenName":[name]},"userName":[username],"password":[password],"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}]}--header "Content-Type:application/json" https://localhost:9443/scim2/Users
@@ -593,8 +593,8 @@ paths:
     post:
       tags:
         - Users Endpoint
-      summary: Return users according to the filter, sort and pagination parameters
-      description: Returns HTTP 404 if the users are not found.
+      summary: Search Users
+      description: This API returns users according to the filter, sort and pagination parameters. It returns HTTP 404 if the users are not found.
       operationId: getUsersByPost
       x-wso2-request: |
         curl -v -k --user [username]:[password] --data '{"schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"attributes": [attribute names],"filter": [filter query],"domain": [domain name],"startIndex": [value],"count": [value]}' --header "Content-Type:application/scim+json"  'https://localhost:9443/scim2/Users/.search'
@@ -623,7 +623,7 @@ paths:
     get:
       tags:
         - Users Endpoint
-      summary: Return the user with the given id
+      summary: Get User by ID
       description: Returns HTTP 200 if the user is found.
       operationId: getUser by id
       x-wso2-request: |
@@ -637,7 +637,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Unique id of the resource type.
+          description: Unique ID of the resource type.
           required: true
           type: string
         - name: attributes
@@ -660,8 +660,8 @@ paths:
     put:
       tags:
         - Users Endpoint
-      summary: Return the updated user
-      description: Returns HTTP 404 if the user is not found.
+      summary: Update User - PUT 
+      description: This API updates user details and returns the updated user details using a PUT operation. It returns HTTP 404 if the user is not found.
       operationId: updateUser
       x-wso2-request: |
         curl -v -k --user [username]:[password] -X PUT -d '{"schemas":[],"name":{"familyName":[last name],"givenName":[name]},"userName":[username],"emails":[{"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/[user ID]
@@ -676,7 +676,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Unique id of the resource type.
+          description: Unique ID of the resource type.
           required: true
           type: string
         - name: attributes
@@ -704,8 +704,8 @@ paths:
     delete:
       tags:
         - Users Endpoint
-      summary: Delete the user with the given id
-      description: Returns HTTP 204 if the user is successfully deleted.
+      summary: Delete User by ID
+      description: This API deletes a user using the user's unique ID. It returns HTTP 204 if the user is successfully deleted.
       operationId: deleteUser
       x-wso2-request: |
         curl -v -k --user [username]:[password] -X DELETE https://localhost:9443/scim2/Users/[user ID] -H "Accept: application/scim+json"
@@ -718,7 +718,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: Unique id of the resource type.
+          description: Unique ID of the resource type.
           required: true
           type: string
       responses:
@@ -731,8 +731,8 @@ paths:
     patch:
       tags:
         - Users Endpoint
-      summary: Return the updated user
-      description: Return HTTP 404 if the user is not found.
+      summary: Update User - PATCH 
+      description: This API updates user details and returns the updated user details using a PATCH operation. It returns HTTP 404 if the user is not found.
       operationId: patchUser
       x-wso2-request: |
         curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op":[operation],"value":{[attributeName]:[attribute value]}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/[user ID]
@@ -776,8 +776,8 @@ paths:
     post:
       tags:
         - Bulk Endpoint
-      summary: Return the bulk response depends.
-      description: Returns HTTP 201 if the users are successfully created.
+      summary: Create Users in Bulk
+      description: This API is used to create multiple users at once. It returns HTTP 201 if the users are successfully created.
       operationId: createBulkUsers
       x-wso2-request: |
         curl -v -k --user [username]:[password] --data '{"failOnErrors": [value],"schemas":[],"Operations":[{"method": [request type],"path": [end point],"bulkId": [bulk id] ,"data": [input user details] }] }' --header "Content-Type:application/scim+json" https://localhost:9443/scim2/Bulk
@@ -806,8 +806,8 @@ paths:
     get:
       tags:
         - ResourceType Endpoint
-      summary: Return the ResourceType schema.
-      description: Returns HTTP 200 if the schema is found.
+      summary: Get Resource Types
+      description: This API lists and returns metadata about resource types. It returns HTTP 200 if the schema is found.
       operationId: getResourceType
       x-wso2-request: |
         curl -v -k --user [username]:[password] https://localhost:9443/scim2/ResourceType
@@ -829,8 +829,8 @@ paths:
     get:
       tags:
         - ServiceProviderConfig Endpoint
-      summary: Return the ServiceProviderConfig schema.
-      description: Returns HTTP 200 if the schema is found.
+      summary: Get Service Provider Config
+      description: This API returns the service provider's configuration details. It returns HTTP 200 if the schema is found.
       operationId: getServiceProviderConfig
       x-wso2-request: |
         curl -v -k --user [username]:[password]  https://localhost:9443/scim2/ServiceProviderConfig
