@@ -159,7 +159,7 @@ paths:
       tags:
         - Me Endpoint
       summary: Update Me - PATCH 
-      description: This API uses a PATCH operation to update user details Returns HTTP 404 if the user is not found.
+      description: This API uses a PATCH operation to update user details. It returns HTTP 404 if the user is not found.
       operationId: patchUserMe
       x-wso2-request: |
         curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op":[operation],"value":{[attributeName]:[attribute value]}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
