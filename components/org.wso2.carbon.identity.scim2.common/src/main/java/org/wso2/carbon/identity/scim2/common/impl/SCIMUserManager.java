@@ -1119,8 +1119,7 @@ public class SCIMUserManager implements UserManager {
                     if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
                         //skip internal roles
                         if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName)) ||
-                                UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration()) ||
-                                UserCoreUtil.isPrimaryAdminRole(roleName, carbonUM.getRealmConfiguration())) {
+                                UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration())) {
                             continue;
                         }
                         /**construct the group name with domain -if not already provided, in order to support
