@@ -40,7 +40,7 @@ public class MeResource extends AbstractResource {
     private static Log logger = LogFactory.getLog(UserResource.class);
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,

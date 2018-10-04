@@ -41,7 +41,7 @@ public class RecourceTypeResource extends AbstractResource {
     private static Log logger = LogFactory.getLog(RecourceTypeResource.class);
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getUser() {
 
         JSONEncoder encoder = null;

@@ -45,7 +45,7 @@ public class GroupResource extends AbstractResource {
 
     @GET
     @Path("{id}")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
                              @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                              @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
@@ -75,7 +75,7 @@ public class GroupResource extends AbstractResource {
 
     @POST
     @Path("/.search")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getGroupsByPOST(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                     @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                     @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
