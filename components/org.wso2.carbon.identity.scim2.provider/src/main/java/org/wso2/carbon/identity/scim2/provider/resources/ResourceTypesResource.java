@@ -16,7 +16,6 @@
  * under the License.
  */
 
-
 package org.wso2.carbon.identity.scim2.provider.resources;
 
 import org.apache.commons.logging.Log;
@@ -28,7 +27,6 @@ import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.ResourceTypeResourceManager;
-import org.wso2.charon3.core.protocol.endpoints.ResourceTypesResourceManager;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -52,7 +50,7 @@ public class ResourceTypesResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // create charon-SCIM service provider config endpoint and hand-over the request.
-            ResourceTypesResourceManager resourceTypeResourceManager = new ResourceTypesResourceManager();
+            ResourceTypeResourceManager resourceTypeResourceManager = new ResourceTypeResourceManager();
 
             SCIMResponse scimResponse = resourceTypeResourceManager.get(null, null, null, null);
             // needs to check the code of the response and return 200 0k or other error codes
