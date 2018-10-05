@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,7 +16,6 @@
  * under the License.
  */
 
-
 package org.wso2.carbon.identity.scim2.provider.resources;
 
 import org.apache.commons.logging.Log;
@@ -26,7 +25,6 @@ import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
-import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.ResourceTypeResourceManager;
 
@@ -37,11 +35,11 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 @Path("/")
-public class RecourceTypeResource extends AbstractResource {
-    private static Log logger = LogFactory.getLog(RecourceTypeResource.class);
+public class ResourceTypesResource extends AbstractResource {
+    private static Log logger = LogFactory.getLog(ResourceTypesResource.class);
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getUser() {
 
         JSONEncoder encoder = null;
