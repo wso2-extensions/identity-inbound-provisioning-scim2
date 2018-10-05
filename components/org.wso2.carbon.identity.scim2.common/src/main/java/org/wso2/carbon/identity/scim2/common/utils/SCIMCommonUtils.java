@@ -104,6 +104,12 @@ public class SCIMCommonUtils {
         return scimResourceType;
     }
 
+    public static String getSCIMResourceTypesURL() {
+        String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
+        String scimResourceType = scimURL + SCIMCommonConstants.RESOURCE_TYPES;
+        return scimResourceType;
+    }
+
     public static String getGroupNameWithDomain(String groupName) {
 
         if (groupName == null) {
