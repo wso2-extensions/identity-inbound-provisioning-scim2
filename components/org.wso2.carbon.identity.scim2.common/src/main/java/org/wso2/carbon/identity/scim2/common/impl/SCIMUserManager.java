@@ -252,9 +252,9 @@ public class SCIMUserManager implements UserManager {
             } else {
                 //we assume (since id is unique per user) only one user exists for a given id
                 userName = userNames[0];
-                //check if SCIM is enabled for the user store
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(userName);
-                if (StringUtils.isNotBlank(userStoreDomainName) && !isSCIMEnabled(userStoreDomainName)) {
+                //check if SCIM is enabled for the user store
+                if (!isSCIMEnabled(userStoreDomainName)) {
                     throw new CharonException("Cannot delete user: " + userName + " through SCIM from user store: " +
                             userStoreDomainName + ". SCIM is not enabled for user store: " + userStoreDomainName);
                 }
