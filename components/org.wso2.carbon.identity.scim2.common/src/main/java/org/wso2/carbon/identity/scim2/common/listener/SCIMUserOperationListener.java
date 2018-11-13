@@ -34,7 +34,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -120,8 +120,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         // Update last-modified-date.
         try {
-            Date date = new Date();
-            String lastModifiedDate = AttributeUtil.formatDateTime(date);
+            Instant now = Instant.now();
+            String lastModifiedDate = AttributeUtil.formatDateTime(now);
             userStoreManager.setUserClaimValue(
                     userName, SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, lastModifiedDate, null);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -171,8 +171,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
 
-        Date date = new Date();
-        String lastModifiedDate = AttributeUtil.formatDateTime(date);
+        Instant now = Instant.now();
+        String lastModifiedDate = AttributeUtil.formatDateTime(now);
         claims.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, lastModifiedDate);
 
         return true;
@@ -429,8 +429,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 attributes.put(userIdLocalClaimUri, id);
             }
 
-            Date date = new Date();
-            String createdDate = AttributeUtil.formatDateTime(date);
+            Instant now = Instant.now();
+            String createdDate = AttributeUtil.formatDateTime(now);
             attributes.put(createdLocalClaimUri, createdDate);
             attributes.put(modifiedLocalClaimUri, createdDate);
             attributes.put(usernameLocalClaimUri, userName);

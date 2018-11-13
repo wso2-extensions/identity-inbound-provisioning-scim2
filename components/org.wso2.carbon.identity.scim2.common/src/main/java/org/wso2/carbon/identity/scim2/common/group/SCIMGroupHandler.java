@@ -27,14 +27,10 @@ import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.schema.SCIMConstants;
-import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
-import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
-import java.util.ArrayList;
-import java.util.Date;
+import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -70,8 +66,8 @@ public class SCIMGroupHandler {
         String id = UUID.randomUUID().toString();
         attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
 
-        Date date = new Date();
-        String createdDate = AttributeUtil.formatDateTime(date);
+        Instant now = Instant.now();
+        String createdDate = AttributeUtil.formatDateTime(now);
         attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
 
         attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
@@ -107,19 +103,16 @@ public class SCIMGroupHandler {
      * @param group
      */
     public void createSCIMAttributes(Group group) throws IdentitySCIMException {
-        try {
+
             Map<String, String> attributes = new HashMap<>();
             attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, group.getId());
             attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, AttributeUtil.formatDateTime(
-                    group.getCreatedDate()));
+                    group.getCreatedInstant()));
             attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, AttributeUtil.formatDateTime(
-                    group.getLastModified()));
+                    group.getLastModifiedInstant()));
             attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, group.getLocation());
             GroupDAO groupDAO = new GroupDAO();
             groupDAO.addSCIMGroupAttributes(tenantId, group.getDisplayName(), attributes);
-        } catch (CharonException e) {
-            throw new IdentitySCIMException("Error getting group name from SCIM Group.", e);
-        }
     }
 
     /**
@@ -169,9 +162,9 @@ public class SCIMGroupHandler {
             if (SCIMConstants.CommonSchemaConstants.ID_URI.equals(entry.getKey())) {
                 group.setId(entry.getValue());
             } else if (SCIMConstants.CommonSchemaConstants.CREATED_URI.equals(entry.getKey())) {
-                group.setCreatedDate(AttributeUtil.parseDateTime(entry.getValue()));
+                group.setCreatedInstant(AttributeUtil.parseDateTime(entry.getValue()));
             } else if (SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI.equals(entry.getKey())) {
-                group.setLastModified(AttributeUtil.parseDateTime(entry.getValue()));
+                group.setLastModifiedInstant(AttributeUtil.parseDateTime(entry.getValue()));
             } else if (SCIMConstants.CommonSchemaConstants.LOCATION_URI.equals(entry.getKey())) {
                 group.setLocation(entry.getValue());
             }
