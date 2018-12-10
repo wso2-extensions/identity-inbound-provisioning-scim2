@@ -96,6 +96,11 @@
                 <artifactId>org.wso2.charon3.core</artifactId>
                 <version>${charon.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.governance</groupId>
+                <artifactId>org.wso2.carbon.identity.password.policy</artifactId>
+                <version>${identity.governance.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
@@ -282,6 +287,7 @@
         <junit.version>4.11</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <charon.version>3.0.28</charon.version>
+        <identity.governance.version>1.1.37</identity.governance.version>
 
         <!--Maven Plugin Version-->
         <maven.compiler.plugin.version>2.3.1</maven.compiler.plugin.version>
