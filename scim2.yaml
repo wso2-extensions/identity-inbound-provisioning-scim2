@@ -1,0 +1,850 @@
+swagger: '2.0'
+info:
+  version: '1.0'
+  title: SCIM 2.0 Endpoint Swagger Definition
+  description: |
+    SCIM 2.0 endpoints
+    It is written with [swagger 2](http://swagger.io/).
+  contact:
+    name: WSO2 Identity Server Team
+    url: 'http://wso2.com'
+    email: "architecture@wso2.com"
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0'
+    
+# The base path of the SCIM2 API.
+# If the tenant domain is carbon.super then basepath can be /scim2.
+basePath: /t/{tenant-domain}/scim2
+
+produces:
+  - application/scim+json
+        
+paths:
+  /Me:
+    get:
+      tags:
+        - Me Endpoint
+      summary: Get Me
+      description: This API returns the user details of the currently authenticated user.
+      operationId: getUserMe
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] https://localhost:9443/scim2/Me
+      x-wso2-curl: |
+        curl -v -k --user kim:kimwso2 https://localhost:9443/scim2/Me
+      x-wso2-response: |
+        {"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jackson@gmail.com"}],"meta":{"created":"2018-08-16T17:19:43Z","location":"https://localhost:9443/scim2/Users/f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","lastModified":"2018-08-16T17:19:43Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"roles":[{"type":"default","value":"manager,Internal/everyone,admin"}],"name":{"givenName":"kim","familyName":"jackson"},"groups":[{"display":"manager","value":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}],"id":"f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","userName":"kim"}
+      produces:
+        - application/scim+json
+      parameters:
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+      responses:
+        '200':
+          description: Valid user is found
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+    post:
+      tags:
+        - Me Endpoint
+      summary: Create Me
+      description: |
+        This API is used to register a user anonymously. It returns an HTTP 201 response if the user is successfully created. These endpoints are secured by default. Therefore, to invoke this API anonymously, set the secured property for the SCIM2 resource in the identity.xml to false. For more information, see [Authenticating and Authorizing REST APIs](https://docs.wso2.com/display/IS530/Authenticating+and+Authorizing+REST+APIs).
+      operationId: createUserMe
+      x-wso2-request: |
+        curl -v -k  --data '{"schemas":[],"name:{"familyName":[last name],"givenName":[name]},"userName":[username],"password":[password],"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}],"EnterpriseUser":{"employeeNumber":[employee ID],"manager":{"value":[manager's name]}}}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
+      x-wso2-curl: |
+         curl -v -k --data '{"schemas":[],"name":{"familyName":"Johnson","givenName":"Alex"},"userName":"alex","password":"alexwso2","emails":[{"primary":true,"value":"alex.j@gmail.com","type":"home"},{"value":"alex_j@wso2.com","type":"work"}],"EnterpriseUser":{"employeeNumber":"123A","manager":{"value":"Taylor"}}}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
+      x-wso2-response: |
+        {"emails":[{"type":"home","value":"alex.j@gmail.com","primary":true},{"type":"work","value":"alex_j@wso2.com"}],"meta":{"created":"2018-08-17T10:34:29Z","location":"https://localhost:9443/scim2/Users/008bba85-451d-414b-87de-c03b5a1f4217","lastModified":"2018-08-17T10:34:29Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"EnterpriseUser":{"manager":{"value":"Taylor"},"employeeNumber":"123A"},"name":{"familyName":"Johnson","givenName":"Alex"},"id":"008bba85-451d-414b-87de-c03b5a1f4217","userName":"alex"}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Valid user is created
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+    put:
+      tags:
+        - Me Endpoint
+      summary: Update Me - PUT 
+      description: This API uses a PUT operation to update user details. It returns HTTP 404 if the user is not found.
+      operationId: updateUserMe
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] -X PUT -d '{"schemas":[],"name":{"familyName":[last name],"givenName":[name]},"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
+      x-wso2-curl: |
+        curl -v -k --user kim:kimwso2 -X PUT -d '{"schemas":[],"name":{"familyName":"JacksonJohn","givenName":"Kim"},"userName":"kim","emails":[{"primary":true,"value":"jacksonk@gmail.com","type":"home"},{"value":"jackson_k@wso2.com","type":"work"}],"EnterpriseUser":{"employeeNumber":"123A","manager":{"value":"Taylor"}}}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
+      x-wso2-response: |
+        {"emails":[{"type":"work","value":"jackson_k@wso2.com"},{"type":"home","value":"jacksonk@gmail.com"}],"meta":{"created":"2018-08-16T17:19:43Z","location":"https://localhost:9443/scim2/Users/f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","lastModified":"2018-08-16T17:43:17Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"EnterpriseUser":{"manager":{"value":"Taylor"},"employeeNumber":"123A"},"roles":[{"type":"default","value":"manager,Internal/everyone,admin"}],"name":{"givenName":"Kim","familyName":"JacksonJohn"},"groups":[{"display":"manager","value":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}],"id":"f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","userName":"kim"}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User is updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+    delete:
+      tags:
+        - Me Endpoint
+      summary: Delete Me
+      description: This API is used to delete the currently authenticated user. It returns HTTP 204 if the user is successfully deleted.
+      operationId: deleteUserMe
+      x-wso2-request: |
+         curl -v -k --user  [username]:[password] -X DELETE https://localhost:9443/scim2/Me
+      x-wso2-curl: |
+         curl -v -k --user kim:kimwso2 -X DELETE https://localhost:9443/scim2/Me
+      x-wso2-response: |
+        HTTP/1.1 501 Not Implemented
+      produces:
+        - application/scim+json
+      parameters: []
+      responses:
+        '204':
+          description: User is deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+    patch:
+      tags:
+        - Me Endpoint
+      summary: Update Me - PATCH 
+      description: This API uses a PATCH operation to update user details. It returns HTTP 404 if the user is not found.
+      operationId: patchUserMe
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op":[operation],"value":{[attributeName]:[attribute value]}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
+      x-wso2-curl: |
+        curl -v -k --user kim:kimwso2 -X PATCH -d '{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"add","value":{"nickName":"shaggy"}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
+      x-wso2-response: |
+        {"emails":[{"type":"work","value":"jackson_k@wso2.com"},{"type":"home","value":"jacksonk@gmail.com"}],"meta":{"created":"2018-08-16T17:19:43Z","location":"https://localhost:9443/scim2/Users/f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","lastModified":"2018-08-17T11:43:34Z","resourceType":"User"},"nickName":"shaggy","schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"EnterpriseUser":{"manager":{"value":"Taylor"},"employeeNumber":"123A"},"roles":[{"type":"default","value":"manager,Internal/everyone,admin"}],"name":{"givenName":"Kim","familyName":"JacksonJohn"},"groups":[{"display":"manager","value":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}],"id":"f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","userName":"kim"}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User is updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+  /Groups:
+    get:
+      tags:
+        - Groups Endpoint
+      summary: Filter Groups
+      description: This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
+      operationId: getGroup
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] 'https://localhost:9443/scim2/Groups?startIndex=[value]&count=[value]&filter=[query]&attributes=[attribute names]'
+      x-wso2-curl: |
+        curl -v -k --user admin:admin 'https://localhost:9443/scim2/Groups?filter=displayName+eq+manager'
+      x-wso2-response: |
+        {"totalResults":1,"startIndex":1,"itemsPerPage":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:ListResponse"],"Resources":[{"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:27:42Z"},"members":[{"display":"kim","value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0"},{"display":"Kris","value":"81cbba1b-c259-485d-8ba4-79afb03e5bd1"}],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}]}
+      produces:
+        - application/scim+json
+      parameters:
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - name: filter
+          in: query
+          description: Filter expression for filtering
+          required: false
+          type: string
+        - name: startIndex
+          in: query
+          description: The 1-based index of the first query result
+          required: false
+          type: integer
+          format: int32
+        - name: count
+          in: query
+          description: Specifies the desired maximum number of query results per page.
+          required: false
+          type: integer
+          format: int32
+        - name: sortBy
+          in: query
+          description: |-
+            Specifies the attribute whose value
+            SHALL be used to order the returned responses
+          required: false
+          type: string
+        - name: sortOder
+          in: query
+          description: The order in which the "sortBy" parameter is applied.
+          required: false
+          type: string
+        - name: domain
+          in: query
+          description: The name of the user store where filtering needs to be applied.
+          required: false
+          type: string
+      responses:
+        '200':
+          description: Valid groups are found
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid groups are not found
+    post:
+      tags:
+        - Groups Endpoint
+      summary: Create Group 
+      description: This API creates a group and returns the details of the created group including its unique ID. It returns HTTP 201 if the group is successfully created.
+      operationId: createGroup
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"displayName": [group name], "members": [{"value": [user ID],"$ref":[ref url],"display": [user name] }]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups
+      x-wso2-curl: |
+        curl -v -k --user admin:admin --data '{"displayName":"manager"}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups
+      x-wso2-response: |
+        {"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:27:42Z","resourceType":"Group"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Valid group is created
+        '401':
+          description: Unauthorized
+        '404':
+          description: Group is not found
+  /Groups/.search:
+    post:
+      tags:
+        - Groups Endpoint
+      summary: Search Groups 
+      description: This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
+      operationId: getGroupsByPost
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] --data '{"schemas": [],"startIndex": [value], "filter": [query]}' --header "Content-Type:application/scim+json" https://localhost:9443/scim2/Groups/.search
+      x-wso2-curl: |
+        curl -v -k --user admin:admin --data '{"schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"startIndex": 1, "filter": "displayName eq manager"}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/.search
+      x-wso2-response: |
+        {"totalResults":1,"startIndex":1,"itemsPerPage":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:ListResponse"],"Resources":[{"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:27:42Z"},"members":[{"display":"kim","value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0"},{"display":"Kris","value":"81cbba1b-c259-485d-8ba4-79afb03e5bd1"}],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}]}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Valid groups are found
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid groups are not found
+  '/Groups/{id}':
+    get:
+      tags:
+        - Groups Endpoint
+      summary: Get Group by ID
+      description: This API returns the group details of a particular group using its unique ID. It returns HTTP 200 if the group is found.
+      operationId: getGroup by id
+      x-wso2-request: |
+        curl -v -k --user [username]:[password]  https://localhost:9443/scim2/Groups/[group ID]
+      x-wso2-curl: |
+        curl -v -k --user admin:admin https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36
+      x-wso2-response: |
+        {"displayName":"manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:27:42Z"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+      responses:
+        '200':
+          description: Valid group is found
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid group is not found
+    put:
+      tags:
+        - Groups Endpoint
+      summary: Update Group - PUT
+      description: This API updates the group details and returns the updated group details using a PUT operation. It returns HTTP 404 if the group is not found.
+      operationId: updateGroup
+      x-wso2-request: |
+        curl -v -k --user[username]:[password] -X PUT -d '{"displayName":[group name],"members":[{"value":[user ID],"display":[user's name]}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/[group ID]
+      x-wso2-curl: |
+        curl -v -k --user admin:admin -X PUT -d '{"displayName":"manager","members":[{"value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0","display":"kim"}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36
+      x-wso2-response: |
+        {"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:42:56Z"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"members":[{"display":"kim","value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0"}],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Group is updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid group is not found
+    delete:
+      tags:
+        - Groups Endpoint
+      summary: Delete Group
+      description: This API deletes a particular group using its unique ID. It returns HTTP 204 if the group is successfully deleted.
+      operationId: deleteGroup
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] -X DELETE https://localhost:9443/scim2/Groups/[group ID] -H "Accept: application/json"
+      x-wso2-curl: |
+        curl -v -k --user admin:admin -X DELETE https://localhost:9443/scim2/Groups/0d32c19e-7a74-4c22-b1ad-1d21317d5b04 -H "Accept: application/json"
+      x-wso2-response: |
+        HTTP/1.1 204 No Content
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+      responses:
+        '204':
+          description: Group is deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid group is not found
+    patch:
+      tags:
+        - Groups Endpoint
+      summary: Update Group - PATCH
+      description: This API updates the group details and returns the updated group details using a PATCH operation. It returns HTTP 404 if the group is not found.
+      operationId: patchGroup
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op": [operation],"value":{"members":[{"display": [name],"$ref": [ref],"value": [member user ID] }] } }]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/[group ID]
+      x-wso2-curl: |
+        curl -v -k --user admin:admin -X PATCH -d '{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"add","value":{"members":[{"display": "Kris","$ref":"https://localhost:9443/scim2/Users/81cbba1b-c259-485d-8ba4-79afb03e5bd1","value": "81cbba1b-c259-485d-8ba4-79afb03e5bd1"}]}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36
+      x-wso2-response: |
+        {"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:51:45Z"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"members":[{"display":"kim","value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0"},{"display":"Kris","value":"81cbba1b-c259-485d-8ba4-79afb03e5bd1","$ref":"https://localhost:9443/scim2/Users/81cbba1b-c259-485d-8ba4-79afb03e5bd1"}],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique id of the resource type.
+          required: true
+          type: string
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Group is updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid group is not found
+  /Users:
+    get:
+      tags:
+        - Users Endpoint
+      summary: Filter Users
+      description: |
+        This API returns users according to the filter, sort and pagination parameters. It returns HTTP 404 if the users are not found. Pagination is not supported across user stores and LDAP multi-attribute group filtering. However, filtering is supported across multiple user stores.
+      operationId: getUser
+      x-wso2-request: |
+        curl -v -k --user [username]:[password]  'https://localhost:9443/scim2/Users?startIndex=[value]&count=[value]&domain=[value]&filter=[query]&attributes=[attribute names]'
+      x-wso2-curl: |
+        curl -v -k --user admin:admin 'https://localhost:9443/scim2/Users?startIndex=1&count=10&domain=PRIMARY&filter=userName+sw+ki+and+name.familyName+co+ack&attributes=userName,name.familyName'
+      x-wso2-response: |
+        {"totalResults":1,"startIndex":1,"itemsPerPage":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:ListResponse"],"Resources":[{"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jackson@gmail.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-15T14:55:23Z","resourceType":"User"},"roles":[{"type":"default","value":"Internal/everyone"}],"name":{"givenName":"kim","familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}]}
+      produces:
+        - application/scim+json
+      parameters:
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - name: filter
+          in: query
+          description: |
+            Filter expression for filtering. Supported filters are ‘Ew’, ‘Ew’, ‘Co’, ‘Sw’, ‘and’.
+          required: false
+          type: string
+        - name: startIndex
+          in: query
+          description: The 1-based index of the first query result
+          required: false
+          type: integer
+          format: int32
+        - name: count
+          in: query
+          description: Specifies the desired maximum number of query results per page.
+          required: false
+          type: integer
+          format: int32
+        - name: sortBy
+          in: query
+          description: |-
+            Specifies the attribute whose value
+            SHALL be used to order the returned responses.
+          required: false
+          type: string
+        - name: sortOder
+          in: query
+          description: The order in which the "sortBy" parameter is applied.
+          required: false
+          type: string
+        - name: domain
+          in: query
+          description: The name of the user store where filtering needs to be applied.
+          required: false
+          type: string
+      responses:
+        '200':
+          description: Valid users are found
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid users are not found
+    post:
+      tags:
+        - Users Endpoint
+      summary: Create User
+      description: This API creates a user and returns the user details along with the user's unique ID. It returns HTTP 201 if the user is successfully created.
+      operationId: createUser
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] --data '{"schemas":[],"name":{"familyName":[last name],"givenName":[name]},"userName":[username],"password":[password],"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}]}--header "Content-Type:application/json" https://localhost:9443/scim2/Users
+      x-wso2-curl: |
+        curl -v -k --user admin:admin --data '{"schemas":[],"name":{"familyName":"jackson","givenName":"kim"},"userName":"kim","password":"kimwso2","emails":[{"primary":true,"value":"kim.jackson@gmail.com","type":"home"},{"value":"kim_j@wso2.com","type":"work"}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users
+      x-wso2-response: |
+        {"emails":[{"type":"home","value":"kim.jackson@gmail.com","primary":true},{"type":"work","value":"kim_j@wso2.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-15T14:55:23Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"name":{"familyName":"jackson","givenName":"kim"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}
+      consumes:
+        - application/scim+json
+      parameters:
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Valid user is created
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+  /Users/.search:
+    post:
+      tags:
+        - Users Endpoint
+      summary: Search Users
+      description: This API returns users according to the filter, sort and pagination parameters. It returns HTTP 404 if the users are not found.
+      operationId: getUsersByPost
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] --data '{"schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"attributes": [attribute names],"filter": [filter query],"domain": [domain name],"startIndex": [value],"count": [value]}' --header "Content-Type:application/scim+json"  'https://localhost:9443/scim2/Users/.search'
+      x-wso2-curl: |
+        curl -v -k --user admin:admin --data '{"schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"attributes": ["name.familyName", "userName"],"filter":"userName sw ki and name.familyName co ack","domain":"PRIMARY","startIndex": 1,"count": 10}' --header "Content-Type:application/scim+json"  'https://localhost:9443/scim2/Users/.search'
+      x-wso2-response: |
+        {"totalResults":1,"startIndex":1,"itemsPerPage":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:ListResponse"],"Resources":[{"name":{"familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}]}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Valid users are found
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid users are not found
+  '/Users/{id}':
+    get:
+      tags:
+        - Users Endpoint
+      summary: Get User by ID
+      description: Returns HTTP 200 if the user is found.
+      operationId: getUser by id
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] https://localhost:9443/scim2/Users/[user ID]
+      x-wso2-curl: |
+        curl -v -k --user admin:admin 'https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd'
+      x-wso2-response: |
+        {"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jackson@gmail.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-15T14:55:23Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"roles":[{"type":"default","value":"Internal/everyone"}],"name":{"givenName":"kim","familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+      responses:
+        '200':
+          description: Valid user is found
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+    put:
+      tags:
+        - Users Endpoint
+      summary: Update User - PUT 
+      description: This API updates user details and returns the updated user details using a PUT operation. It returns HTTP 404 if the user is not found.
+      operationId: updateUser
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] -X PUT -d '{"schemas":[],"name":{"familyName":[last name],"givenName":[name]},"userName":[username],"emails":[{"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/[user ID]
+      x-wso2-curl: |
+        curl -v -k --user admin:admin -X PUT -d '{"schemas":[],"name":{"familyName":"jackson","givenName":"kim"},"userName":"kim","emails":[{"value":"kim_j@wso2.com","type":"work"},{"value":"kim.jack@gmail.com","type":"home"}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd
+      x-wso2-response: |
+        {"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jack@gmail.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-16T14:24:00Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"roles":[{"type":"default","value":"Internal/everyone"}],"name":{"givenName":"kim","familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User is updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+    delete:
+      tags:
+        - Users Endpoint
+      summary: Delete User by ID
+      description: This API deletes a user using the user's unique ID. It returns HTTP 204 if the user is successfully deleted.
+      operationId: deleteUser
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] -X DELETE https://localhost:9443/scim2/Users/[user ID] -H "Accept: application/scim+json"
+      x-wso2-curl: |
+        curl -v -k --user admin:admin -X DELETE https://localhost:9443/scim2/Users/b228b59d-db19-4064-b637-d33c31209fae -H "Accept: application/scim+json"
+      x-wso2-response: |
+        HTTP/1.1 204 No Content
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+      responses:
+        '204':
+          description: User is deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+    patch:
+      tags:
+        - Users Endpoint
+      summary: Update User - PATCH 
+      description: This API updates user details and returns the updated user details using a PATCH operation. It returns HTTP 404 if the user is not found.
+      operationId: patchUser
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op":[operation],"value":{[attributeName]:[attribute value]}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/[user ID]
+      x-wso2-curl: |
+        curl -v -k --user admin:admin -X PATCH -d '{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"add","value":{"nickName":"shaggy"}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd
+      x-wso2-response: |
+        {"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jack@gmail.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-16T14:46:07Z","resourceType":"User"},"nickName":"shaggy","schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"roles":[{"type":"default","value":"Internal/everyone"}],"name":{"givenName":"kim","familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique id of the resource type.
+          required: true
+          type: string
+        - name: attributes
+          in: query
+          description: SCIM defined attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: SCIM defined excludedAttribute parameter.
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User is updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+  /Bulk:
+    post:
+      tags:
+        - Bulk Endpoint
+      summary: Create Users in Bulk
+      description: This API is used to create multiple users at once. It returns HTTP 201 if the users are successfully created.
+      operationId: createBulkUsers
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] --data '{"failOnErrors": [value],"schemas":[],"Operations":[{"method": [request type],"path": [end point],"bulkId": [bulk id] ,"data": [input user details] }] }' --header "Content-Type:application/scim+json" https://localhost:9443/scim2/Bulk
+      x-wso2-curl: |
+        curl -v -k --user admin:admin --data '{"failOnErrors":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],"Operations":[{"method": "POST","path": "/Users","bulkId": "qwerty","data":{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User"],"userName": "Kris","password":"krispass"}},{"method": "POST","path": "/Users","bulkId":"ytrewq","data":{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"userName":"Jesse","password":"jessepass","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User":{"employeeNumber": "11250","manager": {"value": "bulkId:qwerty"}}}}]}' --header "Content-Type:application/scim+json" https://localhost:9443/scim2/Bulk
+      x-wso2-response: |
+        {"schemas":["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],"Operations":[{"bulkId":"qwerty","method":"POST","location":"https://localhost:9443/scim2/Users/81cbba1b-c259-485d-8ba4-79afb03e5bd1","status":{"code":201}},{"bulkId":"ytrewq","method":"POST","location":"https://localhost:9443/scim2/Users/b489dacc-fc89-449c-89f6-7acc37422031","status":{"code":201}}]}
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Valid user is created
+        '401':
+          description: Unauthorized
+        '404':
+          description: Valid user is not found
+  /ResourceType:
+    get:
+      tags:
+        - ResourceType Endpoint
+      summary: Get Resource Types
+      description: This API lists and returns metadata about resource types. It returns HTTP 200 if the schema is found.
+      operationId: getResourceType
+      x-wso2-request: |
+        curl -v -k --user [username]:[password] https://localhost:9443/scim2/ResourceType
+      x-wso2-curl: |
+        curl -v -k --user admin:admin https://localhost:9443/scim2/ResourceType
+      x-wso2-response: |
+        {"schemas":["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],"resourceType":[{"schema":"urn:ietf:params:scim:schemas:core:2.0:User","endpoint":"/Users","meta":{"location":"https://localhost:9443/scim2/ResourceType/User","resourceType":"ResourceType"},"name":"User","description":"User Account","schemaExtensions":{"schema":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User","required":false},"id":"User"},{"schema":"urn:ietf:params:scim:schemas:core:2.0:Group","endpoint":"/Groups","meta":{"location":"https://localhost:9443/scim2/ResourceType/Group","resourceType":"ResourceType"},"name":"Group","description":"Group","id":"Group"}]}
+      produces:
+        - application/scim+json
+      parameters: []
+      responses:
+        '200':
+          description: Schema is found
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schema is not found
+  /ServiceProviderConfig:
+    get:
+      tags:
+        - ServiceProviderConfig Endpoint
+      summary: Get Service Provider Config
+      description: This API returns the service provider's configuration details. It returns HTTP 200 if the schema is found.
+      operationId: getServiceProviderConfig
+      x-wso2-request: |
+        curl -v -k --user [username]:[password]  https://localhost:9443/scim2/ServiceProviderConfig
+      x-wso2-curl: |
+        curl -v -k --user admin:admin  https://localhost:9443/scim2/ServiceProviderConfig
+      x-wso2-response: |
+        {"patch":{"supported":true},"filter":{"maxResults":200,"supported":true},"documentationUri":"http://example.com/help/scim.html","authenticationSchemes":[{"name":"OAuth Bearer Token","description":"Authentication scheme using the OAuth Bearer Token Standard","specUri":"http://www.rfc-editor.org/info/rfc6750","type":"oauthbearertoken","primary":true},{"name":"HTTP Basic","description":"Authentication scheme using the HTTP Basic Standard","specUri":"http://www.rfc-editor.org/info/rfc2617","type":"httpbasic","primary":false}],"schemas":["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],"etag":{"supported":false},"sort":{"supported":false},"bulk":{"maxPayloadSize":1048576,"maxOperations":1000,"supported":true},"changePassword":{"supported":false}}
+      produces:
+        - application/scim+json
+      parameters: []
+      responses:
+        '200':
+          description: Schema is found
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schema is not found

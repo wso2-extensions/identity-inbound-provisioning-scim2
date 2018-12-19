@@ -45,7 +45,7 @@ public class GroupResource extends AbstractResource {
 
     @GET
     @Path("{id}")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
                              @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                              @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
@@ -75,7 +75,7 @@ public class GroupResource extends AbstractResource {
 
     @POST
     @Path("/.search")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getGroupsByPOST(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                     @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                     @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
@@ -163,7 +163,8 @@ public class GroupResource extends AbstractResource {
                              @QueryParam(SCIMProviderConstants.START_INDEX) String startIndex,
                              @QueryParam(SCIMProviderConstants.COUNT) String count,
                              @QueryParam(SCIMProviderConstants.SORT_BY) String sortBy,
-                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder) {
+                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder,
+                             @QueryParam(SCIMProviderConstants.DOMAIN) String domainName) {
 
         String userName = SupportUtils.getAuthenticatedUsername();
         try {
@@ -185,6 +186,7 @@ public class GroupResource extends AbstractResource {
         requestAttributes.put(SCIMProviderConstants.COUNT, count);
         requestAttributes.put(SCIMProviderConstants.SORT_BY, sortBy);
         requestAttributes.put(SCIMProviderConstants.SORT_ORDER, sortOrder);
+        requestAttributes.put(SCIMProviderConstants.DOMAIN, domainName);
         requestAttributes.put(SCIMProviderConstants.SEARCH, "0");
         return processRequest(requestAttributes);
     }
@@ -337,9 +339,10 @@ public class GroupResource extends AbstractResource {
 
                 String sortBy = requestAttributes.get(SCIMProviderConstants.SORT_BY);
                 String sortOrder = requestAttributes.get(SCIMProviderConstants.SORT_ORDER);
+                String domainName = requestAttributes.get(SCIMProviderConstants.DOMAIN);
 
                 scimResponse = groupResourceManager.listWithGET(userManager, filter, startIndex,
-                        count, sortBy, sortOrder, attributes, excludedAttributes);
+                        count, sortBy, sortOrder, domainName, attributes, excludedAttributes);
 
             } else if (GET.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager.get(id, userManager, attributes, excludedAttributes);

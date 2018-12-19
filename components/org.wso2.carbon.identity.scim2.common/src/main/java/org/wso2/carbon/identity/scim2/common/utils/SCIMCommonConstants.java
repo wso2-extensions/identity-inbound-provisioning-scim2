@@ -28,7 +28,7 @@ public class SCIMCommonConstants {
     public static final String USERS = "/Users";
     public static final String GROUPS = "/Groups";
     public static final String SERVICE_PROVIDER_CONFIG = "/ServiceProviderConfig";
-    public static final String RESOURCE_TYPE = "/ResourceType";
+    public static final String RESOURCE_TYPE = "/ResourceTypes";
     public static final String DEFAULT = "default";
 
     public static final int USER = 1;
@@ -69,7 +69,8 @@ public class SCIMCommonConstants {
     // Identity recovery claims
     public static final String ASK_PASSWORD_CLAIM = "http://wso2.org/claims/identity/askPassword";
     public static final String VERIFY_EMAIL_CLIAM = "http://wso2.org/claims/identity/verifyEmail";
+    public static final String SCIM_COMPLEX_MULTIVALUED_ATTRIBUTE_SUPPORT_ENABLED = "SCIM2" +
+            ".ComplexMultiValuedAttributeSupportEnabled";
     public static final String SCIM_ENABLE_FILTERING_ENHANCEMENTS = "SCIM2.EnableFilteringEnhancements";
-
 }
 

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
@@ -35,15 +36,32 @@ public class AbstractResource {
 
     //identify the output format
     public boolean isValidOutputFormat(String format) {
-        return format == null || "*/*".equals(format) ||
-                format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION__JSON)
-                || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON);
+
+        if (format == null) {
+            return true;
+        }
+        if (!StringUtils.contains(format, ",")) {
+            return isValidInputFormat(format);
+        } else {
+            String[] responseFormats = format.split(",");
+            for (String responseFormat : responseFormats) {
+                if (responseFormat != null) {
+                    responseFormat = responseFormat.trim();
+                    boolean validJSONOutputFormat = isValidJSONOutputFormat(responseFormat);
+                    if (validJSONOutputFormat) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
     }
     //identify the input format
     public boolean isValidInputFormat(String format) {
         return format == null || "*/*".equals(format) ||
                 format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION__JSON)
-                || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON);
+                || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON)
+                || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_ALL);
     }
 
     /**
@@ -82,5 +100,13 @@ public class AbstractResource {
         // use the default JSON encoder to build the error response.
         return SupportUtils.buildResponse(
                 AbstractResourceManager.encodeSCIMException(e));
+    }
+
+    protected boolean isValidJSONOutputFormat(String format) {
+
+        return "*/*".equals(format) ||
+                format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION__JSON)
+                || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON) ||
+                format.equalsIgnoreCase("application/*");
     }
 }

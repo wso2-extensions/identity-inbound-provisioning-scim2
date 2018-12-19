@@ -42,7 +42,7 @@ public class UserResource extends AbstractResource {
 
     @GET
     @Path("{id}")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
                             @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
@@ -169,7 +169,7 @@ public class UserResource extends AbstractResource {
     }
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format,
                             @QueryParam (SCIMProviderConstants.ATTRIBUTES) String attribute,
@@ -178,7 +178,8 @@ public class UserResource extends AbstractResource {
                             @QueryParam (SCIMProviderConstants.START_INDEX) int startIndex,
                             @QueryParam (SCIMProviderConstants.COUNT) int count,
                             @QueryParam (SCIMProviderConstants.SORT_BY) String sortBy,
-                            @QueryParam (SCIMProviderConstants.SORT_ORDER) String sortOrder) {
+                            @QueryParam (SCIMProviderConstants.SORT_ORDER) String sortOrder,
+                            @QueryParam (SCIMProviderConstants.DOMAIN) String domainName) {
 
         JSONEncoder encoder = null;
         try {
@@ -204,7 +205,7 @@ public class UserResource extends AbstractResource {
             SCIMResponse scimResponse = null;
 
             scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
-                    sortBy, sortOrder, attribute, excludedAttributes);
+                    sortBy, sortOrder, domainName, attribute, excludedAttributes);
 
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
@@ -216,7 +217,7 @@ public class UserResource extends AbstractResource {
 
     @POST
     @Path("/.search")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getUsersByPost(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                    @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                    @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,

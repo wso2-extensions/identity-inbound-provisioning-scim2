@@ -294,7 +294,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("value");
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
         List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
-                requiredAttributes);
+                null, requiredAttributes);
 
         assertEquals(roleList.size(), 2);
 
