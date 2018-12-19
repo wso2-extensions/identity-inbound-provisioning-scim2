@@ -291,4 +291,17 @@ public class SCIMCommonUtils {
         }
         return tenantDomain;
     }
+
+    /**
+     * Checks whether the identity.xml config is available for applying filtering enhancements. This makes sure that Eq
+     * should strictly check for the String match (in this case cross user store search should not be performed).
+     * This config also enforces consistency on the filtered attribute formats in the response.
+     *
+     * @return whether 'EnableFilteringEnhancements' property is enabled in identity.xml.
+     */
+    public static boolean isFilteringEnhancementsEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty
+                (SCIMCommonConstants.SCIM_ENABLE_FILTERING_ENHANCEMENTS));
+    }
 }

@@ -464,6 +464,16 @@ public class SCIMUserManager implements UserManager {
                 throw new NotImplementedException(error);
             }
 
+            if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+                if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation)) {
+                    if (StringUtils.equals(attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI) &&
+                            !StringUtils.contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+                        attributeValue = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME +
+                                CarbonConstants.DOMAIN_SEPARATOR + attributeValue;
+                    }
+                }
+            }
+
             if (!SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
                 //get the user name of the user with this id
                 userNames = getUserNames(attributeName, filterOperation, attributeValue);
@@ -863,6 +873,16 @@ public class SCIMUserManager implements UserManager {
             throw new NotImplementedException(error);
         }
 
+        if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+            if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation)) {
+                if (StringUtils.equals(attributeName, SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI) &&
+                        !StringUtils.contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+                    attributeValue = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME +
+                            CarbonConstants.DOMAIN_SEPARATOR + attributeValue;
+                }
+            }
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("Listing groups with filter: " + attributeName + filterOperation +
                     attributeValue);
@@ -1152,7 +1172,6 @@ public class SCIMUserManager implements UserManager {
             //add groups of user:
             for (String role : roles) {
                 if (UserCoreUtil.isEveryoneRole(role, carbonUM.getRealmConfiguration())
-                        || UserCoreUtil.isPrimaryAdminRole(role, carbonUM.getRealmConfiguration())
                         || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(role)
                         || role.toLowerCase().startsWith((UserCoreConstants.INTERNAL_DOMAIN +
                         CarbonConstants.DOMAIN_SEPARATOR).toLowerCase())) {
@@ -1160,6 +1179,12 @@ public class SCIMUserManager implements UserManager {
                     // skipping them.
                     // skip intenal roles
                     continue;
+                }
+
+                if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+                    if (!StringUtils.contains(role, CarbonConstants.DOMAIN_SEPARATOR)) {
+                        role = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + role;
+                    }
                 }
 
                 Group group = groupMetaAttributesCache.get(role);
@@ -1249,7 +1274,6 @@ public class SCIMUserManager implements UserManager {
                 //add groups of user
                 for (String role : roles) {
                     if (UserCoreUtil.isEveryoneRole(role, carbonUM.getRealmConfiguration())
-                            || UserCoreUtil.isPrimaryAdminRole(role, carbonUM.getRealmConfiguration())
                             || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(role)
                             || role.toLowerCase().startsWith((UserCoreConstants.INTERNAL_DOMAIN +
                             CarbonConstants.DOMAIN_SEPARATOR).toLowerCase())) {
@@ -1257,6 +1281,12 @@ public class SCIMUserManager implements UserManager {
                         // skipping them.
                         // skip internal roles
                         continue;
+                    }
+
+                    if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+                        if (!StringUtils.contains(role, CarbonConstants.DOMAIN_SEPARATOR)) {
+                            role = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + role;
+                        }
                     }
 
                     Group group = groupMetaAttributesCache.get(role);

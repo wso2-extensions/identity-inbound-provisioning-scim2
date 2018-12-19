@@ -69,6 +69,7 @@ public class SCIMCommonConstants {
     // Identity recovery claims
     public static final String ASK_PASSWORD_CLAIM = "http://wso2.org/claims/identity/askPassword";
     public static final String VERIFY_EMAIL_CLIAM = "http://wso2.org/claims/identity/verifyEmail";
+    public static final String SCIM_ENABLE_FILTERING_ENHANCEMENTS = "SCIM2.EnableFilteringEnhancements";
 
 }
 
