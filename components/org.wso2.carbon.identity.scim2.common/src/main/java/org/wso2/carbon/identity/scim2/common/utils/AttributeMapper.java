@@ -197,10 +197,6 @@ public class AttributeMapper {
             boolean isComplexMultivaluedSupportEnabled = Boolean.parseBoolean(IdentityUtil.getProperty
                     (SCIM_COMPLEX_MULTIVALUED_ATTRIBUTE_SUPPORT_ENABLED));
             if (isComplexMultivaluedSupportEnabled) {
-                if (typeValue == null) {
-                    throw new CharonException("Type Value cannot be null in sub attributes");
-                }
-
                 Map<String, Attribute> otherAttributes = new HashMap<>(subAttributes);
                 otherAttributes.remove(SCIMConstants.CommonSchemaConstants.TYPE);
                 otherAttributes.remove(SCIMConstants.CommonSchemaConstants.VALUE);

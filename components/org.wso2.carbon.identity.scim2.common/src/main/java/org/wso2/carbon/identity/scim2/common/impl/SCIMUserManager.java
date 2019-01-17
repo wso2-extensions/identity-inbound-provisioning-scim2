@@ -465,7 +465,7 @@ public class SCIMUserManager implements UserManager {
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
         } catch (BadRequestException | CharonException e) {
-            throw new CharonException("Error occured while trying to update the user");
+            throw new CharonException("Error occured while trying to update the user", e);
         }
     }
 
@@ -850,20 +850,19 @@ public class SCIMUserManager implements UserManager {
             //we assume (since id is unique per user) only one user exists for a given id
             scimUser = this.getSCIMUser(userName, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
 
-            if(scimUser == null){
-                log.debug("User with userName : " + userName + " does not exist in the system.");
-                throw new NotFoundException();
-            }else{
+            if (scimUser == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("User with userName : " + userName + " does not exist in the system.");
+                }
+                throw new NotFoundException("No such user exist");
+            } else {
                 //set the schemas of the scim user
                 scimUser.setSchemas();
                 log.info("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
                 return scimUser;
             }
-
         } catch (UserStoreException e) {
-            throw new CharonException("Error from getting the authenticated user");
-        } catch (NotFoundException e) {
-            throw new NotFoundException("No such user exist");
+            throw new CharonException("Error from getting the authenticated user", e);
         }
     }
 
@@ -998,6 +997,9 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentitySCIMException | BadRequestException e) {
             String error = "One or more group members do not exist in the same user store. " +
                     "Hence, can not create the group: " + group.getDisplayName();
+            if (log.isDebugEnabled()) {
+                log.debug(error, e);
+            }
             throw new BadRequestException(error, ResponseCodeConstants.INVALID_VALUE);
         }
         return group;
@@ -1027,7 +1029,7 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentitySCIMException e) {
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         } catch (CharonException | BadRequestException e) {
-            throw new CharonException("Error in retrieving the group");
+            throw new CharonException("Error in retrieving the group", e);
         }
     }
 
