@@ -366,11 +366,23 @@ public class SCIMUserManager implements UserManager {
             if (userName.contains(UserCoreConstants.NAME_COMBINER)) {
                 userName = userName.split("\\" + UserCoreConstants.NAME_COMBINER)[0];
             }
-            User scimUser = this.getSCIMUser(userName, requiredClaims, scimToLocalClaimsMap);
-            if (scimUser != null) {
-                Map<String, Attribute> attrMap = scimUser.getAttributeList();
-                if (attrMap != null && !attrMap.isEmpty()) {
-                    users.add(scimUser);
+            String userStoreDomainName = IdentityUtil.extractDomainFromName(userName);
+            if (isSCIMEnabled(userStoreDomainName)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". " +
+                            "Including user : " + userName + " in the response.");
+                }
+                User scimUser = this.getSCIMUser(userName, requiredClaims, scimToLocalClaimsMap);
+                if (scimUser != null) {
+                    Map<String, Attribute> attrMap = scimUser.getAttributeList();
+                    if (attrMap != null && !attrMap.isEmpty()) {
+                        users.add(scimUser);
+                    }
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". " +
+                            "Hence user : " + userName + " in this domain is excluded in the response.");
                 }
             }
         }
@@ -813,13 +825,24 @@ public class SCIMUserManager implements UserManager {
             if (CarbonConstants.REGISTRY_ANONNYMOUS_USERNAME.equals(userName)) {
                 continue;
             }
-
-            scimUser = this.getSCIMUser(userName, requiredClaims, scimToLocalClaimsMap);
-            //if SCIM-ID is not present in the attributes, skip
-            if (scimUser != null && StringUtils.isBlank(scimUser.getId())) {
-                continue;
+            String userStoreDomainName = IdentityUtil.extractDomainFromName(userName);
+            if (isSCIMEnabled(userStoreDomainName)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". " +
+                            "Including user : " + userName + " in the response.");
+                }
+                scimUser = this.getSCIMUser(userName, requiredClaims, scimToLocalClaimsMap);
+                //if SCIM-ID is not present in the attributes, skip
+                if (scimUser != null && StringUtils.isBlank(scimUser.getId())) {
+                    continue;
+                }
+                filteredUsers.add(scimUser);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". " +
+                            "Hence user : "+ userName + " in this domain is excluded in the response.");
+                }
             }
-            filteredUsers.add(scimUser);
         }
     }
 
@@ -1503,79 +1526,85 @@ public class SCIMUserManager implements UserManager {
         Map<String, Group> groupMetaAttributesCache = new HashMap<>();
 
         for (String userName : userNames) {
-            User scimUser;
-            Map<String, String> userClaimValues = new HashMap<>();
-            for (UserClaimSearchEntry entry : searchEntries) {
-                if (StringUtils.isNotBlank(entry.getUserName()) && entry.getUserName().equals(userName)) {
-                    userClaimValues = entry.getClaims();
-                }
-            }
-            Map<String, String> attributes;
-            try {
-                attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues, scimToLocalClaimsMap);
-            } catch (UserStoreException e) {
-                throw new CharonException("Error in converting local claims to SCIM dialect for user: " + userName, e);
-            }
-
             String userStoreDomainName = IdentityUtil.extractDomainFromName(userName);
-            if (StringUtils.isNotBlank(userStoreDomainName) && !isSCIMEnabled(userStoreDomainName)) {
-                throw new CharonException("Cannot get user through scim to user store " + ". SCIM is not " +
-                        "enabled for user store " + userStoreDomainName);
-            }
-
-            try {
-                //skip simple type addresses claim because it is complex with sub types in the schema
-                if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
-                    attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
+            if (isSCIMEnabled(userStoreDomainName)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". " +
+                            "Including user : " + userName + " in the response.");
+                }
+                User scimUser;
+                Map<String, String> userClaimValues = new HashMap<>();
+                for (UserClaimSearchEntry entry : searchEntries) {
+                    if (StringUtils.isNotBlank(entry.getUserName()) && entry.getUserName().equals(userName)) {
+                        userClaimValues = entry.getClaims();
+                    }
+                }
+                Map<String, String> attributes;
+                try {
+                    attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues, scimToLocalClaimsMap);
+                } catch (UserStoreException e) {
+                    throw new CharonException("Error in converting local claims to SCIM dialect for user: " + userName, e);
                 }
 
-                // Add username with domain name
-                attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
-
-                //get groups of user and add it as groups attribute
-                List<String> roleList = usersRoles.get(userName);
-                String[] roles = new String[0];
-                if (CollectionUtils.isNotEmpty(roleList)) {
-                    roles = roleList.toArray(new String[0]);
-                }
-
-                //construct the SCIM Object from the attributes
-                scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
-
-                //add groups of user
-                for (String role : roles) {
-                    if (UserCoreUtil.isEveryoneRole(role, carbonUM.getRealmConfiguration())
-                            || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(role)
-                            || role.toLowerCase().startsWith((UserCoreConstants.INTERNAL_DOMAIN +
-                            CarbonConstants.DOMAIN_SEPARATOR).toLowerCase())) {
-                        // carbon specific roles do not possess SCIM info, hence
-                        // skipping them.
-                        // skip internal roles
-                        continue;
+                try {
+                    //skip simple type addresses claim because it is complex with sub types in the schema
+                    if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
+                        attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
                     }
 
-                    if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
-                        if (!StringUtils.contains(role, CarbonConstants.DOMAIN_SEPARATOR)) {
-                            role = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + role;
+                    // Add username with domain name
+                    attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
+
+                    //get groups of user and add it as groups attribute
+                    List<String> roleList = usersRoles.get(userName);
+                    String[] roles = new String[0];
+                    if (CollectionUtils.isNotEmpty(roleList)) {
+                        roles = roleList.toArray(new String[0]);
+                    }
+
+                    //construct the SCIM Object from the attributes
+                    scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
+
+                    //add groups of user
+                    for (String role : roles) {
+                        if (UserCoreUtil.isEveryoneRole(role, carbonUM.getRealmConfiguration())
+                                || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(role)
+                                || role.toLowerCase().startsWith((UserCoreConstants.INTERNAL_DOMAIN +
+                                CarbonConstants.DOMAIN_SEPARATOR).toLowerCase())) {
+                            // carbon specific roles do not possess SCIM info, hence
+                            // skipping them.
+                            // skip internal roles
+                            continue;
+                        }
+
+                        if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+                            if (!StringUtils.contains(role, CarbonConstants.DOMAIN_SEPARATOR)) {
+                                role = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + role;
+                            }
+                        }
+
+                        Group group = groupMetaAttributesCache.get(role);
+                        if (group == null && !groupMetaAttributesCache.containsKey(role)) {
+                            group = getGroupOnlyWithMetaAttributes(role);
+                            groupMetaAttributesCache.put(role, group);
+                        }
+
+                        if (group != null) { // can be null for non SCIM groups
+                            scimUser.setGroup(null, group.getId(), role);
                         }
                     }
-
-                    Group group = groupMetaAttributesCache.get(role);
-                    if (group == null && !groupMetaAttributesCache.containsKey(role)) {
-                        group = getGroupOnlyWithMetaAttributes(role);
-                        groupMetaAttributesCache.put(role, group);
-                    }
-
-                    if (group != null) { // can be null for non SCIM groups
-                        scimUser.setGroup(null, group.getId(), role);
-                    }
+                } catch (UserStoreException | CharonException | NotFoundException | IdentitySCIMException | BadRequestException e) {
+                    throw new CharonException("Error in getting user information for user: " + userName, e);
                 }
-            } catch (UserStoreException | CharonException | NotFoundException | IdentitySCIMException | BadRequestException e) {
-                throw new CharonException("Error in getting user information for user: " + userName, e);
-            }
 
-            if (scimUser != null) {
-                scimUsers.add(scimUser);
+                if (scimUser != null) {
+                    scimUsers.add(scimUser);
+                }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". " +
+                            "Hence user : "+ userName + " in this domain is excluded in the response.");
+                }
             }
         }
         return scimUsers.toArray(new User[0]);

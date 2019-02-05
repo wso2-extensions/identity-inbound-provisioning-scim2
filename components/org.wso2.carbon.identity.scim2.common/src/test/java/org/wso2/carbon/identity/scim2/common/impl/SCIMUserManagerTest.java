@@ -30,18 +30,21 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -72,12 +75,14 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 /*
  * Unit tests for SCIMUserManager
  */
 @PrepareForTest({SCIMGroupHandler.class, IdentityUtil.class, SCIMUserSchemaExtensionBuilder.class,
-SCIMAttributeSchema.class, AttributeMapper.class, ClaimMetadataHandler.class})
+SCIMAttributeSchema.class, AttributeMapper.class, ClaimMetadataHandler.class, SCIMCommonUtils.class,
+IdentityTenantUtil.class})
 @PowerMockIgnore("java.sql.*")
 public class SCIMUserManagerTest extends PowerMockTestCase {
 
@@ -107,6 +112,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Mock
     private ClaimMetadataHandler mockClaimMetadataHandler;
+
+    @Mock
+    private RealmService mockRealmService;
+
+    @Mock
+    private UserStoreManager secondaryUserStoreManager;
 
 
     @BeforeMethod
@@ -298,6 +309,58 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         assertEquals(roleList.size(), 2);
 
+    }
+
+    @Test(dataProvider = "listUser")
+    public void testListUsersWithGET(String[] users, boolean isScimEnabledForPrimary, boolean
+            isScimEnabledForSecondary, int expectedResultCount) throws Exception {
+
+        Map<String, String> scimToLocalClaimMap = new HashMap<>();
+        scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", "http://wso2.org/claims/username");
+        scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:id", "http://wso2.org/claims/userid");
+
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimMap);
+
+        when(mockedUserStoreManager.getUserList("http://wso2.org/claims/userid", "*", null)).thenReturn(users);
+        when(mockedUserStoreManager.getRoleListOfUser(anyString())).thenReturn(new String[0]);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(isScimEnabledForPrimary);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(isScimEnabledForSecondary);
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockedRealmConfig);
+        when(mockedRealmConfig.getUserStoreProperty("DomainName")).thenReturn(null);
+
+        HashMap<String, Boolean> requiredClaimsMap = new HashMap<>();
+        requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        List<Object> result = scimUserManager.listUsersWithGET(null, 1, 0, null, null, requiredClaimsMap);
+        assertTrue(result.size() == expectedResultCount);
+    }
+
+    @DataProvider(name = "listUser")
+    public Object[][] listUser() throws Exception {
+
+        String[] users = {"testUser1", "testUser2", "SECONDARY/testUser3"};
+        return new Object[][]{
+                /* if SCIM is enabled for both primary and secondary, result should contain a total of 4 entries,
+                including the metadata in index position.
+                 */
+                {users, true, true, 4},
+                /* if SCIM is enabled for primary but not for secondary, result should contain 3 entries including
+                the metadata in index position and 2 users [testUser1, testUser2] from primary user-store domain.
+                 */
+                {users, true, false, 3},
+                /* if SCIM is enabled for secondary but not for primary, result should contain 2 entries including
+                the metadata in index position and 1 users [SECONDARY/testUser3] from secondary user-store domain.
+                 */
+                {users, false, true, 2},
+                // if no users are present in user-stores, result should contain a single entry for metadata.
+                {null, true, true, 1}
+        };
     }
 
     @ObjectFactory
