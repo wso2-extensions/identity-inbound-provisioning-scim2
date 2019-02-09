@@ -1831,7 +1831,13 @@ public class SCIMUserManager implements UserManager {
 
         String searchAttribute = null;
         if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
-            searchAttribute = delimiter + attributeValue + delimiter;
+            String[] attributeItems = attributeValue.split(CarbonConstants.DOMAIN_SEPARATOR);
+            if(attributeItems.length == 2) {
+                searchAttribute = attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR +
+                        delimiter + attributeItems[1] + delimiter;
+            } else {
+                searchAttribute = delimiter + attributeValue + delimiter;
+            }
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
             searchAttribute = attributeValue + delimiter;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
