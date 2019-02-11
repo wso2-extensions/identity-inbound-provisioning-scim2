@@ -84,6 +84,7 @@ public class SCIMUserManager implements UserManager {
     public static final String FILTERING_DELIMITER = "*";
     public static final String SQL_FILTERING_DELIMITER = "%";
     private static final String ERROR_CODE_INVALID_USERNAME = "31301";
+    private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
     private static Log log = LogFactory.getLog(SCIMUserManager.class);
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
@@ -176,6 +177,9 @@ public class SCIMUserManager implements UserManager {
         while (e != null && i < 10) {
 
             if (e instanceof UserStoreException && e.getMessage().contains(ERROR_CODE_INVALID_USERNAME)) {
+                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+            }
+            if (e instanceof UserStoreException && e.getMessage().contains(ERROR_CODE_INVALID_CREDENTIAL)) {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             if (e instanceof PolicyViolationException) {
