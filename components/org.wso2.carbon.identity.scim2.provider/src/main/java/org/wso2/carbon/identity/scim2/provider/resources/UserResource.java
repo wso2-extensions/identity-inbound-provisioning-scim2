@@ -202,7 +202,11 @@ public class UserResource extends AbstractResource {
             // create charon-SCIM user resource manager and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
 
-            SCIMResponse scimResponse = null;
+            SCIMResponse scimResponse;
+
+            if(filter != null) {
+                filter = filter.replace("\"", "");
+            }
 
             scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
                     sortBy, sortOrder, domainName, attribute, excludedAttributes);

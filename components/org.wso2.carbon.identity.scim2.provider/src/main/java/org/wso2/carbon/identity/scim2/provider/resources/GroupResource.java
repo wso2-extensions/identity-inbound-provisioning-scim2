@@ -176,6 +176,10 @@ public class GroupResource extends AbstractResource {
             return handleFormatNotSupportedException(e);
         }
 
+        if(filter != null) {
+            filter = filter.replace("\"", "");
+        }
+
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, GET.class.getSimpleName());
