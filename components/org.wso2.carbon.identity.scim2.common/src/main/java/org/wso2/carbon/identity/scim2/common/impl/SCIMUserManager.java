@@ -1870,7 +1870,11 @@ public class SCIMUserManager implements UserManager {
             throws org.wso2.carbon.user.core.UserStoreException {
 
         String searchAttribute = getSearchAttribute(filterOperation, attributeValue, FILTERING_DELIMITER);
-        return carbonUM.getUserList(attributeName, searchAttribute, UserCoreConstants.DEFAULT_PROFILE);
+        String attributeNameInLocalDialect = SCIMCommonUtils.getSCIMtoLocalMappings().get(attributeName);
+        if (StringUtils.isBlank(attributeNameInLocalDialect)) {
+            attributeNameInLocalDialect = attributeName;
+        }
+        return carbonUM.getUserList(attributeNameInLocalDialect, searchAttribute, UserCoreConstants.DEFAULT_PROFILE);
     }
 
     /**
