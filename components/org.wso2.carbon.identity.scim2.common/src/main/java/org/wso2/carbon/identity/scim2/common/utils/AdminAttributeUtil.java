@@ -33,6 +33,7 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -162,7 +163,7 @@ public class AdminAttributeUtil {
         claimsList.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
 
         Date date = new Date();
-        String createdDate = SCIMCommonUtils.formatDateTime(date);
+        String createdDate = AttributeUtil.formatDateTime(date);
         claimsList.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
         claimsList.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
         if (log.isDebugEnabled()) {
