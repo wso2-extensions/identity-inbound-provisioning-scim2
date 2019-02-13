@@ -528,8 +528,10 @@ public class SCIMUserManager implements UserManager {
                                 "attribute value: %s and filter operation %s", attributeName, attributeValue,
                         filterOperation), e);
             }
-
             userNames = paginateUsers(userNames, limit, offset);
+            //Removing duplicated usernames
+            HashSet<String> userNamesSet = new HashSet<String>(Arrays.asList(userNames));
+            userNames=userNamesSet.toArray(new String[userNamesSet.size()]);
             filteredUsers.set(0, userNames.length);
             filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
             return filteredUsers;
@@ -785,7 +787,11 @@ public class SCIMUserManager implements UserManager {
                         addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                     }
                 } else {
-                    addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
+
+
+
+                        addSCIMUsers(filteredUsers, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
+
                 }
             } catch (UserStoreException e) {
                 throw new CharonException("Error in retrieve user details. ", e);
