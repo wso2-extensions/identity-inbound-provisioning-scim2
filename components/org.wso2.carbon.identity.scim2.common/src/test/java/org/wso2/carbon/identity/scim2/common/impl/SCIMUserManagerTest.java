@@ -303,6 +303,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockRealmConfig.getEveryOneRoleName()).thenReturn("admin");
 
         when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("value");
+
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName",
+                "http://wso2.org/claims/username");
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
         List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
                 null, requiredAttributes);
