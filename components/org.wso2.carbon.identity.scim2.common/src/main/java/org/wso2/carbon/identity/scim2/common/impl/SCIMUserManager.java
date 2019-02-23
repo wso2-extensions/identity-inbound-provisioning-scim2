@@ -530,18 +530,9 @@ public class SCIMUserManager implements UserManager {
             }
 
             userNames = paginateUsers(userNames, limit, offset);
-            //When email is used as user name there are two mail attributes in um_user_attribute column there for it creates duplicates as user names #4181
-            if(userNames[0].equals(userNames[1])){//This only happens when user name is given as the email address hence results can have only two elements
-                String[] userNames1=new String[1];
-                userNames1[0]=userNames[0];
-                userNames=userNames1;
-
-                log.debug("Duplicate Usernames Detected");
-
-            }else {
-                log.debug("No Duplicate Usernames Detected");
-
-            }
+            //Removing duplicated usernames
+            HashSet<String> userNamesSet = new HashSet<String>(Arrays.asList(userNames));
+            userNames=userNamesSet.toArray(new String[userNamesSet.size()]);
             filteredUsers.set(0, userNames.length);
             filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
             return filteredUsers;
