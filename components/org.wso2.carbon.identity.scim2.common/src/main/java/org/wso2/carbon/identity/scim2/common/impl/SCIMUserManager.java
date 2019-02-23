@@ -528,7 +528,6 @@ public class SCIMUserManager implements UserManager {
                                 "attribute value: %s and filter operation %s", attributeName, attributeValue,
                         filterOperation), e);
             }
-
             userNames = paginateUsers(userNames, limit, offset);
             //Removing duplicated usernames
             HashSet<String> userNamesSet = new HashSet<String>(Arrays.asList(userNames));
