@@ -1133,9 +1133,21 @@ public class SCIMUserManager implements UserManager {
             SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
             Set<String> roleNames = groupHandler.listSCIMRoles();
             for (String roleName : roleNames) {
-                Group group = this.getGroupWithName(roleName);
-                if (group.getId() != null) {
-                    groupList.add(group);
+                String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
+                if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". " +
+                                "Including group with name : " + roleName + " in the response.");
+                    }
+                    Group group = this.getGroupWithName(roleName);
+                    if (group.getId() != null) {
+                        groupList.add(group);
+                    }
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". Hence " +
+                                "group with name : " + roleName + " is excluded in the response.");
+                    }
                 }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
@@ -1203,8 +1215,20 @@ public class SCIMUserManager implements UserManager {
                             groupNameWithDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
                                     + roleName;
                         }
-                        Group group = getGroupWithName(groupNameWithDomain);
-                        filteredGroups.add(group);
+                        String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
+                        if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". " +
+                                        "Including group with name : " + roleName + " in the response.");
+                            }
+                            Group group = getGroupWithName(groupNameWithDomain);
+                            filteredGroups.add(group);
+                        } else {
+                            if (log.isDebugEnabled()) {
+                                log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". Hence " +
+                                        "group with name : " + roleName + " is excluded in the response.");
+                            }
+                        }
                     } else {
                         //returning null will send a resource not found error to client by Charon.
                         filteredGroups.clear();
