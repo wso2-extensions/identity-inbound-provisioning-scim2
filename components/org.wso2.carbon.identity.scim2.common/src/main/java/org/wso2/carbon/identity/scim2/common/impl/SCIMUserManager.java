@@ -176,10 +176,8 @@ public class SCIMUserManager implements UserManager {
         int i = 0; // this variable is used to avoid endless loop if the e.getCause never becomes null.
         while (e != null && i < 10) {
 
-            if (e instanceof UserStoreException && e.getMessage().contains(ERROR_CODE_INVALID_USERNAME)) {
-                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
-            }
-            if (e instanceof UserStoreException && e.getMessage().contains(ERROR_CODE_INVALID_CREDENTIAL)) {
+            if (e instanceof UserStoreException && (e.getMessage().contains(ERROR_CODE_INVALID_USERNAME) ||
+                    e.getMessage().contains(ERROR_CODE_INVALID_CREDENTIAL))) {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             if (e instanceof PolicyViolationException) {
