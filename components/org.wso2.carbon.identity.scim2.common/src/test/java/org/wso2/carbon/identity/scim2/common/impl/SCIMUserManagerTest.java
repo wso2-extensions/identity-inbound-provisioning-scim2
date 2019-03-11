@@ -38,14 +38,13 @@ import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.testutil.Whitebox;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
-import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
@@ -53,19 +52,17 @@ import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.schema.SCIMAttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
-import org.wso2.charon3.core.utils.codeutils.Node;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
+import static junit.framework.TestCase.assertTrue;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
-import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -73,9 +70,8 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
+import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.AssertJUnit.assertNotNull;
 
 /*
  * Unit tests for SCIMUserManager
@@ -360,6 +356,26 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 {users, false, true, 2},
                 // if no users are present in user-stores, result should contain a single entry for metadata.
                 {null, true, true, 1}
+        };
+    }
+
+    @Test(dataProvider = "getSearchAttribute")
+    public void testGetSearchAttribute(String attributeValue, String expectedValue) throws Exception {
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+
+        String searchAttribute = Whitebox.invokeMethod(scimUserManager, "getSearchAttribute",
+                SCIMCommonConstants.CO, attributeValue, "*");
+
+        assertEquals(searchAttribute, expectedValue);
+    }
+
+    @DataProvider(name = "getSearchAttribute")
+    public Object[][] getSearchAttribute() {
+
+        return new Object[][]{
+                {"user", "*user*"},
+                {"PRIMARY/testUser", "PRIMARY/*testUser*"}
         };
     }
 
