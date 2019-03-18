@@ -299,7 +299,7 @@ public class SCIMUserManager implements UserManager {
         } else if (rootNode != null) {
             return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
         } else {
-            return listUsers(requiredAttributes);
+            return listUsers(requiredAttributes, startIndex, count, domainName);
         }
     }
 
@@ -311,7 +311,7 @@ public class SCIMUserManager implements UserManager {
                 requiredAttributes);
     }
 
-    private List<Object> listUsers(Map<String, Boolean> requiredAttributes) throws CharonException {
+    private List<Object> listUsers(Map<String, Boolean> requiredAttributes, int offset, int limit, String domainName) throws CharonException {
 
         ClaimMapping[] coreClaims;
         ClaimMapping[] userClaims;
@@ -320,12 +320,22 @@ public class SCIMUserManager implements UserManager {
         //0th index is to store total number of results;
         users.add(0);
         try {
-            Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
-            String userIdLocalClaim = scimToLocalClaimsMap.get(SCIMConstants
-                    .CommonSchemaConstants.ID_URI);
             String[] userNames = null;
-            if (StringUtils.isNotBlank(userIdLocalClaim)) {
-                userNames = carbonUM.getUserList(userIdLocalClaim, "*", null);
+            Map<String, String> scimToLocalClaimsMap;
+            if (domainName==null) {
+                scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+                String userIdLocalClaim = scimToLocalClaimsMap.get(SCIMConstants
+                        .CommonSchemaConstants.ID_URI);
+                if (StringUtils.isNotBlank(userIdLocalClaim)) {
+                    userNames = carbonUM.getUserList(userIdLocalClaim, "*", null);
+                    userNames = paginateUsers(userNames, limit, offset);// pagination enabled
+                }
+            } else {
+                scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+                String userNameClaim = scimToLocalClaimsMap.get(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
+                String claimValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR;
+                userNames = getUserNames(userNameClaim, SCIMCommonConstants.SW, claimValue);
+                userNames = paginateUsers(userNames, limit, offset);// pagination enabled
             }
             if (userNames != null && userNames.length != 0) {
                 List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
