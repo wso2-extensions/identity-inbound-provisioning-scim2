@@ -537,9 +537,7 @@ public class SCIMUserManager implements UserManager {
                     //get the user name of the user with this id
                     userNames = getUserNames(attributeName, filterOperation, attributeValue);
                 } else {
-                    if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
-                        userNames = carbonUM.getUserListOfRole(attributeValue);
-                    } else if (carbonUM instanceof AbstractUserStoreManager) {
+                    if (carbonUM instanceof AbstractUserStoreManager) {
                         String[] roleNames = getRoleNames(filterOperation, attributeValue);
                         userNames = getUserListOfRoles(roleNames);
                     } else {
