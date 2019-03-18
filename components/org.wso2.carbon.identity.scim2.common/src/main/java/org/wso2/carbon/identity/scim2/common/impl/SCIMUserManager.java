@@ -1810,15 +1810,18 @@ public class SCIMUserManager implements UserManager {
 
     private String[] paginateUsers(String[] users, int limit, int offset) {
 
-        Arrays.sort(users);
-
         if (offset <= 0) {
             offset = 1;
         }
 
-        if (limit <= 0) {
-            // This is to support backward compatibility.
-            return users;
+        if (limit <= 0) { // if limit is minus or zero
+            if (users == null) { // if users String array is null
+                return new String[0];
+            } else {
+                // This is to support backward compatibility.
+                Arrays.sort(users);
+                return users;
+            }
         }
 
         if (users == null) {
@@ -1826,9 +1829,11 @@ public class SCIMUserManager implements UserManager {
         } else if (offset > users.length) {
             return new String[0];
         } else if (users.length < limit + offset) {
+            Arrays.sort(users);
             limit = users.length - offset + 1;
             return Arrays.copyOfRange(users, offset - 1, limit + offset - 1);
         } else {
+            Arrays.sort(users);
             return Arrays.copyOfRange(users, offset - 1, limit + offset - 1);
         }
     }
