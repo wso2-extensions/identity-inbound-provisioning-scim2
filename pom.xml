@@ -279,7 +279,7 @@
 
     <properties>
         <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
-        <cxf-bundle.version>3.2.6</cxf-bundle.version>
+        <cxf-bundle.version>3.2.8</cxf-bundle.version>
         <inbound.auth.oauth.version>5.2.0</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.4.34</carbon.kernel.version>
