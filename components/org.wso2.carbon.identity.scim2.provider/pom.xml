@@ -32,12 +32,12 @@
     <dependencies>
         <dependency>
             <groupId>javax.ws.rs</groupId>
-            <artifactId>jsr311-api</artifactId>
+            <artifactId>javax.ws.rs-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.wso2.orbit.org.apache.cxf</groupId>
-            <artifactId>cxf-bundle</artifactId>
+            <groupId>org.apache.cxf</groupId>
+            <artifactId>cxf-core</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>

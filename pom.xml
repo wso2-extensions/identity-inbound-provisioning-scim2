@@ -46,14 +46,14 @@
         <dependencies>
             <dependency>
                 <groupId>javax.ws.rs</groupId>
-                <artifactId>jsr311-api</artifactId>
-                <version>${jsr311-api.version}</version>
+                <artifactId>javax.ws.rs-api</artifactId>
+                <version>${javax.ws.rs-api.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>org.wso2.orbit.org.apache.cxf</groupId>
-                <artifactId>cxf-bundle</artifactId>
-                <version>${cxf-bundle.wso2.version}</version>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-core</artifactId>
+                <version>${cxf-bundle.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-collections.wso2</groupId>
@@ -278,8 +278,8 @@
     </modules>
 
     <properties>
-        <jsr311-api.version>1.1.1</jsr311-api.version>
-        <cxf-bundle.wso2.version>2.7.16.wso2v1</cxf-bundle.wso2.version>
+        <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
+        <cxf-bundle.version>3.2.8</cxf-bundle.version>
         <inbound.auth.oauth.version>5.2.0</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.4.34</carbon.kernel.version>
