@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -299,7 +300,7 @@ public class SCIMUserManager implements UserManager {
         } else if (rootNode != null) {
             return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
         } else {
-            return listUsers(requiredAttributes);
+            return listUsers(requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
         }
     }
 
@@ -311,23 +312,76 @@ public class SCIMUserManager implements UserManager {
                 requiredAttributes);
     }
 
-    private List<Object> listUsers(Map<String, Boolean> requiredAttributes) throws CharonException {
+    private List<Object> listUsers(Map<String, Boolean> requiredAttributes, int offset, int limit, String sortBy,
+            String sortOrder, String domainName) throws CharonException {
 
-        ClaimMapping[] coreClaims;
-        ClaimMapping[] userClaims;
-        ClaimMapping[] extensionClaims = null;
         List<Object> users = new ArrayList<>();
-        //0th index is to store total number of results;
+        //0th index is to store total number of results.
         users.add(0);
+
+        String[] userNames;
+
+        if (StringUtils.isNotEmpty(domainName)) { // When domain is not null or not empty.
+            userNames = getAllUsernamesByDomainName(domainName);
+        } else { // When domain is null or empty.
+            userNames = getAllUsernamesByAllDomainNames();
+        }
+
+        if (userNames != null) {
+            users.set(0, userNames.length); // Set total number of results to 0th index.
+            users.addAll(getUserDetails(userNames, requiredAttributes)); // Set user details from index 1.
+        }
+
+        return users;
+    }
+
+    private String[] getAllUsernamesByDomainName(String domainName) throws CharonException {
+
+        String[] userNames = null;
+        UserStoreManager tempCarbonUM = carbonUM.getSecondaryUserStoreManager(domainName);
+
         try {
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
-            String userIdLocalClaim = scimToLocalClaimsMap.get(SCIMConstants
-                    .CommonSchemaConstants.ID_URI);
-            String[] userNames = null;
+            String userIdLocalClaim = scimToLocalClaimsMap.get(SCIMConstants.CommonSchemaConstants.ID_URI);
+            if (StringUtils.isNotBlank(userIdLocalClaim)) {
+                userNames = tempCarbonUM.getUserList(userIdLocalClaim, "*", null);
+            }
+
+            return userNames;
+        } catch (UserStoreException e) {
+            throw new CharonException(String.format("Error while listing users from domain: %s.", domainName), e);
+        }
+    }
+
+    private String[] getAllUsernamesByAllDomainNames() throws CharonException {
+
+        String[] userNames = null;
+
+        try {
+            Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            String userIdLocalClaim = scimToLocalClaimsMap.get(SCIMConstants.CommonSchemaConstants.ID_URI);
             if (StringUtils.isNotBlank(userIdLocalClaim)) {
                 userNames = carbonUM.getUserList(userIdLocalClaim, "*", null);
             }
-            if (userNames != null && userNames.length != 0) {
+
+            return userNames;
+        } catch (UserStoreException e) {
+            throw new CharonException("Error while listing users across all domains. ", e);
+        }
+    }
+
+    private List<Object> getUserDetails(String[] userNames, Map<String, Boolean> requiredAttributes)
+            throws CharonException {
+
+        List<Object> users = new ArrayList<>();
+
+        if (ArrayUtils.isEmpty(userNames)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Users for this filter does not exist in the system.");
+            }
+        } else {
+            try {
+                Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
                 List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
                 List<String> requiredClaimsInLocalDialect;
                 if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
@@ -340,30 +394,25 @@ public class SCIMUserManager implements UserManager {
                     requiredClaimsInLocalDialect = new ArrayList<>();
                 }
 
-                if (isPaginatedUserStoreAvailable()) {
-                    if (carbonUM instanceof PaginatedUserStoreManager) {
-                        User[] scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
-                        users.addAll(Arrays.asList(scimUsers));
-                    } else {
-                        retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
-                    }
-                } else {
+                User[] scimUsers;
+
+                if ((isPaginatedUserStoreAvailable())
+                        && (carbonUM instanceof PaginatedUserStoreManager)) { // retrieve all scim users at once
+                    scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
+                    users.addAll(Arrays.asList(scimUsers));
+                } else { // retrieve scim users one by one
                     retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                 }
 
-                //set the totalResults value in index 0
-                users.set(0, users.size()-1);
+            } catch (UserStoreException e) {
+                throw new CharonException("Error in retrieve user details. ", e);
             }
-        } catch (UserStoreException e) {
-            throw new CharonException("Error while retrieving users from user store..", e);
         }
-        log.info("User list is retrieved through SCIM.");
         return users;
     }
 
-    private void retriveSCIMUsers(List<Object> users, String[] userNames, List<String> requiredClaims, Map<String,
-            String> scimToLocalClaimsMap)
-            throws CharonException {
+    private void retriveSCIMUsers(List<Object> users, String[] userNames, List<String> requiredClaims,
+            Map<String, String> scimToLocalClaimsMap) throws CharonException {
         for (String userName : userNames) {
             if (userName.contains(UserCoreConstants.NAME_COMBINER)) {
                 userName = userName.split("\\" + UserCoreConstants.NAME_COMBINER)[0];
@@ -371,8 +420,8 @@ public class SCIMUserManager implements UserManager {
             String userStoreDomainName = IdentityUtil.extractDomainFromName(userName);
             if (isSCIMEnabled(userStoreDomainName)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". " +
-                            "Including user : " + userName + " in the response.");
+                    log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". "
+                            + "Including user : " + userName + " in the response.");
                 }
                 User scimUser = this.getSCIMUser(userName, requiredClaims, scimToLocalClaimsMap);
                 if (scimUser != null) {
@@ -383,8 +432,8 @@ public class SCIMUserManager implements UserManager {
                 }
             } else {
                 if (log.isDebugEnabled()) {
-                    log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". " +
-                            "Hence user : " + userName + " in this domain is excluded in the response.");
+                    log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". "
+                            + "Hence user : " + userName + " in this domain is excluded in the response.");
                 }
             }
         }
@@ -1972,13 +2021,13 @@ public class SCIMUserManager implements UserManager {
         return groupHandler.getGroupListFromAttributeName(attributeName, searchAttribute);
     }
 
-
     private boolean isPaginatedUserStoreAvailable() {
 
         String enablePaginatedUserStore = IdentityUtil.getProperty(ENABLE_PAGINATED_USER_STORE);
-        if (!StringUtils.isBlank(enablePaginatedUserStore)) {
+        if (StringUtils.isNotBlank(enablePaginatedUserStore)) {
             return Boolean.parseBoolean(enablePaginatedUserStore);
-        } return false;
+        }
+        return true;
     }
 
     /**
