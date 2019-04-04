@@ -1262,8 +1262,7 @@ public class SCIMUserManager implements UserManager {
     @Override
     public Group updateGroup(Group oldGroup, Group newGroup, Map<String, Boolean> requiredAttributes)
             throws CharonException {
-        String displayName = null;
-        displayName = oldGroup.getDisplayName();
+
         try {
             String userStoreDomainFromSP = getUserStoreDomainFromSP();
 
@@ -1400,7 +1399,7 @@ public class SCIMUserManager implements UserManager {
                 }
             }
             if (updated) {
-                log.info("Group: " + newGroup.getDisplayName() + " is updated through SCIM.");
+                log.info("Group: " + oldGroup.getDisplayName() + " is updated through SCIM.");
             } else {
                 log.warn("There is no updated field in the group: " + oldGroup.getDisplayName() +
                         ". Therefore ignoring the provisioning.");
