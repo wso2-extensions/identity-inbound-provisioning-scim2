@@ -486,88 +486,361 @@ public class SCIMUserManager implements UserManager {
     /**
      * Filter users using multi-attribute filters or single attribute filters with pagination.
      *
-     * @param node
-     * @param requiredAttributes
-     * @param offset
-     * @param limit
-     * @param sortBy
-     * @param sortOrder
-     * @param domainName
-     * @return
-     * @throws NotImplementedException
+     * @param node               Node
+     * @param requiredAttributes Required attributes
+     * @param offset             Starting index of the count
+     * @param limit              Number of required results (count)
+     * @param sortBy             Sortby
+     * @param sortOrder          Sort order
+     * @param domainName         Domain that the filter should perform
+     * @return Detailed user list
      * @throws CharonException
      */
     private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, int limit,
-                                     String sortBy, String sortOrder, String domainName)
-            throws NotImplementedException, CharonException {
-
-        List<Object> filteredUsers = new ArrayList<>();
-        //0th index is to store total number of results
-        filteredUsers.add(0);
-        String[] userNames;
+            String sortBy, String sortOrder, String domainName) throws CharonException {
 
         //Handle single attribute search
         if (node instanceof ExpressionNode) {
-            String attributeName = ((ExpressionNode) node).getAttributeValue();
-            String filterOperation = ((ExpressionNode) node).getOperation();
-            String attributeValue = ((ExpressionNode) node).getValue();
-
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Listing users by filter: %s %s %s",
-                        attributeName, filterOperation, attributeValue));
-            }
-
-            try {
-                if (isNotFilteringSupported(filterOperation)) {
-                    throw new NotImplementedException(String.format("System does not support filter operator: %s",
-                            filterOperation));
-                }
-
-                if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
-                    if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation)) {
-                        if (StringUtils.equals(attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI) &&
-                                !StringUtils.contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
-                            attributeValue = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME +
-                                    CarbonConstants.DOMAIN_SEPARATOR + attributeValue;
-                        }
-                    }
-                }
-
-                if (!SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
-                    //get the user name of the user with this id
-                    userNames = getUserNames(attributeName, filterOperation, attributeValue);
-                } else {
-                    if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
-                        userNames = carbonUM.getUserListOfRole(attributeValue);
-                    } else if (carbonUM instanceof AbstractUserStoreManager) {
-                        String[] roleNames = getRoleNames(filterOperation, attributeValue);
-                        userNames = getUserListOfRoles(roleNames);
-                    } else {
-                        throw new NotImplementedException(String.format("Filter operator %s is not supported " +
-                                "by the user store.", filterOperation));
-                    }
-                }
-            } catch (UserStoreException e) {
-                throw new CharonException(String.format("Error in filtering users by attribute name: %s, " +
-                                "attribute value: %s and filter operation %s", attributeName, attributeValue,
-                        filterOperation), e);
-            }
-
-            userNames = paginateUsers(userNames, limit, offset);
-            //remove duplicated username entries
-            HashSet<String> userNamesSet = new HashSet<String>(Arrays.asList(userNames));
-            userNames = userNamesSet.toArray(new String[userNamesSet.size()]);
-            filteredUsers.set(0, userNames.length);
-            filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
-            return filteredUsers;
+            return getFilteredUsersBySingleAttribute((ExpressionNode) node, requiredAttributes, offset, limit, sortBy,
+                    sortOrder, domainName);
 
         } else if (node instanceof OperationNode) {
+            if (log.isDebugEnabled())
+                log.debug("Listing users by multi attribute filter");
+            List<Object> filteredUsers = new ArrayList<>();
+
+            // 0th index is to store total number of results.
+            filteredUsers.add(0);
+
             // Support multi attribute filtering.
             return getMultiAttributeFilteredUsers(node, requiredAttributes, offset, limit, sortBy, sortOrder,
                     domainName, filteredUsers);
         } else {
-            throw new CharonException("Unsupported Operation");
+            throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
         }
+    }
+
+    /**
+     * Method to filter users for a filter with a single attribute.
+     *
+     * @param node               Expression node for single attribute filtering
+     * @param requiredAttributes Required attributes for the response
+     * @param offset             Starting index of the count
+     * @param limit              Counting value
+     * @param sortBy             SortBy
+     * @param sortOrder          Sorting order
+     * @param domainName         Domain to run the filter
+     * @return User list with detailed attributes
+     * @throws CharonException Error while filtering
+     */
+    private List<Object> getFilteredUsersBySingleAttribute(ExpressionNode node, Map<String, Boolean> requiredAttributes,
+            int offset, int limit, String sortBy, String sortOrder, String domainName) throws CharonException {
+
+        String[] userNames;
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Listing users by filter: %s %s %s", node.getAttributeValue(), node.getOperation(),
+                    node.getValue()));
+        }
+        try {
+            // Apply filter enhancements for username and update expression node value.
+            applyFilterEnhancementsForUsername(node);
+
+            if ((carbonUM instanceof PaginatedUserStoreManager) && isPaginatedUserStoreAvailable()) {
+
+                // If the limit is not specified, list all the users.
+                if (limit <= 0) {
+                    userNames = getAllFilteredUsers(node, limit, offset, domainName);
+                } else {
+                    // Extract he domain name if the domain name is embedded in the filter attribute value.
+                    domainName = resolveDomainNameInAttributeValue(domainName, node);
+
+                    // Get filtered user names.
+                    userNames = getFilteredUsers(node, offset, limit, sortBy, sortOrder, domainName);
+                }
+            } else
+                userNames = filterUsersUsingLegacyAPIs(node, limit, offset);
+        } catch (NotImplementedException e) {
+            String errorMessage = String.format("System does not support filter operator: %s", node.getOperation());
+            throw new CharonException(errorMessage, e);
+        } catch (BadRequestException e) {
+            String errorMessage = String
+                    .format("Domain parameter: %s in request does not match with the domain name in the attribute "
+                            + "value: %s ", domainName, node.getValue());
+            throw new CharonException(errorMessage, e);
+        } catch (CharonException e) {
+            String errorMessage = String.format("Error in filtering users by attribute name: %s, "
+                            + "attribute value: %s and filter operation: %s", node.getAttributeValue(), node.getValue(),
+                    node.getOperation());
+            throw new CharonException(errorMessage, e);
+        }
+        return getDetailedUsers(userNames, requiredAttributes);
+    }
+
+    /**
+     * Method to handle a request without the count(limit). Since the new APIs require a limit, all the users in a
+     * user store cannot be fetched. Therefore, legacy APIs have been used to retrieve all the users in a user store.
+     *
+     * @param node       Expression node
+     * @param limit      Results count
+     * @param offset     Starting index of the filter
+     * @param domainName Domain name in the request
+     * @return User list with their usernames
+     * @throws CharonException
+     * @throws NotImplementedException
+     */
+    private String[] getAllFilteredUsers(ExpressionNode node, int limit, int offset, String domainName)
+            throws CharonException, NotImplementedException {
+
+        // If there is a domain, append the domain with the domain separator in front of the new attribute value.
+        if (StringUtils.isNotEmpty(domainName))
+            node.setValue(domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR + node.getValue());
+        return filterUsersUsingLegacyAPIs(node, limit, offset);
+    }
+
+    /**
+     * Validate whether filter enhancements are enabled and then append the primary domain name in front of the
+     * attribute value to be searched. Finally update the attribute value in Expression node to new attribute value.
+     *
+     * @param node Expression node
+     * @return Modified attribute value
+     */
+    private void applyFilterEnhancementsForUsername(ExpressionNode node) {
+
+        // Set filter values.
+        String attributeName = node.getAttributeValue();
+        String filterOperation = node.getOperation();
+        String attributeValue = node.getValue();
+
+        if (SCIMCommonUtils.isFilteringEnhancementsEnabled())
+            if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation))
+                if (StringUtils.equals(attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI) && !StringUtils
+                        .contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR))
+                    node.setValue(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                            + attributeValue);
+    }
+
+    /**
+     * Update the domain parameter from the domain in attribute value and update the value in the expression node to the
+     * newly extracted value.
+     *
+     * @param domainName Domain name in the filter request
+     * @param node       Expression node
+     * @return Domain name extracted from the attribute value
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value
+     */
+    private String resolveDomainNameInAttributeValue(String domainName, ExpressionNode node)
+            throws BadRequestException {
+
+        String extractedDomain;
+        String attributeName = node.getAttributeValue();
+        String filterOperation = node.getOperation();
+        String attributeValue = node.getValue();
+
+        if (isDomainNameEmbeddedInAttributeValue(filterOperation, attributeName, attributeValue)) {
+            int indexOfDomainSeparator = attributeValue.indexOf(CarbonConstants.DOMAIN_SEPARATOR);
+            extractedDomain = attributeValue.substring(0, indexOfDomainSeparator).toUpperCase();
+
+            // Update then newly extracted attribute value in the expression node.
+            int startingIndexOfAttributeValue = indexOfDomainSeparator + 1;
+            node.setValue(attributeValue.substring(startingIndexOfAttributeValue));
+
+            // Check whether the domain name is equal to the extracted domain name from attribute value.
+            if (StringUtils.isNotEmpty(domainName) && StringUtils.isNotEmpty(extractedDomain) && !extractedDomain
+                    .equalsIgnoreCase(domainName))
+                throw new BadRequestException(String.format(
+                        " Domain name %s in the domain parameter does not match with the domain name %s in search "
+                                + "attribute value of %s claim.", domainName, extractedDomain, attributeName));
+
+            if (StringUtils.isEmpty(domainName) && StringUtils.isNotEmpty(extractedDomain)) {
+                if (log.isDebugEnabled())
+                    log.debug(String.format("Domain name %s set from the domain name in the attribute value %s ",
+                            extractedDomain, attributeValue));
+                return extractedDomain;
+            }
+        }
+        return domainName;
+    }
+
+    /**
+     * Method to verify whether there is a domain in the attribute value.
+     *
+     * @param filterOperation Operation of the expression node
+     * @param attributeName   Attribute name of the expression node
+     * @param attributeValue  Value of the expression node
+     * @return Whether there is a domain embedded to the attribute value
+     */
+    private boolean isDomainNameEmbeddedInAttributeValue(String filterOperation, String attributeName,
+            String attributeValue) {
+
+        // Checks whether the domain separator is in the attribute value.
+        if (StringUtils.contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+
+            // Checks whether the attribute name is username or group uri.
+            if (StringUtils.equals(attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI) || StringUtils
+                    .equals(attributeName, SCIMConstants.UserSchemaConstants.GROUP_URI)) {
+
+                // Checks whether the operator is equal to SW, EW, CO.
+                if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation) || SCIMCommonConstants.SW
+                        .equalsIgnoreCase(filterOperation) || SCIMCommonConstants.CO
+                        .equalsIgnoreCase(filterOperation)) {
+
+                    if (log.isDebugEnabled())
+                        log.debug(String.format("Attribute value %s is embedded with a domain in %s claim, ",
+                                attributeValue, attributeName));
+                    // If all the above conditions are true, then a domain is embedded to the attribute value.
+                    return true;
+                }
+            }
+        }
+        // If no domain name in the attribute value, return false.
+        return false;
+    }
+
+    /**
+     * Method to get users when a filter is used with a single attribute.
+     *
+     * @param node       Expression or Operation node
+     * @param offset     Start index value
+     * @param limit      Count value
+     * @param sortBy     SortBy
+     * @param sortOrder  Sort order
+     * @param domainName Domain to perform the search
+     * @return User names of the filtered users
+     * @throws CharonException Error while filtering
+     */
+    private String[] getFilteredUsers(Node node, int offset, int limit, String sortBy, String sortOrder,
+            String domainName) throws CharonException {
+
+        if (StringUtils.isNotEmpty(domainName)) {
+            return getFilteredUsernames(node, offset, limit, sortBy, sortOrder, domainName);
+        } else {
+            String[] userStoreDomainNames = getDomainNames();
+            ArrayList<String> filteredUsernames = new ArrayList<>();
+            for (String userStoreDomainName : userStoreDomainNames) {
+                filteredUsernames.addAll(Arrays
+                        .asList(getFilteredUsernames(node, offset, limit, sortBy, sortOrder, userStoreDomainName)));
+            }
+            return filteredUsernames.toArray(new String[0]);
+        }
+    }
+
+    /**
+     * Method to get users when a filter domain is known.
+     *
+     * @param node       Expression or Operation node
+     * @param offset     Start index value
+     * @param limit      Count value
+     * @param sortBy     SortBy
+     * @param sortOrder  Sort order
+     * @param domainName Domain to perform the search
+     * @return User names of the filtered users
+     * @throws CharonException Error while filtering
+     */
+    private String[] getFilteredUsernames(Node node, int offset, int limit, String sortBy, String sortOrder,
+            String domainName) throws CharonException {
+
+        if (log.isDebugEnabled())
+            log.debug("Filtering users in domain : " + domainName);
+
+        try {
+            Map<String, String> attributes = getAllAttributes(domainName);
+            return ((PaginatedUserStoreManager) carbonUM)
+                    .getUserList(getCondition(node, attributes), domainName, UserCoreConstants.DEFAULT_PROFILE, limit,
+                            offset, sortBy, sortOrder);
+        } catch (UserStoreException e) {
+            String errorMessage = String.format("Error while retrieving attributes for the domain %s.", domainName);
+            throw new CharonException(errorMessage, e);
+        }
+    }
+
+    /**
+     * Get all the domain names related to user stores.
+     *
+     * @return A list of all the available domain names
+     */
+    private String[] getDomainNames() {
+
+        String domainName;
+        ArrayList<String> domainsOfUserStores = new ArrayList<>();
+        domainsOfUserStores.add(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        UserStoreManager secondaryUserStore = carbonUM.getSecondaryUserStoreManager();
+
+        while (secondaryUserStore != null) {
+            domainName = secondaryUserStore.getRealmConfiguration().
+                    getUserStoreProperty("DomainName").toUpperCase();
+            secondaryUserStore = secondaryUserStore.getSecondaryUserStoreManager();
+            domainsOfUserStores.add(domainName);
+        }
+        return domainsOfUserStores.toArray(new String[0]);
+    }
+
+    /**
+     * Method to filter users if the user store is not an instance of PaginatedUserStoreManager and
+     * ENABLE_PAGINATED_USER_STORE is not enabled.
+     *
+     * @param node   Expression node
+     * @param limit  Number of users required for counting
+     * @param offset Starting user index for start counting
+     * @return List of paginated set of users.
+     * @throws NotImplementedException Not supported filter operation
+     * @throws UserStoreException
+     */
+    private String[] filterUsersUsingLegacyAPIs(ExpressionNode node, int limit, int offset)
+            throws NotImplementedException, CharonException {
+
+        String[] userNames;
+
+        // Set filter values.
+        String attributeName = node.getAttributeValue();
+        String filterOperation = node.getOperation();
+        String attributeValue = node.getValue();
+
+        try {
+            if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
+                if (carbonUM instanceof AbstractUserStoreManager) {
+                    String[] roleNames = getRoleNames(filterOperation, attributeValue);
+                    userNames = getUserListOfRoles(roleNames);
+                } else {
+                    String errorMessage = String
+                            .format("Filter operator %s is not supported by the user store.", filterOperation);
+                    throw new NotImplementedException(errorMessage);
+                }
+            } else
+                // Get the user name of the user with this id.
+                userNames = getUserNames(attributeName, filterOperation, attributeValue);
+        } catch (UserStoreException e) {
+            String errorMessage = "Error while filtering the users";
+            throw new CharonException(errorMessage, e);
+        }
+
+        userNames = paginateUsers(userNames, limit, offset);
+        return userNames;
+    }
+
+    /**
+     * Method to remove duplicate users and get the user details.
+     *
+     * @param userNames          Filtered user names
+     * @param requiredAttributes Required attributes in the response
+     * @return Users list with populated attributes
+     * @throws CharonException Error in retrieving user details
+     */
+    private List<Object> getDetailedUsers(String[] userNames, Map<String, Boolean> requiredAttributes)
+            throws CharonException {
+
+        List<Object> filteredUsers = new ArrayList<>();
+        // 0th index is to store total number of results.
+        filteredUsers.add(0);
+
+        // Remove duplicate users.
+        HashSet<String> userNamesSet = new HashSet<>(Arrays.asList(userNames));
+        userNames = userNamesSet.toArray(new String[0]);
+        filteredUsers.set(0, userNames.length);     //number of filtered users
+
+        // Get details of the finalized user list.
+        filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
+        return filteredUsers;
     }
 
     /**
@@ -1115,15 +1388,14 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Object> listGroupsWithGET(Node rootNode, int startIndex,
-                                          int count, String sortBy, String sortOrder, String domainName,
-                                          Map<String, Boolean> requiredAttributes)
+    public List<Object> listGroupsWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
+            String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
-        if(sortBy != null || sortOrder != null) {
+        if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        }  else if(startIndex != 1){
+        } else if (startIndex != 1) {
             throw new NotImplementedException("Pagination is not supported");
-        } else if(rootNode != null) {
+        } else if (rootNode != null) {
             return filterGroups(rootNode, requiredAttributes);
         } else {
             return listGroups(requiredAttributes);
@@ -1977,7 +2249,7 @@ public class SCIMUserManager implements UserManager {
         String enablePaginatedUserStore = IdentityUtil.getProperty(ENABLE_PAGINATED_USER_STORE);
         if (!StringUtils.isBlank(enablePaginatedUserStore)) {
             return Boolean.parseBoolean(enablePaginatedUserStore);
-        } return false;
+        } return true;
     }
 
     /**
