@@ -322,12 +322,46 @@ public class SCIMUserManager implements UserManager {
         String[] userNames;
 
         if (StringUtils.isNotEmpty(domainName)) { // When domain is not null or not empty.
-            userNames = getAllUsernamesByDomainName(domainName);
+            if (offset == 1 && limit == 0) { // If pagination not enable
+                userNames = getAllUsernamesByDomainName(domainName);
+            } else {
+                if ((isPaginatedUserStoreAvailable()) && (carbonUM instanceof PaginatedUserStoreManager)) {
+                    if (limit == 0) {
+                        limit = getMaxLimit();
+                    }
+                    userNames = getUsernamesByDomainName(offset, limit, sortBy, sortOrder, domainName);
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("User store manager is not a paginated user store manager. Therefore pagination is "
+                                + "not supported.");
+                    }
+                    throw new CharonException("Pagination is not supported.");
+                }
+            }
         } else { // When domain is null or empty.
-            userNames = getAllUsernamesByAllDomainNames();
+            if (offset == 1 && limit == 0) { // If pagination not enable.
+                userNames = getAllUsernamesByAllDomainNames();
+            } else {
+                if ((isPaginatedUserStoreAvailable()) && (carbonUM instanceof PaginatedUserStoreManager)) {
+                    if (limit == 0) {
+                        limit = getMaxLimit();
+                    }
+                    userNames = getAllUserNamesByAllDomainNames(offset, limit, sortBy, sortOrder);
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("User store manager is not a paginated user store manager. Therefore pagination is "
+                                + "not supported.");
+                    }
+                    throw new CharonException("Pagination is not supported.");
+                }
+            }
         }
 
-        if (userNames != null) {
+        if (ArrayUtils.isEmpty(userNames)) {
+            if (log.isDebugEnabled()) {
+                log.debug("There is no user who comply with the requested conditions.");
+            }
+        } else {
             users.set(0, userNames.length); // Set total number of results to 0th index.
             users.addAll(getUserDetails(userNames, requiredAttributes)); // Set user details from index 1.
         }
@@ -336,16 +370,34 @@ public class SCIMUserManager implements UserManager {
     }
 
     private String[] getAllUsernamesByDomainName(String domainName) throws CharonException {
-
         String[] userNames = null;
-        UserStoreManager tempCarbonUM = carbonUM.getSecondaryUserStoreManager(domainName);
 
         try {
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             String userIdLocalClaim = scimToLocalClaimsMap.get(SCIMConstants.CommonSchemaConstants.ID_URI);
+            String claimValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR + "*";
             if (StringUtils.isNotBlank(userIdLocalClaim)) {
-                userNames = tempCarbonUM.getUserList(userIdLocalClaim, "*", null);
+                userNames = carbonUM.getUserList(userIdLocalClaim, claimValue, null);
             }
+
+            return userNames;
+        } catch (UserStoreException e) {
+            throw new CharonException(String.format("Error while listing users from domain: %s.", domainName), e);
+        }
+
+    }
+
+    private String[] getUsernamesByDomainName(int offset, int limit, String sortBy, String sortOrder, String domainName)
+            throws CharonException {
+
+        String[] userNames = null;
+
+        try {
+            // Operator SW set with USERNAME and empty string to get all users.
+            ExpressionCondition exCond = new ExpressionCondition(ExpressionOperation.SW.toString(),
+                    ExpressionAttribute.USERNAME.toString(), "");
+            userNames = ((PaginatedUserStoreManager) carbonUM)
+                    .getUserList(exCond, domainName, null, limit, offset, sortBy, sortOrder);
 
             return userNames;
         } catch (UserStoreException e) {
@@ -370,44 +422,88 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    private String[] getAllUserNamesByAllDomainNames(int offset, int limit, String sortBy, String sortOrder)
+            throws CharonException {
+
+        String[] userNames = null;
+        int initialLimit = limit;
+        int cumulativeCount = 0;
+        UserStoreManager tempCarbonUM = carbonUM;
+
+        while (tempCarbonUM != null) {
+            String[] tempUserNames;
+            int tempCount;
+            // If carbonUM is not an instance of Paginated User Store Manger we can't get the domain name.
+            if (tempCarbonUM instanceof PaginatedUserStoreManager) {
+                String domainName = tempCarbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
+                tempUserNames = getUsernamesByDomainName(offset, limit, sortBy, sortOrder, domainName);
+
+                if (tempUserNames.length != 0) {
+                    tempCount = tempUserNames.length;
+                    cumulativeCount = cumulativeCount + tempCount;
+                    if (initialLimit > cumulativeCount) {
+                        userNames = (String[]) ArrayUtils.addAll(userNames, tempUserNames);
+                        limit = initialLimit - cumulativeCount;
+                        offset = 0;
+                    } else if (initialLimit == cumulativeCount) {
+                        userNames = (String[]) ArrayUtils.addAll(userNames, tempUserNames);
+                        break;
+                    }
+                } else {
+                    String[] tempUsers = getAllUsernamesByDomainName(domainName);
+                    if (ArrayUtils.isEmpty(tempUsers)) {
+                        offset = offset;
+                    } else {
+                        if (offset >= tempUsers.length) {
+                            offset = offset - tempUsers.length;
+                        }
+                    }
+                }
+
+                tempCarbonUM = tempCarbonUM.getSecondaryUserStoreManager();
+            } else {
+                throw new CharonException("Pagination is not supported.");
+            }
+        }
+
+        return userNames;
+
+    }
+
     private List<Object> getUserDetails(String[] userNames, Map<String, Boolean> requiredAttributes)
             throws CharonException {
 
         List<Object> users = new ArrayList<>();
 
-        if (ArrayUtils.isEmpty(userNames)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Users for this filter does not exist in the system.");
-            }
-        } else {
-            try {
-                Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
-                List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
-                List<String> requiredClaimsInLocalDialect;
-                if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
-                    scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
-                    requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("SCIM to Local Claim mappings list is empty.");
-                    }
-                    requiredClaimsInLocalDialect = new ArrayList<>();
+        try {
+            Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
+            List<String> requiredClaimsInLocalDialect;
+            if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
+                scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
+                requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM to Local Claim mappings list is empty.");
                 }
-
-                User[] scimUsers;
-
-                if ((isPaginatedUserStoreAvailable())
-                        && (carbonUM instanceof PaginatedUserStoreManager)) { // retrieve all scim users at once
-                    scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
-                    users.addAll(Arrays.asList(scimUsers));
-                } else { // retrieve scim users one by one
-                    retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
-                }
-
-            } catch (UserStoreException e) {
-                throw new CharonException("Error in retrieve user details. ", e);
+                requiredClaimsInLocalDialect = new ArrayList<>();
             }
+
+            User[] scimUsers;
+
+            if ((isPaginatedUserStoreAvailable()) && (carbonUM instanceof PaginatedUserStoreManager)) {
+                // Retrieve all scim users at once.
+                scimUsers = this.getSCIMUsers(userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
+                users.addAll(Arrays.asList(scimUsers));
+            } else {
+                // Retrieve scim users one by one
+                retriveSCIMUsers(users, userNames, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
+            }
+
+        } catch (UserStoreException e) {
+            throw new CharonException("Error in retrieve user details. ", e);
         }
+
         return users;
     }
 
