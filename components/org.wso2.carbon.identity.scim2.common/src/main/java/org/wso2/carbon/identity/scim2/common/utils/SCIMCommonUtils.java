@@ -304,4 +304,40 @@ public class SCIMCommonUtils {
         return Boolean.parseBoolean(IdentityUtil.getProperty
                 (SCIMCommonConstants.SCIM_ENABLE_FILTERING_ENHANCEMENTS));
     }
+
+    /**
+     * Checks whether the identity.xml config is available for applying filtering enhancements. This makes sure that Eq
+     * should strictly check for the String match (in this case cross user store search should not be performed).
+     *
+     * @return whether 'FilterUsersAndGroupsFromPrimaryDomain' property is enabled in identity.xml.
+     */
+    public static boolean isFilterUsersAndGroupsFromPrimaryDomainPropertyEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_FILTER_USERS_AND_GROUPS_FROM_PRIMARY_DOMAIN));
+    }
+
+    /**
+     * Checks whether the identity.xml config is available for prepending the 'PRIMARY/' in each role and
+     * which belong to Primary domain in the response of Groups endpoints.
+     *
+     * @return whether 'PrependPrimaryDomainInGroupsResponse' property is enabled in identity.xml.
+     */
+    public static boolean isPrependPrimaryDomainInGroupsResponsePropertyEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_PREPEND_PRIMARY_DOMAIN_IN_GROUPS_RESPONSE));
+    }
+
+    /**
+     * Checks whether the identity.xml config is available for prepending the 'PRIMARY/' in each role and
+     * username which belong to Primary domain in the responses of both Users and Groups endpoints.
+     *
+     * @return whether 'PrependPrimaryDomainInUsersAndGroupsResponses' property is enabled in identity.xml.
+     */
+    public static boolean isPrependPrimaryDomainInUsersAndGroupsResponsesPropertyEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_PREPEND_PRIMARY_DOMAIN_IN_USERS_AND_GROUPS_RESPONSES));
+    }
 }

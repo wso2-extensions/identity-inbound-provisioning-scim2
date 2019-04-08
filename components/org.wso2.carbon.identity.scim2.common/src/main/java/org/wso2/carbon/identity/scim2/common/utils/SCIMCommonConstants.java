@@ -72,5 +72,11 @@ public class SCIMCommonConstants {
     public static final String SCIM_COMPLEX_MULTIVALUED_ATTRIBUTE_SUPPORT_ENABLED = "SCIM2" +
             ".ComplexMultiValuedAttributeSupportEnabled";
     public static final String SCIM_ENABLE_FILTERING_ENHANCEMENTS = "SCIM2.EnableFilteringEnhancements";
+    public static final String SCIM_ENABLE_FILTER_USERS_AND_GROUPS_FROM_PRIMARY_DOMAIN =
+            "SCIM2.FilterUsersAndGroupsFromPrimaryDomain";
+    public static final String SCIM_ENABLE_PREPEND_PRIMARY_DOMAIN_IN_GROUPS_RESPONSE =
+            "SCIM2.PrependPrimaryDomainInGroupsResponse";
+    public static final String SCIM_ENABLE_PREPEND_PRIMARY_DOMAIN_IN_USERS_AND_GROUPS_RESPONSES =
+            "SCIM2.PrependPrimaryDomainInUsersAndGroupsResponses";
 }
 
