@@ -122,6 +122,10 @@ public class SCIMUserManager implements UserManager {
         }
 
         String userStoreDomainName = IdentityUtil.extractDomainFromName(user.getUserName());
+        if (!user.getUserName().contains(CarbonConstants.DOMAIN_SEPARATOR) &&
+                !UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(userStoreDomainName)) {
+            user.setUserName(IdentityUtil.addDomainToName(user.getUserName(), userStoreDomainName));
+        }
         if(StringUtils.isNotBlank(userStoreDomainName) && !isSCIMEnabled(userStoreDomainName)){
             throw new CharonException("Cannot add user through scim to user store " + ". SCIM is not " +
                     "enabled for user store " + userStoreDomainName);
