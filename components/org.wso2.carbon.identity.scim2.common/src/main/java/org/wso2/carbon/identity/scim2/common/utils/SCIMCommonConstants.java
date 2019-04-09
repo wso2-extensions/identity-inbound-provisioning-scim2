@@ -45,6 +45,8 @@ public class SCIMCommonConstants {
     public static final String APPLICATION_DOMAIN = "Application";
     public static final String INTERNAL_DOMAIN = "Internal";
 
+    public static final String ANY = "*";
+
     //config constants
     public static final String CHARON_CONFIG_NAME = "charon-config.xml";
     public static final String ELEMENT_NAME_AUTHENTICATION_SCHEMES = "authenticationSchemes";;
