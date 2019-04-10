@@ -713,7 +713,7 @@ public class SCIMUserManager implements UserManager {
             for (String userStoreDomainName : userStoreDomainNames) {
 
                 // Create filter condition for each domain.
-                Condition condition = createConditionForSingleAttributeFilter(domainName, node);
+                Condition condition = createConditionForSingleAttributeFilter(userStoreDomainName, node);
 
                 // Filter users for given condition and domain.
                 String[] userNames = getFilteredUsernames(condition, offset, limit, sortBy, sortOrder,
@@ -728,7 +728,7 @@ public class SCIMUserManager implements UserManager {
                     if (log.isDebugEnabled()) {
                         log.debug(String.format("Filter returned no results for original offset: %d.", offset));
                     }
-                    offset = calculateOffset(condition, offset, sortBy, sortOrder, domainName);
+                    offset = calculateOffset(condition, offset, sortBy, sortOrder, userStoreDomainName);
                 } else {
                     // Returned user names size > 0 implies there are users in that domain which is larger than
                     // the offset.
