@@ -2146,28 +2146,48 @@ public class SCIMUserManager implements UserManager {
         return requiredClaimList;
     }
 
+    /**
+     * Paginate a list of users names according to a given offset and a count.
+     *
+     * @param users  A list of unpaginated users.
+     * @param limit  The total number of results required (Zero will return all the users).
+     * @param offset The starting index of the count (limit).
+     * @return A list of paginated users
+     */
     private String[] paginateUsers(String[] users, int limit, int offset) {
 
+        // If the results are empty, an empty list should be returned.
+        if (users == null) {
+            return new String[0];
+        }
         Arrays.sort(users);
 
+        // Validate offset value.
         if (offset <= 0) {
             offset = 1;
         }
 
-        if (limit <= 0) {
-            // This is to support backward compatibility.
-            return users;
+        // If the results is less than the offset return an empty user list.
+        if (offset > users.length) {
+            return new String[0];
         }
 
-        if (users == null) {
-            return new String[0];
-        } else if (offset > users.length) {
-            return new String[0];
-        } else if (users.length < limit + offset) {
-            limit = users.length - offset + 1;
-            return Arrays.copyOfRange(users, offset - 1, limit + offset - 1);
+        // If the limit is zero, all the users needs to be returned after verifying the offset.
+        if (limit <= 0) {
+            if (offset == 1) {
+                // This is to support backward compatibility.
+                return users;
+            } else {
+                return Arrays.copyOfRange(users, offset - 1, users.length);
+            }
         } else {
-            return Arrays.copyOfRange(users, offset - 1, limit + offset - 1);
+            // If users.length > limit + offset, then return only the users bounded by the offset and the limit.
+            if (users.length > limit + offset) {
+                return Arrays.copyOfRange(users, offset - 1, limit + offset - 1);
+            } else {
+                // Return all the users from the offset.
+                return Arrays.copyOfRange(users, offset - 1, users.length);
+            }
         }
     }
 
