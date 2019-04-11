@@ -282,7 +282,7 @@
         <cxf-bundle.version>3.2.8</cxf-bundle.version>
         <inbound.auth.oauth.version>5.2.0</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
-        <carbon.kernel.version>4.4.34</carbon.kernel.version>
+        <carbon.kernel.version>4.4.39</carbon.kernel.version>
         <identity.framework.version>5.6.15</identity.framework.version>
         <junit.version>4.11</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
