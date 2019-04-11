@@ -784,43 +784,68 @@ public class SCIMUserManager implements UserManager {
             return getFilteredUsernames(createConditionForSingleAttributeFilter(domainName, node), offset, limit,
                     sortBy, sortOrder, domainName);
         } else {
-            // Filter users when the domain is not set in the request. Then filter through multiple domains.
-            String[] userStoreDomainNames = getDomainNames();
-            ArrayList<String> filteredUsernames = new ArrayList<>();
-            for (String userStoreDomainName : userStoreDomainNames) {
-
-                // Create filter condition for each domain.
-                Condition condition = createConditionForSingleAttributeFilter(userStoreDomainName, node);
-
-                // Filter users for given condition and domain.
-                String[] userNames = getFilteredUsernames(condition, offset, limit, sortBy, sortOrder,
-                        userStoreDomainName);
-                if (userNames == null) {
-                    userNames = new String[0];
-                }
-
-                // Calculating new offset and limit parameters.
-                int numberOfFilteredUsers = userNames.length;
-                if (numberOfFilteredUsers <= 0 && offset > 1) {
-                    if (log.isDebugEnabled()) {
-                        log.debug(String.format("Filter returned no results for original offset: %d.", offset));
-                    }
-                    offset = calculateOffset(condition, offset, sortBy, sortOrder, userStoreDomainName);
-                } else {
-                    // Returned user names size > 0 implies there are users in that domain which is larger than
-                    // the offset.
-                    offset = 1;
-                    limit = calculateLimit(limit, numberOfFilteredUsers);
-                }
-                filteredUsernames.addAll(Arrays.asList(userNames));
-
-                // If the limit is changed then filtering needs to be stopped.
-                if (limit == 0) {
-                    break;
-                }
-            }
-            return filteredUsernames.toArray(new String[0]);
+            return filterUsersFromMultipleDomains(node, offset, limit, sortBy, sortOrder, null);
         }
+    }
+
+    /**
+     * Method to perform a multiple domain search when the domain is not specified in the request. The same function
+     * can be used to listing users by passing a condition for conditionForListingUsers parameter.
+     *
+     * @param node                     Expression or Operation node (set the value to null when method is used for
+     *                                 list users)
+     * @param offset                   Start index value
+     * @param limit                    Count value
+     * @param sortBy                   SortBy
+     * @param sortOrder                Sort order
+     * @param conditionForListingUsers Condition for listing users when the function is used to list users except for
+     *                                 filtering. For filtering this value should be set to NULL.
+     * @return User names of the filtered users
+     */
+    private String[] filterUsersFromMultipleDomains(Node node, int offset, int limit, String sortBy, String sortOrder,
+            Condition conditionForListingUsers) throws CharonException {
+
+        // Filter users when the domain is not set in the request. Then filter through multiple domains.
+        String[] userStoreDomainNames = getDomainNames();
+        ArrayList<String> filteredUsernames = new ArrayList<>();
+        Condition condition;
+        for (String userStoreDomainName : userStoreDomainNames) {
+
+            // Check whether the used case is for listing users.
+            if (conditionForListingUsers == null) {
+                // Create filter condition for each domain for single attribute filter.
+                condition = createConditionForSingleAttributeFilter(userStoreDomainName, node);
+            } else {
+                condition = conditionForListingUsers;
+            }
+
+            // Filter users for given condition and domain.
+            String[] userNames = getFilteredUsernames(condition, offset, limit, sortBy, sortOrder, userStoreDomainName);
+            if (userNames == null) {
+                userNames = new String[0];
+            }
+
+            // Calculating new offset and limit parameters.
+            int numberOfFilteredUsers = userNames.length;
+            if (numberOfFilteredUsers <= 0 && offset > 1) {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Filter returned no results for original offset: %d.", offset));
+                }
+                offset = calculateOffset(condition, offset, sortBy, sortOrder, userStoreDomainName);
+            } else {
+                // Returned user names size > 0 implies there are users in that domain which is larger than
+                // the offset.
+                offset = 1;
+                limit = calculateLimit(limit, numberOfFilteredUsers);
+            }
+            filteredUsernames.addAll(Arrays.asList(userNames));
+
+            // If the limit is changed then filtering needs to be stopped.
+            if (limit == 0) {
+                break;
+            }
+        }
+        return filteredUsernames.toArray(new String[0]);
     }
 
     /**
