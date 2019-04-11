@@ -337,9 +337,17 @@ public class SCIMUserManager implements UserManager {
         users.add(0);
         String[] userNames;
         if (StringUtils.isNotEmpty(domainName)) {
-            userNames = listAllUsernamesByDomain(domainName);
+            if (canPaginate(offset, limit)) {
+                userNames = listUsernames(offset, limit, sortBy, sortOrder, domainName);
+            } else {
+                userNames = listUsernamesUsingLegacyAPIs(domainName);
+            }
         } else {
-            userNames = listAllUsernamesAcrossAllDomains();
+            if (canPaginate(offset, limit)) {
+                userNames = listUsernamesAcrossAllDomains(offset, limit, sortBy, sortOrder);
+            } else {
+                userNames = listUsernamesAcrossAllDomainsUsingLegacyAPIs();
+            }
         }
 
         if (ArrayUtils.isEmpty(userNames)) {
@@ -359,13 +367,57 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Method to list usernames of all users from a specific user store.
+     * Method to decide whether to paginate based on the offset and the limit in the request.
+     *
+     * @param offset Starting index of the count
+     * @param limit  Counting value
+     * @return true if pagination is possible, false otherwise
+     */
+    private boolean canPaginate(int offset, int limit) {
+
+        return (offset != 1 || limit != 0);
+    }
+
+    /**
+     * Method to list paginated usernames from a specific user store using new APIs.
+     *
+     * @param offset     Starting index of the count
+     * @param limit      Counting value
+     * @param sortBy     SortBy
+     * @param sortOrder  Sorting order
+     * @param domainName Name of the user store
+     * @return Paginated usernames list
+     * @throws CharonException Error while listing usernames
+     */
+    private String[] listUsernames(int offset, int limit, String sortBy, String sortOrder, String domainName)
+            throws CharonException {
+
+        if (isPaginatedUserStoreAvailable() && carbonUM instanceof PaginatedUserStoreManager) {
+            if (limit == 0) {
+                limit = getMaxLimit(domainName);
+            }
+            // Operator SW set with USERNAME and empty string to get all users.
+            ExpressionCondition exCond = new ExpressionCondition(ExpressionOperation.SW.toString(),
+                    ExpressionAttribute.USERNAME.toString(), "");
+            return filterUsernames(exCond, offset, limit, sortBy, sortOrder, domainName);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format(
+                        "%s is not an instance of PaginatedUserStoreManager. Therefore pagination is not supported.",
+                        domainName));
+            }
+            throw new CharonException(String.format("Pagination is not supported for %s.", domainName));
+        }
+    }
+
+    /**
+     * Method to list usernames of all users from a specific user store using legacy APIs.
      *
      * @param domainName Name of the user store
      * @return Usernames list
      * @throws CharonException Error while listing usernames
      */
-    private String[] listAllUsernamesByDomain(String domainName) throws CharonException {
+    private String[] listUsernamesUsingLegacyAPIs(String domainName) throws CharonException {
 
         String[] userNames = null;
         try {
@@ -382,12 +434,45 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Method to list usernames of all users across all user stores.
+     * Method to list paginated usernames from all user stores using new APIs.
+     *
+     * @param offset    Starting index of the count
+     * @param limit     Counting value
+     * @param sortBy    SortBy
+     * @param sortOrder Sorting order
+     * @return Paginated usernames list
+     * @throws CharonException Pagination not support
+     */
+    private String[] listUsernamesAcrossAllDomains(int offset, int limit, String sortBy, String sortOrder)
+            throws CharonException {
+
+        String[] usernames;
+        if (isPaginatedUserStoreAvailable() && carbonUM instanceof PaginatedUserStoreManager) {
+            if (limit == 0) {
+                usernames = listUsernamesAcrossAllDomainsUsingLegacyAPIs();
+                usernames = paginateUsers(usernames, limit, offset);
+            } else {
+                ExpressionCondition condition = new ExpressionCondition(ExpressionOperation.SW.toString(),
+                        ExpressionAttribute.USERNAME.toString(), "");
+                usernames = filterUsersFromMultipleDomains(null, offset, limit, sortBy, sortOrder, condition);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug(" The user store is not a paginated user store manager. Therefore pagination "
+                        + "is not supported.");
+            }
+            throw new CharonException("Pagination is not supported.");
+        }
+        return usernames;
+    }
+
+    /**
+     * Method to list usernames of all users across all user stores using legacy APIs.
      *
      * @return Usernames list
      * @throws CharonException Error while listing usernames
      */
-    private String[] listAllUsernamesAcrossAllDomains() throws CharonException {
+    private String[] listUsernamesAcrossAllDomainsUsingLegacyAPIs() throws CharonException {
 
         String[] userNames = null;
         try {
@@ -781,7 +866,7 @@ public class SCIMUserManager implements UserManager {
 
         // Filter users when the domain is specified in the request.
         if (StringUtils.isNotEmpty(domainName)) {
-            return getFilteredUsernames(createConditionForSingleAttributeFilter(domainName, node), offset, limit,
+            return filterUsernames(createConditionForSingleAttributeFilter(domainName, node), offset, limit,
                     sortBy, sortOrder, domainName);
         } else {
             return filterUsersFromMultipleDomains(node, offset, limit, sortBy, sortOrder, null);
@@ -820,7 +905,7 @@ public class SCIMUserManager implements UserManager {
             }
 
             // Filter users for given condition and domain.
-            String[] userNames = getFilteredUsernames(condition, offset, limit, sortBy, sortOrder, userStoreDomainName);
+            String[] userNames = filterUsernames(condition, offset, limit, sortBy, sortOrder, userStoreDomainName);
             if (userNames == null) {
                 userNames = new String[0];
             }
@@ -892,7 +977,7 @@ public class SCIMUserManager implements UserManager {
 
         // Checking the number of matches till the original offset.
         int skippedUserCount;
-        String[] skippedUsers = getFilteredUsernames(condition, initialOffset, offset, sortBy, sortOrder, domainName);
+        String[] skippedUsers = filterUsernames(condition, initialOffset, offset, sortBy, sortOrder, domainName);
         if (skippedUsers == null) {
             skippedUserCount = 0;
         } else {
@@ -915,7 +1000,7 @@ public class SCIMUserManager implements UserManager {
      * @return User names of the filtered users
      * @throws CharonException Error while filtering
      */
-    private String[] getFilteredUsernames(Condition condition, int offset, int limit, String sortBy, String sortOrder,
+    private String[] filterUsernames(Condition condition, int offset, int limit, String sortBy, String sortOrder,
             String domainName) throws CharonException {
 
         if (log.isDebugEnabled()) {
@@ -1089,7 +1174,7 @@ public class SCIMUserManager implements UserManager {
             filteredUsers.set(0, userNames.length);
             filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
         } else {
-            int maxLimit = getMaxLimit();
+            int maxLimit = getMaxLimit(domainName);
             if (StringUtils.isNotEmpty(domainName)) {
                 userNames = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy,
                         sortOrder, domainName);
@@ -1119,17 +1204,20 @@ public class SCIMUserManager implements UserManager {
     /**
      * Get maximum user limit to retrieve.
      *
+     * @param domainName Name of the user store
      * @return
      */
-    private int getMaxLimit() {
+    private int getMaxLimit(String domainName) {
 
-        int givenMax;
+        int givenMax = UserCoreConstants.MAX_USER_ROLE_LIST;
+        if (StringUtils.isEmpty(domainName)) {
+            domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+        }
 
-        try {
-            givenMax = Integer.parseInt(carbonUM.getRealmConfiguration().getUserStoreProperty(
-                    "MaxUserNameListLength"));
-        } catch (Exception e) {
-            givenMax = UserCoreConstants.MAX_USER_ROLE_LIST;
+        if (carbonUM.getSecondaryUserStoreManager(domainName).getRealmConfiguration()
+                .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_USER_LIST) != null) {
+            givenMax = Integer.parseInt(carbonUM.getSecondaryUserStoreManager(domainName).getRealmConfiguration()
+                    .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_USER_LIST));
         }
 
         return givenMax;
