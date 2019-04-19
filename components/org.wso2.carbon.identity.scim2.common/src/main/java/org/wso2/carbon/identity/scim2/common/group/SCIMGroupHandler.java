@@ -31,6 +31,7 @@ import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -70,8 +71,7 @@ public class SCIMGroupHandler {
         String id = UUID.randomUUID().toString();
         attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
 
-        Date date = new Date();
-        String createdDate = AttributeUtil.formatDateTime(date);
+        String createdDate = AttributeUtil.formatDateTime(Instant.now());
         attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
 
         attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
@@ -111,9 +111,9 @@ public class SCIMGroupHandler {
             Map<String, String> attributes = new HashMap<>();
             attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, group.getId());
             attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, AttributeUtil.formatDateTime(
-                    group.getCreatedDate()));
+                    group.getCreatedDate().toInstant()));
             attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, AttributeUtil.formatDateTime(
-                    group.getLastModified()));
+                    group.getLastModified().toInstant()));
             attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, group.getLocation());
             GroupDAO groupDAO = new GroupDAO();
             groupDAO.addSCIMGroupAttributes(tenantId, group.getDisplayName(), attributes);
@@ -169,9 +169,9 @@ public class SCIMGroupHandler {
             if (SCIMConstants.CommonSchemaConstants.ID_URI.equals(entry.getKey())) {
                 group.setId(entry.getValue());
             } else if (SCIMConstants.CommonSchemaConstants.CREATED_URI.equals(entry.getKey())) {
-                group.setCreatedDate(AttributeUtil.parseDateTime(entry.getValue()));
+                group.setCreatedDate(Date.from(AttributeUtil.parseDateTime(entry.getValue())));
             } else if (SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI.equals(entry.getKey())) {
-                group.setLastModified(AttributeUtil.parseDateTime(entry.getValue()));
+                group.setLastModified(Date.from(AttributeUtil.parseDateTime(entry.getValue())));
             } else if (SCIMConstants.CommonSchemaConstants.LOCATION_URI.equals(entry.getKey())) {
                 group.setLocation(entry.getValue());
             }
