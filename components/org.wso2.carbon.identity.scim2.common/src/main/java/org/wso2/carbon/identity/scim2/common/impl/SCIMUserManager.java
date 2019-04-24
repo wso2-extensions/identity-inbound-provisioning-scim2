@@ -827,22 +827,17 @@ public class SCIMUserManager implements UserManager {
         // Checks whether the domain separator is in the attribute value.
         if (StringUtils.contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
 
-            // Checks whether the attribute name is username or group uri.
-            if (StringUtils.equals(attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI) || StringUtils
-                    .equals(attributeName, SCIMConstants.UserSchemaConstants.GROUP_URI)) {
-
-                // Checks whether the operator is equal to SW, EW, CO.
-                if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation) || SCIMCommonConstants.SW
-                        .equalsIgnoreCase(filterOperation) || SCIMCommonConstants.CO
-                        .equalsIgnoreCase(filterOperation)) {
-
-                    if (log.isDebugEnabled())
-                        log.debug(String.format("Attribute value %s is embedded with a domain in %s claim, ",
-                                attributeValue, attributeName));
-                    // If all the above conditions are true, then a domain is embedded to the attribute value.
-                    return true;
-                }
+            // Checks whether the operator is equal to SW, EW, CO.
+            if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation) || SCIMCommonConstants.SW
+                    .equalsIgnoreCase(filterOperation) || SCIMCommonConstants.CO.equalsIgnoreCase(filterOperation)) {
+                if (log.isDebugEnabled())
+                    log.debug(
+                            String.format("Attribute value %s is embedded with a domain in %s claim, ", attributeValue,
+                                    attributeName));
+                // If all the above conditions are true, then a domain is embedded to the attribute value.
+                return true;
             }
+
         }
         // If no domain name in the attribute value, return false.
         return false;
