@@ -175,8 +175,8 @@ public class UserResource extends AbstractResource {
                             @QueryParam (SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                             @QueryParam (SCIMProviderConstants.FILTER) String filter,
-                            @QueryParam (SCIMProviderConstants.START_INDEX) int startIndex,
-                            @QueryParam (SCIMProviderConstants.COUNT) int count,
+                            @QueryParam (SCIMProviderConstants.START_INDEX) Integer startIndex,
+                            @QueryParam (SCIMProviderConstants.COUNT) Integer count,
                             @QueryParam (SCIMProviderConstants.SORT_BY) String sortBy,
                             @QueryParam (SCIMProviderConstants.SORT_ORDER) String sortOrder,
                             @QueryParam (SCIMProviderConstants.DOMAIN) String domainName) {

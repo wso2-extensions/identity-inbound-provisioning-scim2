@@ -326,8 +326,8 @@ public class GroupResource extends AbstractResource {
             //create charon-SCIM group endpoint and hand-over the request.
             GroupResourceManager groupResourceManager = new GroupResourceManager();
             SCIMResponse scimResponse = null;
-            int startIndex = 0;
-            int count = 0;
+            Integer startIndex = null;
+            Integer count = null;
             if (GET.class.getSimpleName().equals(httpVerb) && id == null) {
                 String filter = requestAttributes.get(SCIMProviderConstants.FILTER);
                 if(requestAttributes.get(SCIMProviderConstants.START_INDEX) != null){
