@@ -831,10 +831,10 @@ public class SCIMUserManager implements UserManager {
             if (StringUtils.equals(attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI) || StringUtils
                     .equals(attributeName, SCIMConstants.UserSchemaConstants.GROUP_URI)) {
 
-                // Checks whether the operator is equal to SW, EW, CO.
+                // Checks whether the operator is equal to EQ, SW, EW, CO.
                 if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation) || SCIMCommonConstants.SW
-                        .equalsIgnoreCase(filterOperation) || SCIMCommonConstants.CO
-                        .equalsIgnoreCase(filterOperation)) {
+                        .equalsIgnoreCase(filterOperation) || SCIMCommonConstants.CO.equalsIgnoreCase(filterOperation)
+                        || SCIMCommonConstants.EW.equalsIgnoreCase(filterOperation)) {
 
                     if (log.isDebugEnabled())
                         log.debug(String.format("Attribute value %s is embedded with a domain in %s claim, ",
@@ -2467,7 +2467,13 @@ public class SCIMUserManager implements UserManager {
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
             searchAttribute = attributeValue + delimiter;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
-            searchAttribute = delimiter + attributeValue;
+            // Extract the domain attached to the attribute value and then append the delimiter.
+            String[] attributeItems = attributeValue.split(CarbonConstants.DOMAIN_SEPARATOR);
+            if (attributeItems.length == 2) {
+                searchAttribute = attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR + delimiter + attributeItems[1];
+            } else {
+                searchAttribute = delimiter + attributeValue;
+            }
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
             searchAttribute = attributeValue;
         }
