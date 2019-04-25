@@ -705,9 +705,6 @@ public class SCIMUserManager implements UserManager {
             log.debug(String.format("Listing users by filter: %s %s %s", node.getAttributeValue(), node.getOperation(),
                     node.getValue()));
         }
-
-        // Apply filter enhancements for username and update expression node value.
-        applyFilterEnhancementsForUsernameInNode(node);
         try {
             // Extract he domain name if the domain name is embedded in the filter attribute value.
             domainName = resolveDomainNameInAttributeValue(domainName, node);
@@ -716,6 +713,10 @@ public class SCIMUserManager implements UserManager {
                     .format("Domain parameter: %s in request does not match with the domain name in the attribute "
                             + "value: %s ", domainName, node.getValue());
             throw new CharonException(errorMessage, e);
+        }
+        // Apply filter enhancements for username and set domain value.
+        if (StringUtils.isEmpty(domainName)) {
+            domainName = applyFilterEnhancementsForUsernameInNode(node);
         }
         try {
             // Check which APIs should the filter needs to follow.
@@ -751,25 +752,27 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Validate whether filter enhancements are enabled and then append the primary domain name in front of the
-     * attribute value to be searched. Finally update the attribute value in Expression node to new attribute value.
+     * Validate whether filter enhancements are enabled and then return primary default domain name as the domain to
+     * be fitlered.
      *
      * @param node Expression node
      * @return Modified attribute value
      */
-    private void applyFilterEnhancementsForUsernameInNode(ExpressionNode node) {
+    private String applyFilterEnhancementsForUsernameInNode(ExpressionNode node) {
 
         // Set filter values.
         String attributeName = node.getAttributeValue();
         String filterOperation = node.getOperation();
         String attributeValue = node.getValue();
-
-        if (SCIMCommonUtils.isFilteringEnhancementsEnabled())
-            if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation))
+        if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+            if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation)) {
                 if (StringUtils.equals(attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI) && !StringUtils
-                        .contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR))
-                    node.setValue(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
-                            + attributeValue);
+                        .contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+                    return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+                }
+            }
+        }
+        return null;
     }
 
     /**
