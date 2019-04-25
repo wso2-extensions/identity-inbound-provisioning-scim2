@@ -309,35 +309,49 @@ public class SCIMCommonUtils {
      * Checks whether the identity.xml config is available for applying filtering enhancements. This makes sure that Eq
      * should strictly check for the String match (in this case cross user store search should not be performed).
      *
-     * @return whether 'FilterUsersAndGroupsFromPrimaryDomain' property is enabled in identity.xml.
+     * @return whether 'FilterUsersAndGroupsOnlyFromPrimaryDomain' property is enabled in identity.xml.
      */
-    public static boolean isFilterUsersAndGroupsFromPrimaryDomainPropertyEnabled() {
+    public static boolean isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled() {
 
         return Boolean.parseBoolean(IdentityUtil
-                .getProperty(SCIMCommonConstants.SCIM_ENABLE_FILTER_USERS_AND_GROUPS_FROM_PRIMARY_DOMAIN));
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_FILTER_USERS_AND_GROUPS_ONLY_FROM_PRIMARY_DOMAIN));
     }
 
     /**
      * Checks whether the identity.xml config is available for prepending the 'PRIMARY/' in each role and
      * which belong to Primary domain in the response of Groups endpoints.
      *
-     * @return whether 'PrependPrimaryDomainInGroupsResponse' property is enabled in identity.xml.
+     * @return whether 'MandateDomainForGroupNamesInGroupsResponse' property is enabled in identity.xml.
      */
-    public static boolean isPrependPrimaryDomainInGroupsResponsePropertyEnabled() {
+    public static boolean MandateDomainForGroupNamesInGroupsResponse() {
 
         return Boolean.parseBoolean(IdentityUtil
-                .getProperty(SCIMCommonConstants.SCIM_ENABLE_PREPEND_PRIMARY_DOMAIN_IN_GROUPS_RESPONSE));
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_MANDATE_DOMAIN_FOR_GROUPNAMES_IN_GROUPS_RESPONSE));
     }
 
     /**
      * Checks whether the identity.xml config is available for prepending the 'PRIMARY/' in each role and
      * username which belong to Primary domain in the responses of both Users and Groups endpoints.
      *
-     * @return whether 'PrependPrimaryDomainInUsersAndGroupsResponses' property is enabled in identity.xml.
+     * @return whether 'MandateDomainForUsernamesAndGroupNamesInResponse' property is enabled in identity.xml.
      */
-    public static boolean isPrependPrimaryDomainInUsersAndGroupsResponsesPropertyEnabled() {
+    public static boolean MandateDomainForUsernamesAndGroupNamesInResponse() {
 
         return Boolean.parseBoolean(IdentityUtil
-                .getProperty(SCIMCommonConstants.SCIM_ENABLE_PREPEND_PRIMARY_DOMAIN_IN_USERS_AND_GROUPS_RESPONSES));
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_MANDATE_DOMAIN_FOR_USERNAMES_AND_GROUPNAMES_IN_RESPONSE));
+    }
+
+    /**
+     * Method to prepend PRIMARY domain name to given String when that String not contains DOMAIN_SEPARATOR.
+     * @param value
+     * @return Given String if given String not contains DOMAIN_SEPARATOR, String with PRIMARY domain otherwise.
+     */
+    public static String prependPrimaryDomain(String value) {
+
+        if (StringUtils.contains(value, CarbonConstants.DOMAIN_SEPARATOR)) {
+            return value;
+        } else {
+            return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + value;
+        }
     }
 }
