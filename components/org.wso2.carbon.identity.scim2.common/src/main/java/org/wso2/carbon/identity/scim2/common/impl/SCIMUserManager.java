@@ -360,8 +360,9 @@ public class SCIMUserManager implements UserManager {
                 log.debug(message);
             }
         } else {
-            users.set(0, userNames.length); // Set total number of results to 0th index.
-            users.addAll(getUserDetails(userNames, requiredAttributes)); // Set user details from index 1.
+            List<Object> scimUsers = getUserDetails(userNames, requiredAttributes);
+            users.set(0, scimUsers.size()); // Set total number of results to 0th index.
+            users.addAll(scimUsers); // Set user details from index 1.
         }
         return users;
     }
@@ -2055,6 +2056,10 @@ public class SCIMUserManager implements UserManager {
             Map<String, String> attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues,
                     scimToLocalClaimsMap);
 
+            if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.ID_URI)) {
+                return scimUser;
+            }
+
             //skip simple type addresses claim because it is complex with sub types in the schema
             if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
                 attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
@@ -2153,6 +2158,9 @@ public class SCIMUserManager implements UserManager {
                 }
 
                 try {
+                    if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.ID_URI)) {
+                        continue;
+                    }
                     //skip simple type addresses claim because it is complex with sub types in the schema
                     if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
                         attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
