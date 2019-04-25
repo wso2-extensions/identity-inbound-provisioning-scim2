@@ -190,6 +190,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn("testPrimaryDomain");
 
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap())).thenReturn(new HashMap<String, String>() {{
+            put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c"); }});
+
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getRoleListOfUser(anyString())).thenReturn(userRoles);
