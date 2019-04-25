@@ -705,8 +705,6 @@ public class SCIMUserManager implements UserManager {
                     node.getValue()));
         }
 
-        // Apply filter enhancements for username and update expression node value.
-        applyFilterEnhancementsForUsernameInNode(node);
         try {
             // Extract he domain name if the domain name is embedded in the filter attribute value.
             domainName = resolveDomainNameInAttributeValue(domainName, node);
@@ -715,6 +713,10 @@ public class SCIMUserManager implements UserManager {
                     .format("Domain parameter: %s in request does not match with the domain name in the attribute "
                             + "value: %s ", domainName, node.getValue());
             throw new CharonException(errorMessage, e);
+        }
+        // Get domain name according to Filter Enhancements properties as in identity.xml
+        if (StringUtils.isEmpty(domainName)) {
+            domainName = getDomainNameAccordingToFilterEnhancementProperty(node);
         }
         try {
             // Check which APIs should the filter needs to follow.
@@ -750,25 +752,32 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Validate whether filter enhancements are enabled and then append the primary domain name in front of the
-     * attribute value to be searched. Finally update the attribute value in Expression node to new attribute value.
+     * Validate whether filter enhancements are enabled and then return primary default domain name as the domain to
+     * be filtered.
      *
      * @param node Expression node
-     * @return Modified attribute value
+     * @return PRIMARY default domainName if property enabled, Null otherwise.
      */
-    private void applyFilterEnhancementsForUsernameInNode(ExpressionNode node) {
+    private String getDomainNameAccordingToFilterEnhancementProperty(ExpressionNode node) {
 
         // Set filter values.
         String attributeName = node.getAttributeValue();
         String filterOperation = node.getOperation();
         String attributeValue = node.getValue();
 
-        if (SCIMCommonUtils.isFilteringEnhancementsEnabled())
-            if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation))
+        if (SCIMCommonUtils.isFilterUsersAndGroupsFromPrimaryDomainPropertyEnabled()) {
+            if (!StringUtils.contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+                return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+            }
+        } else if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+            if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation)) {
                 if (StringUtils.equals(attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI) && !StringUtils
-                        .contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR))
-                    node.setValue(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
-                            + attributeValue);
+                        .contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+                    return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -1762,7 +1771,12 @@ public class SCIMUserManager implements UserManager {
             throw new NotImplementedException(error);
         }
 
-        if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+        if (SCIMCommonUtils.isFilterUsersAndGroupsFromPrimaryDomainPropertyEnabled()) {
+            if (!StringUtils.contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+                attributeValue = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                        + attributeValue;
+            }
+        } else if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
             if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation)) {
                 if (StringUtils.equals(attributeName, SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI) &&
                         !StringUtils.contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
@@ -2061,7 +2075,17 @@ public class SCIMUserManager implements UserManager {
             }
 
             // Add username with domain name
-            attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
+            if (SCIMCommonUtils.isPrependPrimaryDomainInUsersAndGroupsResponsesPropertyEnabled()) {
+                if (!StringUtils.contains(userName, CarbonConstants.DOMAIN_SEPARATOR)) {
+                    String username =
+                            UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + userName;
+                    attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, username);
+                } else {
+                    attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
+                }
+            } else {
+                attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
+            }
 
             //get groups of user and add it as groups attribute
             String[] roles = carbonUM.getRoleListOfUser(userName);
@@ -2081,7 +2105,11 @@ public class SCIMUserManager implements UserManager {
                     continue;
                 }
 
-                if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+                if (SCIMCommonUtils.isPrependPrimaryDomainInUsersAndGroupsResponsesPropertyEnabled()) {
+                    if (!StringUtils.contains(role, CarbonConstants.DOMAIN_SEPARATOR)) {
+                        role = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + role;
+                    }
+                } else if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
                     if (!StringUtils.contains(role, CarbonConstants.DOMAIN_SEPARATOR)) {
                         role = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + role;
                     }
@@ -2159,7 +2187,18 @@ public class SCIMUserManager implements UserManager {
                     }
 
                     // Add username with domain name
-                    attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
+                    if (SCIMCommonUtils.isPrependPrimaryDomainInUsersAndGroupsResponsesPropertyEnabled()) {
+                        if (!StringUtils.contains(userName, CarbonConstants.DOMAIN_SEPARATOR)) {
+                            String username =
+                                    UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                                            + userName;
+                            attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, username);
+                        } else {
+                            attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
+                        }
+                    } else {
+                        attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
+                    }
 
                     //get groups of user and add it as groups attribute
                     List<String> roleList = usersRoles.get(userName);
@@ -2183,9 +2222,15 @@ public class SCIMUserManager implements UserManager {
                             continue;
                         }
 
-                        if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+                        if (SCIMCommonUtils.isPrependPrimaryDomainInUsersAndGroupsResponsesPropertyEnabled()) {
                             if (!StringUtils.contains(role, CarbonConstants.DOMAIN_SEPARATOR)) {
-                                role = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + role;
+                                role = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                                        + role;
+                            }
+                        } else if (SCIMCommonUtils.isFilteringEnhancementsEnabled()) {
+                            if (!StringUtils.contains(role, CarbonConstants.DOMAIN_SEPARATOR)) {
+                                role = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                                        + role;
                             }
                         }
 
@@ -2268,13 +2313,39 @@ public class SCIMUserManager implements UserManager {
         }
 
         Group group = new Group();
-        group.setDisplayName(groupName);
+        if (SCIMCommonUtils.isPrependPrimaryDomainInUsersAndGroupsResponsesPropertyEnabled()) {
+            if (!StringUtils.contains(groupName, CarbonConstants.DOMAIN_SEPARATOR)) {
+                String role =
+                        UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + groupName;
+                group.setDisplayName(role);
+            } else {
+                group.setDisplayName(groupName);
+            }
+        } else if (SCIMCommonUtils.isPrependPrimaryDomainInGroupsResponsePropertyEnabled()) {
+            group.setDisplayName(groupName);
+        } else {
+            if (StringUtils.isNotEmpty(userStoreDomainName) && (userStoreDomainName.toUpperCase()
+                    .equals(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME)) && (
+                    groupName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0)) {
+                int indexOfDomainSeparator = groupName.indexOf(CarbonConstants.DOMAIN_SEPARATOR);
+                String role = groupName.substring(indexOfDomainSeparator + 1);
+                group.setDisplayName(role);
+            } else {
+                group.setDisplayName(groupName);
+            }
+        }
         String[] userNames = carbonUM.getUserListOfRole(groupName);
 
         //get the ids of the users and set them in the group with id + display name
         if (userNames != null && userNames.length != 0) {
             for (String userName : userNames) {
                 String userId = carbonUM.getUserClaimValue(userName, SCIMConstants.CommonSchemaConstants.ID_URI, null);
+                if (SCIMCommonUtils.isPrependPrimaryDomainInUsersAndGroupsResponsesPropertyEnabled()) {
+                    if (!StringUtils.contains(userName, CarbonConstants.DOMAIN_SEPARATOR)) {
+                        userName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR
+                                + userName;
+                    }
+                }
                 group.setMember(userId, userName);
             }
         }
