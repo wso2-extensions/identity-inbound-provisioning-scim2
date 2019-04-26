@@ -310,6 +310,24 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
+    public List<Object> listUsersWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
+            String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
+            throws CharonException, NotImplementedException {
+
+        // Validate NULL value for startIndex.
+        startIndex = handleStartIndexEqualsNULL(startIndex);
+        if (sortBy != null || sortOrder != null) {
+            throw new NotImplementedException("Sorting is not supported");
+        } else if (count != null && count == 0) {
+            return Collections.emptyList();
+        } else if (rootNode != null) {
+            return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
+        } else {
+            return listUsers(requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
+        }
+    }
+
+    @Override
     public List<Object> listUsersWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
         return listUsersWithGET(searchRequest.getFilter(), searchRequest.getStartIndex(), searchRequest.getCount(),
@@ -329,12 +347,15 @@ public class SCIMUserManager implements UserManager {
      * @return User list with detailed attributes
      * @throws CharonException Error while listing users
      */
-    private List<Object> listUsers(Map<String, Boolean> requiredAttributes, int offset, int limit, String sortBy,
-            String sortOrder, String domainName) throws CharonException {
+    private List<Object> listUsers(Map<String, Boolean> requiredAttributes, int offset, Integer limit,
+            String sortBy, String sortOrder, String domainName) throws CharonException {
 
         List<Object> users = new ArrayList<>();
-        //0th index is to store total number of results.
+        // 0th index is to store total number of results.
         users.add(0);
+
+        // Handle limit equals NULL scenario.
+        limit = handleLimitEqualsNULL(limit);
         String[] userNames;
         if (StringUtils.isNotEmpty(domainName)) {
             if (canPaginate(offset, limit)) {
@@ -648,21 +669,39 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
+     * Method to handle limit equals NULL in a request.
+     *
+     * @param limit Limit in the request.
+     * @return Updated limit.
+     */
+    private int handleLimitEqualsNULL(Integer limit) {
+
+        // Limit equal to null implies return all users. Return all users scenario handled by the following methods by
+        // expecting count as zero.
+        if (limit == null) {
+            limit = 0;
+        }
+        return limit;
+    }
+
+    /**
      * Filter users using multi-attribute filters or single attribute filters with pagination.
      *
      * @param node               Node
      * @param requiredAttributes Required attributes
      * @param offset             Starting index of the count
      * @param limit              Number of required results (count)
-     * @param sortBy             Sortby
+     * @param sortBy             SortBy
      * @param sortOrder          Sort order
      * @param domainName         Domain that the filter should perform
      * @return Detailed user list
      * @throws CharonException
      */
-    private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, int limit,
+    private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
             String sortBy, String sortOrder, String domainName) throws CharonException {
 
+        // Handle limit equals NULL scenario.
+        limit = handleLimitEqualsNULL(limit);
         // Handle single attribute search.
         if (node instanceof ExpressionNode) {
             return filterUsersBySingleAttribute((ExpressionNode) node, requiredAttributes, offset, limit, sortBy,
@@ -734,7 +773,8 @@ public class SCIMUserManager implements UserManager {
     /**
      * Method to decide whether to use new APIs or legacy APIs.
      *
-     * @param limit Number of results required for the filter request.
+     * @param limit Number of results required for the filter request (limit equals to ZERO will retrieve all users
+     *              who matches the filter).
      * @return True if legacy API filtering is needed.
      */
     private boolean isUseLegacyAPIs(int limit) {
@@ -1161,17 +1201,14 @@ public class SCIMUserManager implements UserManager {
      * @return
      * @throws CharonException
      */
-    private List<Object> getMultiAttributeFilteredUsers(Node node, Map<String, Boolean> requiredAttributes,
-                                                        int offset, int limit, String sortBy, String sortOrder,
-                                                        String domainName, List<Object> filteredUsers)
+    private List<Object> getMultiAttributeFilteredUsers(Node node, Map<String, Boolean> requiredAttributes, int offset,
+            int limit, String sortBy, String sortOrder, String domainName, List<Object> filteredUsers)
             throws CharonException {
 
         String[] userNames;
-
         // Handle pagination.
         if (limit > 0) {
-            userNames = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit, sortBy,
-                    sortOrder, domainName);
+            userNames = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit, sortBy, sortOrder, domainName);
             filteredUsers.set(0, userNames.length);
             filteredUsers.addAll(getFilteredUserDetails(userNames, requiredAttributes));
         } else {
@@ -1698,15 +1735,51 @@ public class SCIMUserManager implements UserManager {
     public List<Object> listGroupsWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
             String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
+
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        } else if (startIndex != 1) {
+        } else if (startIndex != 1 && count >= 0) {
             throw new NotImplementedException("Pagination is not supported");
         } else if (rootNode != null) {
             return filterGroups(rootNode, requiredAttributes);
         } else {
             return listGroups(requiredAttributes);
         }
+    }
+
+    @Override
+    public List<Object> listGroupsWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
+            String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
+            throws CharonException, NotImplementedException {
+
+        // Validate NULL value for startIndex.
+        startIndex = handleStartIndexEqualsNULL(startIndex);
+        if (sortBy != null || sortOrder != null) {
+            throw new NotImplementedException("Sorting is not supported");
+        } else if (startIndex != 1 || count != null) {
+            throw new NotImplementedException("Pagination is not supported");
+        } else if (rootNode != null) {
+            return filterGroups(rootNode, requiredAttributes);
+        } else {
+            return listGroups(requiredAttributes);
+        }
+    }
+
+    /**
+     * Method to interpret startIndex as 1 when the startIndex equals to NULL in the request.
+     *
+     * @param startIndex StartIndex in the request.
+     * @return Updated startIndex
+     */
+    private int handleStartIndexEqualsNULL(Integer startIndex) {
+
+        if (startIndex == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("NULL value for startIndex argument interpreted as 1");
+            }
+            return 1;
+        }
+        return startIndex;
     }
 
     private List<Object> listGroups(Map<String, Boolean> requiredAttributes) throws CharonException {
@@ -2387,7 +2460,7 @@ public class SCIMUserManager implements UserManager {
      * Paginate a list of users names according to a given offset and a count.
      *
      * @param users  A list of unpaginated users.
-     * @param limit  The total number of results required (Zero will return all the users).
+     * @param limit  The total number of results required (ZERO will return all the users).
      * @param offset The starting index of the count (limit).
      * @return A list of paginated users
      */
@@ -2404,7 +2477,7 @@ public class SCIMUserManager implements UserManager {
             offset = 1;
         }
 
-        // If the results is less than the offset return an empty user list.
+        // If the results are less than the offset, return an empty user list.
         if (offset > users.length) {
             return new String[0];
         }

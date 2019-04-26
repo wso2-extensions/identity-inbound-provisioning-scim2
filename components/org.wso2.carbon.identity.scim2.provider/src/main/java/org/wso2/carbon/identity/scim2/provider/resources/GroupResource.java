@@ -18,9 +18,9 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
@@ -312,58 +312,75 @@ public class GroupResource extends AbstractResource {
         String attributes = requestAttributes.get(SCIMProviderConstants.ATTRIBUTES);
         String excludedAttributes = requestAttributes.get(SCIMProviderConstants.EXCLUDE_ATTRIBUTES);
         String search = requestAttributes.get(SCIMProviderConstants.SEARCH);
-
         JSONEncoder encoder = null;
         try {
-
             IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-            //obtain the encoder at this layer in case exceptions needs to be encoded.
+            // Obtain the encoder at this layer in case exceptions needs to be encoded.
             encoder = identitySCIMManager.getEncoder();
 
-            // obtain the user store manager
+            // Obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
-            //create charon-SCIM group endpoint and hand-over the request.
+            // Create charon-SCIM group endpoint and hand-over the request.
             GroupResourceManager groupResourceManager = new GroupResourceManager();
             SCIMResponse scimResponse = null;
-            int startIndex = 0;
-            int count = 0;
             if (GET.class.getSimpleName().equals(httpVerb) && id == null) {
                 String filter = requestAttributes.get(SCIMProviderConstants.FILTER);
-                if(requestAttributes.get(SCIMProviderConstants.START_INDEX) != null){
-                    startIndex = Integer.parseInt(requestAttributes.get(SCIMProviderConstants.START_INDEX));
-                }
-                if(requestAttributes.get(SCIMProviderConstants.COUNT) != null){
-                    count = Integer.parseInt(requestAttributes.get(SCIMProviderConstants.COUNT));
-                }
-
                 String sortBy = requestAttributes.get(SCIMProviderConstants.SORT_BY);
                 String sortOrder = requestAttributes.get(SCIMProviderConstants.SORT_ORDER);
                 String domainName = requestAttributes.get(SCIMProviderConstants.DOMAIN);
 
-                scimResponse = groupResourceManager.listWithGET(userManager, filter, startIndex,
-                        count, sortBy, sortOrder, domainName, attributes, excludedAttributes);
-
+                // Processing count and startIndex in the request.
+                Integer startIndex = convertStringPaginationParamsToInteger(
+                        requestAttributes.get(SCIMProviderConstants.START_INDEX), SCIMProviderConstants.START_INDEX);
+                Integer count = convertStringPaginationParamsToInteger(requestAttributes.get(SCIMProviderConstants.COUNT),
+                        SCIMProviderConstants.COUNT);
+                scimResponse = groupResourceManager
+                        .listWithGET(userManager, filter, startIndex, count, sortBy, sortOrder, domainName, attributes,
+                                excludedAttributes);
             } else if (GET.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager.get(id, userManager, attributes, excludedAttributes);
-            } else if (POST.class.getSimpleName().equals(httpVerb) && search.equals("1")){
-                scimResponse = groupResourceManager.listWithPOST(resourceString,userManager);
+            } else if (POST.class.getSimpleName().equals(httpVerb) && search.equals("1")) {
+                scimResponse = groupResourceManager.listWithPOST(resourceString, userManager);
             } else if (POST.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager.create(resourceString, userManager, attributes, excludedAttributes);
             } else if (PUT.class.getSimpleName().equals(httpVerb)) {
-                scimResponse =
-                        groupResourceManager.updateWithPUT(id, resourceString, userManager, attributes, excludedAttributes);
+                scimResponse = groupResourceManager
+                        .updateWithPUT(id, resourceString, userManager, attributes, excludedAttributes);
             } else if (PATCH.class.getSimpleName().equals(httpVerb)) {
-                scimResponse =
-                        groupResourceManager.updateWithPATCH(id, resourceString, userManager, attributes, excludedAttributes);
+                scimResponse = groupResourceManager
+                        .updateWithPATCH(id, resourceString, userManager, attributes, excludedAttributes);
             } else if (DELETE.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager.delete(id, userManager);
             }
-
             return SupportUtils.buildResponse(scimResponse);
-
         } catch (CharonException e) {
             return handleCharonException(e, encoder);
+        }
+    }
+
+    /**
+     * Method to convert string pagination values to Interger pagination values.
+     *
+     * @param valueInRequest       Value passed in the request.
+     * @param scimProviderConstant The name of parameter.
+     * @return Integer if the param is populated and returns null if the param is omitted from the request.
+     * @throws CharonException If the passed param value is not an integer.
+     */
+    private Integer convertStringPaginationParamsToInteger(String valueInRequest, String scimProviderConstant)
+            throws CharonException {
+
+        try {
+            if (StringUtils.isNotEmpty(valueInRequest)) {
+                return new Integer(valueInRequest);
+            } else {
+                return null;
+            }
+        } catch (NumberFormatException e) {
+            String errorMessage = String
+                    .format("Invalid integer value: %s for %s parameter in the request.", valueInRequest,
+                            scimProviderConstant);
+            throw new CharonException(errorMessage, e);
         }
     }
 
