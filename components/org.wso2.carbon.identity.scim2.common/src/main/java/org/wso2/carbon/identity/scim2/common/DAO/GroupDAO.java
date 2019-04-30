@@ -67,6 +67,7 @@ public class GroupDAO {
             while (resultSet.next()) {
                 String group = resultSet.getString(1);
                 if (StringUtils.isNotEmpty(group)) {
+                    group = SCIMCommonUtils.getPrimaryFreeGroupName(group);
                     groups.add(group);
                 }
             }
