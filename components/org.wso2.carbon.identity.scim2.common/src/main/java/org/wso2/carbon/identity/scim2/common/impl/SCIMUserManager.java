@@ -168,6 +168,16 @@ public class SCIMUserManager implements UserManager {
             carbonUM.addUser(user.getUserName(), user.getPassword(), null, claimsInLocalDialect, null);
             log.info("User: " + user.getUserName() + " is created through SCIM.");
 
+            // Get Claims related to SCIM claim dialect
+            Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            // Get required SCIM Claims in local claim dialect.
+            List<String> requiredClaimsInLocalDialect = getRequiredClaimsInLocalDialect(scimToLocalClaimsMap,
+                    requiredAttributes);
+            // Get the user from the user store in order to get the default attributes during the user creation
+            // response.
+            user = this.getSCIMUser(user.getUserName(), requiredClaimsInLocalDialect, scimToLocalClaimsMap);
+            // Set the schemas of the scim user.
+            user.setSchemas();
         } catch (UserStoreException e) {
             handleErrorsOnUserNameAndPasswordPolicy(e);
             String errMsg = "Error in adding the user: " + user.getUserName() + " to the user store. ";
@@ -217,17 +227,8 @@ public class SCIMUserManager implements UserManager {
             } else {
                 //get Claims related to SCIM claim dialect
                 Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
-                List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
-                List<String> requiredClaimsInLocalDialect;
-                if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
-                    scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
-                    requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("SCIM to Local Claim mappings list is empty.");
-                    }
-                    requiredClaimsInLocalDialect = new ArrayList<>();
-                }
+                List<String> requiredClaimsInLocalDialect = getRequiredClaimsInLocalDialect(scimToLocalClaimsMap,
+                        requiredAttributes);
                 //we assume (since id is unique per user) only one user exists for a given id
                 scimUser = this.getSCIMUser(userNames[0], requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                 //set the schemas of the scim user
@@ -2610,5 +2611,26 @@ public class SCIMUserManager implements UserManager {
                 claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) ||
                 claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI)) ||
                 claim.contains(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI);
+    }
+
+    /**
+     * Get the local claims mapped to the required scim claims.
+     */
+    private List<String> getRequiredClaimsInLocalDialect(Map<String, String> scimToLocalClaimsMap, Map<String,
+            Boolean> requiredAttributes)
+            throws UserStoreException {
+
+        List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
+        List<String> requiredClaimsInLocalDialect;
+        if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
+            scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
+            requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("SCIM to Local Claim mappings list is empty.");
+            }
+            requiredClaimsInLocalDialect = new ArrayList<>();
+        }
+        return requiredClaimsInLocalDialect;
     }
 }
