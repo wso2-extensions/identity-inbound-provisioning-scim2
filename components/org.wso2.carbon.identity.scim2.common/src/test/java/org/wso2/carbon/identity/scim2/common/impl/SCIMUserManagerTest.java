@@ -283,7 +283,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         list.add(roleName);
         Map<String, Boolean> requiredAttributes = null;
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
-        when(mockedGroupDAO.getGroupNameList(anyString(), anyString(), anyInt())).thenReturn(list.toArray(new String[0]));
+        when(mockedGroupDAO.getGroupNameList(anyString(), anyString(), anyInt(), anyString()))
+                .thenReturn(list.toArray(new String[0]));
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
 
