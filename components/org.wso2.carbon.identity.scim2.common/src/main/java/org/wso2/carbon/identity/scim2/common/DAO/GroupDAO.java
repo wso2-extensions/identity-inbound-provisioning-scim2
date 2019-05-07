@@ -321,19 +321,27 @@ public class GroupDAO {
             throw new IdentitySCIMException("Error when updating role name of the role: " + oldRoleName);
         }
     }
+
     /**
      * Lists the Groups created from SCIM with a attribute filter and search regex
      *
+     * @param searchAttributeName  Search attribute name.
+     * @param searchAttributeValue Search attribute value.
+     * @param tenantId             Tenant ID.
      * @return list of SCIM groups
      * @throws IdentitySCIMException
+     * @since 1.2.44
+     * @deprecated Method does not support domain filtering. Use
+     * {@link org.wso2.carbon.identity.scim2.common.DAO.GroupDAO#getGroupNameList(String, String, Integer, String)}
      */
+    @Deprecated
     public String[] getGroupNameList(String searchAttributeName, String searchAttributeValue, Integer tenantId)
             throws IdentitySCIMException {
 
         List<String> roleList = new ArrayList<>();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            try (PreparedStatement prepStmt =
-                         connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE)) {
+            try (PreparedStatement prepStmt = connection
+                    .prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE)) {
 
                 prepStmt.setInt(1, tenantId);
                 prepStmt.setString(2, searchAttributeName);
@@ -356,9 +364,85 @@ public class GroupDAO {
             }
         } catch (SQLException e) {
             log.error("Error when executing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE);
-            throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
-                    "persistence store.", e);
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.",
+                    e);
         }
         return roleList.toArray(new String[roleList.size()]);
+    }
+
+    /**
+     * List the groups created from SCIM with a attribute filter and search regex.
+     *
+     * @param searchAttributeName  Search attribute name.
+     * @param searchAttributeValue Search attribute value.
+     * @param tenantId             Tenant ID.
+     * @param domainName           Domain that needs to be filtered.
+     * @return List of SCIM groups.
+     * @throws IdentitySCIMException IdentitySCIMException when reading the SCIM Group information.
+     */
+    public String[] getGroupNameList(String searchAttributeName, String searchAttributeValue, Integer tenantId,
+            String domainName) throws IdentitySCIMException {
+
+        List<String> roleList = new ArrayList<>();
+        String sqlQuery;
+
+        // Resolve sql query for filtering.
+        if (StringUtils.isNotEmpty(domainName)) {
+            // if the domain is given, domain needs to be searched in ROLE_NAME column as well.
+            sqlQuery = SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE_AND_ROLE_NAME;
+        } else {
+            sqlQuery = SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE;
+        }
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
+                prepStmt.setInt(1, tenantId);
+                prepStmt.setString(2, searchAttributeName);
+                prepStmt.setString(3, searchAttributeValue);
+
+                // Append SQL_FILTERING_DELIMITER to ROLE_NAME param to filter in a given domain.
+                if (StringUtils.isNotEmpty(domainName)) {
+                    prepStmt.setString(4, domainName.toUpperCase() + "%");
+                }
+                try (ResultSet rSet = prepStmt.executeQuery()) {
+                    while (rSet.next()) {
+                        String roleName = rSet.getString(1);
+                        if (StringUtils.isNotEmpty(roleName)) {
+                                // Remove the primary domain name from roleNames.
+                                roleList.add(removePrimaryDomainName(roleName));
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error when executing the SQL : " + sqlQuery);
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.",
+                    e);
+        }
+        return roleList.toArray(new String[roleList.size()]);
+    }
+
+    /**
+     * Remove the primary domain name from the display names of groups in the primary user store to maintain
+     * consistency.
+     *
+     * @param roleName Role names with Domain
+     * @return Role names.
+     */
+    private String removePrimaryDomainName(String roleName) {
+
+        // If a domain is embedded, then the length would equal to 2. The first element of the array will be the
+        // domain name.
+        String[] domainSplitFromRoleName = roleName.split(CarbonConstants.DOMAIN_SEPARATOR, 2);
+
+        // Length equal to one would imply that no domain separator is included in the roleName.
+        if (domainSplitFromRoleName.length > 1) {
+            if (UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(domainSplitFromRoleName[0])) {
+                return domainSplitFromRoleName[1];
+            } else {
+                return roleName;
+            }
+        } else {
+            return roleName;
+        }
     }
 }

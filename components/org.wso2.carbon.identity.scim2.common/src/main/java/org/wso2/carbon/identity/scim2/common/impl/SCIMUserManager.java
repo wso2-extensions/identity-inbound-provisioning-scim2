@@ -1766,14 +1766,16 @@ public class SCIMUserManager implements UserManager {
             String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
+        // If the startIndex less than 1 should be interpreted as 1 according to the SCIM2 specification.
+        startIndex  = (startIndex < 1 ? 1 : startIndex);
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
         } else if (startIndex != 1 && count >= 0) {
             throw new NotImplementedException("Pagination is not supported");
         } else if (rootNode != null) {
-            return filterGroups(rootNode, requiredAttributes);
+            return filterGroups(rootNode, startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
         } else {
-            return listGroups(requiredAttributes);
+            return listGroups(startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
         }
     }
 
@@ -1788,10 +1790,12 @@ public class SCIMUserManager implements UserManager {
             throw new NotImplementedException("Sorting is not supported");
         } else if (startIndex != 1 || count != null) {
             throw new NotImplementedException("Pagination is not supported");
+        } else if (count != null && count == 0) {
+            return Collections.emptyList();
         } else if (rootNode != null) {
-            return filterGroups(rootNode, requiredAttributes);
+            return filterGroups(rootNode, startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
         } else {
-            return listGroups(requiredAttributes);
+            return listGroups(startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
         }
     }
 
@@ -1812,19 +1816,32 @@ public class SCIMUserManager implements UserManager {
         return startIndex;
     }
 
-    private List<Object> listGroups(Map<String, Boolean> requiredAttributes) throws CharonException {
+    /**
+     * List all the groups.
+     *
+     * @param startIndex         Start index in the request.
+     * @param count              Limit in the request.
+     * @param sortBy             SortBy
+     * @param sortOrder          Sorting order
+     * @param domainName         Domain Name
+     * @param requiredAttributes Required attributes
+     * @return
+     * @throws CharonException
+     */
+    private List<Object> listGroups(int startIndex, Integer count, String sortBy, String sortOrder, String domainName,
+            Map<String, Boolean> requiredAttributes) throws CharonException {
+
         List<Object> groupList = new ArrayList<>();
         //0th index is to store total number of results;
         groupList.add(0);
         try {
-            SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-            Set<String> roleNames = groupHandler.listSCIMRoles();
+            Set<String> roleNames = getRoleNamesForGroupsEndpoint(domainName);
             for (String roleName : roleNames) {
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
                 if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
                     if (log.isDebugEnabled()) {
-                        log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". " +
-                                "Including group with name : " + roleName + " in the response.");
+                        log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". "
+                                + "Including group with name : " + roleName + " in the response.");
                     }
                     Group group = this.getGroupWithName(roleName);
                     if (group.getId() != null) {
@@ -1832,8 +1849,8 @@ public class SCIMUserManager implements UserManager {
                     }
                 } else {
                     if (log.isDebugEnabled()) {
-                        log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". Hence " +
-                                "group with name : " + roleName + " is excluded in the response.");
+                        log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". Hence "
+                                + "group with name : " + roleName + " is excluded in the response.");
                     }
                 }
             }
@@ -1841,74 +1858,126 @@ public class SCIMUserManager implements UserManager {
             String errMsg = "Error in obtaining role names from user store.";
             errMsg += e.getMessage();
             throw new CharonException(errMsg, e);
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            String errMsg = "Error in retrieving role names from user store.";
+            throw new CharonException(errMsg, e);
         } catch (IdentitySCIMException | BadRequestException e) {
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
-        //set the totalResults value in index 0
-        groupList.set(0, groupList.size()-1);
+        // Set the totalResults value in index 0.
+        groupList.set(0, groupList.size() - 1);
         return groupList;
     }
 
+    /**
+     * Get role names according to the given domain. If the domain is not specified, roles of all the user
+     * stores will be returned.
+     *
+     * @param domainName Domain name
+     * @return Roles List
+     * @throws UserStoreException
+     * @throws IdentitySCIMException
+     */
+    private Set<String> getRoleNamesForGroupsEndpoint(String domainName)
+            throws UserStoreException, IdentitySCIMException {
 
-    private List<Object> filterGroups(Node node, Map<String, Boolean> requiredAttributes)
+        SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+        if (StringUtils.isEmpty(domainName)) {
+            return groupHandler.listSCIMRoles();
+        } else {
+            // If the domain is specified create a attribute value with the domain name.
+            String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
+
+            // Retrieve roles using the above attribute value.
+            List<String> roleList = Arrays.asList(((AbstractUserStoreManager) carbonUM)
+                    .getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true, true));
+            Set<String> roleNames = new HashSet<>(roleList);
+            return roleNames;
+        }
+    }
+
+    /**
+     * Filter users according to a given filter.
+     *
+     * @param rootNode           Node
+     * @param startIndex         Starting index of the results
+     * @param count              Number of required results.
+     * @param sortBy             SortBy
+     * @param sortOrder          Sorting order
+     * @param domainName         Domain name in the request
+     * @param requiredAttributes Required attributes
+     * @return List of filtered groups
+     * @throws NotImplementedException Complex filters are used.
+     * @throws CharonException         Unknown node operation.
+     */
+    private List<Object> filterGroups(Node rootNode, int startIndex, Integer count, String sortBy, String sortOrder,
+            String domainName, Map<String, Boolean> requiredAttributes)
             throws NotImplementedException, CharonException {
 
-        if(node.getLeftNode() != null || node.getRightNode() != null){
+        // Handle count equals NULL scenario.
+        count = handleLimitEqualsNULL(count);
+        if (rootNode instanceof ExpressionNode) {
+            return filterGroupsBySingleAttribute((ExpressionNode) rootNode, startIndex, count, sortBy, sortOrder,
+                    domainName, requiredAttributes);
+        } else if (rootNode instanceof OperationNode) {
             String error = "Complex filters are not supported yet";
             throw new NotImplementedException(error);
+        } else {
+            throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
         }
-        String attributeName = ((ExpressionNode)node).getAttributeValue();
-        String filterOperation = ((ExpressionNode)node).getOperation();
-        String attributeValue = ((ExpressionNode)node).getValue();
+    }
 
-        if (isNotFilteringSupported(filterOperation)) {
-            String error = "System does not support filter operator: " + filterOperation;
-            throw new NotImplementedException(error);
-        }
+    /**
+     * Filter groups with a single attribute.
+     *
+     * @param node               Expression node
+     * @param startIndex         Starting index
+     * @param count              Number of results required
+     * @param sortBy             SortBy
+     * @param sortOrder          Sorting order
+     * @param domainName         Domain to be filtered
+     * @param requiredAttributes Required attributes
+     * @return Filtered groups
+     * @throws CharonException Error in Filtering
+     */
+    private List<Object> filterGroupsBySingleAttribute(ExpressionNode node, int startIndex, int count, String sortBy,
+            String sortOrder, String domainName, Map<String, Boolean> requiredAttributes) throws CharonException {
 
-        if (isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled()) {
-            attributeValue = prependDomain(attributeValue);
-        } else if (isFilteringEnhancementsEnabled()) {
-            if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation)) {
-                if (StringUtils.equals(attributeName, SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI)) {
-                    attributeValue = prependDomain(attributeValue);
-                }
-            }
-        }
-
+        String attributeName = node.getAttributeValue();
+        String filterOperation = node.getOperation();
+        String attributeValue = node.getValue();
         if (log.isDebugEnabled()) {
-            log.debug("Listing groups with filter: " + attributeName + filterOperation +
-                    attributeValue);
+            log.debug("Filtering groups with filter: " + attributeName + " + " + filterOperation + " + "
+                    + attributeValue);
         }
+        // Check whether the filter operation is supported for filtering in groups.
+        if (isFilteringNotSupported(filterOperation)){
+            String errorMessage = "Filter operation: " + filterOperation + " is not supported for groups filtering.";
+            throw new CharonException(errorMessage);
+        }
+        // Resolve the domain name in request according to 'FilterUsersAndGroupsOnlyFromPrimaryDomain' or
+        // EnableFilteringEnhancements' properties in identity.xml or domain name embedded in the filter attribute
+        // value.
+        domainName = resolveDomain(domainName, node);
         List<Object> filteredGroups = new ArrayList<>();
-        //0th index is to store total number of results;
+        // 0th index is to store total number of results.
         filteredGroups.add(0);
         try {
-            String[] roleList = getGroupList(attributeName, filterOperation, attributeValue);
+            String[] roleList = getGroupList(node, domainName);
             if (roleList != null) {
                 for (String roleName : roleList) {
                     if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
-                        //skip internal roles
-                        if ((CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName)) ||
-                                UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration())) {
+                        // Skip internal roles.
+                        if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName) || UserCoreUtil
+                                .isEveryoneRole(roleName, carbonUM.getRealmConfiguration())) {
                             continue;
                         }
-                        String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
-                        if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
-                            if (log.isDebugEnabled()) {
-                                log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". " +
-                                        "Including group with name : " + roleName + " in the response.");
-                            }
-                            Group group = getGroupWithName(roleName);
+                        Group group = getRoleWithDefaultAttributes(roleName);
+                        if (group != null && group.getId() != null) {
                             filteredGroups.add(group);
-                        } else {
-                            if (log.isDebugEnabled()) {
-                                log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". Hence " +
-                                        "group with name : " + roleName + " is excluded in the response.");
-                            }
                         }
                     } else {
-                        //returning null will send a resource not found error to client by Charon.
+                        // Returning null will send a resource not found error to client by Charon.
                         filteredGroups.clear();
                         filteredGroups.add(0);
                         return filteredGroups;
@@ -1916,21 +1985,149 @@ public class SCIMUserManager implements UserManager {
                 }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            throw new CharonException("Error in filtering groups by attribute name : " + attributeName + ", " +
-                    "attribute value : " + attributeValue + " and filter operation " + filterOperation, e);
+            throw new CharonException(
+                    "Error in filtering groups by attribute name : " + attributeName + ", " + "attribute value : "
+                            + attributeValue + " and filter operation : " + filterOperation, e);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            throw new CharonException("Error in filtering group with filter: "
-                    + attributeName + filterOperation + attributeValue, e);
-        } catch (IdentitySCIMException e) {
-            throw new CharonException("Error in retrieving SCIM Group information from database.", e);
-        } catch (BadRequestException e) {
-            throw new CharonException("Error in retrieving SCIM Group.", e);
+            throw new CharonException(
+                    "Error in filtering group with filter: " + attributeName + " + " + filterOperation + " + "
+                            + attributeValue, e);
         }
-        //set the totalResults value in index 0
+        // Set the totalResults value in index 0.
         filteredGroups.set(0, filteredGroups.size() - 1);
         return filteredGroups;
     }
 
+    /**
+     * Resolve the domain name in request according to 'FilterUsersAndGroupsOnlyFromPrimaryDomain' or
+     * 'EnableFilteringEnhancements' properties in identity.xml or domain name embedded in the filter attribute value.
+     *
+     * @param domainName Domain name passed in the request.
+     * @param node       Expression node
+     * @return Domain name
+     * @throws CharonException
+     */
+    private String resolveDomain(String domainName, ExpressionNode node) throws CharonException {
+
+        try {
+            // Update the domain name if a domain is appended to the attribute value.
+            domainName = resolveDomainInAttributeValue(domainName, node);
+
+            // Apply filter enhancements if the domain is not specified in the request.
+            if (StringUtils.isEmpty(domainName)) {
+                domainName = getDomainWithFilterProperties(node);
+            }
+            return domainName;
+        } catch (BadRequestException e) {
+            String errorMessage = String
+                    .format(" Domain name in the attribute value: %s does not match with the domain parameter: %s in "
+                            + "the request.", node.getValue(), domainName);
+            throw new CharonException(errorMessage, e);
+        }
+    }
+
+    /**
+     * Check isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled() or isFilteringEnhancementsEnabled() which
+     * enables filtering in primary domain only.
+     *
+     * @param node Expression node.
+     * @return Primary domain name if properties are enabled or return NULL when properties are disabled.
+     */
+    private String getDomainWithFilterProperties(ExpressionNode node) {
+
+        if (isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled()) {
+            return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+        } else if (isFilteringEnhancementsEnabled()) {
+            // To maintain backward compatibility.
+            if (SCIMCommonConstants.EQ.equalsIgnoreCase(node.getOperation())) {
+                if (StringUtils.equals(node.getAttributeValue(), SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI)) {
+                    return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+                }
+            }
+        }
+        // Domain value should be returned to indicate no special requirement for primary user store filtering.
+        return "";
+    }
+
+    /**
+     * Resolve domain name if a domain is attached to the attribute value.
+     *
+     * @param domainName Domain name in the request.
+     * @param node       Expression Node.
+     * @return Domain name
+     */
+    private String resolveDomainInAttributeValue(String domainName, ExpressionNode node) throws BadRequestException {
+
+        String attributeName = node.getAttributeValue();
+        String attributeValue = node.getValue();
+        String extractedDomain;
+        if (StringUtils.equals(attributeName, SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI) || StringUtils
+                .equals(attributeName, SCIMConstants.GroupSchemaConstants.DISPLAY_URI) || StringUtils
+                .equals(attributeName, SCIMConstants.GroupSchemaConstants.VALUE_URI)) {
+
+            // Split the attribute value by domain separator. If a domain is embedded in the attribute value, then
+            // the size of the array will be 2.
+            String[] contentInAttributeValue = attributeValue.split(CarbonConstants.DOMAIN_SEPARATOR, 2);
+
+            // Length less than 1 would indicate that there is no domain appended in front of the attribute value.
+            if (contentInAttributeValue.length > 1) {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Attribute value: %s is embedded with a domain.", attributeValue));
+                }
+                extractedDomain = contentInAttributeValue[0].toUpperCase();
+
+                // Check whether the domain name is equal to the extracted domain name from attribute value.
+                if (StringUtils.isNotEmpty(domainName) && StringUtils.isNotEmpty(extractedDomain) && !extractedDomain
+                        .equalsIgnoreCase(domainName)) {
+                    throw new BadRequestException(String.format(
+                            " Domain name: %s in the domain parameter does not match with the domain name: %s in "
+                                    + "search attribute value of %s claim.", domainName, extractedDomain,
+                            attributeName));
+                }
+                // Remove the domain name from the attribute value and update it in the expression node.
+                node.setValue(contentInAttributeValue[1]);
+                return extractedDomain;
+            } else {
+                return domainName;
+            }
+        } else {
+            // If the domain is not embedded, return domain name passed in the request.
+            return domainName;
+        }
+    }
+
+    /**
+     * Get the role name with attributes.
+     *
+     * @param roleName       Role name
+     * @throws CharonException
+     * @throws UserStoreException
+     */
+    private Group getRoleWithDefaultAttributes(String roleName)
+            throws CharonException, UserStoreException {
+
+        String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
+        if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
+            if (log.isDebugEnabled()) {
+                log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". "
+                        + "Including group with name : " + roleName + " in the response.");
+            }
+            try {
+                return getGroupWithName(roleName);
+            } catch (IdentitySCIMException e) {
+                throw new CharonException("Error in retrieving SCIM Group information from database.", e);
+            } catch (BadRequestException e) {
+                throw new CharonException("Error in retrieving SCIM Group.", e);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". Hence "
+                        + "group with name : " + roleName + " is excluded in the response.");
+            }
+            // Return NULL implies that a group cannot be created.
+            return null;
+        }
+    }
 
     @Override
     public Group updateGroup(Group oldGroup, Group newGroup, Map<String, Boolean> requiredAttributes)
@@ -2539,15 +2736,15 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * check whether the filtering is supported
-     * @param filterOperation operator use for filtering
+     * Check whether the filtering is supported.
+     *
+     * @param filterOperation Operator to be used for filtering
      * @return boolean to check whether operator is supported
      */
-    private boolean isNotFilteringSupported(String filterOperation) {
+    private boolean isFilteringNotSupported(String filterOperation) {
 
-        return !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)
-                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)
-                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)
+        return !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ) && !filterOperation
+                .equalsIgnoreCase(SCIMCommonConstants.CO) && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)
                 && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW);
     }
 
@@ -2634,63 +2831,88 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * get the list of groups that matches the search criteria
-     * @param attributeName attribute which is used to search
-     * @param filterOperation operator value
-     * @param attributeValue search value
-     * @return list of user groups
+     * Get the list of groups that matches the search criteria.
+     *
+     * @param expressionNode Expression node for the filter.
+     * @param domainName Domain name
+     * @return List of user groups
      * @throws org.wso2.carbon.user.core.UserStoreException
      * @throws IdentitySCIMException
      */
-    private String[] getGroupList(String attributeName, String filterOperation, String attributeValue)
-            throws org.wso2.carbon.user.core.UserStoreException, IdentitySCIMException {
+    private String[] getGroupList(ExpressionNode expressionNode, String domainName)
+            throws org.wso2.carbon.user.core.UserStoreException, CharonException {
 
-        String[] userRoleList;
-        if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_URI)
-                || attributeName.equals(SCIMConstants.GroupSchemaConstants.VALUE_URI)) {
+        String attributeName = expressionNode.getAttributeValue();
+        String filterOperation = expressionNode.getOperation();
+        String attributeValue = expressionNode.getValue();
+
+        // Groups endpoint only support display uri and value uri.
+        if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_URI) || attributeName
+                .equals(SCIMConstants.GroupSchemaConstants.VALUE_URI)) {
             String[] userList;
+
+            // Update attribute value with the domain name.
+            attributeValue = prependDomainNameToTheAttributeValue(attributeValue, domainName);
+            // Listing users.
             if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_URI)) {
-                userList = getUserNames(SCIMConstants.UserSchemaConstants.USER_NAME_URI, filterOperation, attributeValue);
+                userList = getUserNames(SCIMConstants.UserSchemaConstants.USER_NAME_URI, filterOperation,
+                        attributeValue);
             } else {
                 userList = getUserNames(SCIMConstants.CommonSchemaConstants.ID_URI, filterOperation, attributeValue);
             }
+            // Get the roles of the users.
             Set<String> fullRoleList = new HashSet<>();
-            List<String> currentRoleList;
-
             if (userList != null) {
                 for (String userName : userList) {
-                    String[] roles = carbonUM.getRoleListOfUser(userName);
-                    currentRoleList = Arrays.asList(roles);
-                    fullRoleList.addAll(currentRoleList);
+                    fullRoleList.addAll(Arrays.asList(carbonUM.getRoleListOfUser(userName)));
                 }
             }
-
-            userRoleList = fullRoleList.toArray(new String[fullRoleList.size()]);
-
+            return fullRoleList.toArray(new String[0]);
         } else if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI)) {
-            userRoleList = getRoleNames(filterOperation, attributeValue);
+            attributeValue = prependDomainNameToTheAttributeValue(attributeValue, domainName);
+            return getRoleNames(filterOperation, attributeValue);
         } else {
-            userRoleList = getGroupNamesFromDB(attributeName, filterOperation, attributeValue);
+            try {
+                return getGroupNamesFromDB(attributeName, filterOperation, attributeValue, domainName);
+            } catch (IdentitySCIMException e) {
+                throw new CharonException("Error in retrieving SCIM Group information from database.", e);
+            }
         }
-
-        return userRoleList;
     }
 
     /**
-     * return when search using meta data; list of groups
-     * @param attributeName attribute which is used to search
-     * @param filterOperation operator value
-     * @param attributeValue search value
+     * Prepend the domain name in front of the attribute value to be searched.
+     *
+     * @param attributeValue
+     * @param domainName
+     * @return
+     */
+    private String prependDomainNameToTheAttributeValue(String attributeValue, String domainName) {
+
+        if (StringUtils.isNotEmpty(domainName)) {
+            return domainName + CarbonConstants.DOMAIN_SEPARATOR + attributeValue;
+        } else {
+            return attributeValue;
+        }
+    }
+
+    /**
+     * Return group names when search using meta data; list of groups
+     *
+     * @param attributeName   Attribute name which is used to search
+     * @param filterOperation Operator value.
+     * @param attributeValue  Search value.
+     * @param domainName      Domain to be filtered.
      * @return list of groups
      * @throws org.wso2.carbon.user.core.UserStoreException
      * @throws IdentitySCIMException
      */
-    private String[] getGroupNamesFromDB(String attributeName, String filterOperation, String attributeValue)
-            throws org.wso2.carbon.user.core.UserStoreException, IdentitySCIMException {
+    private String[] getGroupNamesFromDB(String attributeName, String filterOperation, String attributeValue,
+            String domainName) throws org.wso2.carbon.user.core.UserStoreException, IdentitySCIMException {
 
         String searchAttribute = getSearchAttribute(filterOperation, attributeValue, SQL_FILTERING_DELIMITER);
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-        return groupHandler.getGroupListFromAttributeName(attributeName, searchAttribute);
+        return groupHandler.getGroupListFromAttributeName(attributeName, searchAttribute, domainName);
     }
 
     private boolean isPaginatedUserStoreAvailable() {
