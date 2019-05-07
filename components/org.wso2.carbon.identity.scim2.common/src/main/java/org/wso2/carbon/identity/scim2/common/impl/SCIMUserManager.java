@@ -751,7 +751,12 @@ public class SCIMUserManager implements UserManager {
             log.debug(String.format("Listing users by filter: %s %s %s", node.getAttributeValue(), node.getOperation(),
                     node.getValue()));
         }
-
+        // Check whether the filter operation is supported for filtering in groups.
+        if (isFilteringNotSupported(node.getOperation())) {
+            String errorMessage = "Filter operation: " + node.getOperation() + " is not supported for user filtering.";
+            throw new CharonException(errorMessage);
+        }
+        // Resolve domain name according to filter properties and domain in attribute value.
         domainName = resolveDomainName(domainName, node);
         try {
             // Check which APIs should the filter needs to follow.
