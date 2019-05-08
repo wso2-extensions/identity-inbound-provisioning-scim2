@@ -373,12 +373,14 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "getSearchAttribute")
-    public void testGetSearchAttribute(String attributeValue, String expectedValue) throws Exception {
+    public void testGetSearchAttribute(String attributeName, String attributeValue, String expectedValue)
+            throws Exception {
 
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
 
-        String searchAttribute = Whitebox.invokeMethod(scimUserManager, "getSearchAttribute",
-                SCIMCommonConstants.CO, attributeValue, "*");
+        String searchAttribute = Whitebox
+                .invokeMethod(scimUserManager, "getSearchAttribute", attributeName, SCIMCommonConstants.CO,
+                        attributeValue, "*");
 
         assertEquals(searchAttribute, expectedValue);
     }
@@ -386,9 +388,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     @DataProvider(name = "getSearchAttribute")
     public Object[][] getSearchAttribute() {
 
-        return new Object[][]{
-                {"user", "*user*"},
-                {"PRIMARY/testUser", "PRIMARY/*testUser*"}
+        return new Object[][] {
+                { SCIMConstants.UserSchemaConstants.USER_NAME_URI, "user", "*user*" },
+                { SCIMConstants.UserSchemaConstants.USER_NAME_URI, "PRIMARY/testUser", "PRIMARY/*testUser*" }
         };
     }
 
