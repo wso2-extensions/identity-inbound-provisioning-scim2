@@ -751,7 +751,12 @@ public class SCIMUserManager implements UserManager {
             log.debug(String.format("Listing users by filter: %s %s %s", node.getAttributeValue(), node.getOperation(),
                     node.getValue()));
         }
-
+        // Check whether the filter operation is supported by the users endpoint.
+        if (isFilteringNotSupported(node.getOperation())) {
+            String errorMessage =
+                    "Filter operation: " + node.getOperation() + " is not supported for filtering in users endpoint.";
+            throw new CharonException(errorMessage);
+        }
         domainName = resolveDomainName(domainName, node);
         try {
             // Check which APIs should the filter needs to follow.
