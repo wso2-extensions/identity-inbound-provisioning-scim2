@@ -314,7 +314,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
                 null, requiredAttributes);
 
-        assertEquals(roleList.size(), 2);
+        assertEquals(roleList.size(), 1);
 
     }
 
