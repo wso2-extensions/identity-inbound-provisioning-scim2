@@ -1174,7 +1174,7 @@ public class SCIMUserManager implements UserManager {
         try {
             if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
                 if (carbonUM instanceof AbstractUserStoreManager) {
-                    String[] roleNames = getRoleNames(filterOperation, attributeValue);
+                    String[] roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
                     userNames = getUserListOfRoles(roleNames);
                 } else {
                     String errorMessage = String
@@ -2767,33 +2767,26 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * get the search value after appending the delimiters
-     * @param filterOperation operator value
-     * @param attributeValue search value
-     * @param delimiter delimiter for based on search type
-     * @return search attribute
+     * Get the search value after appending the delimiters according to the attribute name to be filtered.
+     *
+     * @param attributeName   Filter attribute name
+     * @param filterOperation Operator value
+     * @param attributeValue  Search value
+     * @param delimiter       Filter delimiter based on search type
+     * @return Search attribute
      */
-    private String getSearchAttribute(String filterOperation, String attributeValue, String delimiter) {
+    private String getSearchAttribute(String attributeName, String filterOperation, String attributeValue,
+            String delimiter) {
 
         String searchAttribute = null;
         if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
-            String[] attributeItems = attributeValue.split(CarbonConstants.DOMAIN_SEPARATOR);
-            if(attributeItems.length == 2) {
-                searchAttribute = attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR +
-                        delimiter + attributeItems[1] + delimiter;
-            } else {
-                searchAttribute = delimiter + attributeValue + delimiter;
-            }
+            searchAttribute = createSearchValueForCoOperation(attributeName, filterOperation, attributeValue,
+                    delimiter);
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
             searchAttribute = attributeValue + delimiter;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
-            // Extract the domain attached to the attribute value and then append the delimiter.
-            String[] attributeItems = attributeValue.split(CarbonConstants.DOMAIN_SEPARATOR);
-            if (attributeItems.length == 2) {
-                searchAttribute = attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR + delimiter + attributeItems[1];
-            } else {
-                searchAttribute = delimiter + attributeValue;
-            }
+            searchAttribute = createSearchValueForEwOperation(attributeName, filterOperation, attributeValue,
+                    delimiter);
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
             searchAttribute = attributeValue;
         }
@@ -2801,36 +2794,157 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * get list of roles that matches the search criteria
-     * @param filterOperation operator value
-     * @param attributeValue search value
-     * @return list of role names
-     * @throws org.wso2.carbon.user.core
-    .UserStoreException
+     * Create search value for CO operation.
+     *
+     * @param attributeName   Filter attribute name
+     * @param filterOperation Operator value
+     * @param attributeValue  Filter attribute value
+     * @param delimiter       Filter delimiter based on search type
+     * @return Search attribute value
      */
-    private String[] getRoleNames(String filterOperation, String attributeValue) throws org.wso2.carbon.user.core
-            .UserStoreException {
+    private String createSearchValueForCoOperation(String attributeName, String filterOperation, String attributeValue,
+            String delimiter) {
 
-        String searchAttribute = getSearchAttribute(filterOperation, attributeValue, FILTERING_DELIMITER);
-        return ((AbstractUserStoreManager) carbonUM).getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true,
-                true, true);
+        // For attributes which support domain embedding, create search value by appending the delimiter after
+        // the domain separator.
+        if (isDomainSupportedAttribute(attributeName)) {
+
+            // Check whether domain is embedded in the attribute value.
+            String[] attributeItems = attributeValue.split(CarbonConstants.DOMAIN_SEPARATOR, 2);
+            if (attributeItems.length > 1) {
+                return createSearchValueWithDomainForCoEwOperations(attributeName, filterOperation, attributeValue,
+                        delimiter, attributeItems);
+            } else {
+                return delimiter + attributeValue + delimiter;
+            }
+        } else {
+            return delimiter + attributeValue + delimiter;
+        }
     }
 
     /**
-     * get list of user that matches the search criteria
-     * @param attributeName field name for search
-     * @param filterOperation operator
-     * @param attributeValue search value
-     * @return list of users
+     * Create search value for EW operation.
+     *
+     * @param attributeName   Filter attribute name
+     * @param filterOperation Operator value
+     * @param attributeValue  Filter attribute value
+     * @param delimiter       Filter delimiter based on search type
+     * @return Search attribute value
+     */
+    private String createSearchValueForEwOperation(String attributeName, String filterOperation, String attributeValue,
+            String delimiter) {
+
+        // For attributes which support domain embedding, create search value by appending the delimiter after
+        // the domain separator.
+        if (isDomainSupportedAttribute(attributeName)) {
+            // Extract the domain attached to the attribute value and then append the delimiter.
+            String[] attributeItems = attributeValue.split(CarbonConstants.DOMAIN_SEPARATOR, 2);
+            if (attributeItems.length > 1) {
+                return createSearchValueWithDomainForCoEwOperations(attributeName, filterOperation, attributeValue,
+                        delimiter, attributeItems);
+            } else {
+                return delimiter + attributeValue;
+            }
+        } else {
+            return delimiter + attributeValue;
+        }
+    }
+
+    /**
+     * Create search value for CO and EW operations when domain is detected in the filter attribute value.
+     *
+     * @param attributeName   Filter attribute name
+     * @param filterOperation Operator value
+     * @param attributeValue  Search value
+     * @param delimiter       Filter delimiter based on search type
+     * @param attributeItems  Extracted domain and filter value
+     * @return Search attribute value
+     */
+    private String createSearchValueWithDomainForCoEwOperations(String attributeName, String filterOperation,
+            String attributeValue, String delimiter, String[] attributeItems) {
+
+        String searchAttribute;
+        if (log.isDebugEnabled()) {
+            log.debug(String.format(
+                    "Domain detected in attribute value: %s for filter attribute: %s for " + "filter operation; %s.",
+                    attributeValue, attributeName, filterOperation));
+        }
+        if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
+            searchAttribute = attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR + delimiter + attributeItems[1];
+        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
+            searchAttribute =
+                    attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR + delimiter + attributeItems[1] + delimiter;
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Filter operation: %s is not supported by method "
+                        + "createSearchValueWithDomainForCoEwOperations to create a search value."));
+            }
+            searchAttribute = attributeValue;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug(
+                    String.format("Search attribute value : %s is created for operation: %s created with domain : %s ",
+                            searchAttribute, filterOperation, attributeItems[0]));
+        }
+        return searchAttribute;
+    }
+
+    /**
+     * Check whether the filter attribute support filtering with the domain embedded in the attribute value.
+     *
+     * @param attributeName Attribute to filter
+     * @return True if the given attribute support embedding domain in attribute value.
+     */
+    private boolean isDomainSupportedAttribute(String attributeName) {
+
+        return SCIMConstants.UserSchemaConstants.USER_NAME_URI.equalsIgnoreCase(attributeName)
+                || SCIMConstants.CommonSchemaConstants.ID_URI.equalsIgnoreCase(attributeName)
+                || SCIMConstants.UserSchemaConstants.GROUP_URI.equalsIgnoreCase(attributeName)
+                || SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI.equalsIgnoreCase(attributeName)
+                || SCIMConstants.GroupSchemaConstants.DISPLAY_URI.equalsIgnoreCase(attributeName);
+    }
+
+    /**
+     * Get list of roles that matches the search criteria.
+     *
+     * @param attributeName   Filter attribute name
+     * @param filterOperation Operator value
+     * @param attributeValue  Search value
+     * @return List of role names
+     * @throws org.wso2.carbon.user.core.UserStoreException Error getting roleNames.
+     */
+    private String[] getRoleNames(String attributeName, String filterOperation, String attributeValue)
+            throws org.wso2.carbon.user.core.UserStoreException {
+
+        String searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue,
+                FILTERING_DELIMITER);
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Filtering roleNames from search attribute: %s", searchAttribute));
+        }
+        return ((AbstractUserStoreManager) carbonUM)
+                .getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true, true, true);
+    }
+
+    /**
+     * Get list of user that matches the search criteria.
+     *
+     * @param attributeName   Field name for search
+     * @param filterOperation Operator
+     * @param attributeValue  Search value
+     * @return List of users
      * @throws org.wso2.carbon.user.core.UserStoreException
      */
     private String[] getUserNames(String attributeName, String filterOperation, String attributeValue)
             throws org.wso2.carbon.user.core.UserStoreException {
 
-        String searchAttribute = getSearchAttribute(filterOperation, attributeValue, FILTERING_DELIMITER);
+        String searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue,
+                FILTERING_DELIMITER);
         String attributeNameInLocalDialect = SCIMCommonUtils.getSCIMtoLocalMappings().get(attributeName);
         if (StringUtils.isBlank(attributeNameInLocalDialect)) {
             attributeNameInLocalDialect = attributeName;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Filtering userNames from search attribute: %s", searchAttribute));
         }
         return carbonUM.getUserList(attributeNameInLocalDialect, searchAttribute, UserCoreConstants.DEFAULT_PROFILE);
     }
@@ -2858,11 +2972,20 @@ public class SCIMUserManager implements UserManager {
 
             // Update attribute value with the domain name.
             attributeValue = prependDomainNameToTheAttributeValue(attributeValue, domainName);
+
             // Listing users.
             if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_URI)) {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Filter attribute: %s mapped to filter attribute: %s to filter users in "
+                            + "groups endpoint.", attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI));
+                }
                 userList = getUserNames(SCIMConstants.UserSchemaConstants.USER_NAME_URI, filterOperation,
                         attributeValue);
             } else {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Filter attribute: %s mapped to filter attribute: %s to filter users in "
+                            + "groups endpoint", attributeName, SCIMConstants.CommonSchemaConstants.ID_URI));
+                }
                 userList = getUserNames(SCIMConstants.CommonSchemaConstants.ID_URI, filterOperation, attributeValue);
             }
             // Get the roles of the users.
@@ -2875,7 +2998,7 @@ public class SCIMUserManager implements UserManager {
             return fullRoleList.toArray(new String[0]);
         } else if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI)) {
             attributeValue = prependDomainNameToTheAttributeValue(attributeValue, domainName);
-            return getRoleNames(filterOperation, attributeValue);
+            return getRoleNames(attributeName, filterOperation, attributeValue);
         } else {
             try {
                 return getGroupNamesFromDB(attributeName, filterOperation, attributeValue, domainName);
@@ -2902,9 +3025,9 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Return group names when search using meta data; list of groups
+     * Return group names when search using meta data; list of groups.
      *
-     * @param attributeName   Attribute name which is used to search
+     * @param attributeName   Attribute name which is used to search.
      * @param filterOperation Operator value.
      * @param attributeValue  Search value.
      * @param domainName      Domain to be filtered.
@@ -2915,8 +3038,12 @@ public class SCIMUserManager implements UserManager {
     private String[] getGroupNamesFromDB(String attributeName, String filterOperation, String attributeValue,
             String domainName) throws org.wso2.carbon.user.core.UserStoreException, IdentitySCIMException {
 
-        String searchAttribute = getSearchAttribute(filterOperation, attributeValue, SQL_FILTERING_DELIMITER);
+        String searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue,
+                SQL_FILTERING_DELIMITER);
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Filtering roleNames from DB from search attribute: %s", searchAttribute));
+        }
         return groupHandler.getGroupListFromAttributeName(attributeName, searchAttribute, domainName);
     }
 
