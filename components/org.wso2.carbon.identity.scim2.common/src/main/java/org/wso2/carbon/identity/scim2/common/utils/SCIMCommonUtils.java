@@ -304,4 +304,54 @@ public class SCIMCommonUtils {
         return Boolean.parseBoolean(IdentityUtil.getProperty
                 (SCIMCommonConstants.SCIM_ENABLE_FILTERING_ENHANCEMENTS));
     }
+
+    /**
+     * Checks whether the identity.xml config is available for applying filtering enhancements. If that property
+     * enabled, then this will return true/false accordingly.
+     *
+     * @return whether 'FilterUsersAndGroupsOnlyFromPrimaryDomain' property is enabled in identity.xml.
+     */
+    public static boolean isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_FILTER_USERS_AND_GROUPS_ONLY_FROM_PRIMARY_DOMAIN));
+    }
+
+    /**
+     * Checks whether the identity.xml config is available for prepending the 'PRIMARY/' in each role and
+     * which belong to Primary domain in the response of Groups endpoints.
+     *
+     * @return whether 'MandateDomainForGroupNamesInGroupsResponse' property is enabled in identity.xml.
+     */
+    public static boolean mandateDomainForGroupNamesInGroupsResponse() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_MANDATE_DOMAIN_FOR_GROUPNAMES_IN_GROUPS_RESPONSE));
+    }
+
+    /**
+     * Checks whether the identity.xml config is available for prepending the 'PRIMARY/' in each role and
+     * username which belong to Primary domain in the responses of both Users and Groups endpoints.
+     *
+     * @return whether 'MandateDomainForUsernamesAndGroupNamesInResponse' property is enabled in identity.xml.
+     */
+    public static boolean mandateDomainForUsernamesAndGroupNamesInResponse() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_MANDATE_DOMAIN_FOR_USERNAMES_AND_GROUPNAMES_IN_RESPONSE));
+    }
+
+    /**
+     * Method to prepend PRIMARY domain name to given String when that String not contains DOMAIN_SEPARATOR.
+     * @param value
+     * @return Given String if given String not contains DOMAIN_SEPARATOR, String with PRIMARY domain otherwise.
+     */
+    public static String prependDomain(String value) {
+
+        if (StringUtils.contains(value, CarbonConstants.DOMAIN_SEPARATOR)) {
+            return value;
+        } else {
+            return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + value;
+        }
+    }
 }

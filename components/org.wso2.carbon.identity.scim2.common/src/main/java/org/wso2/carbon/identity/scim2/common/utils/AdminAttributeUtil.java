@@ -35,6 +35,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -162,8 +163,7 @@ public class AdminAttributeUtil {
         claimsList.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
         claimsList.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
 
-        Date date = new Date();
-        String createdDate = AttributeUtil.formatDateTime(date);
+        String createdDate = AttributeUtil.formatDateTime(Instant.now());
         claimsList.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
         claimsList.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
         if (log.isDebugEnabled()) {

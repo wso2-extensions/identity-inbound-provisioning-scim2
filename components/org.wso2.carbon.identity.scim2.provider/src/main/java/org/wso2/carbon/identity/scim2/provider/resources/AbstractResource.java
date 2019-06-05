@@ -77,6 +77,11 @@ public class AbstractResource {
             logger.debug(e.getMessage(), e);
         }
 
+        // Log the internal server errors.
+        if (e.getStatus() == 500) {
+            logger.error("Server error while handling the request.", e);
+        }
+
         // if the encoder is null we go with the JSON encoder as the default encoder.
         if (encoder == null) {
             logger.error("No encoder found. Sending error response using default JSON encoder");

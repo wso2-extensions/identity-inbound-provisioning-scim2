@@ -38,14 +38,13 @@ import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.testutil.Whitebox;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
-import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
@@ -53,19 +52,16 @@ import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.schema.SCIMAttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
-import org.wso2.charon3.core.utils.codeutils.Node;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMap;
-import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -73,9 +69,8 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
+import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.AssertJUnit.assertNotNull;
 
 /*
  * Unit tests for SCIMUserManager
@@ -195,6 +190,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn("testPrimaryDomain");
 
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap())).thenReturn(new HashMap<String, String>() {{
+            put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c"); }});
+
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getRoleListOfUser(anyString())).thenReturn(userRoles);
@@ -284,7 +283,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         list.add(roleName);
         Map<String, Boolean> requiredAttributes = null;
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
-        when(mockedGroupDAO.getGroupNameList(anyString(), anyString(), anyInt())).thenReturn(list.toArray(new String[0]));
+        when(mockedGroupDAO.getGroupNameList(anyString(), anyString(), anyInt(), anyString()))
+                .thenReturn(list.toArray(new String[0]));
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
 
@@ -314,7 +314,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
                 null, requiredAttributes);
 
-        assertEquals(roleList.size(), 2);
+        assertEquals(roleList.size(), 1);
 
     }
 
@@ -328,6 +328,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimMap);
+        when(SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap())).thenReturn(new HashMap<String, String>() {{
+            put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c"); }});
 
         when(mockedUserStoreManager.getUserList("http://wso2.org/claims/userid", "*", null)).thenReturn(users);
         when(mockedUserStoreManager.getRoleListOfUser(anyString())).thenReturn(new String[0]);
@@ -345,7 +347,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
         List<Object> result = scimUserManager.listUsersWithGET(null, 1, 0, null, null, requiredClaimsMap);
-        assertTrue(result.size() == expectedResultCount);
+        assertEquals(result.size(), expectedResultCount);
     }
 
     @DataProvider(name = "listUser")
@@ -367,6 +369,28 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 {users, false, true, 2},
                 // if no users are present in user-stores, result should contain a single entry for metadata.
                 {null, true, true, 1}
+        };
+    }
+
+    @Test(dataProvider = "getSearchAttribute")
+    public void testGetSearchAttribute(String attributeName, String attributeValue, String expectedValue)
+            throws Exception {
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+
+        String searchAttribute = Whitebox
+                .invokeMethod(scimUserManager, "getSearchAttribute", attributeName, SCIMCommonConstants.CO,
+                        attributeValue, "*");
+
+        assertEquals(searchAttribute, expectedValue);
+    }
+
+    @DataProvider(name = "getSearchAttribute")
+    public Object[][] getSearchAttribute() {
+
+        return new Object[][] {
+                { SCIMConstants.UserSchemaConstants.USER_NAME_URI, "user", "*user*" },
+                { SCIMConstants.UserSchemaConstants.USER_NAME_URI, "PRIMARY/testUser", "PRIMARY/*testUser*" }
         };
     }
 

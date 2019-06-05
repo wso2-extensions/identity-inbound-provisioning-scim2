@@ -28,7 +28,7 @@
     <artifactId>identity-inbound-provisioning-scim2</artifactId>
     <packaging>pom</packaging>
     <modelVersion>4.0.0</modelVersion>
-    <version>1.2.19-SNAPSHOT</version>
+    <version>1.2.46-SNAPSHOT</version>
     <name>WSO2 Carbon - SCIM Provisioning Module</name>
     <description>
         SCIM 2.0 Implementation for C4
@@ -46,14 +46,14 @@
         <dependencies>
             <dependency>
                 <groupId>javax.ws.rs</groupId>
-                <artifactId>jsr311-api</artifactId>
-                <version>${jsr311-api.version}</version>
+                <artifactId>javax.ws.rs-api</artifactId>
+                <version>${javax.ws.rs-api.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>org.wso2.orbit.org.apache.cxf</groupId>
-                <artifactId>cxf-bundle</artifactId>
-                <version>${cxf-bundle.wso2.version}</version>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-core</artifactId>
+                <version>${cxf-bundle.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-collections.wso2</groupId>
@@ -278,15 +278,15 @@
     </modules>
 
     <properties>
-        <jsr311-api.version>1.1.1</jsr311-api.version>
-        <cxf-bundle.wso2.version>2.7.16.wso2v1</cxf-bundle.wso2.version>
+        <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
+        <cxf-bundle.version>3.2.8</cxf-bundle.version>
         <inbound.auth.oauth.version>5.2.0</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
-        <carbon.kernel.version>4.4.34</carbon.kernel.version>
+        <carbon.kernel.version>4.4.39</carbon.kernel.version>
         <identity.framework.version>5.6.15</identity.framework.version>
         <junit.version>4.11</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
-        <charon.version>3.0.28</charon.version>
+        <charon.version>3.1.21</charon.version>
         <identity.governance.version>1.1.37</identity.governance.version>
 
         <!--Maven Plugin Version-->

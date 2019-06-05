@@ -31,6 +31,7 @@ import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -70,8 +71,7 @@ public class SCIMGroupHandler {
         String id = UUID.randomUUID().toString();
         attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
 
-        Date date = new Date();
-        String createdDate = AttributeUtil.formatDateTime(date);
+        String createdDate = AttributeUtil.formatDateTime(Instant.now());
         attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
 
         attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
@@ -111,9 +111,9 @@ public class SCIMGroupHandler {
             Map<String, String> attributes = new HashMap<>();
             attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, group.getId());
             attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, AttributeUtil.formatDateTime(
-                    group.getCreatedDate()));
+                    group.getCreatedDate().toInstant()));
             attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, AttributeUtil.formatDateTime(
-                    group.getLastModified()));
+                    group.getLastModified().toInstant()));
             attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, group.getLocation());
             GroupDAO groupDAO = new GroupDAO();
             groupDAO.addSCIMGroupAttributes(tenantId, group.getDisplayName(), attributes);
@@ -169,9 +169,9 @@ public class SCIMGroupHandler {
             if (SCIMConstants.CommonSchemaConstants.ID_URI.equals(entry.getKey())) {
                 group.setId(entry.getValue());
             } else if (SCIMConstants.CommonSchemaConstants.CREATED_URI.equals(entry.getKey())) {
-                group.setCreatedDate(AttributeUtil.parseDateTime(entry.getValue()));
+                group.setCreatedDate(Date.from(AttributeUtil.parseDateTime(entry.getValue())));
             } else if (SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI.equals(entry.getKey())) {
-                group.setLastModified(AttributeUtil.parseDateTime(entry.getValue()));
+                group.setLastModified(Date.from(AttributeUtil.parseDateTime(entry.getValue())));
             } else if (SCIMConstants.CommonSchemaConstants.LOCATION_URI.equals(entry.getKey())) {
                 group.setLocation(entry.getValue());
             }
@@ -230,16 +230,40 @@ public class SCIMGroupHandler {
         GroupDAO groupDAO = new GroupDAO();
         return groupDAO.listSCIMGroups();
     }
+
     /**
-     * Lists the Groups created from SCIM with a attribute filter and search regex
+     * Lists the Groups created from SCIM with a attribute filter and search regex.
      *
-     * @return list of SCIM groups
-     * @throws IdentitySCIMException
+     * @param attributeName   Search attribute name
+     * @param searchAttribute Search attribute value
+     * @return List of SCIM groups.
+     * @throws IdentitySCIMException IdentitySCIMException when reading the SCIM Group information.
+     * @since 1.2.44
+     * @deprecated Method does not support domain filtering. Use
+     * {@link org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler#getGroupListFromAttributeName(String,
+     * String, String)}
      */
+    @Deprecated
     public String[] getGroupListFromAttributeName(String attributeName, String searchAttribute)
             throws IdentitySCIMException {
 
         GroupDAO groupDAO = new GroupDAO();
         return groupDAO.getGroupNameList(attributeName, searchAttribute, this.tenantId);
+    }
+
+    /**
+     * Lists the Groups created from SCIM with a attribute filter and search regex.
+     *
+     * @param attributeName   Search attribute name
+     * @param searchAttribute Search attribute value
+     * @param domainName      Domain to search
+     * @return List of SCIM groups.
+     * @throws IdentitySCIMException IdentitySCIMException when reading the SCIM Group information.
+     */
+    public String[] getGroupListFromAttributeName(String attributeName, String searchAttribute, String domainName)
+            throws IdentitySCIMException {
+
+        GroupDAO groupDAO = new GroupDAO();
+        return groupDAO.getGroupNameList(attributeName, searchAttribute, this.tenantId, domainName);
     }
 }
