@@ -650,7 +650,7 @@ public class SCIMUserManager implements UserManager {
             }
 
             Map<String, String> oldClaimList = carbonUM.getUserClaimValues(user.getUserName(), requiredClaimsInLocalDialect
-                    .toArray(new String[requiredClaims.size()]), null);
+                    .toArray(new String[requiredClaimsInLocalDialect.size()]), null);
 
             for (Map.Entry<String, String> entry : oldClaimList.entrySet()) {
                 if (!isImmutableClaim(entry.getKey())) {
