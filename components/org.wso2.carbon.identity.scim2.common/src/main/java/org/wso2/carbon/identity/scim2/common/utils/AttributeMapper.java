@@ -152,9 +152,9 @@ public class AttributeMapper {
             String values = null;
             for (Object attributeValue : attributeValues) {
                 if (values != null) {
-                    values += attributeValue + ",";
+                    values += "," + attributeValue;
                 } else {
-                    values = attributeValue + ",";
+                    values = (String) attributeValue;
                 }
             }
             claimsMap.put(attributeURI, values);
