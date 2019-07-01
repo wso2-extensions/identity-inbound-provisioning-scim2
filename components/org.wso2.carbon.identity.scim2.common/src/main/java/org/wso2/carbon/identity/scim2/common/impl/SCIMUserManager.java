@@ -2255,6 +2255,17 @@ public class SCIMUserManager implements UserManager {
         return newGroup;
     }
 
+    /**
+     * Perform user validation, check provided added member(s) details are exists in the user store. Else throw
+     * corresponding error
+     *
+     * @param userName
+     * @param userStoreDomainForGroup
+     * @param displayName
+     * @param addedUserIdsList
+     * @throws IdentitySCIMException
+     * @throws org.wso2.carbon.user.core.UserStoreException
+     */
     private void doUserValidation(String userName, String userStoreDomainForGroup, String displayName,
             List<Object> addedUserIdsList) throws IdentitySCIMException, org.wso2.carbon.user.core.UserStoreException {
 
@@ -2270,7 +2281,7 @@ public class SCIMUserManager implements UserManager {
         if (userName != null) {
             String userId = carbonUM.getUserClaimValue(userName, SCIMConstants.CommonSchemaConstants.ID_URI, null);
             if (userId == null || userId.isEmpty()) {
-                String error = "User: " + userName + " doesn't exist in the user store. " + "Hence, can not update the "
+                String error = "User: " + userName + " doesn't exist in the user store. Hence, can not update the "
                         + "group: " + displayName;
                 throw new IdentitySCIMException(error);
             } else {
