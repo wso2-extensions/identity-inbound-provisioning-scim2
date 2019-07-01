@@ -2184,15 +2184,16 @@ public class SCIMUserManager implements UserManager {
                 about the provisioning route.*/
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
 
-            // Find out added members and deleted members..
-            List<String> addedMembers = new ArrayList<>();
-            List<String> deletedMembers = new ArrayList<>();
             // Find out added user's user ids as a list.
             List<Object> newlyAddedUserIds = newGroup.getMembers();
             List<Object> oldGroupUserIds = oldGroup.getMembers();
             if (oldGroupUserIds != null && oldGroupUserIds.size() > 0) {
                 newlyAddedUserIds.removeAll(oldGroup.getMembers());
             }
+            // Find out added members and deleted members..
+            List<String> addedMembers = new ArrayList<>();
+            List<String> deletedMembers = new ArrayList<>();
+
             List<String> oldMembers = oldGroup.getMembersWithDisplayName();
             List<String> newMembers = newGroup.getMembersWithDisplayName();
             if (newMembers != null) {
