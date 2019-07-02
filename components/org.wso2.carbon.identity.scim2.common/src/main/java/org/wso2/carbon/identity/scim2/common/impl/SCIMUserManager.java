@@ -81,10 +81,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForGroupNamesInGroupsResponse;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForUsernamesAndGroupNamesInResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilteringEnhancementsEnabled;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForGroupNamesInGroupsResponse;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForUsernamesAndGroupNamesInResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
 
 public class SCIMUserManager implements UserManager {
@@ -2183,69 +2183,20 @@ public class SCIMUserManager implements UserManager {
                 /*set thread local property to signal the downstream SCIMUserOperationListener
                 about the provisioning route.*/
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
-            //check if the user ids sent in updated group exist in the user store and the associated user name
-            //also a matching one.
-            List<Object> userIds = newGroup.getMembers();
-            List<String> userDisplayNames = newGroup.getMembersWithDisplayName();
 
-                /* compare user store domain of group and user store domain of user name , if there is a mismatch do not
-                 update the group */
-            if (userDisplayNames != null && userDisplayNames.size() > 0) {
-                for (String userDisplayName : userDisplayNames) {
-                    String userStoreDomainForUser =
-                            IdentityUtil.extractDomainFromName(userDisplayName);
-                    if (!isInternalOrApplicationGroup(userStoreDomainForGroup) && !userStoreDomainForGroup.equalsIgnoreCase
-                            (userStoreDomainForUser)) {
-                        throw new IdentitySCIMException(
-                                userDisplayName + " does not " + "belongs to user store " + userStoreDomainForGroup);
-                    }
-
-                }
+            // Find out added user's user ids as a list.
+            List<Object> newlyAddedUserIds = newGroup.getMembers();
+            List<Object> oldGroupUserIds = oldGroup.getMembers();
+            if (oldGroupUserIds != null && oldGroupUserIds.size() > 0) {
+                newlyAddedUserIds.removeAll(oldGroup.getMembers());
             }
+            // Find out added members and deleted members..
+            List<String> addedMembers = new ArrayList<>();
+            List<String> deletedMembers = new ArrayList<>();
 
-            if (CollectionUtils.isNotEmpty(userIds)) {
-                String[] userNames = null;
-                for (Object userId : userIds) {
-                    if (userId != null) {
-                        String userIdLocalClaim = SCIMCommonUtils.getSCIMtoLocalMappings().get(SCIMConstants
-                                .CommonSchemaConstants.ID_URI);
-                        if (StringUtils.isNotBlank(userIdLocalClaim)) {
-                            userNames = carbonUM.getUserList(userIdLocalClaim, IdentityUtil.addDomainToName((String)
-                                            userId, userStoreDomainForGroup), UserCoreConstants.DEFAULT_PROFILE);
-                        }
-                        if (userNames == null || userNames.length == 0) {
-                            String error = "User: " + userId + " doesn't exist in the user store. " +
-                                    "Hence, can not update the group: " + oldGroup.getDisplayName();
-                            throw new IdentitySCIMException(error);
-                        } else {
-                            if (!UserCoreUtil.isContain(UserCoreUtil.removeDomainFromName(userNames[0]),
-                                    UserCoreUtil.removeDomainFromNames(userDisplayNames.toArray(
-                                            new String[userDisplayNames.size()])))) {
-                                throw new IdentitySCIMException("Given SCIM user Id and name not matching..");
-                            }
-                        }
-                    }
-                }
-            }
-            //we do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
-
-            //update name if it is changed
-            if (!(oldGroup.getDisplayName().equalsIgnoreCase(newGroup.getDisplayName()))) {
-                //update group name in carbon UM
-                carbonUM.updateRoleName(oldGroup.getDisplayName(),
-                        newGroup.getDisplayName());
-
-                updated = true;
-            }
-
-            //find out added members and deleted members..
             List<String> oldMembers = oldGroup.getMembersWithDisplayName();
             List<String> newMembers = newGroup.getMembersWithDisplayName();
             if (newMembers != null) {
-
-                List<String> addedMembers = new ArrayList<>();
-                List<String> deletedMembers = new ArrayList<>();
-
                 //check for deleted members
                 if (CollectionUtils.isNotEmpty(oldMembers)) {
                     for (String oldMember : oldMembers) {
@@ -2262,17 +2213,29 @@ public class SCIMUserManager implements UserManager {
                         if (oldMembers != null && oldMembers.contains(newMember)) {
                             continue;
                         }
+                        doUserValidation(newMember, userStoreDomainForGroup, oldGroup.getDisplayName(),
+                                newlyAddedUserIds);
                         addedMembers.add(newMember);
                     }
                 }
-
-                if (CollectionUtils.isNotEmpty(addedMembers) || CollectionUtils.isNotEmpty(deletedMembers)) {
-                    carbonUM.updateUserListOfRole(newGroup.getDisplayName(),
-                            deletedMembers.toArray(new String[deletedMembers.size()]),
-                            addedMembers.toArray(new String[addedMembers.size()]));
-                    updated = true;
-                }
             }
+
+            // We do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
+            // Update name if it is changed
+            if (!(oldGroup.getDisplayName().equalsIgnoreCase(newGroup.getDisplayName()))) {
+                // Update group name in carbon UM
+                carbonUM.updateRoleName(oldGroup.getDisplayName(), newGroup.getDisplayName());
+                updated = true;
+            }
+
+            // Update the group with added members and deleted members.
+            if (CollectionUtils.isNotEmpty(addedMembers) || CollectionUtils.isNotEmpty(deletedMembers)) {
+                carbonUM.updateUserListOfRole(newGroup.getDisplayName(),
+                        deletedMembers.toArray(new String[deletedMembers.size()]),
+                        addedMembers.toArray(new String[addedMembers.size()]));
+                updated = true;
+            }
+
             if (updated) {
                 log.info("Group: " + oldGroup.getDisplayName() + " is updated through SCIM.");
             } else {
@@ -2290,6 +2253,43 @@ public class SCIMUserManager implements UserManager {
         }
 
         return newGroup;
+    }
+
+    /**
+     * Perform user validation, check provided added member(s) details are exists in the user store. Else throw
+     * corresponding error
+     *
+     * @param userName
+     * @param userStoreDomainForGroup
+     * @param displayName
+     * @param addedUserIdsList
+     * @throws IdentitySCIMException
+     * @throws org.wso2.carbon.user.core.UserStoreException
+     */
+    private void doUserValidation(String userName, String userStoreDomainForGroup, String displayName,
+            List<Object> addedUserIdsList) throws IdentitySCIMException, org.wso2.carbon.user.core.UserStoreException {
+
+        // Compare user store domain of group and user store domain of user name, if there is a mismatch do not
+        // update the group.
+        String userStoreDomainForUser = IdentityUtil.extractDomainFromName(userName);
+        if (!isInternalOrApplicationGroup(userStoreDomainForGroup) && !userStoreDomainForGroup
+                .equalsIgnoreCase(userStoreDomainForUser)) {
+            throw new IdentitySCIMException(userName + " does not belongs to user store " + userStoreDomainForGroup);
+        }
+
+        // Check if the user ids & associated user name sent in updated (new) group exist in the user store.
+        if (userName != null) {
+            String userId = carbonUM.getUserClaimValue(userName, SCIMConstants.CommonSchemaConstants.ID_URI, null);
+            if (userId == null || userId.isEmpty()) {
+                String error = "User: " + userName + " doesn't exist in the user store. Hence, can not update the "
+                        + "group: " + displayName;
+                throw new IdentitySCIMException(error);
+            } else {
+                if (!UserCoreUtil.isContain(userId, addedUserIdsList.toArray(new String[addedUserIdsList.size()]))) {
+                    throw new IdentitySCIMException("Given SCIM user Id and name not matching..");
+                }
+            }
+        }
     }
 
     @Override
