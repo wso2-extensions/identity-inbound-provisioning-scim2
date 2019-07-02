@@ -1,10 +1,10 @@
 {
   "scim2.primary_authentication_scheme": {
-    "oauthbearertoken": {
+    "oauth_bearer_token": {
       "scim2.oauth_bearer.primary": true,
       "scim2.http_basic.primary": false
     },
-    "httpbasic": {
+    "http_basic": {
       "scim2.oauth_bearer.primary": false,
       "scim2.http_basic.primary": true
     }
