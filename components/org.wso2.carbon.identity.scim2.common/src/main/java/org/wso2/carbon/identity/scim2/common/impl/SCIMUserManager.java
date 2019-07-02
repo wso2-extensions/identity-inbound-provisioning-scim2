@@ -2223,7 +2223,7 @@ public class SCIMUserManager implements UserManager {
             // We do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
             // Update name if it is changed
             if (!(oldGroup.getDisplayName().equalsIgnoreCase(newGroup.getDisplayName()))) {
-                //update group name in carbon UM
+                // Update group name in carbon UM
                 carbonUM.updateRoleName(oldGroup.getDisplayName(), newGroup.getDisplayName());
                 updated = true;
             }
@@ -2269,8 +2269,8 @@ public class SCIMUserManager implements UserManager {
     private void doUserValidation(String userName, String userStoreDomainForGroup, String displayName,
             List<Object> addedUserIdsList) throws IdentitySCIMException, org.wso2.carbon.user.core.UserStoreException {
 
-        /* Compare user store domain of group and user store domain of user name , if there is a mismatch do not
-        update the group */
+        // Compare user store domain of group and user store domain of user name, if there is a mismatch do not
+        // update the group.
         String userStoreDomainForUser = IdentityUtil.extractDomainFromName(userName);
         if (!isInternalOrApplicationGroup(userStoreDomainForGroup) && !userStoreDomainForGroup
                 .equalsIgnoreCase(userStoreDomainForUser)) {
