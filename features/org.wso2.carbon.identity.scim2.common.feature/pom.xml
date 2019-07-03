@@ -72,6 +72,8 @@
                                         <include>charon-config.xml</include>
                                         <include>scim2-schema-extension.config</include>
                                         <include>p2.inf</include>
+                                        <include>charon-config.xml.j2</include>
+                                        <include>*.json</include>
                                     </includes>
                                 </resource>
                             </resources>
