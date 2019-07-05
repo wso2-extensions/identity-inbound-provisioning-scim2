@@ -2238,8 +2238,7 @@ public class SCIMUserManager implements UserManager {
 
             if (updated) {
                 log.info("Group: " + oldGroup.getDisplayName() + " is updated through SCIM.");
-                // In case the duplicate existing in the newGroup, query the corresponding group
-                // again and return it.
+                // Duplicate may exist in newGroup, to make sure, query the corresponding group again and return it.
                 Group newUpdatedGroup = getGroup(newGroup.getId(), requiredAttributes);
                 return newUpdatedGroup;
             } else {
