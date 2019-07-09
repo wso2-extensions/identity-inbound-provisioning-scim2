@@ -67,11 +67,11 @@ public class SCIMCommonUtils {
     private static ThreadLocal<Boolean> threadLocalIsManagedThroughSCIMEP = new ThreadLocal<>();
 
     public static String getSCIMUserURL(String id) {
-        return getSCIMUserURL() + "/" + id;
+        return getSCIMUserURL() + SCIMCommonConstants.URL_SEPERATOR + id;
     }
 
     public static String getSCIMGroupURL(String id) {
-        return getSCIMGroupURL() + "/" + id;
+        return getSCIMGroupURL() + SCIMCommonConstants.URL_SEPERATOR + id;
     }
 
     public static String getSCIMServiceProviderConfigURL(String id){
@@ -81,15 +81,30 @@ public class SCIMCommonUtils {
     /*Handling ThreadLocals*/
 
     public static String getSCIMUserURL() {
-        String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
-        String scimUserLocation = scimURL + SCIMCommonConstants.USERS;
-        return scimUserLocation;
+        String scimURL = getSCIMURL();
+        return scimURL + SCIMCommonConstants.USERS;
     }
 
     public static String getSCIMGroupURL() {
-        String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
-        String scimGroupLocation = scimURL + SCIMCommonConstants.GROUPS;
-        return scimGroupLocation;
+        String scimURL = getSCIMURL();
+        return scimURL + SCIMCommonConstants.GROUPS;
+    }
+
+    private static String getSCIMURL() {
+        String scimURL;
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (isNotASuperTenantFlow(tenantDomain)) {
+            scimURL = IdentityUtil.getServerURL(
+                    SCIMCommonConstants.TENANT_URL_SEPERATOR + tenantDomain + SCIMCommonConstants.SCIM2_ENDPOINT, true,
+                    true);
+        } else {
+            scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
+        }
+        return scimURL;
+    }
+
+    private static boolean isNotASuperTenantFlow(String tenantDomain) {
+        return !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain);
     }
 
     public static String getSCIMServiceProviderConfigURL() {

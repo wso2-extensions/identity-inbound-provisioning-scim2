@@ -27,15 +27,11 @@ import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.schema.SCIMConstants;
-import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
-import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -173,7 +169,7 @@ public class SCIMGroupHandler {
             } else if (SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI.equals(entry.getKey())) {
                 group.setLastModified(Date.from(AttributeUtil.parseDateTime(entry.getValue())));
             } else if (SCIMConstants.CommonSchemaConstants.LOCATION_URI.equals(entry.getKey())) {
-                group.setLocation(entry.getValue());
+                group.setLocation(SCIMCommonUtils.getSCIMGroupURL(group.getId()));
             }
         }
         return group;
