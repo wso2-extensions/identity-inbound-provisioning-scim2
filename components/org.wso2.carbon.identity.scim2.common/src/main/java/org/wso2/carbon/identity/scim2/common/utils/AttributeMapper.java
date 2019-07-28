@@ -596,7 +596,7 @@ public class AttributeMapper {
         String subAttributeURI = attributeEntry.getKey().replace("." + attributeNames[2],"");
         AttributeSchema subAttributeSchema = getAttributeSchema(subAttributeURI, scimObjectType);
 
-        String parentAttributeURI = subAttributeURI.replace("."+ attributeNames[1],"");
+        String parentAttributeURI = subAttributeURI.replace(":"+ attributeNames[1],"");
         AttributeSchema attributeSchema = getAttributeSchema(parentAttributeURI, scimObjectType);
 
                 /*differentiate between sub attribute of Complex attribute and a Multivalued attribute
