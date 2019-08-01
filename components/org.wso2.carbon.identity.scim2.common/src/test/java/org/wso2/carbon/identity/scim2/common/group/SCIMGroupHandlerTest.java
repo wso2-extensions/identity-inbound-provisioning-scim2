@@ -27,6 +27,7 @@ import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -57,7 +58,8 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.AssertJUnit.assertTrue;
 
-@PrepareForTest({IdentityDatabaseUtil.class, StringUtils.class, SCIMCommonUtils.class, SCIMGroupHandler.class})
+@PrepareForTest({IdentityDatabaseUtil.class, StringUtils.class, SCIMCommonUtils.class, SCIMGroupHandler.class,
+                 IdentityTenantUtil.class})
 @PowerMockIgnore("java.sql.*")
 public class SCIMGroupHandlerTest extends PowerMockTestCase {
 
@@ -206,7 +208,9 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
         Group group = new Group();
         ResultSet resultSet = mock(ResultSet.class);
         mockStatic(IdentityDatabaseUtil.class);
+        mockStatic(IdentityTenantUtil.class);
         mockStatic(StringUtils.class);
+        mockStatic(SCIMCommonUtils.class);
 
         Date today = Calendar.getInstance().getTime();
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -214,7 +218,8 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:id", "100");
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.created", formatter.format(today));
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.lastModified", formatter.format(today));
-        attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.location", null);
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.location",
+                "https://localhost:9443/t/TENANT_DOMAIN/Groups/100");
 
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
         when(connection.prepareStatement(anyString())).thenReturn(mockedPreparedStatement);
@@ -224,6 +229,8 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
         whenNew(GroupDAO.class).withNoArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
         when(StringUtils.isNotEmpty(resultSet.getString(anyInt()))).thenReturn(true);
+        when(IdentityTenantUtil.getTenantDomain(1)).thenReturn("TENANT_DOMAIN");
+        when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/t/TENANT_DOMAIN/Groups");
         assertEquals(new SCIMGroupHandler(1).getGroupWithAttributes(group, "EXISTING_GROUP_NAME"), group);
     }
 

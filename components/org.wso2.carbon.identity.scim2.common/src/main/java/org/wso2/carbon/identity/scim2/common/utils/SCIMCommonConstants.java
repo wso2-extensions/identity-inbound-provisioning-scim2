@@ -80,5 +80,8 @@ public class SCIMCommonConstants {
             "SCIM2.MandateDomainForGroupNamesInGroupsResponse";
     public static final String SCIM_ENABLE_MANDATE_DOMAIN_FOR_USERNAMES_AND_GROUPNAMES_IN_RESPONSE =
             "SCIM2.MandateDomainForUsernamesAndGroupNamesInResponse";
+
+    public static final String URL_SEPERATOR = "/";
+    public static final String TENANT_URL_SEPERATOR = "/t/";
 }
 

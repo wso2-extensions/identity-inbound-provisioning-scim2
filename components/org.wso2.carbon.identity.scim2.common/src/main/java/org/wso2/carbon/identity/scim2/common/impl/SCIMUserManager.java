@@ -2368,6 +2368,16 @@ public class SCIMUserManager implements UserManager {
             // Add username with domain name
             attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
 
+            // Location URI is not available for users who created from the mgt console also location URI is not
+            // tenant aware, so need to update the location URI according to the tenant.
+            String locationURI = SCIMCommonUtils
+                    .getSCIMUserURL(attributes.get(SCIMConstants.CommonSchemaConstants.ID_URI));
+            attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, locationURI);
+
+            if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI)) {
+                attributes.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, SCIMConstants.USER);
+            }
+
             //get groups of user and add it as groups attribute
             String[] roles = carbonUM.getRoleListOfUser(userName);
             // Add username with domain name
@@ -2403,7 +2413,7 @@ public class SCIMUserManager implements UserManager {
                 }
 
                 if (group != null) { // can be null for non SCIM groups
-                    scimUser.setGroup(null, group.getId(), role);
+                    scimUser.setGroup(null, group);
                 }
             }
         } catch (UserStoreException | CharonException | NotFoundException | IdentitySCIMException |BadRequestException e) {
@@ -2599,7 +2609,12 @@ public class SCIMUserManager implements UserManager {
                 if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
                     userName = prependDomain(userName);
                 }
-                group.setMember(userId, userName);
+                String locationURI = SCIMCommonUtils.getSCIMUserURL(userId);
+                User user = new User();
+                user.setUserName(userName);
+                user.setId(userId);
+                user.setLocation(locationURI);
+                group.setMember(user);
             }
         }
         //get other group attributes and set.
