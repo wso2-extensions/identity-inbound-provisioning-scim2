@@ -67,11 +67,11 @@ public class SCIMCommonUtils {
     private static ThreadLocal<Boolean> threadLocalIsManagedThroughSCIMEP = new ThreadLocal<>();
 
     public static String getSCIMUserURL(String id) {
-        return getSCIMUserURL() + SCIMCommonConstants.URL_SEPERATOR + id;
+        return StringUtils.isNotBlank(id) ? getSCIMUserURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
     }
 
     public static String getSCIMGroupURL(String id) {
-        return getSCIMGroupURL() + SCIMCommonConstants.URL_SEPERATOR + id;
+        return StringUtils.isNotBlank(id) ? getSCIMGroupURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
     }
 
     public static String getSCIMServiceProviderConfigURL(String id){
