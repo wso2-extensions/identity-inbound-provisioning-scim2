@@ -76,9 +76,21 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
     }
 
     @Test
+    public void testGetSCIMUserURLForNullId() throws Exception {
+        String scimUserURL = SCIMCommonUtils.getSCIMUserURL(null);
+        assertEquals(scimUserURL, null);
+    }
+
+    @Test
     public void testGetSCIMGroupURL() throws Exception {
         String scimGroupURL = SCIMCommonUtils.getSCIMGroupURL(ID);
         assertEquals(scimGroupURL, scimGroupLocation + "/" + ID);
+    }
+
+    @Test
+    public void testGetSCIMGroupURLForNullId() throws Exception {
+        String scimGroupURL = SCIMCommonUtils.getSCIMGroupURL(null);
+        assertEquals(scimGroupURL, null);
     }
 
     @Test
