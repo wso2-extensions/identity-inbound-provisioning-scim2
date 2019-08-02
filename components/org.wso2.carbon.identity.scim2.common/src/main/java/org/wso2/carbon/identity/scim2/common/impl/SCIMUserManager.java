@@ -649,18 +649,15 @@ public class SCIMUserManager implements UserManager {
                 requiredClaimsInLocalDialect = new ArrayList<>();
             }
 
+            // Get existing user claims.
             Map<String, String> oldClaimList = carbonUM.getUserClaimValues(user.getUserName(), requiredClaimsInLocalDialect
                     .toArray(new String[requiredClaimsInLocalDialect.size()]), null);
 
-            for (Map.Entry<String, String> entry : oldClaimList.entrySet()) {
-                if (!isImmutableClaim(entry.getKey())) {
-                    carbonUM.deleteUserClaimValue(user.getUserName(), entry.getKey(), null);
-                }
-            }
             // Get user claims mapped from SCIM dialect to WSO2 dialect.
             Map<String, String> claimValuesInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claims);
-            //set user claim values
-            carbonUM.setUserClaimValues(user.getUserName(), claimValuesInLocalDialect, null);
+
+            updateUserClaims(user, oldClaimList, claimValuesInLocalDialect);
+
             //if password is updated, set it separately
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdmin(user.getUserName(), user.getPassword());
@@ -3114,5 +3111,48 @@ public class SCIMUserManager implements UserManager {
             requiredClaimsInLocalDialect = new ArrayList<>();
         }
         return requiredClaimsInLocalDialect;
+    }
+
+    /**
+     * Evaluate old user claims and the new claims. Then DELETE, ADD and MODIFY user claim values. The DELETE,
+     * ADD and MODIFY operations are done in the same order.
+     *
+     * @param user {@link User} object.
+     * @param oldClaimList User claim list for the user's existing state.
+     * @param newClaimList User claim list for the user's new state.
+     * @throws UserStoreException Error while accessing the user store.
+     * @throws CharonException {@link CharonException}.
+     */
+    private void updateUserClaims(User user, Map<String, String> oldClaimList,
+                                  Map<String, String> newClaimList) throws UserStoreException, CharonException {
+
+        Map<String, String> userClaimsToBeAdded = new HashMap<>(newClaimList);
+        Map<String, String> userClaimsToBeDeleted = new HashMap<>(oldClaimList);
+        Map<String, String> userClaimsToBeModified = new HashMap<>();
+
+        // Get all the old claims, which are not available in the new claims.
+        userClaimsToBeDeleted.keySet().removeAll(newClaimList.keySet());
+
+        // Get all the new claims, which are not available in the existing claims.
+        userClaimsToBeAdded.keySet().removeAll(oldClaimList.keySet());
+
+        // Get all new claims, which are only modifying the value of an existing claim.
+        for (Map.Entry<String, String> eachNewClaim : newClaimList.entrySet()) {
+            if (oldClaimList.containsKey(eachNewClaim.getKey()) &&
+                    !oldClaimList.get(eachNewClaim.getKey()).equals(eachNewClaim.getValue())) {
+                userClaimsToBeModified.put(eachNewClaim.getKey(), eachNewClaim.getValue());
+            }
+        }
+
+        // Remove user claims.
+        for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
+            if (!isImmutableClaim(entry.getKey())) {
+                carbonUM.deleteUserClaimValue(user.getUserName(), entry.getKey(), null);
+            }
+        }
+
+        // Update user claims.
+        userClaimsToBeModified.putAll(userClaimsToBeAdded);
+        carbonUM.setUserClaimValues(user.getUserName(), userClaimsToBeModified, null);
     }
 }
