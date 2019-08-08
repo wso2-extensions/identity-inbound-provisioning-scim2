@@ -44,7 +44,10 @@ import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.hybrid.HybridRoleManager;
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
@@ -65,6 +68,7 @@ import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -77,7 +81,7 @@ import static org.testng.AssertJUnit.assertNotNull;
  */
 @PrepareForTest({SCIMGroupHandler.class, IdentityUtil.class, SCIMUserSchemaExtensionBuilder.class,
 SCIMAttributeSchema.class, AttributeMapper.class, ClaimMetadataHandler.class, SCIMCommonUtils.class,
-IdentityTenantUtil.class})
+IdentityTenantUtil.class,AbstractUserStoreManager.class,Group.class,UserCoreUtil.class})
 @PowerMockIgnore("java.sql.*")
 public class SCIMUserManagerTest extends PowerMockTestCase {
 
@@ -391,6 +395,94 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         return new Object[][] {
                 { SCIMConstants.UserSchemaConstants.USER_NAME_URI, "user", "*user*" },
                 { SCIMConstants.UserSchemaConstants.USER_NAME_URI, "PRIMARY/testUser", "PRIMARY/*testUser*" }
+        };
+    }
+
+    @Test(dataProvider = "listApplicationRoles")
+    public void testListApplicationRolesWithDomainParam(Map<String, Boolean> requiredAttributes, String[] roles,
+            Map<String, String> attributes) throws Exception {
+
+        AbstractUserStoreManager abstractUserStoreManager = mock(AbstractUserStoreManager.class);
+        when(abstractUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(roles);
+        whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
+        when(mockedGroupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(true);
+        when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
+        List<Object> roleList = scimUserManager
+                .listGroupsWithGET(null, 1, null, null, null, "Application", requiredAttributes);
+        roleList.remove(0);//The first entry is the count of roles.
+        assertEquals("Application/Apple", ((Group) roleList.get(0)).getDisplayName());
+        assertEquals("Application/MyApp", ((Group) roleList.get(1)).getDisplayName());
+        assertEquals(roleList.size(), 2);
+    }
+
+    @DataProvider(name = "listApplicationRoles")
+    public Object[][] listApplicationRoles() {
+
+        Map<String, Boolean> requiredAttributes = new HashMap<>();
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:Group:members.value", true);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:id", false);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.created", false);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.lastModified", false);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.version", false);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.location", false);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:externalId", false);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.resourceType", false);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:Group:members.$ref", true);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:Group:members.type", true);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:Group:members.display", true);
+        requiredAttributes.put("urn:ietf:params:scim:schemas:core:2.0:Group:displayName", true);
+
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:id", "25850849-eb62-476a-a3ff-641b81cbd251");
+
+        String[] roles = { "Application/Apple", "Application/MyApp" };
+        return new Object[][] {
+                { requiredAttributes, roles, attributes }
+        };
+    }
+
+    @Test(dataProvider = "applicationDomainWithFilters")
+    public void testFilterApplicationRolesWithDomainParam(String filter, String[] roles, Map<String, String> attributes)
+            throws Exception {
+
+        ExpressionNode node = new ExpressionNode(filter);
+        Map<String, Boolean> requiredAttributes = null;
+        AbstractUserStoreManager abstractUserStoreManager = mock(AbstractUserStoreManager.class);
+        when(abstractUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(roles);
+        when(abstractUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
+        mockStatic(UserCoreUtil.class);
+        when(UserCoreUtil.isEveryoneRole("role", mockedRealmConfig)).thenReturn(false);
+        whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
+        when(mockedGroupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(true);
+        when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
+        List<Object> roleList = scimUserManager
+                .listGroupsWithGET(node, 1, null, null, null, "Application", requiredAttributes);
+        roleList.remove(0);//The first entry is the count of roles.
+        assertEquals("Application/MyApp", ((Group) roleList.get(0)).getDisplayName());
+        assertEquals(roleList.size(), 1);
+    }
+
+    @DataProvider(name = "applicationDomainWithFilters")
+    public Object[][] applicationDomainWithFilters() {
+
+        String startsWithFilter = "filter urn:ietf:params:scim:schemas:core:2.0:Group:displayName sw My";
+        String equalsFilter = "filter urn:ietf:params:scim:schemas:core:2.0:Group:displayName eq MyApp";
+        String[] roles = { "Application/MyApp" };
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:id", "25850849-eb62-476a-a3ff-641b81cbd251");
+
+        return new Object[][] {
+                {
+                        startsWithFilter, roles, attributes
+                }, {
+                        equalsFilter, roles, attributes
+                }
         };
     }
 
