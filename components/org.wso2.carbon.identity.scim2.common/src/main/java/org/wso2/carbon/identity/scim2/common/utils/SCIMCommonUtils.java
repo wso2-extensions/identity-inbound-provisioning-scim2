@@ -378,8 +378,8 @@ public class SCIMCommonUtils {
      */
     public static String extractDomain(String nameWithDomain) {
 
-        if (nameWithDomain != null && nameWithDomain.indexOf("/") > 0) {
-            String domain = nameWithDomain.substring(0, nameWithDomain.indexOf("/"));
+        if (nameWithDomain != null && nameWithDomain.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
+            String domain = nameWithDomain.substring(0, nameWithDomain.indexOf(CarbonConstants.DOMAIN_SEPARATOR));
             return domain;
         } else {
             return null;
