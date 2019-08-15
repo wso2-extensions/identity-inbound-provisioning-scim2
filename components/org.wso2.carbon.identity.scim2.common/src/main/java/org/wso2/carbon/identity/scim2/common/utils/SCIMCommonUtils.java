@@ -369,4 +369,20 @@ public class SCIMCommonUtils {
             return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME + CarbonConstants.DOMAIN_SEPARATOR + value;
         }
     }
+
+    /**
+     * Method to extract domain name from the input value passed in to this method.
+     *
+     * @param nameWithDomain string which contains domain name
+     * @return extracted domain value or empty string if no domain.
+     */
+    public static String extractDomain(String nameWithDomain) {
+
+        if (nameWithDomain != null && nameWithDomain.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
+            String domain = nameWithDomain.substring(0, nameWithDomain.indexOf(CarbonConstants.DOMAIN_SEPARATOR));
+            return domain;
+        } else {
+            return null;
+        }
+    }
 }
