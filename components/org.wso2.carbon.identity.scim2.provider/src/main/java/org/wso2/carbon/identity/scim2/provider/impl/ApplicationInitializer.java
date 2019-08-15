@@ -31,7 +31,7 @@ import javax.servlet.ServletContextListener;
  */
 public class ApplicationInitializer implements ServletContextListener {
 
-    private Log logger = LogFactory.getLog(ApplicationInitializer.class);
+    private static final Log logger = LogFactory.getLog(ApplicationInitializer.class);
 
     @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {

@@ -36,7 +36,7 @@ import javax.ws.rs.core.Response;
 
 @Path("/")
 public class ResourceTypesResource extends AbstractResource {
-    private static Log logger = LogFactory.getLog(ResourceTypesResource.class);
+    private static final Log logger = LogFactory.getLog(ResourceTypesResource.class);
 
     @GET
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})

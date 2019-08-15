@@ -45,7 +45,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class IdentitySCIMManager {
-    private static Log log = LogFactory.getLog(IdentitySCIMManager.class);
+    private static final Log log = LogFactory.getLog(IdentitySCIMManager.class);
 
     private static volatile IdentitySCIMManager identitySCIMManager;
     private JSONEncoder encoder = null;

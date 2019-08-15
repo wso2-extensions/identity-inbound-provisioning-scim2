@@ -93,7 +93,7 @@ public class SCIMUserManager implements UserManager {
     public static final String SQL_FILTERING_DELIMITER = "%";
     private static final String ERROR_CODE_INVALID_USERNAME = "31301";
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
-    private static Log log = LogFactory.getLog(SCIMUserManager.class);
+    private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;

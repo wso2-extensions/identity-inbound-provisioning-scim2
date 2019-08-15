@@ -59,7 +59,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SC
 public class AttributeMapper {
 
     public static final String ADVANCED_ATTRIBUTE_IDENTIFIER = "#";
-    private static Log log = LogFactory.getLog(AttributeMapper.class);
+    private static final Log log = LogFactory.getLog(AttributeMapper.class);
 
     /**
      * Return claims as a map of <ClaimUri (which is mapped to SCIM attribute uri),ClaimValue>
