@@ -41,7 +41,7 @@ import java.util.Map;
 
 public class GroupResource extends AbstractResource {
 
-    private static Log logger = LogFactory.getLog(GroupResource.class);
+    private static final Log logger = LogFactory.getLog(GroupResource.class);
 
     @GET
     @Path("{id}")

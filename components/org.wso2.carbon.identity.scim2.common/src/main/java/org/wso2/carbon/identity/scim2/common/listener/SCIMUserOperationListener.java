@@ -48,7 +48,7 @@ import java.util.regex.Pattern;
  */
 public class SCIMUserOperationListener extends AbstractIdentityUserOperationEventListener {
 
-    private static Log log = LogFactory.getLog(SCIMUserOperationListener.class);
+    private static final Log log = LogFactory.getLog(SCIMUserOperationListener.class);
 
     @Override
     public int getExecutionOrderId() {

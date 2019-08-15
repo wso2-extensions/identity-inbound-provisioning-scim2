@@ -50,7 +50,7 @@ public class SCIMConfigProcessor {
     //list to keep the authentication schemas
     List<AuthenticationSchema> authenticationSchemas = null;
 
-    private Log logger = LogFactory.getLog(SCIMConfigProcessor.class);
+    private static final Log logger = LogFactory.getLog(SCIMConfigProcessor.class);
 
     public Map<String, String> getProperties() {
         return properties;

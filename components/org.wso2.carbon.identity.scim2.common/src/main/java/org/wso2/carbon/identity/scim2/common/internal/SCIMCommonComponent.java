@@ -54,7 +54,7 @@ import java.util.concurrent.Executors;
  * policy="dynamic" bind="setRealmService" unbind="unsetRealmService"
  */
 public class SCIMCommonComponent {
-    private static Log logger = LogFactory.getLog(SCIMCommonComponent.class);
+    private static final Log logger = LogFactory.getLog(SCIMCommonComponent.class);
 
     ExecutorService executorService = Executors.newFixedThreadPool(1);
 

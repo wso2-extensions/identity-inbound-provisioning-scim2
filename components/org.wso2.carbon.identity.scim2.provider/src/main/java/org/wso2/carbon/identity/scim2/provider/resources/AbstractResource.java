@@ -31,7 +31,7 @@ import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import javax.ws.rs.core.Response;
 
 public class AbstractResource {
-    private static Log logger = LogFactory.getLog(AbstractResource.class);
+    private static final Log logger = LogFactory.getLog(AbstractResource.class);
     private JSONEncoder defaultEncoder = new JSONEncoder();
 
     //identify the output format

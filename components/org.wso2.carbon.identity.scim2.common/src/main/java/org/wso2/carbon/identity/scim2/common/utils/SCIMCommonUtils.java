@@ -47,7 +47,7 @@ import java.util.Map;
  */
 public class SCIMCommonUtils {
 
-    private static Log log = LogFactory.getLog(SCIMCommonUtils.class);
+    private static final Log log = LogFactory.getLog(SCIMCommonUtils.class);
 
     /**
      * Since we need perform provisioning through UserOperationEventListener implementation -
