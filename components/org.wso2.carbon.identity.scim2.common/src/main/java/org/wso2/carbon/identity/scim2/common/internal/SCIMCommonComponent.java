@@ -104,6 +104,11 @@ public class SCIMCommonComponent {
         }
     }
 
+    protected void unsetIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
+        /* reference IdentityCoreInitializedEvent service to guarantee that this component will wait until identity core
+         is started */
+    }
+
     @Reference(
             name = "identityCoreInitializedEventService",
             service = org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent.class,
@@ -111,11 +116,6 @@ public class SCIMCommonComponent {
             cardinality = ReferenceCardinality.MANDATORY,
             unbind = "unsetIdentityCoreInitializedEventService"
     )
-    protected void unsetIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
-        /* reference IdentityCoreInitializedEvent service to guarantee that this component will wait until identity core
-         is started */
-    }
-
     protected void setIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
         /* reference IdentityCoreInitializedEvent service to guarantee that this component will wait until identity core
          is started */
