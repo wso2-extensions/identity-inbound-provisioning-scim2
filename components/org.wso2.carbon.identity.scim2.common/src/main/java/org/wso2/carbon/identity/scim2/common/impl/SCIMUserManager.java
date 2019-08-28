@@ -41,6 +41,7 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionAttribute;
 import org.wso2.carbon.user.core.model.ExpressionCondition;
@@ -2602,16 +2603,29 @@ public class SCIMUserManager implements UserManager {
         //get the ids of the users and set them in the group with id + display name
         if (userNames != null && userNames.length != 0) {
             for (String userName : userNames) {
-                String userId = carbonUM.getUserClaimValue(userName, SCIMConstants.CommonSchemaConstants.ID_URI, null);
-                if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
-                    userName = prependDomain(userName);
+                try {
+                    String userId = carbonUM
+                            .getUserClaimValue(userName, SCIMConstants.CommonSchemaConstants.ID_URI, null);
+                    if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
+                        userName = prependDomain(userName);
+                    }
+                    String locationURI = SCIMCommonUtils.getSCIMUserURL(userId);
+                    User user = new User();
+                    user.setUserName(userName);
+                    user.setId(userId);
+                    user.setLocation(locationURI);
+                    group.setMember(user);
+                } catch (UserStoreException e) {
+                    if (e.getMessage()
+                            .contains(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getCode())) {
+                        log.error("UserNotFound - User: " + userName + " does not exist in: " + userStoreDomainName
+                                + ", hence skipping to add as the member for the group: " + groupName);
+                        continue;
+                    } else {
+                        throw new org.wso2.carbon.user.core.UserStoreException(
+                                "Error occurred while obtaining the user ID for the member(user): " + userName, e);
+                    }
                 }
-                String locationURI = SCIMCommonUtils.getSCIMUserURL(userId);
-                User user = new User();
-                user.setUserName(userName);
-                user.setId(userId);
-                user.setLocation(locationURI);
-                group.setMember(user);
             }
         }
         //get other group attributes and set.
