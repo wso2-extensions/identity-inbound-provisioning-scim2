@@ -38,7 +38,7 @@ import javax.ws.rs.core.Response;
 
 @Path("/")
 public class UserResource extends AbstractResource {
-    private static Log logger = LogFactory.getLog(UserResource.class);
+    private static final Log logger = LogFactory.getLog(UserResource.class);
 
     @GET
     @Path("{id}")

@@ -36,7 +36,7 @@ import javax.ws.rs.core.Response;
 
 @Path("/")
 public class ServiceProviderConfigResource extends AbstractResource {
-    private static Log logger = LogFactory.getLog(ServiceProviderConfigResource.class);
+    private static final Log logger = LogFactory.getLog(ServiceProviderConfigResource.class);
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)

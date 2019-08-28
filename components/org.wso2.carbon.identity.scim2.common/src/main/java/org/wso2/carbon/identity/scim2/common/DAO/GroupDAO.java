@@ -45,7 +45,7 @@ import java.util.Set;
  */
 public class GroupDAO {
 
-    private static Log log = LogFactory.getLog(GroupDAO.class);
+    private static final Log log = LogFactory.getLog(GroupDAO.class);
 
     /**
      * Lists the groups that are created from SCIM

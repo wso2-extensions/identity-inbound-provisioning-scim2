@@ -43,7 +43,7 @@ import java.util.UUID;
  * But need to use the same approach as for User, by going through AttributMapper to do it in a generic way.
  */
 public class SCIMGroupHandler {
-    private static Log logger = LogFactory.getLog(SCIMGroupHandler.class);
+    private static final Log logger = LogFactory.getLog(SCIMGroupHandler.class);
     private int tenantId;
 
     /**

@@ -47,7 +47,7 @@ import java.util.UUID;
  */
 public class AdminAttributeUtil {
 
-    private static Log log = LogFactory.getLog(AdminAttributeUtil.class);
+    private static final Log log = LogFactory.getLog(AdminAttributeUtil.class);
 
     /**
      * Update admin user attribute under given tenant.

@@ -94,7 +94,7 @@ public class SCIMUserManager implements UserManager {
     public static final String SQL_FILTERING_DELIMITER = "%";
     private static final String ERROR_CODE_INVALID_USERNAME = "31301";
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
-    private static Log log = LogFactory.getLog(SCIMUserManager.class);
+    private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
@@ -1891,9 +1891,16 @@ public class SCIMUserManager implements UserManager {
             // If the domain is specified create a attribute value with the domain name.
             String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
 
-            // Retrieve roles using the above attribute value.
-            List<String> roleList = Arrays.asList(((AbstractUserStoreManager) carbonUM)
-                    .getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true, true));
+            List<String> roleList;
+            // Retrieve roles using the above search value.
+            if (isInternalOrApplicationGroup(domainName)) {
+                // Support for hybrid roles listing with domain parameter. ex: domain=Application.
+                roleList = Arrays.asList(filterHybridRoles(domainName, searchValue));
+            } else {
+                // Retrieve roles using the above attribute value.
+                roleList = Arrays.asList(((AbstractUserStoreManager) carbonUM)
+                        .getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true, true));
+            }
             Set<String> roleNames = new HashSet<>(roleList);
             return roleNames;
         }
@@ -2077,7 +2084,12 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Attribute value: %s is embedded with a domain.", attributeValue));
                 }
-                extractedDomain = contentInAttributeValue[0].toUpperCase();
+                String domainInAttributeValue = contentInAttributeValue[0];
+                if (isInternalOrApplicationGroup(domainInAttributeValue)) {
+                    extractedDomain = domainInAttributeValue;
+                } else {
+                    extractedDomain = domainInAttributeValue.toUpperCase();
+                }
 
                 // Check whether the domain name is equal to the extracted domain name from attribute value.
                 if (StringUtils.isNotEmpty(domainName) && StringUtils.isNotEmpty(extractedDomain) && !extractedDomain
@@ -2951,8 +2963,18 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug(String.format("Filtering roleNames from search attribute: %s", searchAttribute));
         }
-        return ((AbstractUserStoreManager) carbonUM)
-                .getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true, true, true);
+        String domain = SCIMCommonUtils.extractDomain(attributeValue);
+        // Extract domain from attribute value.
+        if (isInternalOrApplicationGroup(domain)) {
+            return filterHybridRoles(domain, searchAttribute);
+        } else if (StringUtils.isEmpty(domain)) {
+            // When domain is empty filter through all the domains.
+            return ((AbstractUserStoreManager) carbonUM)
+                    .getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, false, true, true);
+        } else {
+            return ((AbstractUserStoreManager) carbonUM)
+                    .getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true, true, true);
+        }
     }
 
     /**
@@ -3168,5 +3190,33 @@ public class SCIMUserManager implements UserManager {
         // Update user claims.
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
         carbonUM.setUserClaimValues(user.getUserName(), userClaimsToBeModified, null);
+    }
+
+    /**
+     * Method to filter hybrid roles (Application & Internal) from a search value.
+     *
+     * @param domainInAttributeValue domain of the hybrid role
+     * @param searchAttribute        search value
+     * @return Array of filtered hybrid roles.
+     * @throws org.wso2.carbon.user.core.UserStoreException
+     */
+    private String[] filterHybridRoles(String domainInAttributeValue, String searchAttribute)
+            throws org.wso2.carbon.user.core.UserStoreException {
+
+        List<String> roleList = new ArrayList<>();
+        // Get filtered hybrid roles by passing noInternalRoles=false.
+        String[] hybridRoles = ((AbstractUserStoreManager) carbonUM)
+                .getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, false, true, true);
+        // Iterate through received hybrid roles and filter out specific hybrid role domain(Application or Internal) values
+        for (String hybridRole : hybridRoles) {
+            if (domainInAttributeValue != null && !hybridRole.startsWith(domainInAttributeValue)) {
+                continue;
+            }
+            if (hybridRole.toLowerCase().startsWith(SCIMCommonConstants.INTERNAL_DOMAIN.toLowerCase()) || hybridRole
+                    .toLowerCase().startsWith(SCIMCommonConstants.APPLICATION_DOMAIN.toLowerCase())) {
+                roleList.add(hybridRole);
+            }
+        }
+        return roleList.toArray(new String[roleList.size()]);
     }
 }
