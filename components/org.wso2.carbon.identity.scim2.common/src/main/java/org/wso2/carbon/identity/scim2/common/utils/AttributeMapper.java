@@ -527,21 +527,36 @@ public class AttributeMapper {
             } else {
                 //sub attribute of a complex attribute
                 AttributeSchema subAttributeSchema = getAttributeSchema(attributeEntry.getKey(), scimObjectType);
-                //we assume sub attribute is simple attribute
-                SimpleAttribute simpleAttribute =
-                        new SimpleAttribute(attributeNames[1],
-                                AttributeUtil.getAttributeValueFromString(attributeEntry.getValue(),
-                                        subAttributeSchema.getType()));
-                DefaultAttributeFactory.createAttribute(subAttributeSchema, simpleAttribute);
+                Attribute attribute = null;
+                if(subAttributeSchema.getMultiValued()) {
+                    String attributeStringValue = (String) attributeEntry.getValue();
+                    String[] attributeStringValues = attributeStringValue.split(",");
+                    
+                    List<Object> values = new ArrayList<Object>();
+                    for (String value : attributeStringValues) {
+                        values.add(AttributeUtil.getAttributeValueFromString(value, subAttributeSchema.getType()));
+                    }
+                    
+                    MultiValuedAttribute multivaluedAttribute = new MultiValuedAttribute(attributeNames[1]);
+                    multivaluedAttribute.setAttributePrimitiveValues(values);
+                    DefaultAttributeFactory.createAttribute(subAttributeSchema, multivaluedAttribute);
+                    attribute = multivaluedAttribute;
+                } else {
+                    SimpleAttribute simpleAttribute = new SimpleAttribute(attributeNames[1],
+                            AttributeUtil.getAttributeValueFromString(attributeEntry.getValue(),
+                                    subAttributeSchema.getType()));
+                    DefaultAttributeFactory.createAttribute(subAttributeSchema, simpleAttribute);
+                    attribute = simpleAttribute;
+                }
                 //check whether parent attribute exists.
                 if (((AbstractSCIMObject) scimObject).isAttributeExist(parentAttributeSchema.getName())) {
                     ComplexAttribute complexAttribute =
                             (ComplexAttribute) scimObject.getAttribute(parentAttributeSchema.getName());
-                    complexAttribute.setSubAttribute(simpleAttribute);
+                    complexAttribute.setSubAttribute(attribute);
                 } else {
                     //create parent attribute and set sub attribute
                     ComplexAttribute complexAttribute = new ComplexAttribute(parentAttributeSchema.getName());
-                    complexAttribute.setSubAttribute(simpleAttribute);
+                    complexAttribute.setSubAttribute(attribute);
                     DefaultAttributeFactory.createAttribute(parentAttributeSchema, complexAttribute);
                     ((AbstractSCIMObject) scimObject).setAttribute(complexAttribute);
                 }
@@ -656,11 +671,27 @@ public class AttributeMapper {
         } else {
 
             AttributeSchema subSubAttributeSchema = getAttributeSchema(attributeEntry.getKey(), scimObjectType);
-            //we assume sub attribute is simple attribute
-            SimpleAttribute simpleAttribute = new SimpleAttribute(attributeNames[2],
-                    AttributeUtil.getAttributeValueFromString(attributeEntry.getValue(),
-                            subSubAttributeSchema.getType()));
-            DefaultAttributeFactory.createAttribute(subSubAttributeSchema, simpleAttribute);
+            Attribute attribute = null;
+            if(subSubAttributeSchema.getMultiValued()) {
+                String attributeStringValue = (String) attributeEntry.getValue();
+                String[] attributeStringValues = attributeStringValue.split(",");
+                
+                List<Object> values = new ArrayList<Object>();
+                for (String value : attributeStringValues) {
+                    values.add(AttributeUtil.getAttributeValueFromString(value, subSubAttributeSchema.getType()));
+                }
+                
+                MultiValuedAttribute multivaluedAttribute = new MultiValuedAttribute(attributeNames[2]);
+                multivaluedAttribute.setAttributePrimitiveValues(values);
+                DefaultAttributeFactory.createAttribute(subSubAttributeSchema, multivaluedAttribute);
+                attribute = multivaluedAttribute;
+            } else {
+                SimpleAttribute simpleAttribute = new SimpleAttribute(attributeNames[2],
+                        AttributeUtil.getAttributeValueFromString(attributeEntry.getValue(),
+                                subSubAttributeSchema.getType()));
+                DefaultAttributeFactory.createAttribute(subSubAttributeSchema, simpleAttribute);
+                attribute = simpleAttribute;
+            }
 
             // check if the super parent exist
             boolean superParentExist = ((AbstractSCIMObject) scimObject).isAttributeExist(attributeSchema.getName());
@@ -671,10 +702,10 @@ public class AttributeMapper {
                 if (immediateParentExist) {
                     // both the parent and super parent exists
                     ComplexAttribute immediateParentAttribute = (ComplexAttribute) superParentAttribute.getSubAttribute(immediateParentAttributeName);
-                    immediateParentAttribute.setSubAttribute(simpleAttribute);
+                    immediateParentAttribute.setSubAttribute(attribute);
                 } else { // immediate parent does not exist
                     ComplexAttribute immediateParentAttribute = new ComplexAttribute(immediateParentAttributeName);
-                    immediateParentAttribute.setSubAttribute(simpleAttribute);
+                    immediateParentAttribute.setSubAttribute(attribute);
                     DefaultAttributeFactory.createAttribute(subAttributeSchema, immediateParentAttribute);
                     // created the immediate parent and now set to super
                     superParentAttribute.setSubAttribute(immediateParentAttribute);
@@ -682,7 +713,7 @@ public class AttributeMapper {
             } else { // now have to create both the super parent and immediate parent
                 // immediate first
                 ComplexAttribute immediateParentAttribute = new ComplexAttribute(immediateParentAttributeName);
-                immediateParentAttribute.setSubAttribute(simpleAttribute);
+                immediateParentAttribute.setSubAttribute(attribute);
                 DefaultAttributeFactory.createAttribute(subAttributeSchema, immediateParentAttribute);
                 // now super parent
                 ComplexAttribute superParentAttribute = new ComplexAttribute(attributeSchema.getName());
