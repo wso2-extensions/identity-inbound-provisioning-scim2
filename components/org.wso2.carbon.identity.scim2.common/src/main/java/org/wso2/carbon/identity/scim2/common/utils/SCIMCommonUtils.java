@@ -19,9 +19,11 @@
 package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.ThreadLocalProvisioningServiceProvider;
@@ -32,6 +34,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.user.mgt.common.UIPermissionNode;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -383,6 +386,48 @@ public class SCIMCommonUtils {
             return domain;
         } else {
             return null;
+        }
+    }
+
+    /**
+     * Traverse through UI permission tree node  and form a flat array.
+     * @param node UI permission tree node
+     * @return JSONArray
+     */
+    public static JSONArray transformUIPermissionNodeToArray(UIPermissionNode node) {
+
+        JSONArray array = new JSONArray();
+        UIPermissionNode[] children = node.getNodeList();
+        if (node.isSelected()) {
+            array.put(node.getResourcePath());
+            if (log.isDebugEnabled()) {
+                log.debug("Permission: " + node.getDisplayName() + " and resourcePath: " +
+                        node.getResourcePath() + "," + " added to the permission Map");
+            }
+        }
+        traverseNodes(children, array);
+        return array;
+    }
+
+    /**
+     * Recursive traverse through node lists.
+     * @param nodeList UI permission list
+     * @param array global JSONArray
+     */
+    private static void traverseNodes(UIPermissionNode[] nodeList, JSONArray array) {
+
+        if (!ArrayUtils.isEmpty(nodeList)) {
+            for( int i = 0; i < nodeList.length; i++ ) {
+                if (nodeList[i].isSelected()) {
+                    array.put(nodeList[i].getResourcePath());
+                    if (log.isDebugEnabled()) {
+                        log.debug("Permission: " + nodeList[i].getDisplayName() + " and resourcePath: " +
+                                nodeList[i].getResourcePath() + "," + " added to the permission Map");
+                    }
+                }
+                UIPermissionNode[] childNode = nodeList[i].getNodeList();
+                traverseNodes(childNode, array);
+            }
         }
     }
 }
