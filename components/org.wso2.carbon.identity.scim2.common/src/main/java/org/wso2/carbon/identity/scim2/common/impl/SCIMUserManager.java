@@ -2193,7 +2193,7 @@ public class SCIMUserManager implements UserManager {
             // Find out added user's user ids as a list.
             List<Object> newlyAddedUserIds = newGroup.getMembers();
             List<Object> oldGroupUserIds = oldGroup.getMembers();
-            if (oldGroupUserIds != null && oldGroupUserIds.size() > 0) {
+            if (CollectionUtils.isNotEmpty(oldGroupUserIds)) {
                 newlyAddedUserIds.removeAll(oldGroup.getMembers());
             }
             // Find out added members and deleted members..
@@ -2228,28 +2228,30 @@ public class SCIMUserManager implements UserManager {
 
             // We do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
             // Update name if it is changed
-            if (!(oldGroup.getDisplayName().equalsIgnoreCase(newGroup.getDisplayName()))) {
+            String oldGroupDisplayName = oldGroup.getDisplayName();
+            String newGroupDisplayName = newGroup.getDisplayName();
+            if (!(oldGroupDisplayName.equalsIgnoreCase(newGroupDisplayName))) {
                 // Update group name in carbon UM
-                carbonUM.updateRoleName(oldGroup.getDisplayName(), newGroup.getDisplayName());
+                carbonUM.updateRoleName(oldGroupDisplayName, newGroupDisplayName);
                 updated = true;
             }
 
             // Update the group with added members and deleted members.
             if (CollectionUtils.isNotEmpty(addedMembers) || CollectionUtils.isNotEmpty(deletedMembers)) {
-                carbonUM.updateUserListOfRole(newGroup.getDisplayName(),
+                carbonUM.updateUserListOfRole(newGroupDisplayName,
                         deletedMembers.toArray(new String[deletedMembers.size()]),
                         addedMembers.toArray(new String[addedMembers.size()]));
                 updated = true;
             }
 
             if (updated) {
-                log.info("Group: " + oldGroup.getDisplayName() + " is updated through SCIM.");
+                log.info("Group: " + oldGroupDisplayName + " is updated through SCIM.");
                 // Duplicate may exist in newGroup, to make sure, query the corresponding group again and return it.
                 Group newUpdatedGroup = getGroup(newGroup.getId(), requiredAttributes);
                 return newUpdatedGroup;
             } else {
-                log.warn("There is no updated field in the group: " + oldGroup.getDisplayName() +
-                        ". Therefore ignoring the provisioning.");
+                log.warn("There is no updated field in the group: " + oldGroupDisplayName
+                        + ". Therefore ignoring the provisioning.");
                 // Hence no changes were done, return original group. There are some cases, new group can have
                 // duplicated members.
                 return oldGroup;
@@ -2290,13 +2292,14 @@ public class SCIMUserManager implements UserManager {
         // Check if the user ids & associated user name sent in updated (new) group exist in the user store.
         if (userName != null) {
             String userId = carbonUM.getUserClaimValue(userName, SCIMConstants.CommonSchemaConstants.ID_URI, null);
-            if (userId == null || userId.isEmpty()) {
-                String error = "User: " + userName + " doesn't exist in the user store. Hence, can not update the "
+            if (StringUtils.isEmpty(userId)) {
+                String error = "User: " + userName + " doesn't exist in the user store. Hence can not update the "
                         + "group: " + displayName;
                 throw new IdentitySCIMException(error);
             } else {
                 if (!UserCoreUtil.isContain(userId, addedUserIdsList.toArray(new String[addedUserIdsList.size()]))) {
-                    throw new IdentitySCIMException("Given SCIM user Id and name not matching..");
+                    throw new IdentitySCIMException("Provided SCIM user Id: " + userId + " doesn't match with the "
+                            + "userID obtained from user-store for the provided username: " + userName);
                 }
             }
         }
