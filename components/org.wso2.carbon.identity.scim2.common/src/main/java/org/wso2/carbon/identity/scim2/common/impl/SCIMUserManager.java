@@ -24,9 +24,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.json.JSONArray;
-import org.wso2.carbon.context.CarbonContext;
-import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -52,9 +49,6 @@ import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.model.OperationalOperation;
 import org.wso2.carbon.user.core.model.UserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
-import org.wso2.carbon.user.mgt.UserRealmProxy;
-import org.wso2.carbon.user.mgt.common.UIPermissionNode;
-import org.wso2.carbon.user.mgt.common.UserAdminException;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
@@ -2319,41 +2313,6 @@ public class SCIMUserManager implements UserManager {
                 requiredAttributes);
     }
 
-    /**
-     * Provide enabled set of permissions of a group/role.
-     * @param groupName role/group name
-     * @return
-     */
-    public  static String getGroupPermissions(String groupName) {
-
-        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
-        try {
-            JSONArray uiPermissionNode = SCIMCommonUtils.transformUIPermissionNodeToArray
-                    (getUserAdminProxy().getRolePermissions(groupName, tenantId));
-            return uiPermissionNode.toString();
-
-        } catch (UserAdminException e) {
-            log.error("An error occurred when retrieving permissions of role: " + groupName);
-        }
-
-        return null;
-    }
-
-    /**
-     * Update(add or remove) set of permissions of a group/role.
-     * @param groupName group name
-     * @param resource array of permission resource paths
-     */
-    public static void updateGroupPermissions(String groupName, String[] resource) {
-
-        try {
-            getUserAdminProxy().setRoleUIPermission(groupName, resource);
-        } catch (UserAdminException e) {
-            log.error("An error occurred when retrieving permissions of role: " + groupName);
-        }
-    }
-
-
     private String getUserStoreDomainFromSP() throws IdentityApplicationManagementException {
         ServiceProvider serviceProvider = null;
 
@@ -3244,15 +3203,5 @@ public class SCIMUserManager implements UserManager {
             }
         }
         return roleList.toArray(new String[roleList.size()]);
-    }
-
-    /**
-     * Get the UserAdmin service.
-     * @return
-     */
-    private static UserRealmProxy getUserAdminProxy() {
-
-        UserRealm realm = (UserRealm) CarbonContext.getThreadLocalCarbonContext().getUserRealm();
-        return new UserRealmProxy(realm);
     }
 }

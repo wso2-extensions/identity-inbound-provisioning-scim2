@@ -18,15 +18,14 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
-import org.wso2.carbon.identity.scim2.common.impl.SCIMUserManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.charon3.core.encoder.JSONDecoder;
@@ -86,7 +85,8 @@ public class GroupResource extends AbstractResource {
     @GET
     @Path("{id}/permissions")
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
-    public Response getPermissionListOfGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
+    public Response getPermissionListOfGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
+                                             @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                              @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                              @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat) {
         String userName = SupportUtils.getAuthenticatedUsername();
@@ -448,6 +448,7 @@ public class GroupResource extends AbstractResource {
             // Create charon-SCIM group endpoint and hand-over the request.
             GroupResourceManager groupResourceManager = new GroupResourceManager();
             SCIMResponse scimResponse = null;
+            String groupName = null;
             if (GET.class.getSimpleName().equals(httpVerb) && id == null) {
                 String filter = requestAttributes.get(SCIMProviderConstants.FILTER);
                 String sortBy = requestAttributes.get(SCIMProviderConstants.SORT_BY);
@@ -467,8 +468,13 @@ public class GroupResource extends AbstractResource {
                 attributes = SCIMConstants.GroupSchemaConstants.DISPLAY_NAME;
                 scimResponse = groupResourceManager.get(id, userManager, attributes, excludedAttributes);
                 JSONObject responseMessage = new JSONObject(scimResponse.getResponseMessage());
-                String groupName = (String) (responseMessage).get("displayName");
-                String permissions = SCIMUserManager.getGroupPermissions(groupName);
+                try {
+                    groupName = (String) (responseMessage).get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME);
+                } catch (JSONException e) {
+                    // Group Id is not found.
+                    return SupportUtils.buildResponse(scimResponse);
+                }
+                String permissions = SupportUtils.getUserAdminManager().getGroupPermissions(groupName);
                 scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), permissions,
                         scimResponse.getHeaderParamMap());
             } else if (GET.class.getSimpleName().equals(httpVerb)) {
@@ -483,10 +489,16 @@ public class GroupResource extends AbstractResource {
                 attributes = SCIMConstants.GroupSchemaConstants.DISPLAY_NAME;
                 scimResponse = groupResourceManager.get(id, userManager, attributes, excludedAttributes);
                 JSONObject responseMessage = new JSONObject(scimResponse.getResponseMessage());
-                String groupName = (String) (responseMessage).get("displayName");
+                try {
+                    groupName = (String) (responseMessage).get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME);
+                } catch (JSONException e) {
+                    // Group Id is not found.
+                    return SupportUtils.buildResponse(scimResponse);
+                }
                 String[] permissionArray = jsonArrayToStringArray(new JSONArray(resourceString));
-                SCIMUserManager.updateGroupPermissions(groupName, permissionArray);
-                String permissions = SCIMUserManager.getGroupPermissions(groupName);
+                // Replace the existing permission paths with given array.
+                SupportUtils.getUserAdminManager().updateGroupPermissions(groupName, permissionArray);
+                String permissions = SupportUtils.getUserAdminManager().getGroupPermissions(groupName);
                 scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), permissions,
                         scimResponse.getHeaderParamMap());
             } else if (PUT.class.getSimpleName().equals(httpVerb)) {
@@ -499,11 +511,21 @@ public class GroupResource extends AbstractResource {
                 attributes = SCIMConstants.GroupSchemaConstants.DISPLAY_NAME;
                 scimResponse = groupResourceManager.get(id, userManager, attributes, excludedAttributes);
                 JSONObject responseMessage = new JSONObject(scimResponse.getResponseMessage());
-                String groupName = (String) (responseMessage).get("displayName");
-                String existingPermissions = SCIMUserManager.getGroupPermissions(groupName);
+                try {
+                    groupName = (String) (responseMessage).get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME);
+                } catch (JSONException e) {
+                    // Group Id is not found.
+                    return SupportUtils.buildResponse(scimResponse);
+                }
+                // Get existing permissions of the group before patch operation.
+                String existingPermissions = SupportUtils.getUserAdminManager().getGroupPermissions(groupName);
+                // Decode the patch request body and get the permissions that need to be patched by comparing existing
+                // list of permissions and add/remove patch permissions.
                 JSONArray patchPermissions = getPatchOpPermissions(groupName, resourceString, existingPermissions);
-                SCIMUserManager.updateGroupPermissions(groupName, jsonArrayToStringArray(patchPermissions));
-                scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), SCIMUserManager
+                // PUT the permissions through the OSGi service.
+                SupportUtils.getUserAdminManager().updateGroupPermissions(groupName, jsonArrayToStringArray(patchPermissions));
+                // Retrive the the current permissions after the patch operation.
+                scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), SupportUtils.getUserAdminManager()
                         .getGroupPermissions(groupName), scimResponse.getHeaderParamMap());
 
             } else if (PATCH.class.getSimpleName().equals(httpVerb)) {
@@ -526,11 +548,13 @@ public class GroupResource extends AbstractResource {
      * @return
      */
     private JSONArray getPatchOpPermissions(String groupName, String resourceString, String existingPermissions) {
+
         JSONDecoder decode = new JSONDecoder();
         ArrayList<PatchOperation> listOperations = null;
         JSONArray existingPermissionsArray = new JSONArray(existingPermissions);
         JSONArray outputPermissions = new JSONArray();
         try {
+            // Decode the resource string and get the operations list
             listOperations  = decode.decodeRequest(resourceString);
         } catch (BadRequestException e) {
             logger.error("The Patch request is invalid. Can not decode.");
@@ -540,9 +564,10 @@ public class GroupResource extends AbstractResource {
                 if (op.getOperation() == "add") {
                     outputPermissions = concatJSONArrays(existingPermissionsArray, new JSONArray(op.getValues().toString()));
                 } else if (op.getOperation() == "remove") {
-                    SCIMUserManager.updateGroupPermissions(groupName, jsonArrayToStringArray(new JSONArray(
+                    SupportUtils.getUserAdminManager().updateGroupPermissions(groupName, jsonArrayToStringArray(new JSONArray(
                             op.getValues().toString())));
-                    JSONArray removePermissions = new JSONArray(SCIMUserManager.getGroupPermissions(groupName));
+                    JSONArray removePermissions = new JSONArray(SupportUtils.getUserAdminManager()
+                            .getGroupPermissions(groupName));
                     outputPermissions = removeElementsOfJSONArray(existingPermissionsArray,removePermissions);
                 }
             }
@@ -583,6 +608,7 @@ public class GroupResource extends AbstractResource {
      * @return String[]
      */
     private String[] jsonArrayToStringArray(JSONArray array) {
+
         String[] strArray = new String[array.length()];
         for (int i = 0; i < array.length(); i++) {
             strArray[i] = array.get(i).toString();
@@ -618,6 +644,7 @@ public class GroupResource extends AbstractResource {
      * @return
      */
     private JSONArray removeElementsOfJSONArray(JSONArray a1, JSONArray a2) {
+
         if (a2.length() > 0) {
             for (int i = 0; i < a1.length(); i++) {
                 for (int j = 0; j < a2.length(); j++) {

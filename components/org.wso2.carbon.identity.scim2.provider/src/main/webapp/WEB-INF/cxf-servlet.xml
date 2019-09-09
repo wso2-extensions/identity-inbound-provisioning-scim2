@@ -79,4 +79,9 @@
 
     <bean id="BulkBean" class="org.wso2.carbon.identity.scim2.provider.resources.BulkResource"/>
 
+    <bean id="SupportUtilsBean" class="org.wso2.carbon.identity.scim2.provider.util.SupportUtils">
+        <property name="userAdminManager" ref="UserAdminServiceImplFactoryBean"/>
+    </bean>
+    <bean id="UserAdminServiceImplFactoryBean" class="org.wso2.carbon.identity.scim2.provider.factory.UserAdminServiceImplFactory"/>
+
 </beans>
