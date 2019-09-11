@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
+import org.wso2.carbon.user.mgt.common.UserAdminException;
 import org.wso2.charon3.core.encoder.JSONDecoder;
 import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
@@ -45,7 +46,6 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
 
 public class GroupResource extends AbstractResource {
 
@@ -474,7 +474,7 @@ public class GroupResource extends AbstractResource {
                     // Group Id is not found.
                     return SupportUtils.buildResponse(scimResponse);
                 }
-                String permissions = SupportUtils.getUserAdminManager().getGroupPermissions(groupName);
+                String permissions = SupportUtils.getRolePermissionManagementService().getRolePermissions(groupName);
                 scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), permissions,
                         scimResponse.getHeaderParamMap());
             } else if (GET.class.getSimpleName().equals(httpVerb)) {
@@ -497,8 +497,8 @@ public class GroupResource extends AbstractResource {
                 }
                 String[] permissionArray = jsonArrayToStringArray(new JSONArray(resourceString));
                 // Replace the existing permission paths with given array.
-                SupportUtils.getUserAdminManager().updateGroupPermissions(groupName, permissionArray);
-                String permissions = SupportUtils.getUserAdminManager().getGroupPermissions(groupName);
+                SupportUtils.getRolePermissionManagementService().updateRolePermissions(groupName, permissionArray);
+                String permissions = SupportUtils.getRolePermissionManagementService().getRolePermissions(groupName);
                 scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), permissions,
                         scimResponse.getHeaderParamMap());
             } else if (PUT.class.getSimpleName().equals(httpVerb)) {
@@ -518,15 +518,17 @@ public class GroupResource extends AbstractResource {
                     return SupportUtils.buildResponse(scimResponse);
                 }
                 // Get existing permissions of the group before patch operation.
-                String existingPermissions = SupportUtils.getUserAdminManager().getGroupPermissions(groupName);
+                String existingPermissions = SupportUtils.getRolePermissionManagementService()
+                        .getRolePermissions(groupName);
                 // Decode the patch request body and get the permissions that need to be patched by comparing existing
                 // list of permissions and add/remove patch permissions.
                 JSONArray patchPermissions = getPatchOpPermissions(groupName, resourceString, existingPermissions);
                 // PUT the permissions through the OSGi service.
-                SupportUtils.getUserAdminManager().updateGroupPermissions(groupName, jsonArrayToStringArray(patchPermissions));
+                SupportUtils.getRolePermissionManagementService().updateRolePermissions(groupName,
+                        jsonArrayToStringArray(patchPermissions));
                 // Retrive the the current permissions after the patch operation.
-                scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), SupportUtils.getUserAdminManager()
-                        .getGroupPermissions(groupName), scimResponse.getHeaderParamMap());
+                scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), SupportUtils
+                        .getRolePermissionManagementService().getRolePermissions(groupName), scimResponse.getHeaderParamMap());
 
             } else if (PATCH.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager
@@ -535,8 +537,11 @@ public class GroupResource extends AbstractResource {
                 scimResponse = groupResourceManager.delete(id, userManager);
             }
             return SupportUtils.buildResponse(scimResponse);
-        } catch (CharonException e) {
-            return handleCharonException(e, encoder);
+        } catch (CharonException  e) {
+            return handleCharonException( e, encoder);
+        } catch (UserAdminException e) {
+            return handleCharonException(new CharonException("Error occurred when getting the permissions from server",
+                            e), encoder);
         }
     }
 
@@ -547,7 +552,8 @@ public class GroupResource extends AbstractResource {
      * @param existingPermissions
      * @return
      */
-    private JSONArray getPatchOpPermissions(String groupName, String resourceString, String existingPermissions) {
+    private JSONArray getPatchOpPermissions(String groupName, String resourceString, String existingPermissions)
+            throws UserAdminException {
 
         JSONDecoder decode = new JSONDecoder();
         ArrayList<PatchOperation> listOperations = null;
@@ -564,10 +570,11 @@ public class GroupResource extends AbstractResource {
                 if (op.getOperation() == "add") {
                     outputPermissions = concatJSONArrays(existingPermissionsArray, new JSONArray(op.getValues().toString()));
                 } else if (op.getOperation() == "remove") {
-                    SupportUtils.getUserAdminManager().updateGroupPermissions(groupName, jsonArrayToStringArray(new JSONArray(
+                    SupportUtils.getRolePermissionManagementService().updateRolePermissions(groupName,
+                            jsonArrayToStringArray(new JSONArray(
                             op.getValues().toString())));
-                    JSONArray removePermissions = new JSONArray(SupportUtils.getUserAdminManager()
-                            .getGroupPermissions(groupName));
+                    JSONArray removePermissions = new JSONArray(SupportUtils.getRolePermissionManagementService()
+                            .getRolePermissions(groupName));
                     outputPermissions = removeElementsOfJSONArray(existingPermissionsArray,removePermissions);
                 }
             }
@@ -604,6 +611,7 @@ public class GroupResource extends AbstractResource {
 
     /**
      * Convert JSONArray to String array.
+     *
      * @param array JSONArray
      * @return String[]
      */
@@ -618,6 +626,7 @@ public class GroupResource extends AbstractResource {
 
     /**
      * Concat two JSON Arrays.
+     *
      * @param a1 JSONArray
      * @param a2 JSONArray
      * @return
@@ -639,6 +648,7 @@ public class GroupResource extends AbstractResource {
 
     /**
      * Remove elements of JSONArray a2 from JSONArray a1
+     *
      * @param a1 JSONArray
      * @param a2 JSONArray
      * @return

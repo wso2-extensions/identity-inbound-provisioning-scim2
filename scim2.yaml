@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-  version: '1.0'
+  version: "1.0.0"
   title: SCIM 2.0 Endpoint Swagger Definition
   description: |
     SCIM 2.0 endpoints
@@ -12,30 +12,36 @@ info:
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0'
-    
+
 # The base path of the SCIM2 API.
 # If the tenant domain is carbon.super then basepath can be /scim2.
 basePath: /t/{tenant-domain}/scim2
 
+schemes:
+  - https
+
 produces:
   - application/scim+json
-        
+
+# Applicable authentication mechanisms.
+security:
+  - OAuth2: []
+  - BasicAuth: []
+
 paths:
   /Me:
     get:
       tags:
         - Me Endpoint
       summary: Get Me
-      description: This API returns the user details of the currently authenticated user.
-      operationId: getUserMe
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] https://localhost:9443/scim2/Me
-      x-wso2-curl: |
-        curl -v -k --user kim:kimwso2 https://localhost:9443/scim2/Me
-      x-wso2-response: |
-        {"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jackson@gmail.com"}],"meta":{"created":"2018-08-16T17:19:43Z","location":"https://localhost:9443/scim2/Users/f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","lastModified":"2018-08-16T17:19:43Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"roles":[{"type":"default","value":"manager,Internal/everyone,admin"}],"name":{"givenName":"kim","familyName":"jackson"},"groups":[{"display":"manager","value":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}],"id":"f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","userName":"kim"}
-      produces:
-        - application/scim+json
+      description: |
+        This API returns the user details of the currently authenticated user.
+
+
+          <b>Permission required:</b>
+
+            * /permission/admin/login
+
       parameters:
         - name: attributes
           in: query
@@ -47,26 +53,33 @@ paths:
           description: SCIM defined excludedAttribute parameter.
           required: false
           type: string
+
       responses:
-        '200':
+        200:
           description: Valid user is found
-        '401':
+          schema:
+            $ref: '#/definitions/UserResponseObject'
+        401:
           description: Unauthorized
-        '404':
-          description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+
+          404:
+            description: Valid User is not found
+            schema:
+              $ref: '#/definitions/ErrorUserNotAvailable'
+
     post:
       tags:
         - Me Endpoint
       summary: Create Me
       description: |
         This API is used to register a user anonymously. It returns an HTTP 201 response if the user is successfully created. These endpoints are secured by default. Therefore, to invoke this API anonymously, set the secured property for the SCIM2 resource in the identity.xml to false. For more information, see [Authenticating and Authorizing REST APIs](https://docs.wso2.com/display/IS530/Authenticating+and+Authorizing+REST+APIs).
+
+         <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt/create
       operationId: createUserMe
-      x-wso2-request: |
-        curl -v -k  --data '{"schemas":[],"name:{"familyName":[last name],"givenName":[name]},"userName":[username],"password":[password],"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}],"EnterpriseUser":{"employeeNumber":[employee ID],"manager":{"value":[manager's name]}}}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
-      x-wso2-curl: |
-         curl -v -k --data '{"schemas":[],"name":{"familyName":"Johnson","givenName":"Alex"},"userName":"alex","password":"alexwso2","emails":[{"primary":true,"value":"alex.j@gmail.com","type":"home"},{"value":"alex_j@wso2.com","type":"work"}],"EnterpriseUser":{"employeeNumber":"123A","manager":{"value":"Taylor"}}}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
-      x-wso2-response: |
-        {"emails":[{"type":"home","value":"alex.j@gmail.com","primary":true},{"type":"work","value":"alex_j@wso2.com"}],"meta":{"created":"2018-08-17T10:34:29Z","location":"https://localhost:9443/scim2/Users/008bba85-451d-414b-87de-c03b5a1f4217","lastModified":"2018-08-17T10:34:29Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"EnterpriseUser":{"manager":{"value":"Taylor"},"employeeNumber":"123A"},"name":{"familyName":"Johnson","givenName":"Alex"},"id":"008bba85-451d-414b-87de-c03b5a1f4217","userName":"alex"}
       consumes:
         - application/scim+json
       produces:
@@ -84,28 +97,48 @@ paths:
           type: string
         - in: body
           name: body
-          required: false
+          required: true
+          description: User details to add.
           schema:
-            type: string
+            $ref: '#/definitions/UserObject'
       responses:
-        '201':
-          description: Valid user is created
-        '401':
+        201:
+          description: User is created.
+          schema:
+            $ref: '#/definitions/UserResponseObject'
+
+        400:
+          description: Invalid Input
+          schema:
+            $ref: '#/definitions/ErrorIvalidInput'
+
+        401:
           description: Unauthorized
-        '404':
-          description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+
+        404:
+          description: Valid User is not found
+          schema:
+            $ref: '#/definitions/ErrorUserNotAvailable'
+
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorInternalServerError'
+
     put:
       tags:
         - Me Endpoint
-      summary: Update Me - PUT 
-      description: This API uses a PUT operation to update user details. It returns HTTP 404 if the user is not found.
+      summary: Update Me - PUT
+      description: |
+        This API uses a PUT operation to update user details. It returns HTTP 404 if the user is not found.
+
+
+          <b>Permission required:</b>
+
+            * /permission/admin/login
       operationId: updateUserMe
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] -X PUT -d '{"schemas":[],"name":{"familyName":[last name],"givenName":[name]},"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
-      x-wso2-curl: |
-        curl -v -k --user kim:kimwso2 -X PUT -d '{"schemas":[],"name":{"familyName":"JacksonJohn","givenName":"Kim"},"userName":"kim","emails":[{"primary":true,"value":"jacksonk@gmail.com","type":"home"},{"value":"jackson_k@wso2.com","type":"work"}],"EnterpriseUser":{"employeeNumber":"123A","manager":{"value":"Taylor"}}}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
-      x-wso2-response: |
-        {"emails":[{"type":"work","value":"jackson_k@wso2.com"},{"type":"home","value":"jacksonk@gmail.com"}],"meta":{"created":"2018-08-16T17:19:43Z","location":"https://localhost:9443/scim2/Users/f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","lastModified":"2018-08-16T17:43:17Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"EnterpriseUser":{"manager":{"value":"Taylor"},"employeeNumber":"123A"},"roles":[{"type":"default","value":"manager,Internal/everyone,admin"}],"name":{"givenName":"Kim","familyName":"JacksonJohn"},"groups":[{"display":"manager","value":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}],"id":"f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","userName":"kim"}
       consumes:
         - application/scim+json
       produces:
@@ -123,50 +156,63 @@ paths:
           type: string
         - in: body
           name: body
-          required: false
+          required: true
           schema:
-            type: string
+            $ref: '#/definitions/UserUpdateObject'
       responses:
-        '200':
+        200:
           description: User is updated
-        '401':
+          schema:
+            $ref: '#/definitions/UserResponseObject'
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUserNotAvailable'
     delete:
       tags:
         - Me Endpoint
       summary: Delete Me
-      description: This API is used to delete the currently authenticated user. It returns HTTP 204 if the user is successfully deleted.
+      description: |
+        This API is used to delete the currently authenticated user. It returns HTTP 204 if the user is successfully deleted.
+
+          <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt/delete
       operationId: deleteUserMe
-      x-wso2-request: |
-         curl -v -k --user  [username]:[password] -X DELETE https://localhost:9443/scim2/Me
-      x-wso2-curl: |
-         curl -v -k --user kim:kimwso2 -X DELETE https://localhost:9443/scim2/Me
-      x-wso2-response: |
-        HTTP/1.1 501 Not Implemented
       produces:
         - application/scim+json
       parameters: []
       responses:
-        '204':
+        204:
           description: User is deleted
-        '401':
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUserNotAvailable'
+        501:
+          description: Self delete is not suported
+          schema:
+            $ref: '#/definitions/ErrorNotimplemented'
     patch:
       tags:
         - Me Endpoint
-      summary: Update Me - PATCH 
-      description: This API uses a PATCH operation to update user details. It returns HTTP 404 if the user is not found.
+      summary: Update Me - PATCH
+      description: |
+        This API uses a PATCH operation to update user details. It returns HTTP 404 if the user is not found.
+
+          <b>Permission required:</b>
+
+            * /permission/admin/login
+
       operationId: patchUserMe
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op":[operation],"value":{[attributeName]:[attribute value]}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
-      x-wso2-curl: |
-        curl -v -k --user kim:kimwso2 -X PATCH -d '{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"add","value":{"nickName":"shaggy"}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Me
-      x-wso2-response: |
-        {"emails":[{"type":"work","value":"jackson_k@wso2.com"},{"type":"home","value":"jacksonk@gmail.com"}],"meta":{"created":"2018-08-16T17:19:43Z","location":"https://localhost:9443/scim2/Users/f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","lastModified":"2018-08-17T11:43:34Z","resourceType":"User"},"nickName":"shaggy","schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"EnterpriseUser":{"manager":{"value":"Taylor"},"employeeNumber":"123A"},"roles":[{"type":"default","value":"manager,Internal/everyone,admin"}],"name":{"givenName":"Kim","familyName":"JacksonJohn"},"groups":[{"display":"manager","value":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}],"id":"f60e6ddd-8d04-411f-92b9-c7ba95fb0fa9","userName":"kim"}
       consumes:
         - application/scim+json
       produces:
@@ -186,27 +232,33 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/PatchOpperationInput'
       responses:
-        '200':
+        200:
           description: User is updated
-        '401':
+          schema:
+            $ref: '#/definitions/PatchOperationResponseOutput'
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUserNotAvailable'
   /Groups:
     get:
       tags:
         - Groups Endpoint
       summary: Filter Groups
-      description: This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
+      description: |
+        This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
+
+          <b>Permission required:</b>
+
+            * / permission/admin/manage/identity/rolemgt/view
+
       operationId: getGroup
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] 'https://localhost:9443/scim2/Groups?startIndex=[value]&count=[value]&filter=[query]&attributes=[attribute names]'
-      x-wso2-curl: |
-        curl -v -k --user admin:admin 'https://localhost:9443/scim2/Groups?filter=displayName+eq+manager'
-      x-wso2-response: |
-        {"totalResults":1,"startIndex":1,"itemsPerPage":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:ListResponse"],"Resources":[{"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:27:42Z"},"members":[{"display":"kim","value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0"},{"display":"Kris","value":"81cbba1b-c259-485d-8ba4-79afb03e5bd1"}],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}]}
       produces:
         - application/scim+json
       parameters:
@@ -255,24 +307,29 @@ paths:
           required: false
           type: string
       responses:
-        '200':
+        200:
           description: Valid groups are found
-        '401':
+          schema:
+            $ref: '#/definitions/GroupsListResponseObject'
+        401:
           description: Unauthorized
-        '404':
-          description: Valid groups are not found
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
+          description: No Group found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
     post:
       tags:
         - Groups Endpoint
-      summary: Create Group 
-      description: This API creates a group and returns the details of the created group including its unique ID. It returns HTTP 201 if the group is successfully created.
+      summary: Create Group
+      description: |
+        This API creates a group and returns the details of the created group including its unique ID. It returns HTTP 201 if the group is successfully created.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/create
       operationId: createGroup
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"displayName": [group name], "members": [{"value": [user ID],"$ref":[ref url],"display": [user name] }]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups
-      x-wso2-curl: |
-        curl -v -k --user admin:admin --data '{"displayName":"manager"}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups
-      x-wso2-response: |
-        {"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:27:42Z","resourceType":"Group"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}
       consumes:
         - application/scim+json
       produces:
@@ -292,27 +349,36 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/GroupRequestObject'
       responses:
-        '201':
+        201:
           description: Valid group is created
-        '401':
+          schema:
+            $ref: '#/definitions/GroupResponseObject'
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Group is not found
+          schema:
+            $ref: '#/definitions/ErrorGroupNotAvailable'
+        409:
+          description: Group already exist
+          schema:
+            $ref: '#/definitions/ErroGroupAlreadyAvailable'
   /Groups/.search:
     post:
       tags:
         - Groups Endpoint
-      summary: Search Groups 
-      description: This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
+      summary: Search Groups
+      description: |
+        This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/create
       operationId: getGroupsByPost
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] --data '{"schemas": [],"startIndex": [value], "filter": [query]}' --header "Content-Type:application/scim+json" https://localhost:9443/scim2/Groups/.search
-      x-wso2-curl: |
-        curl -v -k --user admin:admin --data '{"schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"startIndex": 1, "filter": "displayName eq manager"}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/.search
-      x-wso2-response: |
-        {"totalResults":1,"startIndex":1,"itemsPerPage":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:ListResponse"],"Resources":[{"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:27:42Z"},"members":[{"display":"kim","value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0"},{"display":"Kris","value":"81cbba1b-c259-485d-8ba4-79afb03e5bd1"}],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}]}
       consumes:
         - application/scim+json
       produces:
@@ -322,27 +388,32 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/GroupSearchRequestObject'
       responses:
-        '200':
+        200:
           description: Valid groups are found
-        '401':
+          schema:
+            $ref: '#/definitions/GroupSearchResponseObject'
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid groups are not found
+          schema:
+            $ref: '#/definitions/GroupSearchErrorResponseObject'
   '/Groups/{id}':
     get:
       tags:
         - Groups Endpoint
       summary: Get Group by ID
-      description: This API returns the group details of a particular group using its unique ID. It returns HTTP 200 if the group is found.
+      description: |
+        This API returns the group details of a particular group using its unique ID. It returns HTTP 200 if the group is found.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/view
       operationId: getGroup by id
-      x-wso2-request: |
-        curl -v -k --user [username]:[password]  https://localhost:9443/scim2/Groups/[group ID]
-      x-wso2-curl: |
-        curl -v -k --user admin:admin https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36
-      x-wso2-response: |
-        {"displayName":"manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:27:42Z"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}
       produces:
         - application/scim+json
       parameters:
@@ -362,24 +433,30 @@ paths:
           required: false
           type: string
       responses:
-        '200':
+        200:
           description: Valid group is found
-        '401':
+          schema:
+            $ref: '#/definitions/GroupResponseObject'
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
+
     put:
       tags:
         - Groups Endpoint
       summary: Update Group - PUT
-      description: This API updates the group details and returns the updated group details using a PUT operation. It returns HTTP 404 if the group is not found.
+      description: |
+        This API updates the group details and returns the updated group details using a PUT operation. It returns HTTP 404 if the group is not found.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/update
       operationId: updateGroup
-      x-wso2-request: |
-        curl -v -k --user[username]:[password] -X PUT -d '{"displayName":[group name],"members":[{"value":[user ID],"display":[user's name]}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/[group ID]
-      x-wso2-curl: |
-        curl -v -k --user admin:admin -X PUT -d '{"displayName":"manager","members":[{"value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0","display":"kim"}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36
-      x-wso2-response: |
-        {"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:42:56Z"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"members":[{"display":"kim","value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0"}],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}
       consumes:
         - application/scim+json
       produces:
@@ -404,26 +481,32 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/GroupPutRequestObject'
       responses:
-        '200':
+        200:
           description: Group is updated
-        '401':
+          schema:
+            $ref: '#/definitions/GroupPutResponseObject'
+
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
     delete:
       tags:
         - Groups Endpoint
       summary: Delete Group
-      description: This API deletes a particular group using its unique ID. It returns HTTP 204 if the group is successfully deleted.
+      description: |
+        This API deletes a particular group using its unique ID. It returns HTTP 204 if the group is successfully deleted.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/delete
       operationId: deleteGroup
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] -X DELETE https://localhost:9443/scim2/Groups/[group ID] -H "Accept: application/json"
-      x-wso2-curl: |
-        curl -v -k --user admin:admin -X DELETE https://localhost:9443/scim2/Groups/0d32c19e-7a74-4c22-b1ad-1d21317d5b04 -H "Accept: application/json"
-      x-wso2-response: |
-        HTTP/1.1 204 No Content
       produces:
         - application/scim+json
       parameters:
@@ -433,24 +516,28 @@ paths:
           required: true
           type: string
       responses:
-        '204':
+        204:
           description: Group is deleted
-        '401':
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
     patch:
       tags:
         - Groups Endpoint
       summary: Update Group - PATCH
-      description: This API updates the group details and returns the updated group details using a PATCH operation. It returns HTTP 404 if the group is not found.
+      description: |
+        This API updates the group details and returns the updated group details using a PATCH operation. It returns HTTP 404 if the group is not found.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/update
+
       operationId: patchGroup
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op": [operation],"value":{"members":[{"display": [name],"$ref": [ref],"value": [member user ID] }] } }]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/[group ID]
-      x-wso2-curl: |
-        curl -v -k --user admin:admin -X PATCH -d '{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"add","value":{"members":[{"display": "Kris","$ref":"https://localhost:9443/scim2/Users/81cbba1b-c259-485d-8ba4-79afb03e5bd1","value": "81cbba1b-c259-485d-8ba4-79afb03e5bd1"}]}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36
-      x-wso2-response: |
-        {"displayName":"PRIMARY/manager","meta":{"created":"2018-08-16T15:27:42Z","location":"https://localhost:9443/scim2/Groups/a43fe003-d90d-43ca-ae38-d2332ecc0f36","lastModified":"2018-08-16T15:51:45Z"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:Group"],"members":[{"display":"kim","value":"b3c07363-f0ed-4798-97f9-0cb26d9d79c0"},{"display":"Kris","value":"81cbba1b-c259-485d-8ba4-79afb03e5bd1","$ref":"https://localhost:9443/scim2/Users/81cbba1b-c259-485d-8ba4-79afb03e5bd1"}],"id":"a43fe003-d90d-43ca-ae38-d2332ecc0f36"}
       consumes:
         - application/scim+json
       produces:
@@ -475,14 +562,138 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/PatchGroupOperationRequestObject'
       responses:
-        '200':
+        200:
           description: Group is updated
-        '401':
+          schema:
+            $ref: '#/definitions/PatchGroupOperationResponseObject'
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
+
+  '/Groups/{id}/permissions':
+    get:
+      tags:
+        - Groups Endpoint
+      summary: Get permissions of a group by its id
+      description: |
+        This API returns the permission list of a particular group using its unique ID. It returns HTTP 200 if the group is found.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/view
+      operationId: getPermissionbyGroup
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+      responses:
+        200:
+          description: Valid group and permissions found
+          schema:
+            $ref: '#/definitions/GroupPermissionResponseObject'
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
+          description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
+    put:
+      tags:
+        - Groups Endpoint
+      summary: Update permissions of a group by its id
+      description: |
+        This API returns the permission list of a particular group after updating the permissions. It returns HTTP 404 if the user is not found.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/update
+      operationId: updatePermissions
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            $ref: '#/definitions/PermissionPutRequestObject'
+
+      responses:
+        200:
+          description: Valid group is found
+          schema:
+            $ref: '#/definitions/PermissionPutResponseObject'
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
+          description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
+    patch:
+      tags:
+        - Groups Endpoint
+      summary: Patch permissions of a group by its id
+      description: |
+        This API returns the permission list of a particular group after patching the permissions. It returns HTTP 404 if the user is not found.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/update
+
+      operationId: patchPermissions
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            $ref: '#/definitions/PermissionPatchOpperationRequestObject'
+
+      responses:
+        200:
+          description: Valid group is found.
+          schema:
+            $ref: '#/definitions/PermissionPatchResponseObject'
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
+          description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
+
   /Users:
     get:
       tags:
@@ -490,13 +701,11 @@ paths:
       summary: Filter Users
       description: |
         This API returns users according to the filter, sort and pagination parameters. It returns HTTP 404 if the users are not found. Pagination is not supported across user stores and LDAP multi-attribute group filtering. However, filtering is supported across multiple user stores.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt/view
       operationId: getUser
-      x-wso2-request: |
-        curl -v -k --user [username]:[password]  'https://localhost:9443/scim2/Users?startIndex=[value]&count=[value]&domain=[value]&filter=[query]&attributes=[attribute names]'
-      x-wso2-curl: |
-        curl -v -k --user admin:admin 'https://localhost:9443/scim2/Users?startIndex=1&count=10&domain=PRIMARY&filter=userName+sw+ki+and+name.familyName+co+ack&attributes=userName,name.familyName'
-      x-wso2-response: |
-        {"totalResults":1,"startIndex":1,"itemsPerPage":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:ListResponse"],"Resources":[{"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jackson@gmail.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-15T14:55:23Z","resourceType":"User"},"roles":[{"type":"default","value":"Internal/everyone"}],"name":{"givenName":"kim","familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}]}
       produces:
         - application/scim+json
       parameters:
@@ -546,24 +755,29 @@ paths:
           required: false
           type: string
       responses:
-        '200':
+        200:
           description: Valid users are found
-        '401':
+          schema:
+            $ref: '#/definitions/UserObjectListResponseObject'
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid users are not found
+          schema:
+            $ref: '#/definitions/GroupSearchErrorResponseObject'
     post:
       tags:
         - Users Endpoint
       summary: Create User
-      description: This API creates a user and returns the user details along with the user's unique ID. It returns HTTP 201 if the user is successfully created.
+      description: |
+        This API creates a user and returns the user details along with the user's unique ID. It returns HTTP 201 if the user is successfully created.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt/view
       operationId: createUser
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] --data '{"schemas":[],"name":{"familyName":[last name],"givenName":[name]},"userName":[username],"password":[password],"emails":[{"primary":[true/false],"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}]}--header "Content-Type:application/json" https://localhost:9443/scim2/Users
-      x-wso2-curl: |
-        curl -v -k --user admin:admin --data '{"schemas":[],"name":{"familyName":"jackson","givenName":"kim"},"userName":"kim","password":"kimwso2","emails":[{"primary":true,"value":"kim.jackson@gmail.com","type":"home"},{"value":"kim_j@wso2.com","type":"work"}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users
-      x-wso2-response: |
-        {"emails":[{"type":"home","value":"kim.jackson@gmail.com","primary":true},{"type":"work","value":"kim_j@wso2.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-15T14:55:23Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"name":{"familyName":"jackson","givenName":"kim"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}
       consumes:
         - application/scim+json
       parameters:
@@ -581,27 +795,44 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/UserObject'
       responses:
         '201':
-          description: Valid user is created
-        '401':
+          description: User is created.
+          schema:
+            $ref: '#/definitions/UserResponseObject'
+
+        '400':
+          description: Invalid Input
+          schema:
+            $ref: '#/definitions/ErrorIvalidInput'
+
+        401:
           description: Unauthorized
-        '404':
-          description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+
+        404:
+          description: Valid User is not found
+          schema:
+            $ref: '#/definitions/ErrorUserNotAvailable'
+
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorInternalServerError'
   /Users/.search:
     post:
       tags:
         - Users Endpoint
       summary: Search Users
-      description: This API returns users according to the filter, sort and pagination parameters. It returns HTTP 404 if the users are not found.
+      description: |
+        This API returns users according to the filter, sort and pagination parameters. It returns HTTP 404 if the users are not found.
+
+         <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt/create
       operationId: getUsersByPost
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] --data '{"schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"attributes": [attribute names],"filter": [filter query],"domain": [domain name],"startIndex": [value],"count": [value]}' --header "Content-Type:application/scim+json"  'https://localhost:9443/scim2/Users/.search'
-      x-wso2-curl: |
-        curl -v -k --user admin:admin --data '{"schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],"attributes": ["name.familyName", "userName"],"filter":"userName sw ki and name.familyName co ack","domain":"PRIMARY","startIndex": 1,"count": 10}' --header "Content-Type:application/scim+json"  'https://localhost:9443/scim2/Users/.search'
-      x-wso2-response: |
-        {"totalResults":1,"startIndex":1,"itemsPerPage":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:ListResponse"],"Resources":[{"name":{"familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}]}
       consumes:
         - application/scim+json
       produces:
@@ -611,27 +842,32 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/UserSearchRequestObject'
       responses:
-        '200':
+        200:
           description: Valid users are found
-        '401':
+          schema:
+            $ref: '#/definitions/UserObjectListResponseObject'
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid users are not found
+          schema:
+            $ref: '#/definitions/GroupSearchErrorResponseObject'
+
   '/Users/{id}':
     get:
       tags:
         - Users Endpoint
       summary: Get User by ID
-      description: Returns HTTP 200 if the user is found.
+      description: |
+        Returns HTTP 200 if the user is found.
+         <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt/view
       operationId: getUser by id
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] https://localhost:9443/scim2/Users/[user ID]
-      x-wso2-curl: |
-        curl -v -k --user admin:admin 'https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd'
-      x-wso2-response: |
-        {"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jackson@gmail.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-15T14:55:23Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"roles":[{"type":"default","value":"Internal/everyone"}],"name":{"givenName":"kim","familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}
       produces:
         - application/scim+json
       parameters:
@@ -651,24 +887,29 @@ paths:
           required: false
           type: string
       responses:
-        '200':
+        200:
           description: Valid user is found
-        '401':
+          schema:
+            $ref: '#/definitions/UserResponseObject'
+
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUserNotAvailable'
     put:
       tags:
         - Users Endpoint
-      summary: Update User - PUT 
-      description: This API updates user details and returns the updated user details using a PUT operation. It returns HTTP 404 if the user is not found.
+      summary: Update User - PUT
+      description: |
+        This API updates user details and returns the updated user details using a PUT operation. It returns HTTP 404 if the user is not found.
+         <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt/update
       operationId: updateUser
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] -X PUT -d '{"schemas":[],"name":{"familyName":[last name],"givenName":[name]},"userName":[username],"emails":[{"value":[email address],"type":[home/work]},{"value":[email address 2],"type":[home/work]}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/[user ID]
-      x-wso2-curl: |
-        curl -v -k --user admin:admin -X PUT -d '{"schemas":[],"name":{"familyName":"jackson","givenName":"kim"},"userName":"kim","emails":[{"value":"kim_j@wso2.com","type":"work"},{"value":"kim.jack@gmail.com","type":"home"}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd
-      x-wso2-response: |
-        {"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jack@gmail.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-16T14:24:00Z","resourceType":"User"},"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"roles":[{"type":"default","value":"Internal/everyone"}],"name":{"givenName":"kim","familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}
       consumes:
         - application/scim+json
       produces:
@@ -693,26 +934,33 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/UserUpdateObject'
       responses:
-        '200':
-          description: User is updated
-        '401':
+        200:
+          description: Valid user is found
+          schema:
+            $ref: '#/definitions/UserResponseObject'
+
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUserNotAvailable'
     delete:
       tags:
         - Users Endpoint
       summary: Delete User by ID
-      description: This API deletes a user using the user's unique ID. It returns HTTP 204 if the user is successfully deleted.
+      description: |
+        This API deletes a user using the user's unique ID. It returns HTTP 204 if the user is successfully deleted.
+
+         <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt/delete
+
       operationId: deleteUser
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] -X DELETE https://localhost:9443/scim2/Users/[user ID] -H "Accept: application/scim+json"
-      x-wso2-curl: |
-        curl -v -k --user admin:admin -X DELETE https://localhost:9443/scim2/Users/b228b59d-db19-4064-b637-d33c31209fae -H "Accept: application/scim+json"
-      x-wso2-response: |
-        HTTP/1.1 204 No Content
       produces:
         - application/scim+json
       parameters:
@@ -722,24 +970,33 @@ paths:
           required: true
           type: string
       responses:
-        '204':
+        204:
           description: User is deleted
-        '401':
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUserNotAvailable'
     patch:
       tags:
         - Users Endpoint
-      summary: Update User - PATCH 
-      description: This API updates user details and returns the updated user details using a PATCH operation. It returns HTTP 404 if the user is not found.
+      summary: Update User - PATCH
+      description: |
+        This API updates user details and returns the updated user details using a PATCH operation. It returns HTTP 404 if the user is not found.
+
+         <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt/update
+
+        <b>Supported Operations:</b>
+
+            * add
+            * replace
+            * remove
       operationId: patchUser
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] -X PATCH -d '{"schemas":[],"Operations":[{"op":[operation],"value":{[attributeName]:[attribute value]}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/[user ID]
-      x-wso2-curl: |
-        curl -v -k --user admin:admin -X PATCH -d '{"schemas":["urn:ietf:params:scim:api:messages:2.0:PatchOp"],"Operations":[{"op":"add","value":{"nickName":"shaggy"}}]}' --header "Content-Type:application/json" https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd
-      x-wso2-response: |
-        {"emails":[{"type":"work","value":"kim_j@wso2.com"},{"type":"home","value":"kim.jack@gmail.com"}],"meta":{"created":"2018-08-15T14:55:23Z","location":"https://localhost:9443/scim2/Users/c8c821ba-1200-495e-a775-79b260e717bd","lastModified":"2018-08-16T14:46:07Z","resourceType":"User"},"nickName":"shaggy","schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"roles":[{"type":"default","value":"Internal/everyone"}],"name":{"givenName":"kim","familyName":"jackson"},"id":"c8c821ba-1200-495e-a775-79b260e717bd","userName":"kim"}
       consumes:
         - application/scim+json
       produces:
@@ -764,27 +1021,33 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/PatchOpperationInput'
       responses:
-        '200':
-          description: User is updated
-        '401':
+        200:
+          description: Valid user is found
+          schema:
+            $ref: '#/definitions/UserResponseObject'
+
+        401:
           description: Unauthorized
-        '404':
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
           description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUserNotAvailable'
   /Bulk:
     post:
       tags:
         - Bulk Endpoint
       summary: Create Users in Bulk
-      description: This API is used to create multiple users at once. It returns HTTP 201 if the users are successfully created.
+      description: |
+        This API is used to create multiple users at once. It returns HTTP 201 if the users are successfully created.
+         <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/usermgt
+
       operationId: createBulkUsers
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] --data '{"failOnErrors": [value],"schemas":[],"Operations":[{"method": [request type],"path": [end point],"bulkId": [bulk id] ,"data": [input user details] }] }' --header "Content-Type:application/scim+json" https://localhost:9443/scim2/Bulk
-      x-wso2-curl: |
-        curl -v -k --user admin:admin --data '{"failOnErrors":1,"schemas":["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],"Operations":[{"method": "POST","path": "/Users","bulkId": "qwerty","data":{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User"],"userName": "Kris","password":"krispass"}},{"method": "POST","path": "/Users","bulkId":"ytrewq","data":{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"],"userName":"Jesse","password":"jessepass","urn:ietf:params:scim:schemas:extension:enterprise:2.0:User":{"employeeNumber": "11250","manager": {"value": "bulkId:qwerty"}}}}]}' --header "Content-Type:application/scim+json" https://localhost:9443/scim2/Bulk
-      x-wso2-response: |
-        {"schemas":["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],"Operations":[{"bulkId":"qwerty","method":"POST","location":"https://localhost:9443/scim2/Users/81cbba1b-c259-485d-8ba4-79afb03e5bd1","status":{"code":201}},{"bulkId":"ytrewq","method":"POST","location":"https://localhost:9443/scim2/Users/b489dacc-fc89-449c-89f6-7acc37422031","status":{"code":201}}]}
       consumes:
         - application/scim+json
       produces:
@@ -794,57 +1057,1167 @@ paths:
           name: body
           required: false
           schema:
-            type: string
+            $ref: '#/definitions/BulkUserRequestObject'
       responses:
-        '201':
+        201:
           description: Valid user is created
-        '401':
+          schema:
+            $ref: '#/definitions/BulkUserResponseObject'
+        401:
           description: Unauthorized
-        '404':
-          description: Valid user is not found
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        409:
+          description: Users already exists
+
   /ResourceType:
     get:
       tags:
         - ResourceType Endpoint
       summary: Get Resource Types
-      description: This API lists and returns metadata about resource types. It returns HTTP 200 if the schema is found.
+      description: |
+        This API lists and returns metadata about resource types. It returns HTTP 200 if the schema is found.
+
       operationId: getResourceType
-      x-wso2-request: |
-        curl -v -k --user [username]:[password] https://localhost:9443/scim2/ResourceType
-      x-wso2-curl: |
-        curl -v -k --user admin:admin https://localhost:9443/scim2/ResourceType
-      x-wso2-response: |
-        {"schemas":["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],"resourceType":[{"schema":"urn:ietf:params:scim:schemas:core:2.0:User","endpoint":"/Users","meta":{"location":"https://localhost:9443/scim2/ResourceType/User","resourceType":"ResourceType"},"name":"User","description":"User Account","schemaExtensions":{"schema":"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User","required":false},"id":"User"},{"schema":"urn:ietf:params:scim:schemas:core:2.0:Group","endpoint":"/Groups","meta":{"location":"https://localhost:9443/scim2/ResourceType/Group","resourceType":"ResourceType"},"name":"Group","description":"Group","id":"Group"}]}
       produces:
         - application/scim+json
       parameters: []
       responses:
-        '200':
+        200:
           description: Schema is found
-        '401':
+          schema:
+            $ref: '#/definitions/ResourceTypeResponse'
+        401:
           description: Unauthorized
-        '404':
-          description: Schema is not found
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
+          description: Schema not found
+          schema:
+            $ref: '#/definitions/ErrorSchemaNotFound'
+
   /ServiceProviderConfig:
     get:
       tags:
         - ServiceProviderConfig Endpoint
       summary: Get Service Provider Config
-      description: This API returns the service provider's configuration details. It returns HTTP 200 if the schema is found.
+      description: |
+        This API returns the service provider's configuration details. It returns HTTP 200 if the schema is found.
+
+        <b>Permission required:</b>
+
+            * No permissions required
       operationId: getServiceProviderConfig
-      x-wso2-request: |
-        curl -v -k --user [username]:[password]  https://localhost:9443/scim2/ServiceProviderConfig
-      x-wso2-curl: |
-        curl -v -k --user admin:admin  https://localhost:9443/scim2/ServiceProviderConfig
-      x-wso2-response: |
-        {"patch":{"supported":true},"filter":{"maxResults":200,"supported":true},"documentationUri":"http://example.com/help/scim.html","authenticationSchemes":[{"name":"OAuth Bearer Token","description":"Authentication scheme using the OAuth Bearer Token Standard","specUri":"http://www.rfc-editor.org/info/rfc6750","type":"oauthbearertoken","primary":true},{"name":"HTTP Basic","description":"Authentication scheme using the HTTP Basic Standard","specUri":"http://www.rfc-editor.org/info/rfc2617","type":"httpbasic","primary":false}],"schemas":["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],"etag":{"supported":false},"sort":{"supported":false},"bulk":{"maxPayloadSize":1048576,"maxOperations":1000,"supported":true},"changePassword":{"supported":false}}
       produces:
         - application/scim+json
       parameters: []
       responses:
-        '200':
+        200:
           description: Schema is found
-        '401':
+          schema:
+            $ref: '#/definitions/SPConfigResponse'
+        401:
           description: Unauthorized
-        '404':
-          description: Schema is not found
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
+          description: Schema not found
+          schema:
+            $ref: '#/definitions/ErrorSchemaNotFound'
+
+
+
+#-----------------------------------------------------
+# Security Definitions
+#-----------------------------------------------------
+securityDefinitions:
+  BasicAuth:
+    type: basic
+  OAuth2:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: https://localhost:9443/oauth/authorize
+    tokenUrl: https://localhost:9443/oauth/token
+    scopes:
+      read: Grants read access
+      write: Grants write access
+      admin: Grants read and write access to administrative information
+
+#-----------------------------------------------------
+# Definitions
+#-----------------------------------------------------
+definitions:
+  #-----------------------------------------------------
+  # The User object
+  #-----------------------------------------------------
+  UserObject:
+    type: object
+    required:
+      - username
+      - password
+    properties:
+      schemas:
+        type: object
+        example: []
+      name:
+        type: object
+        properties:
+          firstName:
+            type: string
+            example: "Kim"
+          lastName:
+            type: string
+            example: "Berry"
+      userName:
+        type: string
+        example: "kim"
+      password:
+        type: string
+        example: "abc123"
+      emails:
+        type: array
+        items:
+          type: object
+          example:
+            - type: "home"
+              value: "kim@gmail.com"
+              primary: true
+            - type: "work"
+              value: "kim@wso2,com"
+      EnterpriseUser:
+        type: object
+        properties:
+          employeeNumber:
+            type: string
+            example: "1234A"
+          manager:
+            type: object
+            properties:
+              value:
+                type: string
+                example: "Taylor"
+
+  #-----------------------------------------------------
+  # The User Response object
+  #-----------------------------------------------------
+  UserResponseObject:
+    type: object
+    required:
+      - meta
+    properties:
+      meta:
+        type: object
+        properties:
+          created:
+            type: string
+            example: "2018-08-17T10:34:29Z"
+          location:
+            type: string
+            example: "https://localhost:9443/scim2/Users/008bba85-451d-414b-87de-c03b5a1f4217"
+          lastModified:
+            type: string
+            example: "2018-08-17T10:34:29Z"
+          resourceType:
+            type: string
+            example: User
+      schemas:
+        type: object
+        example:
+          - urn:ietf:params:scim:schemas:core:2.0:User
+          - urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
+      username:
+        type: string
+        example: "PRIMARY/kim"
+      id:
+        type: string
+        example: "008bba85-451d-414b-87de-c03b5a1f4217"
+      name:
+        type: object
+        properties:
+          firstName:
+            type: string
+            example: "Kim"
+          lastName:
+            type: string
+            example: "Berry"
+      emails:
+        type: array
+        items:
+          type: object
+          example:
+            - type: "home"
+              value: "kim@gmail.com"
+              primary: true
+            - type: "work"
+              value: "kim@wso2,com"
+      EnterpriseUser:
+        type: object
+        properties:
+          employeeNumber:
+            type: string
+            example: "1234A"
+          manager:
+            type: object
+            properties:
+              value:
+                type: string
+                example: "Taylor"
+      roles:
+        type: object
+        example:
+          - type: "default"
+            value: "Internal/everyone"
+
+  #-----------------------------------------------------
+  # The User Update Object
+  #-----------------------------------------------------
+  UserUpdateObject:
+    type: object
+    required:
+      - username
+    properties:
+      schemas:
+        type: object
+        example: []
+      name:
+        type: object
+        properties:
+          firstName:
+            type: string
+            example: "Kim"
+          lastName:
+            type: string
+            example: "Berry"
+      userName:
+        type: string
+        example: "kim"
+      emails:
+        type: array
+        items:
+          type: object
+          example:
+            - type: "home"
+              value: "kim@gmail.com"
+              primary: true
+            - type: "work"
+              value: "kim@wso2,com"
+      EnterpriseUser:
+        type: object
+        properties:
+          employeeNumber:
+            type: string
+            example: "1234A"
+          manager:
+            type: object
+            properties:
+              value:
+                type: string
+                example: "Taylor"
+
+  #-----------------------------------------------------
+  # The Patch Operation Input - Me
+  #-----------------------------------------------------
+  PatchOpperationInput:
+    type: object
+    properties:
+      schemas:
+        type: array
+        items:
+          example: "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+      Operations:
+        type: array
+        items:
+          $ref: "#/definitions/OperationMeItem"
+
+
+  OperationMeItem:
+    type: object
+    properties:
+      op:
+        type: string
+        enum: ["add", "remove", "replace"]
+      value:
+        type: object
+        properties:
+          nickName:
+            type: string
+            example: "shaggy"
+  #-----------------------------------------------------
+  # The Patch Operation Response Output
+  #-----------------------------------------------------
+  PatchOperationResponseOutput:
+    type: object
+    required:
+      - meta
+    properties:
+      meta:
+        type: object
+        properties:
+          created:
+            type: string
+            example: "2018-08-17T10:34:29Z"
+          location:
+            type: string
+            example: "https://localhost:9443/scim2/Users/008bba85-451d-414b-87de-c03b5a1f4217"
+          lastModified:
+            type: string
+            example: "2018-08-17T10:34:29Z"
+          resourceType:
+            type: string
+            example: User
+      schemas:
+        type: array
+        items:
+          type: string
+          example:
+            - urn:ietf:params:scim:schemas:core:2.0:User
+            - urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
+      username:
+        type: string
+        example: "kim"
+      id:
+        type: string
+        example: "008bba85-451d-414b-87de-c03b5a1f4217"
+      name:
+        type: object
+        properties:
+          firstName:
+            type: string
+            example: "Kim"
+          lastName:
+            type: string
+            example: "Berry"
+      emails:
+        type: array
+        items:
+          type: object
+          example:
+            - type: "home"
+              value: "kim@gmail.com"
+              primary: true
+            - type: "work"
+              value: "kim@wso2,com"
+      EnterpriseUser:
+        type: object
+        properties:
+          employeeNumber:
+            type: string
+            example: "1234A"
+          manager:
+            type: object
+            properties:
+              value:
+                type: string
+                example: "Taylor"
+      roles:
+        type: array
+        items:
+          type: object
+          example:
+            type: "default"
+            value: "Internal/everyone"
+      nickName:
+        type: string
+        example: "shaggy"
+
+  #-----------------------------------------------------
+  # The Group Request Object
+  #-----------------------------------------------------
+  GroupRequestObject:
+    type: object
+    required:
+      - displayName
+      - schemas
+    properties:
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:schemas:core:2.0:Group"
+      displayName:
+        type: string
+        example: "manager"
+      members:
+        type: array
+        items:
+          type: object
+          example:
+            value: "008bba85-451d-414b-87de-c03b5a1f4217"
+            display: "kim"
+  #-----------------------------------------------------
+  # The Group Response Object
+  #-----------------------------------------------------
+  GroupResponseObject:
+    type: object
+    properties:
+      displayName:
+        type: string
+        example: 'PRIMARY/manager'
+      meta:
+        type: object
+        properties:
+          created:
+            type: string
+            example: "2019-08-26T14:27:36"
+          location:
+            type: string
+            example: "https://localhost:9443/scim2/Groups/7bac6a86-1f21-4937-9fb1-5be4a93ef469"
+          lastModified:
+            type: string
+            example: "2019-08-26T14:27:36"
+          resourceType:
+            type: string
+            example: Group
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:schemas:core:2.0:Group"
+      id:
+        type: string
+        example: "7bac6a86-1f21-4937-9fb1-5be4a93ef469"
+      members:
+        type: array
+        items:
+          type: object
+          example:
+            display: "kim"
+            value: "008bba85-451d-414b-87de-c03b5a1f4217"
+  #-----------------------------------------------------
+  # The Groups List Response Object
+  #-----------------------------------------------------
+  GroupsListResponseObject:
+    type: object
+    properties:
+      totalResults:
+        type: integer
+        example: 3
+      startIndex:
+        type: integer
+        example: 1
+      itemsPerPage:
+        type: integer
+        example: 3
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+      Resources:
+        type: array
+        items:
+          $ref: "#/definitions/groupOb"
+  #-----------------------------------------------------
+  # The Groups Search Request Object
+  #-----------------------------------------------------
+  GroupSearchRequestObject:
+    type: object
+    properties:
+      schemas:
+        type: object
+        example:
+          - urn:ietf:params:scim:api:messages:2.0:SearchRequest
+      startIndex:
+        type: integer
+        example: 1
+      filter:
+        type: string
+        example: 'displayName eq manager'
+
+  #-----------------------------------------------------
+  # The Groups Search Response Object
+  #-----------------------------------------------------
+  GroupSearchResponseObject:
+    type: object
+    properties:
+      totalResults:
+        type: integer
+        example: 1
+      startIndex:
+        type: integer
+        example: 1
+      itemsPerPage:
+        type: integer
+        example: 3
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+      Resources:
+        type: array
+        items:
+          $ref: "#/definitions/groupOb"
+
+
+  groupOb:
+    type: object
+    properties:
+      displayName:
+        type: string
+        example: "PRIMARY/manager"
+      meta:
+        type: object
+        properties:
+          created:
+            type: string
+            example: '2019-08-26T14:27:36'
+          location:
+            type: string
+            example: 'https://localhost:9443/scim2/Groups/7bac6a86-1f21-4937-9fb1-5be4a93ef469'
+          lastModified:
+            type: string
+            example: '2019-08-26T14:27:36'
+      members:
+        type: array
+        items:
+          type: object
+          example:
+            - display: 'kim'
+              value: '008bba85-451d-414b-87de-c03b5a1f4217'
+      id:
+        type: string
+        example: '7bac6a86-1f21-4937-9fb1-5be4a93ef469'
+  #-----------------------------------------------------
+  # The Group PUT request object
+  #-----------------------------------------------------
+  GroupPutRequestObject:
+    type: object
+    properties:
+      displayName:
+        type: string
+        example: "manager"
+      members:
+        type: array
+        items:
+          type: object
+          example:
+            value: "409ca90b-2ba6-4474-9a45-2cf7376e6e43"
+            display: "kris"
+
+  #-----------------------------------------------------
+  # The Group PUT response object
+  #-----------------------------------------------------
+  GroupPutResponseObject:
+    type: object
+    properties:
+      displayName:
+        type: string
+        example: 'PRIMARY/manager'
+      meta:
+        type: object
+        properties:
+          created:
+            type: string
+            example: "2019-08-26T14:27:36"
+          location:
+            type: string
+            example: "https://localhost:9443/scim2/Groups/7bac6a86-1f21-4937-9fb1-5be4a93ef469"
+          lastModified:
+            type: string
+            example: "2019-08-26T14:27:36"
+          resourceType:
+            type: string
+            example: Group
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:schemas:core:2.0:Group"
+      id:
+        type: string
+        example: "7bac6a86-1f21-4937-9fb1-5be4a93ef469"
+      members:
+        type: array
+        items:
+          type: object
+          example:
+            display: "kris"
+            value: "409ca90b-2ba6-4474-9a45-2cf7376e6e43"
+
+  #-----------------------------------------------------
+  # The Patch Group Operation Input - Group
+  #-----------------------------------------------------
+  PatchGroupOperationRequestObject:
+    type: object
+    properties:
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+      Operations:
+        type: array
+        items:
+          $ref: "#/definitions/GroupItemObj"
+
+  GroupItemObj:
+    type: object
+    properties:
+      op:
+        type: string
+        enum: ["add", "remove", "replace"]
+      value:
+        type: object
+        properties:
+          members:
+            type: array
+            items:
+              type: object
+              example:
+                display: "kris"
+                value: "409ca90b-2ba6-4474-9a45-2cf7376e6e43"
+
+
+
+  #-----------------------------------------------------
+  # The Patch Group Operation Output - Group
+  #-----------------------------------------------------
+  PatchGroupOperationResponseObject:
+    type: object
+    properties:
+      displayName:
+        type: string
+        example: 'PRIMARY/manager'
+      meta:
+        type: object
+        properties:
+          created:
+            type: string
+            example: "2019-08-26T14:27:36"
+          location:
+            type: string
+            example: "https://localhost:9443/scim2/Groups/7bac6a86-1f21-4937-9fb1-5be4a93ef469"
+          lastModified:
+            type: string
+            example: "2019-08-26T14:27:36"
+          resourceType:
+            type: string
+            example: Group
+      schemas:
+        type: object
+        example:
+          - urn:ietf:params:scim:schemas:core:2.0:Group
+      id:
+        type: string
+        example: "7bac6a86-1f21-4937-9fb1-5be4a93ef469"
+      members:
+        type: array
+        items:
+          type: object
+          example:
+            - display: "kris"
+              value: "409ca90b-2ba6-4474-9a45-2cf7376e6e43"
+            - display: "kim"
+              value: "007bfc66-e4f0-4d53-9dfd-0c4a77b33257"
+  #-----------------------------------------------------
+  # The User List Response Object
+  #-----------------------------------------------------
+  UserObjectListResponseObject:
+    type: object
+    properties:
+      totalResults:
+        type: integer
+        example: 1
+      startIndex:
+        type: integer
+        example: 1
+      itemsPerPage:
+        type: integer
+        example: 1
+      schemas:
+        type: object
+        example:
+          - urn:ietf:params:scim:api:messages:2.0:ListResponse
+      Resources:
+        type: array
+        items:
+          $ref: "#/definitions/UserResponseObject"
+
+  #-----------------------------------------------------
+  # Search Request Object- User
+  #-----------------------------------------------------
+  UserSearchRequestObject:
+    type: object
+    example:
+      schemas:
+        - urn:ietf:params:scim:api:messages:2.0:SearchRequest
+      attributes:
+        - name.familyName
+        - userName
+      filter: "userName sw ki and name.familyName co err"
+      domain: 'PRIMARY'
+      startIndex: 1
+      count: 10
+  #-----------------------------------------------------
+  # Bulk User Request Object
+  #-----------------------------------------------------
+  BulkUserRequestObject:
+    type: object
+    properties:
+      failOnErrors:
+        type: integer
+        example: 1
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:api:messages:2.0:BulkRequest"
+      Operations:
+        type: array
+        items:
+          $ref: '#/definitions/BulkUserOb'
+
+
+
+  BulkUserOb:
+    type: object
+    properties:
+      method:
+        type: string
+        example: "POST"
+      path:
+        type: string
+        example: "/Users"
+      bulkId:
+        type: string
+        example: "ytrewq"
+      data:
+        type: object
+        properties:
+          schemas:
+            type: array
+            items:
+              type: string
+              example:
+                "urn:ietf:params:scim:schemas:core:2.0:User"
+          username:
+            type: string
+            example: "jesse"
+          password:
+            type: string
+            example: "jesspass"
+
+  #-----------------------------------------------------
+  # Bulk User Response Object
+  #-----------------------------------------------------
+  BulkUserResponseObject:
+    type: object
+    properties:
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:api:messages:2.0:BulkResponse"
+      Operations:
+        $ref: '#/definitions/OperationObBulk'
+
+  OperationObBulk:
+    type: object
+    properties:
+      bulkId:
+        type: string
+        example: "qwerty"
+      method:
+        type: string
+        example: "POST"
+      location:
+        type: string
+        example: "https://localhost:9443/scim2/Users/81cbba1b-c259-485d-8ba4-79afb03e5bd1"
+      status:
+        type: object
+        properties:
+          code:
+            type: string
+            example: "201"
+
+  #-----------------------------------------------------
+  # Resource Type response
+  #-----------------------------------------------------
+  ResourceTypeResponse:
+    type: object
+    properties:
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+      resourceType:
+        type: array
+        items:
+          $ref: '#/definitions/UserObResourceType'
+
+
+  UserObResourceType:
+    type: object
+    properties:
+      schema:
+        type: string
+        example: "urn:ietf:params:scim:schemas:core:2.0:User"
+      endpoint:
+        type: string
+        example:  "/Users"
+      meta:
+        type: object
+        properties:
+          location:
+            type: string
+            example: "https://localhost:9443/scim2/ResourceType/User"
+          resourceType:
+            type: string
+            example: "ResourceType"
+      name:
+        type: string
+        example: "User"
+      description:
+        type: string
+        example: "User Account"
+      schemaExtensions:
+        type: object
+        properties:
+          schema:
+            type: string
+            example: "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+          required:
+            type: boolean
+            example: false
+      id:
+        type: string
+        example: "User"
+
+  #-----------------------------------------------------
+  # SP Config Response Object
+  #-----------------------------------------------------
+  SPConfigResponse:
+    type: object
+    example:
+      patch:
+        supported: true
+      filter:
+        maxResults: 200
+        supported: true
+      documentationUri: http://example.com/help/scim.html
+      authenticationSchemes:
+        - name: OAuth Bearer Token
+          description: Authentication scheme using the OAuth Bearer Token Standard
+          specUri: http://www.rfc-editor.org/info/rfc6750
+          type: oauthbearertoken
+          primary: true
+        - name: HTTP Basic
+          description: Authentication scheme using the HTTP Basic Standard
+          specUri: http://www.rfc-editor.org/info/rfc2617
+          type: httpbasic
+          primary: false
+      schemas:
+        - urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig
+      etag:
+        supported: false
+      sort:
+        supported: false
+      bulk:
+        maxPayloadSize: 1048576
+        maxOperations: 1000
+        supported: true
+      changePassword:
+        supported: false
+  #-----------------------------------------------------
+  # The permission response Object
+  #-----------------------------------------------------
+  GroupPermissionResponseObject:
+    type: array
+    items:
+      type: string
+      example:
+        - "/permission/admin/login"
+        - "/permission/admin/manage/search"
+        - "/permission/admin/manage/search/advanced-search"
+        - "/permission/admin/manage/search/resources"
+        - "/permission/admin/manage/add"
+        - "/permission/admin/manage/add/module"
+        - "/permission/admin/manage/add/service"
+        - "/permission/admin/manage/add/webapp"
+
+  #-----------------------------------------------------
+  # The permission patch request Object
+  #-----------------------------------------------------
+  PermissionPatchOpperationRequestObject:
+    type: object
+    properties:
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+      Operations:
+        type: array
+        items:
+          $ref: '#/definitions/OperationItem'
+
+
+
+
+  #-----------------------------------------------------
+  # The permission patch response Object
+  #-----------------------------------------------------
+  PermissionPatchResponseObject:
+    type: array
+    items:
+      type: string
+      example:
+        - "/permission/admin/configure/security/usermgt"
+        - "/permission/admin/configure/security/usermgt/passwords"
+        - "/permission/admin/configure/security/usermgt/profiles"
+        - "/permission/admin/configure/security/usermgt/users"
+        - "/permission/admin/configure/security/usermgt/provisioning"
+        - "/permission/admin/login"
+        - "/permission/admin/manage/search"
+        - "/permission/admin/manage/search/advanced-search"
+        - "/permission/admin/manage/search/resources"
+        - "/permission/admin/manage/add"
+        - "/permission/admin/manage/add/module"
+        - "/permission/admin/manage/add/service"
+        - "/permission/admin/manage/add/webapp"
+
+  #-----------------------------------------------------
+  # The permission patch request Object
+  #-----------------------------------------------------
+  PermissionPutRequestObject:
+    type: array
+    items:
+      type: string
+      example:
+        - "/permission/admin/configure/security/usermgt"
+
+
+  #-----------------------------------------------------
+  # The permission patch response Object
+  #-----------------------------------------------------
+  PermissionPutResponseObject:
+    type: array
+    items:
+      type: string
+      example:
+        - "/permission/admin/configure/security/usermgt"
+        - "/permission/admin/configure/security/usermgt/passwords"
+        - "/permission/admin/configure/security/usermgt/profiles"
+        - "/permission/admin/configure/security/usermgt/users"
+        - "/permission/admin/configure/security/usermgt/provisioning"
+
+
+  #-----------------------------------------------------
+  # The Error Invalid Input
+  #-----------------------------------------------------
+  ErrorIvalidInput:
+    type : object
+    required:
+      - status
+      - schema
+      - detail
+    properties:
+      status:
+        type: string
+        example: "400"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      scimType:
+        type: string
+        example: "invalidSyntax"
+      detail:
+        type: string
+        example: "Request is unparsable, syntactically incorrect, or violates schema."
+  #-----------------------------------------------------
+  # The Error Unauthorized
+  #-----------------------------------------------------
+  ErrorUnauthorized:
+    type : object
+    required:
+      - status
+      - schema
+    properties:
+      status:
+        type: string
+        example: "401"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      scimType:
+        type: string
+        example: "Unauthorized"
+
+  #-----------------------------------------------------
+  # The Error User Not Available
+  #-----------------------------------------------------
+  ErrorUserNotAvailable:
+    type : object
+    required:
+      - status
+      - schema
+      - detail
+    properties:
+      status:
+        type: string
+        example: "404"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      detail:
+        type: string
+        example: "No user with the id : 008bba85-451d-414b-87de-c03b5a1f4217 in the user store."
+
+  #-----------------------------------------------------
+  # The Error Group Not Available
+  #-----------------------------------------------------
+  ErrorGroupNotAvailable:
+    type : object
+    required:
+      - status
+      - schema
+      - detail
+    properties:
+      status:
+        type: string
+        example: "404"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      detail:
+        type: string
+        example: "No Group with the id : 89a2a363-c90f-47e9-afae-949d026dad16 in the user store."
+  #-----------------------------------------------------
+  # The Error Schema Not Found
+  #-----------------------------------------------------
+  ErrorSchemaNotFound:
+    type : object
+    required:
+      - status
+      - schema
+      - detail
+    properties:
+      status:
+        type: string
+        example: "404"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      detail:
+        type: string
+        example: "Schema not found."
+
+  #-----------------------------------------------------
+  # The Error No groups found
+  #-----------------------------------------------------
+  ErrorNoGroupAvailable:
+    type : object
+    required:
+      - status
+      - schema
+      - detail
+    properties:
+      status:
+        type: string
+        example: "404"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      detail:
+        type: string
+        example: "Group not found in the user store."
+
+  #-----------------------------------------------------
+  # The Error No groups found from search
+  #-----------------------------------------------------
+  GroupSearchErrorResponseObject:
+    type: object
+    required:
+      - totalResults
+      - startIndex
+      - itemsPerPage
+      - schemas
+    properties:
+      totalResults:
+        type: integer
+        example: 0
+      startIndex:
+        type: integer
+        example: 1
+      itemsPerPage:
+        type: integer
+        example: 0
+      schemas:
+        type: array
+        items:
+          example: "urn:ietf:params:scim:api:messages:2.0:ListResponse"
+
+  #-----------------------------------------------------
+  # The Error User Not Available
+  #-----------------------------------------------------
+  ErroGroupAlreadyAvailable:
+    type : object
+    required:
+      - status
+      - schema
+      - detail
+    properties:
+      status:
+        type: string
+        example: "409"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      detail:
+        type: string
+        example: "Group with name: PRIMARY/manager already exists in the system."
+
+  #-----------------------------------------------------
+  # The Error Internal Server Error
+  #-----------------------------------------------------
+  ErrorInternalServerError:
+    type : object
+    required:
+      - status
+      - schema
+      - detail
+    properties:
+      status:
+        type: string
+        example: "500"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      detail:
+        type: string
+        example: "Internal Server Error."
+
+  #-----------------------------------------------------
+  # The Error Not Implemented
+  #-----------------------------------------------------
+  ErrorNotimplemented:
+    type : object
+    required:
+      - status
+      - schema
+      - detail
+    properties:
+      status:
+        type: string
+        example: "501"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      detail:
+        type: string
+        example: "Self delete is not supported."
+
+
+  OperationItem:
+    type: object
+    properties:
+      op:
+        type: string
+        enum: ["add", "remove"]
+      value:
+        type: array
+        items:
+          type: string
+          example: "/permission/admin/configure/security/usermgt"

@@ -298,7 +298,7 @@
         <inbound.auth.oauth.version>6.2.0</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.5.0-m3</carbon.kernel.version>
-        <identity.framework.version>5.14.46-SNAPSHOT</identity.framework.version>
+        <identity.framework.version>5.14.66-SNAPSHOT</identity.framework.version>
         <junit.version>4.11</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <charon.version>3.2.2</charon.version>

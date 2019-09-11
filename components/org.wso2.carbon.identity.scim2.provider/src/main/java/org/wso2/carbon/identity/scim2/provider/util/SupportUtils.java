@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.scim2.provider.util;
 import org.apache.axiom.om.util.Base64;
 import org.apache.commons.collections.MapUtils;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.user.mgt.UserAdminManagerImpl;
+import org.wso2.carbon.user.mgt.RolePermissionManagementServiceImpl;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 
 import javax.ws.rs.core.Response;
@@ -32,8 +32,10 @@ import java.util.Map;
  */
 public class SupportUtils {
 
-    private SupportUtils() {}
-    private static UserAdminManagerImpl userAdminManager;
+    private SupportUtils() {
+    }
+
+    private static RolePermissionManagementServiceImpl rolePermissionManagementService;
 
     /**
      * build the jaxrs response
@@ -63,7 +65,7 @@ public class SupportUtils {
      * @param encodedString
      * @return
      */
-    public static String getUserNameFromBase64EncodedString(String encodedString){
+    public static String getUserNameFromBase64EncodedString(String encodedString) {
         // decode it and extract username and password
         byte[] decodedAuthHeader = Base64.decode(encodedString.split(" ")[1]);
         String authHeader = new String(decodedAuthHeader);
@@ -82,11 +84,12 @@ public class SupportUtils {
         return PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
     }
 
-    public static UserAdminManagerImpl getUserAdminManager() {
-        return userAdminManager;
+    public static RolePermissionManagementServiceImpl getRolePermissionManagementService() {
+        return rolePermissionManagementService;
     }
 
-    public static void setUserAdminManager(UserAdminManagerImpl userAdminManager) {
-        SupportUtils.userAdminManager = userAdminManager;
+    public static void setRolePermissionManagementService(RolePermissionManagementServiceImpl
+                                                                  rolePermissionManagementServiceImpl) {
+        SupportUtils.rolePermissionManagementService = rolePermissionManagementServiceImpl;
     }
 }
