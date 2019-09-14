@@ -80,6 +80,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilteringEnhancementsEnabled;
@@ -1367,7 +1369,7 @@ public class SCIMUserManager implements UserManager {
                 extensionClaims = carbonClaimManager.getAllClaimMappings(
                         SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
             }
-            Map<String, String> attributes = new HashMap<>();
+            final Map<String, String> attributes = new HashMap<>();
             for (ClaimMapping claim : coreClaims) {
                 attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
             }
@@ -1379,6 +1381,25 @@ public class SCIMUserManager implements UserManager {
                     attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
                 }
             }
+            
+            //set default mapped attributes for secondaries user stores
+            if(domainName != UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME) {
+                Map<String, String> primaryAttributes = getAllAttributes(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+                primaryAttributes.forEach(
+                        new BiConsumer<String, String>() {
+                            @Override
+                            public void accept(String key, String value) {
+                                attributes.merge(key, value, new BiFunction<String, String, String>() {
+                                    @Override
+                                    public String apply(String v1, String v2) {
+                                        return v1;
+                                    }
+                                });
+                            }
+                        }
+                );
+            }
+            
             return attributes;
         } catch (UserStoreException e) {
             throw new UserStoreException("Error in filtering users by multi attributes ", e);
@@ -1405,7 +1426,7 @@ public class SCIMUserManager implements UserManager {
 
         try {
             if (StringUtils.isEmpty(domainName)) {
-                domainName = "PRIMARY";
+                domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
             }
             Map<String, String> attributes = getAllAttributes(domainName);
             if (log.isDebugEnabled()) {
