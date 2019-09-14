@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.internal;
 
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.user.core.service.RealmService;
 
 /**
@@ -27,6 +28,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 public class SCIMCommonComponentHolder {
 
     private static RealmService realmService;
+    private static ClaimMetadataManagementService claimManagementService;
 
     /**
      * Get realm service.
@@ -48,4 +50,13 @@ public class SCIMCommonComponentHolder {
         SCIMCommonComponentHolder.realmService = realmService;
     }
 
+    public static ClaimMetadataManagementService getClaimManagementService() {
+
+        return claimManagementService;
+    }
+
+    public static void setClaimManagementService(ClaimMetadataManagementService claimManagementService) {
+
+        SCIMCommonComponentHolder.claimManagementService = claimManagementService;
+    }
 }

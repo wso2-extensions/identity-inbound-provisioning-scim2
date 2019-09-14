@@ -27,6 +27,11 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -96,12 +101,38 @@ public class SCIMUserManager implements UserManager {
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
+    private String tenantDomain = null;
+    private ClaimMetadataManagementService claimMetadataManagementService = null;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
+
+
+    private static final String NAME = "name";
+    private static final String DESCRIPTION = "description";
+    private static final String TYPE = "type";
+    private static final String MULTIVALUED = "multiValued";
+    private static final String CASE_EXACT = "caseExact";
+    private static final String REQUIRED = "required";
+    private static final String MUTABILITY = "mutability";
+    private static final String RETURNED = "returned";
+    private static final String UNIQUENESS = "uniqueness";
+
+    // Additional wso2 user schema properties.
+    private static final String DISPLAY_NAME_PROPERTY = "displayName";
+    private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
+    private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
 
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
         carbonUM = carbonUserStoreManager;
         carbonClaimManager = claimManager;
+    }
+
+    public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager, String tenantDomain,
+                           ClaimMetadataManagementService claimMetadataManagementService) {
+        this.carbonUM = carbonUserStoreManager;
+        this.carbonClaimManager = claimManager;
+        this.tenantDomain = tenantDomain;
+        this.claimMetadataManagementService = claimMetadataManagementService;
     }
 
     @Override
@@ -624,7 +655,7 @@ public class SCIMUserManager implements UserManager {
             if (claims.containsKey(SCIMConstants.UserSchemaConstants.GROUP_URI)) {
                 claims.remove(SCIMConstants.UserSchemaConstants.GROUP_URI);
             }
-            
+
                 /* Skip roles list since we map SCIM groups to local roles internally. It shouldn't be allowed to
                 manipulate SCIM groups from user endpoint as this attribute has a mutability of "readOnly". Group
                 changes must be applied via Group Resource */
@@ -2266,6 +2297,102 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException("Error in updating the group", e);
 
         }
+    }
+
+    @Override
+    public List<Map<String, String>> getUserSchema() throws CharonException, NotImplementedException,
+            BadRequestException {
+
+        List<Map<String, String>> userSchemaAttributeList = new ArrayList<>();
+
+        try {
+            List<ExternalClaim> scimClaimList =
+                    this.claimMetadataManagementService.getExternalClaims(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT
+                            , tenantDomain);
+            List<LocalClaim> localClaimList = this.claimMetadataManagementService.getLocalClaims(tenantDomain);
+
+            if (scimClaimList != null && localClaimList != null) {
+                for (ExternalClaim scimClaim : scimClaimList) {
+                    LocalClaim mappedLocalClaim = getMappedLocalClaim(scimClaim, localClaimList);
+
+                    if (mappedLocalClaim != null) {
+
+                        // TODO: Replace mappedLocalClaim.getClaimProperties() with mappedLocalClaim.getClaimProperty()
+                        String supportedByDefault =
+                                mappedLocalClaim.getClaimProperties().get(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
+
+                        if (Boolean.parseBoolean(supportedByDefault)) {
+                            // Return schema of supported-by-default claims only.
+                            Map<String, String> schemaAttributes = getSchemaAttributes(scimClaim,
+                                    mappedLocalClaim);
+                            userSchemaAttributeList.add(schemaAttributes);
+                        }
+                    }
+
+
+                }
+            }
+
+        } catch (ClaimMetadataException e) {
+            throw new CharonException("Error while retrieving schema attribute details.", e);
+        }
+
+        return userSchemaAttributeList;
+    }
+
+    private LocalClaim getMappedLocalClaim(ExternalClaim scimClaim, List<LocalClaim> localClaimList) {
+
+        LocalClaim mappedLocalClaim = null;
+        if (localClaimList != null) {
+            for (LocalClaim localClaim : localClaimList) {
+                if (localClaim.getClaimURI().equals(scimClaim.getMappedLocalClaim())) {
+                    mappedLocalClaim = localClaim;
+                    break;
+                }
+            }
+        }
+        return mappedLocalClaim;
+    }
+
+    private Map<String, String> getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim) {
+
+        Map<String, String> scimAttributeProperties = new HashMap<>();
+
+        String name = scimClaim.getClaimURI();
+        if (name.startsWith(scimClaim.getClaimDialectURI())) {
+            name = name.substring(scimClaim.getClaimDialectURI().length());
+        }
+
+        scimAttributeProperties.put(NAME, name);
+        // TODO: Replace mappedLocalClaim.getClaimProperties() with mappedLocalClaim.getClaimProperty()
+        scimAttributeProperties.put(DESCRIPTION,
+                mappedLocalClaim.getClaimProperties().get(ClaimConstants.DESCRIPTION_PROPERTY));
+        scimAttributeProperties.put(REQUIRED,
+                mappedLocalClaim.getClaimProperties().get(ClaimConstants.REQUIRED_PROPERTY));
+        String readOnlyProperty = mappedLocalClaim.getClaimProperties().get(ClaimConstants.READ_ONLY_PROPERTY);
+        if (Boolean.parseBoolean(readOnlyProperty)) {
+            scimAttributeProperties.put(MUTABILITY, "readOnly");
+        } else {
+            scimAttributeProperties.put(MUTABILITY, "readWrite");
+
+        }
+
+        // Fixed schema attributes
+        scimAttributeProperties.put(CASE_EXACT, "false");
+        scimAttributeProperties.put(TYPE, "simple");
+        scimAttributeProperties.put(MULTIVALUED, "false");
+        scimAttributeProperties.put(RETURNED, "default");
+        scimAttributeProperties.put(UNIQUENESS, "none");
+
+        // Additional schema attributes
+        scimAttributeProperties.put(DISPLAY_NAME_PROPERTY,
+                mappedLocalClaim.getClaimProperties().get(ClaimConstants.DISPLAY_NAME_PROPERTY));
+        scimAttributeProperties.put(DISPLAY_ORDER_PROPERTY,
+                mappedLocalClaim.getClaimProperties().get(ClaimConstants.DISPLAY_ORDER_PROPERTY));
+        scimAttributeProperties.put(REGULAR_EXPRESSION_PROPERTY,
+                mappedLocalClaim.getClaimProperties().get(ClaimConstants.REGULAR_EXPRESSION_PROPERTY));
+
+        return scimAttributeProperties;
     }
 
     /**

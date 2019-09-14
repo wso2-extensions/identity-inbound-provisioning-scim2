@@ -28,6 +28,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMTenantMgtListener;
@@ -149,6 +150,36 @@ public class SCIMCommonComponent {
             logger.debug("realmService unset in SCIMCommonComponent bundle");
         }
         SCIMCommonComponentHolder.setRealmService(null);
+    }
+
+    /**
+     * Set claim metadata management service implementation
+     *
+     * @param claimManagementService ClaimManagementService
+     */
+    @Reference(
+            name = "claimManagementService",
+            service = org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService .class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetClaimMetadataManagementService")
+    protected void setClaimMetadataManagementService(ClaimMetadataManagementService claimManagementService) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("claimManagementService set in SCIMCommonComponent bundle");
+        }
+        SCIMCommonComponentHolder.setClaimManagementService(claimManagementService);
+    }
+
+    /**
+     * Unset claim metadata management service implementation
+     */
+    protected void unsetClaimMetadataManagementService(ClaimMetadataManagementService claimManagementService) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("claimManagementService unset in SCIMCommonComponent bundle");
+        }
+        SCIMCommonComponentHolder.setClaimManagementService(null);
     }
 
     @Deactivate

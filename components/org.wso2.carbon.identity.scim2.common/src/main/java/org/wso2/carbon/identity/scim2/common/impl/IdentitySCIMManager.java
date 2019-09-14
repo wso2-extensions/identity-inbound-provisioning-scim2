@@ -117,7 +117,7 @@ public class IdentitySCIMManager {
                     //get claim manager for manipulating attributes
                     claimManager = (ClaimManager) userRealm.getClaimManager();
                     scimUserManager = new SCIMUserManager((UserStoreManager) userRealm.getUserStoreManager(),
-                            claimManager);
+                            claimManager, tenantDomain, SCIMCommonComponentHolder.getClaimManagementService());
                 }
             } else {
                 String error = "Can not obtain carbon realm service..";
