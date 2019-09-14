@@ -28,6 +28,10 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
@@ -103,12 +107,22 @@ public class SCIMUserManager implements UserManager {
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
+    private String tenantDomain = null;
+    private ClaimMetadataManagementService claimMetadataManagementService = null;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
 
+    @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
         carbonUM = carbonUserStoreManager;
         carbonClaimManager = claimManager;
+    }
+
+    public SCIMUserManager(UserStoreManager carbonUserStoreManager,
+                           ClaimMetadataManagementService claimMetadataManagementService, String tenantDomain) {
+        this.carbonUM = carbonUserStoreManager;
+        this.tenantDomain = tenantDomain;
+        this.claimMetadataManagementService = claimMetadataManagementService;
     }
 
     @Override
@@ -632,7 +646,7 @@ public class SCIMUserManager implements UserManager {
             if (claims.containsKey(SCIMConstants.UserSchemaConstants.GROUP_URI)) {
                 claims.remove(SCIMConstants.UserSchemaConstants.GROUP_URI);
             }
-            
+
                 /* Skip roles list since we map SCIM groups to local roles internally. It shouldn't be allowed to
                 manipulate SCIM groups from user endpoint as this attribute has a mutability of "readOnly". Group
                 changes must be applied via Group Resource */
@@ -1113,7 +1127,7 @@ public class SCIMUserManager implements UserManager {
         Map<String, String> attributes;
         try {
             attributes = getAllAttributes(domainName);
-        } catch (UserStoreException e) {
+        } catch (CharonException e) {
             String errorMessage = String.format("Error while retrieving attributes for the domain %s.", domainName);
             throw new CharonException(errorMessage, e);
         }
@@ -1357,37 +1371,76 @@ public class SCIMUserManager implements UserManager {
      *
      * @param domainName Domain name.
      * @return All attributes of user.
-     * @throws UserStoreException
+     * @throws CharonException
      */
-    private Map<String, String> getAllAttributes(String domainName) throws UserStoreException {
+    private Map<String, String> getAllAttributes(String domainName) throws CharonException {
 
-        ClaimMapping[] userClaims;
-        ClaimMapping[] coreClaims;
-        ClaimMapping[] extensionClaims = null;
+        Map<String, String> attributes = new HashMap<>();
 
-        try {
-            coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
-            userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
+        if (claimMetadataManagementService != null) {
+            attributes.putAll(getMappedAttributes(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT, domainName));
+            attributes.putAll(getMappedAttributes(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT, domainName));
+
             if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
-                extensionClaims = carbonClaimManager.getAllClaimMappings(
-                        SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
+                String extensionURI = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI();
+                attributes.putAll(getMappedAttributes(extensionURI, domainName));
             }
-            Map<String, String> attributes = new HashMap<>();
-            for (ClaimMapping claim : coreClaims) {
-                attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
-            }
-            for (ClaimMapping claim : userClaims) {
-                attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
-            }
-            if (extensionClaims != null) {
-                for (ClaimMapping claim : extensionClaims) {
+        } else {
+            try {
+                ClaimMapping[] userClaims;
+                ClaimMapping[] coreClaims;
+                ClaimMapping[] extensionClaims = null;
+
+                coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
+                userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
+                if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+                    extensionClaims = carbonClaimManager.getAllClaimMappings(
+                            SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
+                }
+                for (ClaimMapping claim : coreClaims) {
                     attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
                 }
+                for (ClaimMapping claim : userClaims) {
+                    attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
+                }
+                if (extensionClaims != null) {
+                    for (ClaimMapping claim : extensionClaims) {
+                        attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
+                    }
+                }
+            } catch (UserStoreException e) {
+                throw new CharonException("Error in filtering users by multi attributes ", e);
             }
-            return attributes;
-        } catch (UserStoreException e) {
-            throw new UserStoreException("Error in filtering users by multi attributes ", e);
         }
+        return attributes;
+
+    }
+
+    /**
+     * Get mapped attribute assigned to the specified domain for each claim in the specified external claim dialect.
+     * @param extClaimDialectName
+     * @param domainName
+     * @return
+     * @throws ClaimMetadataException
+     */
+    private Map<String, String> getMappedAttributes(String extClaimDialectName, String domainName)
+            throws CharonException {
+
+        Map<String, String> attributes = new HashMap<>();
+        Map<ExternalClaim, LocalClaim> externalClaimLocalClaimMap = getMappedLocalClaimsForDialect(extClaimDialectName,
+                tenantDomain);
+
+        if (externalClaimLocalClaimMap != null) {
+            for (Map.Entry<ExternalClaim, LocalClaim> entry: externalClaimLocalClaimMap.entrySet()) {
+
+                ExternalClaim externalClaim = entry.getKey();
+                LocalClaim mappedLocalClaim = entry.getValue();
+
+                attributes.put(externalClaim.getClaimURI(), mappedLocalClaim.getMappedAttribute(domainName));
+            }
+        }
+
+        return attributes;
     }
 
     /**
