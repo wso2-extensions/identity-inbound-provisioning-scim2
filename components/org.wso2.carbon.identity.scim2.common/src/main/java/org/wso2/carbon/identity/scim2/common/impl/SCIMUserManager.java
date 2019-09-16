@@ -1083,9 +1083,17 @@ public class SCIMUserManager implements UserManager {
                     offset));
         }
         try {
-            return ((PaginatedUserStoreManager) carbonUM)
+            String[] userNames =  ((PaginatedUserStoreManager) carbonUM)
                     .getUserList(condition, domainName, UserCoreConstants.DEFAULT_PROFILE, limit, offset, sortBy,
                             sortOrder);
+            
+            //prefix with domain name
+            String[] userNamesWithDomain = new String[userNames.length];
+            for(int i=0 ; i<userNames.length ; i++) {
+                userNamesWithDomain[i] = domainName + CarbonConstants.DOMAIN_SEPARATOR + userNames[i];
+            }
+            return userNamesWithDomain;
+
         } catch (UserStoreException e) {
             String errorMessage = String
                     .format("Error while retrieving users for the domain: %s with limit: %d and offset: %d.",
