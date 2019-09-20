@@ -22,6 +22,9 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.carbon.user.mgt.RolePermissionManagementServiceImpl;
 
+/**
+ *  Role Permission Management OSGi service factory bean class.
+ */
 public class RolePermissionManagementServiceImplFactory extends
                                       AbstractFactoryBean<RolePermissionManagementServiceImpl> {
 

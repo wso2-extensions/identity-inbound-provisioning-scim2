@@ -315,6 +315,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: No Group found
           schema:
@@ -359,6 +363,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Group is not found
           schema:
@@ -398,6 +406,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid groups are not found
           schema:
@@ -441,6 +453,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -487,11 +503,14 @@ paths:
           description: Group is updated
           schema:
             $ref: '#/definitions/GroupPutResponseObject'
-
         401:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -522,6 +541,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -572,6 +595,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -608,6 +635,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -648,6 +679,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -689,6 +724,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -763,6 +802,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid users are not found
           schema:
@@ -812,6 +855,11 @@ paths:
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
 
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
+
         404:
           description: Valid User is not found
           schema:
@@ -852,6 +900,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid users are not found
           schema:
@@ -896,6 +948,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid user is not found
           schema:
@@ -945,6 +1001,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid user is not found
           schema:
@@ -976,6 +1036,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid user is not found
           schema:
@@ -1032,6 +1096,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid user is not found
           schema:
@@ -1067,6 +1135,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         409:
           description: Users already exists
 
@@ -2044,6 +2116,25 @@ definitions:
       scimType:
         type: string
         example: "Unauthorized"
+
+    #-----------------------------------------------------
+    # The Error Forbidden
+    #-----------------------------------------------------
+    ErrorForbidden:
+      type: object
+      required:
+        - status
+        - schema
+      properties:
+        status:
+          type: string
+          example: "403"
+        schemas:
+          type: string
+          example: "urn:ietf:params:scim:api:messages:2.0:Error"
+        scimType:
+          type: string
+          example: "Forbidden"
 
   #-----------------------------------------------------
   # The Error User Not Available
