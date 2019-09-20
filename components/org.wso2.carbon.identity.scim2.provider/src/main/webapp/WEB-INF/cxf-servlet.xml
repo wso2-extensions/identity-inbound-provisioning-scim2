@@ -79,6 +79,15 @@
 
     <bean id="BulkBean" class="org.wso2.carbon.identity.scim2.provider.resources.BulkResource"/>
 
+    <jaxrs:server id="schemasResource" address="/Schemas">
+        <jaxrs:serviceBeans>
+            <ref bean="schemasBean"/>
+        </jaxrs:serviceBeans>
+
+    </jaxrs:server>
+
+    <bean id="schemasBean" class="org.wso2.carbon.identity.scim2.provider.resources.SchemaResource"/>
+
     <bean id="SupportUtilsBean" class="org.wso2.carbon.identity.scim2.provider.util.SupportUtils">
         <property name="rolePermissionManagementService" ref="RolePermissionManagementServiceImplFactoryBean"/>
     </bean>

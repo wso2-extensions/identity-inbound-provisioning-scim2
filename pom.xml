@@ -28,7 +28,7 @@
     <artifactId>identity-inbound-provisioning-scim2</artifactId>
     <packaging>pom</packaging>
     <modelVersion>4.0.0</modelVersion>
-    <version>1.4.4-SNAPSHOT</version>
+    <version>1.4.6-SNAPSHOT</version>
     <name>WSO2 Carbon - SCIM Provisioning Module</name>
     <description>
         SCIM 2.0 Implementation for C4
@@ -59,11 +59,6 @@
                 <groupId>commons-collections.wso2</groupId>
                 <artifactId>commons-collections</artifactId>
                 <version>${commons-collections.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-context</artifactId>
-                <version>${spring-context.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon</groupId>
@@ -136,11 +131,7 @@
                 <artifactId>org.wso2.carbon.identity.claim.metadata.mgt</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon.identity.framework</groupId>
-                <artifactId>org.wso2.carbon.user.mgt</artifactId>
-                <version>${identity.framework.version}</version>
-            </dependency>
+
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
                 <artifactId>org.wso2.carbon.identity.scim2.common</artifactId>
@@ -298,7 +289,7 @@
         <inbound.auth.oauth.version>6.2.0</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.5.0-m3</carbon.kernel.version>
-        <identity.framework.version>5.14.66-SNAPSHOT</identity.framework.version>
+        <identity.framework.version>5.14.0</identity.framework.version>
         <junit.version>4.11</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <charon.version>3.2.2</charon.version>
@@ -337,7 +328,6 @@
         <maven.surefire.plugin.version>2.18.1</maven.surefire.plugin.version>
         <!-- Pax Logging Version -->
         <pax.logging.api.version>1.10.1</pax.logging.api.version>
-        <spring-context.version>5.1.1.RELEASE</spring-context.version>
     </properties>
 
     <build>
