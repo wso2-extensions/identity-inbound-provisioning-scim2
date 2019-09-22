@@ -2632,6 +2632,9 @@ public class SCIMUserManager implements UserManager {
                             .contains(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getCode())) {
                         log.error("UserNotFound - User: " + userName + " does not exist in: " + userStoreDomainName
                                 + ", hence skipping to add as the member for the group: " + groupName);
+                        if (log.isDebugEnabled()) {
+                            log.debug("User: " + userName + " does not exist in: " + userStoreDomainName, e);
+                        }
                         continue;
                     } else {
                         throw new org.wso2.carbon.user.core.UserStoreException(
