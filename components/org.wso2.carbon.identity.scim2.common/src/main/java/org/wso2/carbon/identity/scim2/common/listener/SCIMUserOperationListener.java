@@ -172,8 +172,9 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
 
         String lastModifiedDate = AttributeUtil.formatDateTime(Instant.now());
-        claims.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, lastModifiedDate);
-
+        Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
+        String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
+        claims.put(modifiedLocalClaimUri, lastModifiedDate);
         return true;
     }
 
