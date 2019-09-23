@@ -385,4 +385,19 @@ public class SCIMCommonUtils {
             return null;
         }
     }
+
+    /**
+     * Checks whether the given role is an internal or application role.
+     *
+     * @param roleName Role name.
+     * @return Whether the passed role is "internal" or "application".
+     */
+    public static boolean isHybridRole(String roleName) {
+
+        return roleName.toLowerCase().startsWith((SCIMCommonConstants.INTERNAL_DOMAIN +
+                CarbonConstants.DOMAIN_SEPARATOR).toLowerCase()) ||
+                roleName.toLowerCase().startsWith((SCIMCommonConstants.APPLICATION_DOMAIN +
+                        CarbonConstants.DOMAIN_SEPARATOR).toLowerCase());
+    }
+
 }

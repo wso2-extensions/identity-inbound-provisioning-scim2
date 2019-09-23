@@ -222,13 +222,25 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     @Override
     public boolean doPostAddRole(String roleName, String[] userList, org.wso2.carbon.user.api.Permission[] permissions,
                                  UserStoreManager userStoreManager) throws UserStoreException {
+
         try {
-            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
+            if (!isEnable() || userStoreManager == null) {
+                return true;
+            } else if (!userStoreManager.isSCIMEnabled() && SCIMCommonUtils.isHybridRole(roleName)) {
+                log.info("Persisting SCIM metadata for hybrid role: " + roleName + ", created while SCIM is " +
+                        "disabled in the user store.");
+                return postAddRole(roleName, userStoreManager);
+            } else if (!userStoreManager.isSCIMEnabled()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
+
+        return postAddRole(roleName, userStoreManager);
+    }
+
+    private boolean postAddRole(String roleName, UserStoreManager userStoreManager) throws UserStoreException {
 
         try {
 
@@ -258,7 +270,6 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException(e);
         }
-
     }
 
     @Override

@@ -174,6 +174,41 @@ public class GroupDAO {
         }
     }
 
+    /**
+     * Add SCIM attributes to hybrid roles created while SCIM was disabled in the user store.
+     *
+     * @param tenantId       tenant id.
+     * @param attributesList SCIM attribute list.
+     * @throws IdentitySCIMException Error when reading from persistence store.
+     */
+    public void addSCIMGroupAttributesToSCIMDisabledHybridRoles(int tenantId,
+                                                                Map<String, Map<String, String>> attributesList)
+            throws IdentitySCIMException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(); PreparedStatement prepStmt =
+                connection.prepareStatement(SQLQueries.ADD_ATTRIBUTES_SQL)) {
+            prepStmt.setInt(1, tenantId);
+            for (Map.Entry<String, Map<String, String>> entry : attributesList.entrySet()) {
+                prepStmt.setString(2, entry.getKey());
+                for (Map.Entry<String, String> attributes : entry.getValue().entrySet()) {
+                    if (!isExistingAttribute(attributes.getKey(),
+                            SCIMCommonUtils.getGroupNameWithDomain(entry.getKey()), tenantId)) {
+                        prepStmt.setString(3, attributes.getKey());
+                        prepStmt.setString(4, attributes.getValue());
+                        prepStmt.addBatch();
+                    } else {
+                        throw new IdentitySCIMException("Error when adding SCIM Attribute: " + entry.getKey() +
+                                ". An attribute with the same name already exists.");
+                    }
+                }
+            }
+            prepStmt.executeBatch();
+            connection.commit();
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when adding SCIM attributes for hybrid groups.", e);
+        }
+    }
+
     public void updateSCIMGroupAttributes(int tenantId, String roleName,
                                           Map<String, String> attributes) throws IdentitySCIMException {
 
