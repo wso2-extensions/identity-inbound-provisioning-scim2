@@ -18,12 +18,14 @@
 
 package org.wso2.carbon.identity.scim2.common.impl;
 
+import com.google.gson.Gson;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -31,6 +33,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -49,10 +52,12 @@ import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.model.OperationalOperation;
 import org.wso2.carbon.user.core.model.UserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.user.mgt.common.UserAdminException;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
+import org.wso2.charon3.core.encoder.JSONDecoder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
@@ -70,6 +75,7 @@ import org.wso2.charon3.core.utils.ResourceManagerUtil;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
+import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.util.ArrayList;
@@ -3204,4 +3210,130 @@ public class SCIMUserManager implements UserManager {
         }
         return roleList.toArray(new String[roleList.size()]);
     }
+
+
+    /**
+     * Get permissions of a group.
+     *
+     * @param groupName group name.
+     * @return JSONArray of permissions.
+     * @throws UserStoreException
+     * @throws UserAdminException
+     */
+    public JSONArray getGroupPermissions(String groupName) throws UserStoreException, UserAdminException {
+
+        return SCIMCommonComponentHolder.getRolePermissionManagementService().getRolePermissions(groupName,
+                carbonUM.getTenantId());
+    }
+
+    /**
+     * Set permissions of a group.
+     *
+     * @param groupName group name.
+     * @param permissions array of permissions.
+     * @throws UserStoreException
+     * @throws UserAdminException
+     */
+    public void setGroupPermissions(String groupName, String[] permissions) throws UserAdminException {
+
+        SCIMCommonComponentHolder.getRolePermissionManagementService().updateRolePermissions(groupName, permissions);
+    }
+
+    /**
+     * Add or remove from existing permissions of the group.
+     *
+     * @param groupName group name.
+     * @param patchOperationString patch operation string with permission values.
+     * @throws UserStoreException
+     * @throws UserAdminException
+     */
+    public void patchGroupPermissions(String groupName, String patchOperationString) throws UserStoreException,
+            UserAdminException {
+
+        Gson gson = new Gson();
+        JSONArray exitingPermissions = getGroupPermissions(groupName);
+        JSONArray permissions = getPatchOpPermissions(patchOperationString, exitingPermissions);
+        SCIMCommonComponentHolder.getRolePermissionManagementService().updateRolePermissions(groupName, gson
+                .fromJson(permissions.toString(), String[].class));
+    }
+
+    /**
+     * Get the permissions list that need to be updated.
+     *
+     * @param resourceString patch operation string.
+     * @param existingPermissions available permissions for the group.
+     * @return JSONArray of permissions that should PUT to group.
+     * @throws UserAdminException
+     */
+    private JSONArray getPatchOpPermissions(String resourceString, JSONArray existingPermissions) throws
+            UserAdminException {
+
+        JSONDecoder decode = new JSONDecoder();
+        ArrayList<PatchOperation> listOperations;
+        JSONArray existingPermissionsArray = new JSONArray(existingPermissions);
+        JSONArray outputPermissions = new JSONArray();
+        try {
+            // Decode the resource string and get the operations list
+            listOperations  = decode.decodeRequest(resourceString);
+        } catch (BadRequestException e) {
+            log.error("The Patch request is invalid. Can not decode.");
+            throw new UserAdminException("The PATCH operation request is not in the correct format.");
+        }
+        if (!listOperations.isEmpty()) {
+            for (PatchOperation op : listOperations) {
+                if (("add").equals(op.getOperation())) {
+                    outputPermissions = concatJSONArrays(existingPermissions, new JSONArray(op.getValues().toString()));
+                } else if ("remove".equals(op.getOperation())) {
+                    outputPermissions = removeElementsOfJSONArray(existingPermissionsArray,
+                            new JSONArray(op.getValues().toString()));
+                }
+            }
+        }
+        return outputPermissions;
+    }
+
+
+    /**
+     * Concat two JSON Arrays.
+     *
+     * @param arrayA JSONArray
+     * @param arrayB JSONArray
+     * @return
+     */
+    private JSONArray concatJSONArrays(JSONArray arrayA, JSONArray arrayB) {
+
+        if (arrayA.length() > arrayB.length()) {
+            for (int i = 0; i < arrayB.length(); i++) {
+                arrayA.put(arrayB.get(i));
+            }
+            return arrayA;
+        } else {
+            for (int i = 0; i < arrayA.length(); i++) {
+                arrayB.put(arrayA.get(i));
+            }
+            return arrayB;
+        }
+    }
+
+    /**
+     * Remove elements of JSONArray arrayB from JSONArray arrayA
+     *
+     * @param arrayA JSONArray
+     * @param arrayB JSONArray
+     * @return
+     */
+    private JSONArray removeElementsOfJSONArray(JSONArray arrayA, JSONArray arrayB) {
+
+        if (arrayB.length() > 0) {
+            for (int i = 0; i < arrayA.length(); i++) {
+                for (int j = 0; j < arrayB.length(); j++) {
+                    if (arrayA.get(i).equals(arrayB.get(j))) {
+                        arrayA.remove(i);
+                    }
+                }
+            }
+        }
+        return arrayA;
+    }
+
 }
