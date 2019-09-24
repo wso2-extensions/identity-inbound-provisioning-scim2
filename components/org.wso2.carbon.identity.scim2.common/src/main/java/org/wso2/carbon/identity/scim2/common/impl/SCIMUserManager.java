@@ -691,14 +691,14 @@ public class SCIMUserManager implements UserManager {
     /**
      * Filter users using multi-attribute filters or single attribute filters with pagination.
      *
-     * @param node               Node
-     * @param requiredAttributes Required attributes
-     * @param offset             Starting index of the count
-     * @param limit              Number of required results (count)
-     * @param sortBy             SortBy
-     * @param sortOrder          Sort order
-     * @param domainName         Domain that the filter should perform
-     * @return Detailed user list
+     * @param node               Filter condition tree.
+     * @param requiredAttributes Required attributes.
+     * @param offset             Starting index of the count.
+     * @param limit              Number of required results (count).
+     * @param sortBy             SortBy.
+     * @param sortOrder          Sort order.
+     * @param domainName         Domain that the filter should perform.
+     * @return Detailed user list.
      * @throws CharonException
      */
     private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
@@ -713,14 +713,10 @@ public class SCIMUserManager implements UserManager {
         } else if (node instanceof OperationNode) {
             if (log.isDebugEnabled())
                 log.debug("Listing users by multi attribute filter");
-            List<Object> filteredUsers = new ArrayList<>();
-
-            // 0th index is to store total number of results.
-            filteredUsers.add(0);
 
             // Support multi attribute filtering.
             return getMultiAttributeFilteredUsers(node, requiredAttributes, offset, limit, sortBy, sortOrder,
-                    domainName, filteredUsers);
+                    domainName);
         } else {
             throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
         }
@@ -1222,21 +1218,22 @@ public class SCIMUserManager implements UserManager {
     /**
      * This method support multi-attribute filters with paginated search for user(s).
      *
-     * @param node
-     * @param requiredAttributes
-     * @param offset
-     * @param limit
-     * @param sortBy
-     * @param sortOrder
-     * @param domainName
-     * @param filteredUsers
+     * @param node               Filter condition tree.
+     * @param requiredAttributes Required attributes.
+     * @param offset             Starting index of the count.
+     * @param limit              Number of required results (count).
+     * @param sortBy             SortBy.
+     * @param sortOrder          Sort order.
+     * @param domainName         Domain that the filter should perform.
      * @return
      * @throws CharonException
      */
     private List<Object> getMultiAttributeFilteredUsers(Node node, Map<String, Boolean> requiredAttributes, int offset,
-            int limit, String sortBy, String sortOrder, String domainName, List<Object> filteredUsers)
-            throws CharonException {
+            int limit, String sortBy, String sortOrder, String domainName) throws CharonException {
 
+        List<Object> filteredUsers = new ArrayList<>();
+        // 0th index is to store total number of results.
+        filteredUsers.add(0);
         String[] userNames;
         // Handle pagination.
         if (limit > 0) {
@@ -1275,7 +1272,7 @@ public class SCIMUserManager implements UserManager {
      * Get maximum user limit to retrieve.
      *
      * @param domainName Name of the user store
-     * @return
+     * @return Max user limit.
      */
     private int getMaxLimit(String domainName) {
 
@@ -1296,9 +1293,9 @@ public class SCIMUserManager implements UserManager {
     /**
      * Generate condition tree for given filters.
      *
-     * @param node
-     * @param attributes
-     * @return
+     * @param node       Filter condition tree.
+     * @param attributes User attributes.
+     * @return Validated filter condition tree.
      * @throws CharonException
      */
     private Condition getCondition(Node node, Map<String, String> attributes) throws CharonException {
@@ -1350,8 +1347,8 @@ public class SCIMUserManager implements UserManager {
     /**
      * Get all attributes for given domain.
      *
-     * @param domainName
-     * @return
+     * @param domainName Domain name.
+     * @return All attributes of user.
      * @throws UserStoreException
      */
     private Map<String, String> getAllAttributes(String domainName) throws UserStoreException {
@@ -1388,12 +1385,12 @@ public class SCIMUserManager implements UserManager {
     /**
      * Perform multi attribute filtering.
      *
-     * @param node
-     * @param offset
-     * @param limit
-     * @param sortBy
-     * @param sortOrder
-     * @param domainName
+     * @param node       Filter condition tree.
+     * @param offset     Starting index of the count.
+     * @param limit      Number of required results (count).
+     * @param sortBy     SortBy.
+     * @param sortOrder  Sort order.
+     * @param domainName Domain that the filter should perform.
      * @return
      * @throws CharonException
      */
@@ -1415,7 +1412,7 @@ public class SCIMUserManager implements UserManager {
                     UserCoreConstants.DEFAULT_PROFILE, limit, offset, sortBy, sortOrder);
             return userNames;
         } catch (UserStoreException e) {
-            throw new CharonException("Error in filtering users by multi attributes ", e);
+            throw new CharonException("Error in filtering users by multi attributes in domain: " + domainName, e);
         }
     }
 
@@ -2196,7 +2193,7 @@ public class SCIMUserManager implements UserManager {
             // Find out added user's user ids as a list.
             List<Object> newlyAddedUserIds = newGroup.getMembers();
             List<Object> oldGroupUserIds = oldGroup.getMembers();
-            if (oldGroupUserIds != null && oldGroupUserIds.size() > 0) {
+            if (CollectionUtils.isNotEmpty(oldGroupUserIds)) {
                 newlyAddedUserIds.removeAll(oldGroup.getMembers());
             }
             // Find out added members and deleted members..
@@ -2231,28 +2228,30 @@ public class SCIMUserManager implements UserManager {
 
             // We do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
             // Update name if it is changed
-            if (!(oldGroup.getDisplayName().equalsIgnoreCase(newGroup.getDisplayName()))) {
+            String oldGroupDisplayName = oldGroup.getDisplayName();
+            String newGroupDisplayName = newGroup.getDisplayName();
+            if (!(oldGroupDisplayName.equalsIgnoreCase(newGroupDisplayName))) {
                 // Update group name in carbon UM
-                carbonUM.updateRoleName(oldGroup.getDisplayName(), newGroup.getDisplayName());
+                carbonUM.updateRoleName(oldGroupDisplayName, newGroupDisplayName);
                 updated = true;
             }
 
             // Update the group with added members and deleted members.
             if (CollectionUtils.isNotEmpty(addedMembers) || CollectionUtils.isNotEmpty(deletedMembers)) {
-                carbonUM.updateUserListOfRole(newGroup.getDisplayName(),
+                carbonUM.updateUserListOfRole(newGroupDisplayName,
                         deletedMembers.toArray(new String[deletedMembers.size()]),
                         addedMembers.toArray(new String[addedMembers.size()]));
                 updated = true;
             }
 
             if (updated) {
-                log.info("Group: " + oldGroup.getDisplayName() + " is updated through SCIM.");
+                log.info("Group: " + oldGroupDisplayName + " is updated through SCIM.");
                 // Duplicate may exist in newGroup, to make sure, query the corresponding group again and return it.
                 Group newUpdatedGroup = getGroup(newGroup.getId(), requiredAttributes);
                 return newUpdatedGroup;
             } else {
-                log.warn("There is no updated field in the group: " + oldGroup.getDisplayName() +
-                        ". Therefore ignoring the provisioning.");
+                log.warn("There is no updated field in the group: " + oldGroupDisplayName
+                        + ". Therefore ignoring the provisioning.");
                 // Hence no changes were done, return original group. There are some cases, new group can have
                 // duplicated members.
                 return oldGroup;
@@ -2293,13 +2292,14 @@ public class SCIMUserManager implements UserManager {
         // Check if the user ids & associated user name sent in updated (new) group exist in the user store.
         if (userName != null) {
             String userId = carbonUM.getUserClaimValue(userName, SCIMConstants.CommonSchemaConstants.ID_URI, null);
-            if (userId == null || userId.isEmpty()) {
-                String error = "User: " + userName + " doesn't exist in the user store. Hence, can not update the "
+            if (StringUtils.isEmpty(userId)) {
+                String error = "User: " + userName + " doesn't exist in the user store. Hence can not update the "
                         + "group: " + displayName;
                 throw new IdentitySCIMException(error);
             } else {
                 if (!UserCoreUtil.isContain(userId, addedUserIdsList.toArray(new String[addedUserIdsList.size()]))) {
-                    throw new IdentitySCIMException("Given SCIM user Id and name not matching..");
+                    throw new IdentitySCIMException("Provided SCIM user Id: " + userId + " doesn't match with the "
+                            + "userID obtained from user-store for the provided username: " + userName);
                 }
             }
         }
