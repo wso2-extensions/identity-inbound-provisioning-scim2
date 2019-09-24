@@ -8,7 +8,7 @@ info:
   contact:
     name: WSO2 Identity Server Team
     url: 'http://wso2.com'
-    email: "architecture@wso2.com"
+    email: "architecture@wso2.org"
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0'
@@ -74,7 +74,7 @@ paths:
         - Me Endpoint
       summary: Create Me
       description: |
-        This API is used to register a user anonymously. It returns an HTTP 201 response if the user is successfully created. These endpoints are secured by default. Therefore, to invoke this API anonymously, set the secured property for the SCIM2 resource in the identity.xml to false. For more information, see [Authenticating and Authorizing REST APIs](https://docs.wso2.com/display/IS530/Authenticating+and+Authorizing+REST+APIs).
+        This API is used to register a user anonymously.
 
          <b>Permission required:</b>
 
@@ -130,14 +130,14 @@ paths:
     put:
       tags:
         - Me Endpoint
-      summary: Update Me - PUT
+      summary: Update Me
       description: |
-        This API uses a PUT operation to update user details. It returns HTTP 404 if the user is not found.
-
+        This API uses a PUT operation to update user details.
 
           <b>Permission required:</b>
 
             * /permission/admin/login
+
       operationId: updateUserMe
       consumes:
         - application/scim+json
@@ -177,11 +177,12 @@ paths:
         - Me Endpoint
       summary: Delete Me
       description: |
-        This API is used to delete the currently authenticated user. It returns HTTP 204 if the user is successfully deleted.
+        This API is used to delete the currently authenticated user.
 
           <b>Permission required:</b>
 
             * /permission/admin/manage/identity/usermgt/delete
+
       operationId: deleteUserMe
       produces:
         - application/scim+json
@@ -206,7 +207,7 @@ paths:
         - Me Endpoint
       summary: Update Me - PATCH
       description: |
-        This API uses a PATCH operation to update user details. It returns HTTP 404 if the user is not found.
+        This API uses a PATCH operation to update user details.
 
           <b>Permission required:</b>
 
@@ -252,7 +253,7 @@ paths:
         - Groups Endpoint
       summary: Filter Groups
       description: |
-        This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
+        This API returns groups according to the specified filter, sort and pagination parameters.
 
           <b>Permission required:</b>
 
@@ -328,7 +329,7 @@ paths:
         - Groups Endpoint
       summary: Create Group
       description: |
-        This API creates a group and returns the details of the created group including its unique ID. It returns HTTP 201 if the group is successfully created.
+        This API creates a group and returns the details of the created group including its unique ID.
 
         <b>Permission required:</b>
 
@@ -381,7 +382,7 @@ paths:
         - Groups Endpoint
       summary: Search Groups
       description: |
-        This API returns groups according to the specified filter, sort and pagination parameters. It returns HTTP 404 if the groups are not found.
+        This API returns groups according to the specified filter, sort and pagination parameters.
 
         <b>Permission required:</b>
 
@@ -420,7 +421,7 @@ paths:
         - Groups Endpoint
       summary: Get Group by ID
       description: |
-        This API returns the group details of a particular group using its unique ID. It returns HTTP 200 if the group is found.
+        This API returns the group details of a particular group using its unique ID.
 
         <b>Permission required:</b>
 
@@ -467,7 +468,7 @@ paths:
         - Groups Endpoint
       summary: Update Group - PUT
       description: |
-        This API updates the group details and returns the updated group details using a PUT operation. It returns HTTP 404 if the group is not found.
+        This API updates the group details and returns the updated group details using a PUT operation.
 
         <b>Permission required:</b>
 
@@ -520,7 +521,7 @@ paths:
         - Groups Endpoint
       summary: Delete Group
       description: |
-        This API deletes a particular group using its unique ID. It returns HTTP 204 if the group is successfully deleted.
+        This API deletes a particular group using its unique ID.
 
         <b>Permission required:</b>
 
@@ -554,7 +555,7 @@ paths:
         - Groups Endpoint
       summary: Update Group - PATCH
       description: |
-        This API updates the group details and returns the updated group details using a PATCH operation. It returns HTTP 404 if the group is not found.
+        This API updates the group details and returns the updated group details using a PATCH operation.
 
         <b>Permission required:</b>
 
@@ -610,7 +611,7 @@ paths:
         - Groups Endpoint
       summary: Get permissions of a group by its id
       description: |
-        This API returns the permission list of a particular group using its unique ID. It returns HTTP 200 if the group is found.
+        This API returns the permission list of a particular group using its unique ID.
 
         <b>Permission required:</b>
 
@@ -648,7 +649,7 @@ paths:
         - Groups Endpoint
       summary: Update permissions of a group by its id
       description: |
-        This API returns the permission list of a particular group after updating the permissions. It returns HTTP 404 if the user is not found.
+        This API returns the permission list of a particular group after updating the permissions.
 
         <b>Permission required:</b>
 
@@ -692,7 +693,7 @@ paths:
         - Groups Endpoint
       summary: Patch permissions of a group by its id
       description: |
-        This API returns the permission list of a particular group after patching the permissions. It returns HTTP 404 if the user is not found.
+        This API returns the permission list of a particular group after patching the permissions.
 
         <b>Permission required:</b>
 
@@ -739,7 +740,7 @@ paths:
         - Users Endpoint
       summary: Filter Users
       description: |
-        This API returns users according to the filter, sort and pagination parameters. It returns HTTP 404 if the users are not found. Pagination is not supported across user stores and LDAP multi-attribute group filtering. However, filtering is supported across multiple user stores.
+        This API returns users according to the filter, sort and pagination parameters. Pagination is not supported across user stores and LDAP multi-attribute group filtering. However, filtering is supported across multiple user stores.
 
         <b>Permission required:</b>
 
@@ -815,7 +816,7 @@ paths:
         - Users Endpoint
       summary: Create User
       description: |
-        This API creates a user and returns the user details along with the user's unique ID. It returns HTTP 201 if the user is successfully created.
+        This API creates a user and returns the user details along with the user's unique ID.
 
         <b>Permission required:</b>
 
@@ -875,7 +876,7 @@ paths:
         - Users Endpoint
       summary: Search Users
       description: |
-        This API returns users according to the filter, sort and pagination parameters. It returns HTTP 404 if the users are not found.
+        This API returns users according to the filter, sort and pagination parameters.
 
          <b>Permission required:</b>
 
@@ -915,7 +916,7 @@ paths:
         - Users Endpoint
       summary: Get User by ID
       description: |
-        Returns HTTP 200 if the user is found.
+         Return user details if a user found.
          <b>Permission required:</b>
 
             * /permission/admin/manage/identity/usermgt/view
@@ -961,7 +962,7 @@ paths:
         - Users Endpoint
       summary: Update User - PUT
       description: |
-        This API updates user details and returns the updated user details using a PUT operation. It returns HTTP 404 if the user is not found.
+        This API updates user details and returns the updated user details using a PUT operation.
          <b>Permission required:</b>
 
             * /permission/admin/manage/identity/usermgt/update
@@ -1014,7 +1015,7 @@ paths:
         - Users Endpoint
       summary: Delete User by ID
       description: |
-        This API deletes a user using the user's unique ID. It returns HTTP 204 if the user is successfully deleted.
+        This API deletes a user using the user's unique ID.
 
          <b>Permission required:</b>
 
@@ -1049,7 +1050,7 @@ paths:
         - Users Endpoint
       summary: Update User - PATCH
       description: |
-        This API updates user details and returns the updated user details using a PATCH operation. It returns HTTP 404 if the user is not found.
+        This API updates user details and returns the updated user details using a PATCH operation.
 
          <b>Permission required:</b>
 
@@ -1110,7 +1111,7 @@ paths:
         - Bulk Endpoint
       summary: Create Users in Bulk
       description: |
-        This API is used to create multiple users at once. It returns HTTP 201 if the users are successfully created.
+        This API is used to create multiple users at once.
          <b>Permission required:</b>
 
             * /permission/admin/manage/identity/usermgt
@@ -1148,7 +1149,7 @@ paths:
         - ResourceType Endpoint
       summary: Get Resource Types
       description: |
-        This API lists and returns metadata about resource types. It returns HTTP 200 if the schema is found.
+        This API lists and returns metadata about resource types.
 
       operationId: getResourceType
       produces:
@@ -1174,7 +1175,7 @@ paths:
         - ServiceProviderConfig Endpoint
       summary: Get Service Provider Config
       description: |
-        This API returns the service provider's configuration details. It returns HTTP 200 if the schema is found.
+        This API returns the service provider's configuration details.
 
         <b>Permission required:</b>
 

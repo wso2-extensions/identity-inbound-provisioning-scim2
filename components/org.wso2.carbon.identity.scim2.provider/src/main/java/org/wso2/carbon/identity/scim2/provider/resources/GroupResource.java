@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.common.impl.SCIMUserManager;
@@ -46,11 +45,16 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class GroupResource extends AbstractResource {
 
     private static final Log logger = LogFactory.getLog(GroupResource.class);
     private static final String PERMISSIONS = "Permissions";
+    private UserManager userManager;
+    private GroupResourceManager groupResourceManager;
+    private String groupId;
+    private String excludeAttributes;
 
     @GET
     @Path("{id}")
@@ -432,7 +436,7 @@ public class GroupResource extends AbstractResource {
         String search = requestAttributes.get(SCIMProviderConstants.SEARCH);
         JSONEncoder encoder = null;
         Gson gson = new Gson();
-        Map<String, String> responseHeaders = new HashMap();
+        HashMap responseHeaders = new HashMap();
         responseHeaders.put("Content-Type", "application/scim+json");
         try {
             IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
@@ -445,7 +449,7 @@ public class GroupResource extends AbstractResource {
             // Create charon-SCIM group endpoint and hand-over the request.
             GroupResourceManager groupResourceManager = new GroupResourceManager();
             SCIMResponse scimResponse = null;
-            String groupName = null;
+            String groupName;
             if (GET.class.getSimpleName().equals(httpVerb) && id == null) {
                 String filter = requestAttributes.get(SCIMProviderConstants.FILTER);
                 String sortBy = requestAttributes.get(SCIMProviderConstants.SORT_BY);
@@ -463,7 +467,7 @@ public class GroupResource extends AbstractResource {
             } else if (GET.class.getSimpleName().equals(httpVerb) && requestAttributes.get(SCIMProviderConstants
                     .ATTRIBUTES).equals(PERMISSIONS)) {
                 try{
-                    groupName = getGroupName(userManager, groupResourceManager, id, excludedAttributes);
+                    groupName = getGroupName(id);
                 } catch (JSONException e) {
                     return SupportUtils.buildResponse(groupResourceManager.get(id, userManager, attributes,
                             excludedAttributes));
@@ -479,7 +483,7 @@ public class GroupResource extends AbstractResource {
             } else if (PUT.class.getSimpleName().equals(httpVerb) && PERMISSIONS.equals(requestAttributes.
                     get(SCIMProviderConstants.ATTRIBUTES))) {
                 try{
-                    groupName = getGroupName(userManager, groupResourceManager, id, excludedAttributes);
+                    groupName = getGroupName(id);
                 } catch (JSONException e) {
                     return SupportUtils.buildResponse(groupResourceManager.get(id, userManager, attributes,
                             excludedAttributes));
@@ -498,7 +502,7 @@ public class GroupResource extends AbstractResource {
                     .ATTRIBUTES).equals(PERMISSIONS)) {
 
                 try{
-                    groupName = getGroupName(userManager, groupResourceManager, id, excludedAttributes);
+                    groupName = getGroupName(id);
                 } catch (JSONException e) {
                     return SupportUtils.buildResponse(groupResourceManager.get(id, userManager, attributes,
                             excludedAttributes));
@@ -512,22 +516,31 @@ public class GroupResource extends AbstractResource {
             } else if (DELETE.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager.delete(id, userManager);
             }
-            return SupportUtils.buildResponse(scimResponse);
+            return SupportUtils.buildResponse(Objects.requireNonNull(scimResponse));
         } catch (CharonException  e) {
             return handleCharonException( e, encoder);
         } catch (UserAdminException e) {
             return handleCharonException(new CharonException("Error occurred when getting the permissions from server",
                             e), encoder);
         } catch (UserStoreException e) {
-            return handleCharonException(new CharonException("Error occurred when getting the permissions from server",
-                    e), encoder);
+            try (Response response = handleCharonException(new CharonException("Error occurred when getting the permissions from server",
+                    e), encoder)) {
+                return response;
+            }
         }
     }
 
-    private String getGroupName(UserManager userManager, GroupResourceManager groupResourceManager,
-                                String groupId, String excludeAttributes) throws JSONException {
+    /**
+     * Get group display name from the groupId.
+     *
+     * @param groupId SCIM group id.
+     * @return Display name of the group.
+     * @throws JSONException thrown when an error occurred when getting displayName from JSON response.
+     */
+    private String getGroupName(String groupId) throws JSONException {
+
         String includeAttributes = SCIMConstants.GroupSchemaConstants.DISPLAY_NAME;
-        SCIMResponse scimResponse = groupResourceManager.get(groupId, userManager, includeAttributes, excludeAttributes);
+        SCIMResponse scimResponse = this.groupResourceManager.get(groupId, this.userManager, includeAttributes, this.excludeAttributes);
         JSONObject responseMessage = new JSONObject(scimResponse.getResponseMessage());
         try {
             return (String) (responseMessage).get(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME);
@@ -549,7 +562,7 @@ public class GroupResource extends AbstractResource {
 
         try {
             if (StringUtils.isNotEmpty(valueInRequest)) {
-                return new Integer(valueInRequest);
+                return Integer.valueOf(valueInRequest);
             } else {
                 return null;
             }

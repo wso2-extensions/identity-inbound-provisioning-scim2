@@ -162,18 +162,18 @@ public class SCIMCommonComponent {
     protected void setRolePermissionService(RolePermissionManagementService rolePermissionService) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug("realmService set in SCIMCommonComponent bundle");
+            logger.debug("RolePermissionManagementService is set in SCIMCommonComponent bundle.");
         }
         SCIMCommonComponentHolder.setRolePermissionManagementService(rolePermissionService);
     }
 
     /**
-     * Unset role permission management service implementation
+     * Unset role permission management service implementation.
      */
     protected void unsetRolePermissionService(RolePermissionManagementService rolePermissionService) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug("realmService unset in SCIMCommonComponent bundle");
+            logger.debug("realmService unset in SCIMCommonComponent bundle.");
         }
         SCIMCommonComponentHolder.setRolePermissionManagementService(null);
     }
