@@ -52,18 +52,22 @@ public class SCIMCommonComponentHolder {
 
     /**
      * Get role permission management service.
+     *
      * @return
      */
     public static RolePermissionManagementService getRolePermissionManagementService() {
+
         return rolePermissionManagementService;
     }
 
     /**
      * Set role permission management service.
+     *
      * @param rolePermissionManagementService
      */
     public static void setRolePermissionManagementService(RolePermissionManagementService
                                                                   rolePermissionManagementService) {
+
         SCIMCommonComponentHolder.rolePermissionManagementService = rolePermissionManagementService;
     }
 }

@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.common.impl.SCIMUserManager;
@@ -92,8 +93,7 @@ public class GroupResource extends AbstractResource {
         String userName = SupportUtils.getAuthenticatedUsername();
         try {
             if (!isValidOutputFormat(outputFormat)) {
-                String error = outputFormat + " is not supported.";
-                throw new FormatNotSupportedException(error);
+                throw new FormatNotSupportedException("Output format: " + outputFormat + " is not supported.");
             }
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
@@ -124,19 +124,16 @@ public class GroupResource extends AbstractResource {
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
-                String error = SCIMProviderConstants.CONTENT_TYPE
-                        + " not present in the request header";
-                throw new FormatNotSupportedException(error);
+                throw new FormatNotSupportedException("Content type: " + SCIMProviderConstants.CONTENT_TYPE +
+                        "  not present in the request header");
             }
 
             if (!isValidInputFormat(inputFormat)) {
-                String error = inputFormat + " is not supported.";
-                throw new FormatNotSupportedException(error);
+                throw new FormatNotSupportedException("Input format: " + inputFormat + " is not supported.");
             }
 
             if (!isValidOutputFormat(outputFormat)) {
-                String error = outputFormat + " is not supported.";
-                throw new FormatNotSupportedException(error);
+                throw new FormatNotSupportedException("Output format: " + outputFormat + " is not supported.");
             }
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
@@ -168,19 +165,16 @@ public class GroupResource extends AbstractResource {
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
-                String error = SCIMProviderConstants.CONTENT_TYPE
-                        + " not present in the request header";
-                throw new FormatNotSupportedException(error);
+                throw new FormatNotSupportedException("Content type: " + SCIMProviderConstants.CONTENT_TYPE +
+                        "  not present in the request header");
             }
 
             if (!isValidInputFormat(inputFormat)) {
-                String error = inputFormat + " is not supported.";
-                throw new FormatNotSupportedException(error);
+                throw new FormatNotSupportedException("Input format: " + inputFormat + " is not supported.");
             }
 
             if (!isValidOutputFormat(outputFormat)) {
-                String error = outputFormat + " is not supported.";
-                throw new FormatNotSupportedException(error);
+                throw new FormatNotSupportedException("Output format: " + outputFormat + " is not supported.");
             }
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
@@ -438,6 +432,8 @@ public class GroupResource extends AbstractResource {
         String search = requestAttributes.get(SCIMProviderConstants.SEARCH);
         JSONEncoder encoder = null;
         Gson gson = new Gson();
+        Map<String, String> responseHeaders = new HashMap();
+        responseHeaders.put("Content-Type", "application/scim+json");
         try {
             IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
             // Obtain the encoder at this layer in case exceptions needs to be encoded.
@@ -473,8 +469,7 @@ public class GroupResource extends AbstractResource {
                             excludedAttributes));
                 }
                 JSONArray permissions = userManager.getGroupPermissions(groupName);
-                scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), permissions.toString(),
-                        scimResponse.getHeaderParamMap());
+                scimResponse = new SCIMResponse(200, permissions.toString(), responseHeaders);
             } else if (GET.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager.get(id, userManager, attributes, excludedAttributes);
             } else if (POST.class.getSimpleName().equals(httpVerb) && search.equals("1")) {
@@ -493,8 +488,8 @@ public class GroupResource extends AbstractResource {
                 String[] permissionArray = gson.fromJson(resourceString, String[].class);
                 // Replace the existing permission paths with given array.
                 userManager.setGroupPermissions(groupName, permissionArray);
-                scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), userManager
-                        .getGroupPermissions(groupName).toString(), scimResponse.getHeaderParamMap());
+                scimResponse = new SCIMResponse(200, userManager.getGroupPermissions(groupName).toString(),
+                        responseHeaders);
             } else if (PUT.class.getSimpleName().equals(httpVerb)) {
 
                 scimResponse = groupResourceManager
@@ -509,9 +504,8 @@ public class GroupResource extends AbstractResource {
                             excludedAttributes));
                 }
                 userManager.patchGroupPermissions(groupName, resourceString);
-                scimResponse = new SCIMResponse(scimResponse.getResponseStatus(), userManager
-                        .getGroupPermissions(groupName).toString(), scimResponse.getHeaderParamMap());
-
+                scimResponse = new SCIMResponse(200, userManager.getGroupPermissions(groupName).toString(),
+                        responseHeaders);
             } else if (PATCH.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager
                         .updateWithPATCH(id, resourceString, userManager, attributes, excludedAttributes);

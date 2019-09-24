@@ -3240,7 +3240,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Add or remove from existing permissions of the group.
+     * Add or remove permissions from the existing permissions of a group.
      *
      * @param groupName group name.
      * @param patchOperationString patch operation string with permission values.
@@ -3260,7 +3260,7 @@ public class SCIMUserManager implements UserManager {
     /**
      * Get the permissions list that need to be updated.
      *
-     * @param resourceString patch operation string.
+     * @param resourceString      patch operation string.
      * @param existingPermissions available permissions for the group.
      * @return JSONArray of permissions that should PUT to group.
      * @throws UserAdminException
@@ -3270,11 +3270,10 @@ public class SCIMUserManager implements UserManager {
 
         JSONDecoder decode = new JSONDecoder();
         ArrayList<PatchOperation> listOperations;
-        JSONArray existingPermissionsArray = new JSONArray(existingPermissions);
         JSONArray outputPermissions = new JSONArray();
         try {
             // Decode the resource string and get the operations list
-            listOperations  = decode.decodeRequest(resourceString);
+            listOperations = decode.decodeRequest(resourceString);
         } catch (BadRequestException e) {
             log.error("The Patch request is invalid. Can not decode.");
             throw new UserAdminException("The PATCH operation request is not in the correct format.");
@@ -3284,7 +3283,7 @@ public class SCIMUserManager implements UserManager {
                 if (("add").equals(op.getOperation())) {
                     outputPermissions = concatJSONArrays(existingPermissions, new JSONArray(op.getValues().toString()));
                 } else if ("remove".equals(op.getOperation())) {
-                    outputPermissions = removeElementsOfJSONArray(existingPermissionsArray,
+                    outputPermissions = removeElementsOfJSONArray(existingPermissions,
                             new JSONArray(op.getValues().toString()));
                 }
             }
@@ -3298,7 +3297,7 @@ public class SCIMUserManager implements UserManager {
      *
      * @param arrayA JSONArray
      * @param arrayB JSONArray
-     * @return
+     * @return JSONArray of permissions.
      */
     private JSONArray concatJSONArrays(JSONArray arrayA, JSONArray arrayB) {
 
@@ -3320,7 +3319,7 @@ public class SCIMUserManager implements UserManager {
      *
      * @param arrayA JSONArray
      * @param arrayB JSONArray
-     * @return
+     * @return JSONArray of permissions
      */
     private JSONArray removeElementsOfJSONArray(JSONArray arrayA, JSONArray arrayB) {
 
@@ -3335,5 +3334,4 @@ public class SCIMUserManager implements UserManager {
         }
         return arrayA;
     }
-
 }
