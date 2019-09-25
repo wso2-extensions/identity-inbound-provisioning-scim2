@@ -31,6 +31,8 @@ import java.util.Map;
  */
 public class SupportUtils {
 
+    private SupportUtils() {}
+
     /**
      * build the jaxrs response
      * @param scimResponse

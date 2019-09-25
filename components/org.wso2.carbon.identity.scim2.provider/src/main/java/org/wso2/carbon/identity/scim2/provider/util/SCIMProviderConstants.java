@@ -40,5 +40,7 @@ public class SCIMProviderConstants {
     public static final String HTTP_VERB = "HTTP_VERB";
     public static final String SEARCH = ".search";
     public static final String DEFAULT_USERNAME = "admin";
+    public static final String ADD = "add";
+    public static final String REMOVE = "remove";
 
 }

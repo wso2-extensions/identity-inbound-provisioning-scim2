@@ -721,6 +721,10 @@ paths:
           description: Valid group is found.
           schema:
             $ref: '#/definitions/PermissionPatchResponseObject'
+        400:
+          description: Invalid Input
+          schema:
+            $ref: '#/definitions/ErrorIvalidInput'
         401:
           description: Unauthorized
           schema:
@@ -841,12 +845,12 @@ paths:
           schema:
             $ref: '#/definitions/UserObject'
       responses:
-        '201':
+        201:
           description: User is created.
           schema:
             $ref: '#/definitions/UserResponseObject'
 
-        '400':
+        400:
           description: Invalid Input
           schema:
             $ref: '#/definitions/ErrorIvalidInput'
@@ -1143,7 +1147,7 @@ paths:
         409:
           description: Users already exists
 
-  /ResourceType:
+  /ResourceTypes:
     get:
       tags:
         - ResourceType Endpoint

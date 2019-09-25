@@ -39,7 +39,6 @@ import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.mgt.RolePermissionManagementService;
-import org.wso2.carbon.user.mgt.RolePermissionManagementServiceImpl;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
@@ -173,7 +172,7 @@ public class SCIMCommonComponent {
     protected void unsetRolePermissionService(RolePermissionManagementService rolePermissionService) {
 
         if (logger.isDebugEnabled()) {
-            logger.debug("realmService unset in SCIMCommonComponent bundle.");
+            logger.debug("RolePermissionManagementService unset in SCIMCommonComponent bundle.");
         }
         SCIMCommonComponentHolder.setRolePermissionManagementService(null);
     }
