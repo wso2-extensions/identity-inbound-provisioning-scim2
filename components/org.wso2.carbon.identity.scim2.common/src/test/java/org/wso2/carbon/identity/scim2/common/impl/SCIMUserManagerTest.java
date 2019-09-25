@@ -286,10 +286,15 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         List<String> list = new ArrayList<>();
         list.add(roleName);
         Map<String, Boolean> requiredAttributes = null;
+        Map<String, String> attributes = new HashMap<String, String>() {{
+            put(SCIMConstants.CommonSchemaConstants.ID_URI, "1");
+        }};
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.getGroupNameList(anyString(), anyString(), anyInt(), anyString()))
                 .thenReturn(list.toArray(new String[0]));
         mockStatic(IdentityUtil.class);
+        when(mockedGroupDAO.isExistingGroup("testRole",0)).thenReturn(true);
+        when(mockedGroupDAO.getSCIMGroupAttributes(0,"testRole")).thenReturn(attributes);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
 
         when(mockedUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
@@ -318,7 +323,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
                 null, requiredAttributes);
 
-        assertEquals(roleList.size(), 1);
+        assertEquals(roleList.size(), 2);
 
     }
 
