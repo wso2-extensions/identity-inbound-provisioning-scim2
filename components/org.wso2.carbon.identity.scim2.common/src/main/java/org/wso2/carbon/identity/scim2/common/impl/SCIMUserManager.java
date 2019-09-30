@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.ListUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -31,6 +32,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -49,6 +51,7 @@ import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.model.OperationalOperation;
 import org.wso2.carbon.user.core.model.UserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.user.mgt.RolePermissionException;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
@@ -2315,7 +2318,6 @@ public class SCIMUserManager implements UserManager {
                 requiredAttributes);
     }
 
-
     private String getUserStoreDomainFromSP() throws IdentityApplicationManagementException {
         ServiceProvider serviceProvider = null;
 
@@ -3207,4 +3209,55 @@ public class SCIMUserManager implements UserManager {
         }
         return roleList.toArray(new String[roleList.size()]);
     }
+
+    /**
+     * Get permissions of a group.
+     *
+     * @param groupName group name.
+     * @return String[] of permissions.
+     * @throws UserStoreException
+     * @throws RolePermissionException
+     */
+    public String[] getGroupPermissions(String groupName) throws UserStoreException, RolePermissionException {
+
+        return SCIMCommonComponentHolder.getRolePermissionManagementService().getRolePermissions(groupName,
+            carbonUM.getTenantId());
+    }
+
+    /**
+     * Set permissions of a group.
+     *
+     * @param groupName group name.
+     * @param permissions array of permissions.
+     * @throws UserStoreException
+     * @throws RolePermissionException
+     */
+    public void setGroupPermissions(String groupName, String[] permissions) throws RolePermissionException {
+
+        SCIMCommonComponentHolder.getRolePermissionManagementService().setRolePermissions(groupName, permissions);
+    }
+
+    /**
+     * Add or remove permissions of a group.
+     *
+     * @param groupName group name.
+     * @param permissionToAdd permissions to add.
+     * @param permissionToRemove permissions to remove.
+     * @throws UserStoreException
+     * @throws RolePermissionException
+     */
+    public void updatePermissionListOfGroup(String groupName, String[] permissionToAdd, String[] permissionToRemove)
+            throws UserStoreException, RolePermissionException {
+
+        List permissions = Arrays.asList(getGroupPermissions(groupName));
+        if (ArrayUtils.isNotEmpty(permissionToAdd)) {
+            permissions = ListUtils.union(permissions, Arrays.asList(permissionToAdd));
+        }
+        if (ArrayUtils.isNotEmpty(permissionToRemove)) {
+            permissions = ListUtils.subtract(permissions, Arrays.asList(permissionToRemove));
+        }
+        SCIMCommonComponentHolder.getRolePermissionManagementService().setRolePermissions(groupName,
+                (String[]) permissions.toArray(new String[0]));
+    }
+
 }

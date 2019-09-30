@@ -87,5 +87,4 @@
     </jaxrs:server>
 
     <bean id="schemasBean" class="org.wso2.carbon.identity.scim2.provider.resources.SchemaResource"/>
-
 </beans>

@@ -130,13 +130,14 @@ paths:
     put:
       tags:
         - Me Endpoint
-      summary:  PUT
+      summary: Update Me
       description: |
         This API uses a PUT operation to update user details.
 
           <b>Permission required:</b>
 
             * /permission/admin/login
+
       operationId: updateUserMe
       consumes:
         - application/scim+json
@@ -181,6 +182,7 @@ paths:
           <b>Permission required:</b>
 
             * /permission/admin/manage/identity/usermgt/delete
+
       operationId: deleteUserMe
       produces:
         - application/scim+json
@@ -205,7 +207,7 @@ paths:
         - Me Endpoint
       summary: Update Me - PATCH
       description: |
-        This API will add or remove existing user details.
+        This API uses a PATCH operation to update user details.
 
           <b>Permission required:</b>
 
@@ -314,6 +316,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: No Group found
           schema:
@@ -358,6 +364,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Group is not found
           schema:
@@ -397,6 +407,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid groups are not found
           schema:
@@ -440,6 +454,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -486,11 +504,14 @@ paths:
           description: Group is updated
           schema:
             $ref: '#/definitions/GroupPutResponseObject'
-
         401:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -521,6 +542,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
@@ -571,10 +596,148 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid group is not found
           schema:
             $ref: '#/definitions/ErrorNoGroupAvailable'
+
+  '/Groups/{id}/permissions':
+    get:
+      tags:
+        - Groups Endpoint
+      summary: Get permissions of a group by its id
+      description: |
+        This API returns the permission list of a particular group using its unique ID.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/view
+      operationId: getPermissionbyGroup
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+      responses:
+        200:
+          description: Valid group and permissions found
+          schema:
+            $ref: '#/definitions/GroupPermissionResponseObject'
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
+        404:
+          description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
+    put:
+      tags:
+        - Groups Endpoint
+      summary: Update permissions of a group by its id
+      description: |
+        This API returns the permission list of a particular group after updating the permissions.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/update
+      operationId: updatePermissions
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            $ref: '#/definitions/PermissionPutRequestObject'
+
+      responses:
+        200:
+          description: Valid group is found
+          schema:
+            $ref: '#/definitions/PermissionPutResponseObject'
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
+        404:
+          description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
+    patch:
+      tags:
+        - Groups Endpoint
+      summary: Patch permissions of a group by its id
+      description: |
+        This API returns the permission list of a particular group after patching the permissions.
+
+        <b>Permission required:</b>
+
+            * /permission/admin/manage/identity/rolemgt/update
+
+      operationId: patchPermissions
+      consumes:
+        - application/scim+json
+      produces:
+        - application/scim+json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the resource type.
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            $ref: '#/definitions/PermissionPatchOpperationRequestObject'
+
+      responses:
+        200:
+          description: Valid group is found.
+          schema:
+            $ref: '#/definitions/PermissionPatchResponseObject'
+        400:
+          description: Invalid Input
+          schema:
+            $ref: '#/definitions/ErrorIvalidInput'
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
+        404:
+          description: Valid group is not found
+          schema:
+            $ref: '#/definitions/ErrorNoGroupAvailable'
+
   /Users:
     get:
       tags:
@@ -644,6 +807,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid users are not found
           schema:
@@ -678,12 +845,12 @@ paths:
           schema:
             $ref: '#/definitions/UserObject'
       responses:
-        '201':
+        201:
           description: User is created.
           schema:
             $ref: '#/definitions/UserResponseObject'
 
-        '400':
+        400:
           description: Invalid Input
           schema:
             $ref: '#/definitions/ErrorIvalidInput'
@@ -692,6 +859,11 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
 
         404:
           description: Valid User is not found
@@ -733,17 +905,22 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid users are not found
           schema:
             $ref: '#/definitions/GroupSearchErrorResponseObject'
+
   '/Users/{id}':
     get:
       tags:
         - Users Endpoint
       summary: Get User by ID
       description: |
-        Returns HTTP 200 if the user is found.
+         Return user details if a user found.
          <b>Permission required:</b>
 
             * /permission/admin/manage/identity/usermgt/view
@@ -776,6 +953,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid user is not found
           schema:
@@ -825,6 +1006,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid user is not found
           schema:
@@ -856,6 +1041,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid user is not found
           schema:
@@ -912,6 +1101,10 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         404:
           description: Valid user is not found
           schema:
@@ -947,9 +1140,14 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/ErrorUnauthorized'
+        403:
+          description: Forbidden
+          scheme:
+            $ref: '#/definition/ErrorForbidden'
         409:
           description: Users already exists
-  /ResourceType:
+
+  /ResourceTypes:
     get:
       tags:
         - ResourceType Endpoint
@@ -974,6 +1172,7 @@ paths:
           description: Schema not found
           schema:
             $ref: '#/definitions/ErrorSchemaNotFound'
+
   /ServiceProviderConfig:
     get:
       tags:
@@ -1798,6 +1997,88 @@ definitions:
         supported: true
       changePassword:
         supported: false
+  #-----------------------------------------------------
+  # The permission response Object
+  #-----------------------------------------------------
+  GroupPermissionResponseObject:
+    type: array
+    items:
+      type: string
+      example:
+        - "/permission/admin/login"
+        - "/permission/admin/manage/search"
+        - "/permission/admin/manage/search/advanced-search"
+        - "/permission/admin/manage/search/resources"
+        - "/permission/admin/manage/add"
+        - "/permission/admin/manage/add/module"
+        - "/permission/admin/manage/add/service"
+        - "/permission/admin/manage/add/webapp"
+
+  #-----------------------------------------------------
+  # The permission patch request Object
+  #-----------------------------------------------------
+  PermissionPatchOpperationRequestObject:
+    type: object
+    properties:
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+      Operations:
+        type: array
+        items:
+          $ref: '#/definitions/OperationItem'
+
+
+
+
+  #-----------------------------------------------------
+  # The permission patch response Object
+  #-----------------------------------------------------
+  PermissionPatchResponseObject:
+    type: array
+    items:
+      type: string
+      example:
+        - "/permission/admin/configure/security/usermgt"
+        - "/permission/admin/configure/security/usermgt/passwords"
+        - "/permission/admin/configure/security/usermgt/profiles"
+        - "/permission/admin/configure/security/usermgt/users"
+        - "/permission/admin/configure/security/usermgt/provisioning"
+        - "/permission/admin/login"
+        - "/permission/admin/manage/search"
+        - "/permission/admin/manage/search/advanced-search"
+        - "/permission/admin/manage/search/resources"
+        - "/permission/admin/manage/add"
+        - "/permission/admin/manage/add/module"
+        - "/permission/admin/manage/add/service"
+        - "/permission/admin/manage/add/webapp"
+
+  #-----------------------------------------------------
+  # The permission patch request Object
+  #-----------------------------------------------------
+  PermissionPutRequestObject:
+    type: array
+    items:
+      type: string
+      example:
+        - "/permission/admin/configure/security/usermgt"
+
+
+  #-----------------------------------------------------
+  # The permission patch response Object
+  #-----------------------------------------------------
+  PermissionPutResponseObject:
+    type: array
+    items:
+      type: string
+      example:
+        - "/permission/admin/configure/security/usermgt"
+        - "/permission/admin/configure/security/usermgt/passwords"
+        - "/permission/admin/configure/security/usermgt/profiles"
+        - "/permission/admin/configure/security/usermgt/users"
+        - "/permission/admin/configure/security/usermgt/provisioning"
 
 
   #-----------------------------------------------------
@@ -1841,6 +2122,25 @@ definitions:
         type: string
         example: "Unauthorized"
 
+    #-----------------------------------------------------
+    # The Error Forbidden
+    #-----------------------------------------------------
+    ErrorForbidden:
+      type: object
+      required:
+        - status
+        - schema
+      properties:
+        status:
+          type: string
+          example: "403"
+        schemas:
+          type: string
+          example: "urn:ietf:params:scim:api:messages:2.0:Error"
+        scimType:
+          type: string
+          example: "Forbidden"
+
   #-----------------------------------------------------
   # The Error User Not Available
   #-----------------------------------------------------
@@ -1880,7 +2180,6 @@ definitions:
       detail:
         type: string
         example: "No Group with the id : 89a2a363-c90f-47e9-afae-949d026dad16 in the user store."
-
   #-----------------------------------------------------
   # The Error Schema Not Found
   #-----------------------------------------------------
@@ -2005,3 +2304,16 @@ definitions:
       detail:
         type: string
         example: "Self delete is not supported."
+
+
+  OperationItem:
+    type: object
+    properties:
+      op:
+        type: string
+        enum: ["add", "remove"]
+      value:
+        type: array
+        items:
+          type: string
+          example: "/permission/admin/configure/security/usermgt"

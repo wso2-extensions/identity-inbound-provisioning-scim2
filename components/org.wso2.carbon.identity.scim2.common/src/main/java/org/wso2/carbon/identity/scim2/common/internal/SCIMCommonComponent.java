@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
@@ -151,6 +152,30 @@ public class SCIMCommonComponent {
         SCIMCommonComponentHolder.setRealmService(null);
     }
 
+    @Reference(
+            name = "role.permission.management.service",
+            service = org.wso2.carbon.user.mgt.RolePermissionManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRolePermissionService")
+    protected void setRolePermissionService(RolePermissionManagementService rolePermissionService) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("RolePermissionManagementService is set in SCIMCommonComponent bundle.");
+        }
+        SCIMCommonComponentHolder.setRolePermissionManagementService(rolePermissionService);
+    }
+
+    /**
+     * Unset role permission management service implementation.
+     */
+    protected void unsetRolePermissionService(RolePermissionManagementService rolePermissionService) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("RolePermissionManagementService unset in SCIMCommonComponent bundle.");
+        }
+        SCIMCommonComponentHolder.setRolePermissionManagementService(null);
+    }
     @Deactivate
     protected void deactivate(ComponentContext context) {
 

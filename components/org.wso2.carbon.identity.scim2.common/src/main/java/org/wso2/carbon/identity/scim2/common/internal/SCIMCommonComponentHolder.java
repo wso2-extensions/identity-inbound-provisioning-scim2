@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.internal;
 
 import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 
 /**
  * SCIM service holder class.
@@ -27,6 +28,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 public class SCIMCommonComponentHolder {
 
     private static RealmService realmService;
+    private static RolePermissionManagementService rolePermissionManagementService;
 
     /**
      * Get realm service.
@@ -48,4 +50,24 @@ public class SCIMCommonComponentHolder {
         SCIMCommonComponentHolder.realmService = realmService;
     }
 
+    /**
+     * Get role permission management service.
+     *
+     * @return
+     */
+    public static RolePermissionManagementService getRolePermissionManagementService() {
+
+        return rolePermissionManagementService;
+    }
+
+    /**
+     * Set role permission management service.
+     *
+     * @param rolePermissionManagementService
+     */
+    public static void setRolePermissionManagementService(RolePermissionManagementService
+                                                                  rolePermissionManagementService) {
+
+        SCIMCommonComponentHolder.rolePermissionManagementService = rolePermissionManagementService;
+    }
 }

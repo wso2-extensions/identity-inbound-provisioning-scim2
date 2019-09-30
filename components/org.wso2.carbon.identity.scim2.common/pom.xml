@@ -197,6 +197,7 @@
                             org.wso2.carbon.identity.core.*; version="${identity.framework.version}",
                             org.wso2.carbon.identity.provisioning.*; version="${identity.framework.version}",
                             org.wso2.carbon.identity.claim.metadata.mgt.*; version="${identity.framework.version}",
+                            org.wso2.carbon.user.mgt.*;version="${identity.framework.version}"
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.scim2.common.internal,
