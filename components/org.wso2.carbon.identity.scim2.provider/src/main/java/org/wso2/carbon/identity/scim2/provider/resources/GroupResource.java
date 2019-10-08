@@ -583,7 +583,7 @@ public class GroupResource extends AbstractResource {
                     permissionsToRemove = IntStream.range(0, permissions.length()).mapToObj(permissions::getString)
                             .collect(Collectors.toList());
                     if (permissionsToRemove.isEmpty()) {
-
+                        permissionMap.put(SCIMProviderConstants.REMOVE, null);
                     } else {
                         permissionMap.put(SCIMProviderConstants.REMOVE, permissionsToRemove.toArray(new String[0]));
                     }
