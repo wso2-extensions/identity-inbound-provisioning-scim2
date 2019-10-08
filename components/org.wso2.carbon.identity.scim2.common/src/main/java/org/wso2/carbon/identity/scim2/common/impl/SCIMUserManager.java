@@ -3250,14 +3250,21 @@ public class SCIMUserManager implements UserManager {
             throws UserStoreException, RolePermissionException {
 
         List permissions = Arrays.asList(getGroupPermissions(groupName));
-        if (ArrayUtils.isNotEmpty(permissionToAdd)) {
-            permissions = ListUtils.union(permissions, Arrays.asList(permissionToAdd));
+        if (permissions.isEmpty()) {
+            if (ArrayUtils.isNotEmpty(permissionToAdd)) {
+                SCIMCommonComponentHolder.getRolePermissionManagementService().setRolePermissions(groupName,
+                        permissionToAdd);
+            }
+        } else {
+            if (ArrayUtils.isNotEmpty(permissionToAdd)) {
+                permissions = ListUtils.union(permissions, Arrays.asList(permissionToAdd));
+            }
+            if (ArrayUtils.isNotEmpty(permissionToRemove)) {
+                permissions = ListUtils.subtract(permissions, Arrays.asList(permissionToRemove));
+            }
+            SCIMCommonComponentHolder.getRolePermissionManagementService().setRolePermissions(groupName,
+                    (String[]) permissions.toArray(new String[0]));
         }
-        if (ArrayUtils.isNotEmpty(permissionToRemove)) {
-            permissions = ListUtils.subtract(permissions, Arrays.asList(permissionToRemove));
-        }
-        SCIMCommonComponentHolder.getRolePermissionManagementService().setRolePermissions(groupName,
-                (String[]) permissions.toArray(new String[0]));
     }
 
 }

@@ -43,9 +43,6 @@ import org.wso2.charon3.core.protocol.endpoints.GroupResourceManager;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 
-import javax.ws.rs.*;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -54,6 +51,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 public class GroupResource extends AbstractResource {
 
@@ -497,11 +505,9 @@ public class GroupResource extends AbstractResource {
                     groupName = getGroupName(id, userManager, groupResourceManager, excludedAttributes);
 
                     // Decode the resource string and get the permissions to add or remove.
-                    HashMap<String, List<String>> permissionMap = decodePatchOperation(resourceString);
-                    userManager.updatePermissionListOfGroup(groupName, permissionMap.get(SCIMProviderConstants.ADD)
-                            .toArray(new String[0]), permissionMap.get(SCIMProviderConstants.REMOVE)
-                            .toArray(new String[0]));
-
+                    HashMap<String, String[]> permissionMap = decodePatchOperation(resourceString);
+                    userManager.updatePermissionListOfGroup(groupName, permissionMap.get(SCIMProviderConstants.ADD),
+                            permissionMap.get(SCIMProviderConstants.REMOVE));
                     outputPermissions = new JSONArray(Arrays.asList(userManager.getGroupPermissions(groupName)));
                     scimResponse = new SCIMResponse(ResponseCodeConstants.CODE_OK, outputPermissions
                             .toString(), responseHeaders);
@@ -551,13 +557,13 @@ public class GroupResource extends AbstractResource {
      * @return Map of permissions to add and remove.
      * @throws BadRequestException
      */
-    private HashMap<String, List<String>> decodePatchOperation(String jsonResourceString) throws BadRequestException {
+    private HashMap<String, String[]> decodePatchOperation(String jsonResourceString) throws BadRequestException {
 
         JSONDecoder decode = new JSONDecoder();
         ArrayList<PatchOperation> listOperations;
         List<String> permissionsToAdd;
         List<String> permissionsToRemove;
-        HashMap<String, List<String>> permissionMap = new HashMap<>();
+        HashMap<String, String[]> permissionMap = new HashMap<>();
 
         // Decode the JSON string and get the permissions based on operations.
         listOperations = decode.decodeRequest(jsonResourceString);
@@ -567,12 +573,20 @@ public class GroupResource extends AbstractResource {
                     JSONArray permissions = new JSONArray(op.getValues().toString());
                     permissionsToAdd = IntStream.range(0, permissions.length()).mapToObj(permissions::getString)
                             .collect(Collectors.toList());
-                    permissionMap.put(SCIMProviderConstants.ADD, permissionsToAdd);
+                    if (permissionsToAdd.isEmpty()) {
+                        permissionMap.put(SCIMProviderConstants.ADD, null);
+                    } else {
+                        permissionMap.put(SCIMProviderConstants.ADD, permissionsToAdd.toArray(new String[0]));
+                    }
                 } else if (SCIMProviderConstants.REMOVE.equals(op.getOperation())) {
                     JSONArray permissions = new JSONArray(op.getValues().toString());
                     permissionsToRemove = IntStream.range(0, permissions.length()).mapToObj(permissions::getString)
                             .collect(Collectors.toList());
-                    permissionMap.put(SCIMProviderConstants.REMOVE, permissionsToRemove);
+                    if (permissionsToRemove.isEmpty()) {
+                        permissionMap.put(SCIMProviderConstants.REMOVE, null);
+                    } else {
+                        permissionMap.put(SCIMProviderConstants.REMOVE, permissionsToRemove.toArray(new String[0]));
+                    }
                 }
             }
         }
