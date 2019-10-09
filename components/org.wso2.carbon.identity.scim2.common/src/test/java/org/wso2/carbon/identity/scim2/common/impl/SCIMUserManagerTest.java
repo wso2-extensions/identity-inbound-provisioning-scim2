@@ -45,7 +45,6 @@ import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.user.core.hybrid.HybridRoleManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
@@ -342,6 +341,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockedUserStoreManager.getUserList("http://wso2.org/claims/userid", "*", null)).thenReturn(users);
         when(mockedUserStoreManager.getRoleListOfUser(anyString())).thenReturn(new String[0]);
+        whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
+        when(mockedGroupDAO.listSCIMGroups()).thenReturn(anySet());
         when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(isScimEnabledForPrimary);
         when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManager);
@@ -413,6 +414,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(true);
         when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
+        mockStatic(UserCoreUtil.class);
+        when(UserCoreUtil.isEveryoneRole("role", mockedRealmConfig)).thenReturn(false);
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
 
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
         List<Object> roleList = scimUserManager
@@ -464,6 +469,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(true);
         when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
 
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
         List<Object> roleList = scimUserManager
