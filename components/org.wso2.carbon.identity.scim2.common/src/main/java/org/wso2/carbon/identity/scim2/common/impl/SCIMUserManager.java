@@ -2512,6 +2512,16 @@ public class SCIMUserManager implements UserManager {
                         attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
                     }
 
+                    // Location URI is not available for users who created from the mgt console also location URI is not
+                    // tenant aware, so need to update the location URI according to the tenant.
+                    String locationURI = SCIMCommonUtils
+                            .getSCIMUserURL(attributes.get(SCIMConstants.CommonSchemaConstants.ID_URI));
+                    attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, locationURI);
+
+                    if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI)) {
+                        attributes.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, SCIMConstants.USER);
+                    }
+
                     //get groups of user and add it as groups attribute
                     List<String> roleList = usersRoles.get(userName);
                     String[] roles = new String[0];
@@ -2553,7 +2563,7 @@ public class SCIMUserManager implements UserManager {
                         }
 
                         if (group != null) { // can be null for non SCIM groups
-                            scimUser.setGroup(null, group.getId(), role);
+                            scimUser.setGroup(null, group);
                         }
                     }
                 } catch (UserStoreException | CharonException | NotFoundException | IdentitySCIMException | BadRequestException e) {
