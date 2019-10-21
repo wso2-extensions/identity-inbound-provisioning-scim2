@@ -322,7 +322,7 @@ public class AttributeMapper {
     public static void constructSCIMObjectFromAttributesOfLevelOne(Map.Entry<String, String> attributeEntry,
                                                                    SCIMObject scimObject, String[] attributeNames,
                                                                    int scimObjectType)
-            throws BadRequestException, CharonException {
+            throws BadRequestException, CharonException, NotFoundException {
         //get attribute schema
         AttributeSchema attributeSchema = getAttributeSchema(attributeEntry.getKey(), scimObjectType);
         if (attributeSchema != null) {
@@ -331,14 +331,23 @@ public class AttributeMapper {
                 //see whether multiple values are there
                 String value = attributeEntry.getValue();
                 Object[] values = value.split(",");
-                //create attribute
-                MultiValuedAttribute multiValuedAttribute = new MultiValuedAttribute(
-                        attributeSchema.getName());
-                //set values
-                multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
-                //set attribute in scim object
-                DefaultAttributeFactory.createAttribute(attributeSchema, multiValuedAttribute);
-                ((AbstractSCIMObject) scimObject).setAttribute(multiValuedAttribute);
+
+                // Check whether parent multi-valued attribute already exists.
+                if (((AbstractSCIMObject) scimObject).isAttributeExist(attributeSchema.getName())) {
+                    MultiValuedAttribute multiValuedAttribute = (MultiValuedAttribute) scimObject.getAttribute
+                            (attributeSchema.getName());
+                    // Set values.
+                    multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                } else {
+                    // Create attribute.
+                    MultiValuedAttribute multiValuedAttribute = new MultiValuedAttribute(
+                            attributeSchema.getName());
+                    // Set values.
+                    multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                    // Set attribute in scim object.
+                    DefaultAttributeFactory.createAttribute(attributeSchema, multiValuedAttribute);
+                    ((AbstractSCIMObject) scimObject).setAttribute(multiValuedAttribute);
+                }
 
             } else {
                 //convert attribute to relevant type
