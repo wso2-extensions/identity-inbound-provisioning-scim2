@@ -54,7 +54,9 @@ import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.model.OperationalOperation;
 import org.wso2.carbon.user.core.model.UserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.charon3.core.attributes.AbstractAttribute;
 import org.wso2.charon3.core.attributes.Attribute;
+import org.wso2.charon3.core.attributes.ComplexAttribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
@@ -68,6 +70,7 @@ import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.schema.SCIMDefinitions;
 import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.AttributeUtil;
@@ -105,17 +108,6 @@ public class SCIMUserManager implements UserManager {
     private ClaimMetadataManagementService claimMetadataManagementService = null;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
-
-
-    private static final String NAME = "name";
-    private static final String DESCRIPTION = "description";
-    private static final String TYPE = "type";
-    private static final String MULTIVALUED = "multiValued";
-    private static final String CASE_EXACT = "caseExact";
-    private static final String REQUIRED = "required";
-    private static final String MUTABILITY = "mutability";
-    private static final String RETURNED = "returned";
-    private static final String UNIQUENESS = "uniqueness";
 
     // Additional wso2 user schema properties.
     private static final String DISPLAY_NAME_PROPERTY = "displayName";
@@ -2300,10 +2292,10 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Map<String, String>> getUserSchema() throws CharonException, NotImplementedException,
+    public List<Attribute> getUserSchema() throws CharonException, NotImplementedException,
             BadRequestException {
 
-        List<Map<String, String>> userSchemaAttributeList = new ArrayList<>();
+        List<Attribute> userSchemaAttributeList = new ArrayList<>();
 
         try {
             List<ExternalClaim> scimClaimList =
@@ -2311,6 +2303,7 @@ public class SCIMUserManager implements UserManager {
                             , tenantDomain);
             List<LocalClaim> localClaimList = this.claimMetadataManagementService.getLocalClaims(tenantDomain);
 
+            Map<String, AbstractAttribute> attributeMap = new HashMap<>();
             if (scimClaimList != null && localClaimList != null) {
                 for (ExternalClaim scimClaim : scimClaimList) {
                     LocalClaim mappedLocalClaim = getMappedLocalClaim(scimClaim, localClaimList);
@@ -2323,9 +2316,8 @@ public class SCIMUserManager implements UserManager {
 
                         if (Boolean.parseBoolean(supportedByDefault)) {
                             // Return schema of supported-by-default claims only.
-                            Map<String, String> schemaAttributes = getSchemaAttributes(scimClaim,
-                                    mappedLocalClaim);
-                            userSchemaAttributeList.add(schemaAttributes);
+                            AbstractAttribute schemaAttribute = getSchemaAttributes(scimClaim, mappedLocalClaim);
+                            attributeMap.put(schemaAttribute.getName(), schemaAttribute);
                         }
                     }
 
@@ -2333,11 +2325,82 @@ public class SCIMUserManager implements UserManager {
                 }
             }
 
+            Map<String, ComplexAttribute> newComplexAttributeMap = new HashMap<>();
+            for (Map.Entry<String, AbstractAttribute> userAttribute: attributeMap.entrySet()) {
+                AbstractAttribute attribute = userAttribute.getValue();
+                String attributeName = attribute.getName();
+                if (attributeName.startsWith("name.")) {
+                    handleSubAttribute(userSchemaAttributeList, attributeMap, newComplexAttributeMap, attribute,
+                            attributeName);
+                } else if (attributeName.startsWith("addresses.")) {
+                    ComplexAttribute addressAttribute = (ComplexAttribute) attributeMap.get("addresses");
+                    if (addressAttribute == null) {
+                        addressAttribute = newComplexAttributeMap.get("addresses");
+                    }
+                    if (addressAttribute == null) {
+                        addressAttribute = new ComplexAttribute("addresses");
+                        pupulateBasicAttributes(null, addressAttribute);
+                        userSchemaAttributeList.add(addressAttribute);
+                    }
+                    addressAttribute.setSubAttribute(attribute);
+                } else if (attributeName.startsWith("phoneNumbers.")) {
+                    ComplexAttribute phoneNumbersAttribute = (ComplexAttribute) attributeMap.get("phoneNumbers");
+                    if (phoneNumbersAttribute == null) {
+                        phoneNumbersAttribute = newComplexAttributeMap.get("phoneNumbers");
+                    }
+                    if (phoneNumbersAttribute == null) {
+                        phoneNumbersAttribute = new ComplexAttribute("phoneNumbers");
+                        pupulateBasicAttributes(null, phoneNumbersAttribute);
+                        userSchemaAttributeList.add(phoneNumbersAttribute);
+                    }
+                    phoneNumbersAttribute.setSubAttribute(attribute);
+                } else {
+                    userSchemaAttributeList.add(attribute);
+                }
+
+            }
+
         } catch (ClaimMetadataException e) {
             throw new CharonException("Error while retrieving schema attribute details.", e);
         }
 
         return userSchemaAttributeList;
+    }
+
+    private void handleSubAttribute(List<Attribute> userSchemaAttributeList, Map<String, AbstractAttribute> attributeMap, Map<String, ComplexAttribute> newComplexAttributeMap, AbstractAttribute attribute, String attributeName) throws CharonException {
+
+        ComplexAttribute nameAttribute = (ComplexAttribute) attributeMap.get("name");
+        if (nameAttribute == null) {
+            nameAttribute = newComplexAttributeMap.get("name");
+        }
+        if (nameAttribute == null) {
+            nameAttribute = new ComplexAttribute("name");
+            pupulateBasicAttributes(null, nameAttribute);
+            newComplexAttributeMap.put("name",nameAttribute);
+            userSchemaAttributeList.add(nameAttribute);
+        }
+        attribute = getAttributeWithNewName(attribute, attributeName.substring("name.".length()));
+        nameAttribute.setSubAttribute(attribute);
+    }
+
+    private AbstractAttribute getAttributeWithNewName(AbstractAttribute attribute, String newName) {
+
+        SimpleAttribute newAttribute = new SimpleAttribute(newName, null);
+        newAttribute.setDescription(attribute.getDescription());
+        newAttribute.setRequired(attribute.getRequired());
+        newAttribute.setMutability(attribute.getMutability());
+        newAttribute.setCaseExact(attribute.getCaseExact());
+        newAttribute.setType(attribute.getType());
+        newAttribute.setMultiValued(attribute.getMultiValued());
+        newAttribute.setReturned(attribute.getReturned());
+        newAttribute.setUniqueness(attribute.getUniqueness());
+
+        Map<String, String> customAttributes = attribute.getAttributeProperties();
+        for (Map.Entry<String, String> entry : customAttributes.entrySet()) {
+            newAttribute.addAttributeProperty(entry.getKey(), entry.getValue());
+        }
+
+        return newAttribute;
     }
 
     private LocalClaim getMappedLocalClaim(ExternalClaim scimClaim, List<LocalClaim> localClaimList) {
@@ -2354,45 +2417,78 @@ public class SCIMUserManager implements UserManager {
         return mappedLocalClaim;
     }
 
-    private Map<String, String> getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim) {
-
-        Map<String, String> scimAttributeProperties = new HashMap<>();
+    private AbstractAttribute getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim) {
 
         String name = scimClaim.getClaimURI();
         if (name.startsWith(scimClaim.getClaimDialectURI())) {
-            name = name.substring(scimClaim.getClaimDialectURI().length());
+            name = name.substring(scimClaim.getClaimDialectURI().length()+1);
         }
 
-        scimAttributeProperties.put(NAME, name);
-        // TODO: Replace mappedLocalClaim.getClaimProperties() with mappedLocalClaim.getClaimProperty()
-        scimAttributeProperties.put(DESCRIPTION,
-                mappedLocalClaim.getClaimProperties().get(ClaimConstants.DESCRIPTION_PROPERTY));
-        scimAttributeProperties.put(REQUIRED,
-                mappedLocalClaim.getClaimProperties().get(ClaimConstants.REQUIRED_PROPERTY));
-        String readOnlyProperty = mappedLocalClaim.getClaimProperties().get(ClaimConstants.READ_ONLY_PROPERTY);
-        if (Boolean.parseBoolean(readOnlyProperty)) {
-            scimAttributeProperties.put(MUTABILITY, "readOnly");
+        AbstractAttribute attribute;
+        if (isComplexAttribute(name)) {
+            attribute = new ComplexAttribute(name);
         } else {
-            scimAttributeProperties.put(MUTABILITY, "readWrite");
+            attribute = new SimpleAttribute(name, null);
+        }
 
+        pupulateBasicAttributes(mappedLocalClaim, attribute);
+
+        return attribute;
+    }
+
+    private boolean isComplexAttribute(String name) {
+
+        switch(name) {
+            case "name" :
+            case "emails" :
+            case "phoneNumbers" :
+            case "ims" :
+            case "photos" :
+            case "addresses" :
+            case "groups" :
+            case "entitlements" :
+            case "roles" :
+            case "x509Certificates" :
+                return true;
+            default :
+                return false;
+        }
+    }
+
+    private void pupulateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute) {
+
+        if (mappedLocalClaim != null) {
+            // TODO: Replace mappedLocalClaim.getClaimProperties() with mappedLocalClaim.getClaimProperty()
+            attribute.setDescription(mappedLocalClaim.getClaimProperties().get(ClaimConstants.DESCRIPTION_PROPERTY));
+
+            attribute.setRequired(Boolean.parseBoolean(mappedLocalClaim.getClaimProperties().
+                    get(ClaimConstants.REQUIRED_PROPERTY)));
+
+            String readOnlyProperty = mappedLocalClaim.getClaimProperties().get(ClaimConstants.READ_ONLY_PROPERTY);
+            if (Boolean.parseBoolean(readOnlyProperty)) {
+                attribute.setMutability(SCIMDefinitions.Mutability.READ_ONLY);
+            } else {
+                attribute.setMutability(SCIMDefinitions.Mutability.READ_WRITE);
+
+            }
         }
 
         // Fixed schema attributes
-        scimAttributeProperties.put(CASE_EXACT, "false");
-        scimAttributeProperties.put(TYPE, "simple");
-        scimAttributeProperties.put(MULTIVALUED, "false");
-        scimAttributeProperties.put(RETURNED, "default");
-        scimAttributeProperties.put(UNIQUENESS, "none");
+        attribute.setCaseExact(false);
+        attribute.setType(SCIMDefinitions.DataType.STRING);
+        attribute.setMultiValued(false);
+        attribute.setReturned(SCIMDefinitions.Returned.DEFAULT);
+        attribute.setUniqueness(SCIMDefinitions.Uniqueness.NONE);
 
-        // Additional schema attributes
-        scimAttributeProperties.put(DISPLAY_NAME_PROPERTY,
-                mappedLocalClaim.getClaimProperties().get(ClaimConstants.DISPLAY_NAME_PROPERTY));
-        scimAttributeProperties.put(DISPLAY_ORDER_PROPERTY,
-                mappedLocalClaim.getClaimProperties().get(ClaimConstants.DISPLAY_ORDER_PROPERTY));
-        scimAttributeProperties.put(REGULAR_EXPRESSION_PROPERTY,
-                mappedLocalClaim.getClaimProperties().get(ClaimConstants.REGULAR_EXPRESSION_PROPERTY));
-
-        return scimAttributeProperties;
+        if (mappedLocalClaim != null) {
+            // Additional schema attributes
+            attribute.addAttributeProperty(DISPLAY_NAME_PROPERTY,
+                    mappedLocalClaim.getClaimProperties().get(ClaimConstants.DISPLAY_NAME_PROPERTY));
+            attribute.addAttributeProperty(DISPLAY_ORDER_PROPERTY,
+                    mappedLocalClaim.getClaimProperties().get(ClaimConstants.DISPLAY_ORDER_PROPERTY));
+            attribute.addAttributeProperty(REGULAR_EXPRESSION_PROPERTY,
+                    mappedLocalClaim.getClaimProperties().get(ClaimConstants.REGULAR_EXPRESSION_PROPERTY));
+        }
     }
 
     /**
