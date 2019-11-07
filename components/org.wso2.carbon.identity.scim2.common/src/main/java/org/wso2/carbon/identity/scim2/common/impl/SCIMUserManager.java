@@ -1088,11 +1088,7 @@ public class SCIMUserManager implements UserManager {
                             sortOrder);
             
             //prefix with domain name
-            String[] userNamesWithDomain = new String[userNames.length];
-            for(int i=0 ; i<userNames.length ; i++) {
-                userNamesWithDomain[i] = domainName + CarbonConstants.DOMAIN_SEPARATOR + userNames[i];
-            }
-            return userNamesWithDomain;
+            return prefixWithDomain(userNames,domainName);
 
         } catch (UserStoreException e) {
             String errorMessage = String
@@ -1442,10 +1438,26 @@ public class SCIMUserManager implements UserManager {
             }
             userNames = ((PaginatedUserStoreManager) carbonUM).getUserList(getCondition(node, attributes), domainName,
                     UserCoreConstants.DEFAULT_PROFILE, limit, offset, sortBy, sortOrder);
-            return userNames;
+
+            return prefixWithDomain(userNames,domainName);
+
         } catch (UserStoreException e) {
             throw new CharonException("Error in filtering users by multi attributes ", e);
         }
+    }
+
+    /**
+     * Prefix the usernames with the domain name
+     * @param userNames
+     * @param domainName
+     * @return
+     */
+    private String[] prefixWithDomain( String[] userNames,String domainName){
+        String[] userNamesWithDomain = new String[userNames.length];
+        for(int i=0 ; i<userNames.length ; i++) {
+            userNamesWithDomain[i] = domainName + CarbonConstants.DOMAIN_SEPARATOR + userNames[i];
+        }
+        return userNamesWithDomain;
     }
 
     /**
