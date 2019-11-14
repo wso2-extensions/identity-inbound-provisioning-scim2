@@ -92,6 +92,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -111,8 +112,8 @@ public class SCIMUserManager implements UserManager {
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private UserStoreManager carbonUM = null;
     private ClaimManager carbonClaimManager = null;
-    private String tenantDomain = null;
-    private ClaimMetadataManagementService claimMetadataManagementService = null;
+    private String tenantDomain;
+    private ClaimMetadataManagementService claimMetadataManagementService;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
 
@@ -129,6 +130,7 @@ public class SCIMUserManager implements UserManager {
 
     public SCIMUserManager(UserStoreManager carbonUserStoreManager,
                            ClaimMetadataManagementService claimMetadataManagementService, String tenantDomain) {
+
         this.carbonUM = carbonUserStoreManager;
         this.tenantDomain = tenantDomain;
         this.claimMetadataManagementService = claimMetadataManagementService;
@@ -3462,17 +3464,18 @@ public class SCIMUserManager implements UserManager {
                                                                           String tenantDomain) throws CharonException {
 
         try {
-            Map<ExternalClaim, LocalClaim> externalClaimLocalClaimMap = new HashMap<>();
             List<ExternalClaim> externalClaimList =
                     this.claimMetadataManagementService.getExternalClaims(externalClaimDialect, tenantDomain);
             List<LocalClaim> localClaimList = this.claimMetadataManagementService.getLocalClaims(tenantDomain);
 
+            Map<ExternalClaim, LocalClaim> externalClaimLocalClaimMap = new HashMap<>();
+
             if (externalClaimList != null && localClaimList != null) {
 
-                for (ExternalClaim externalClaim : externalClaimList) {
-                    LocalClaim mappedLocalClaim = getMappedLocalClaim(externalClaim, localClaimList);
-                    externalClaimLocalClaimMap.put(externalClaim, mappedLocalClaim);
-                }
+                externalClaimList.forEach(externalClaim ->
+                        getMappedLocalClaim(externalClaim, localClaimList)
+                                .ifPresent(mappedLocalClaim -> externalClaimLocalClaimMap.put(externalClaim,
+                                        mappedLocalClaim)));
             }
             return externalClaimLocalClaimMap;
 
@@ -3488,18 +3491,15 @@ public class SCIMUserManager implements UserManager {
      * @param localClaimList
      * @return
      */
-    private LocalClaim getMappedLocalClaim(ExternalClaim externalClaim, List<LocalClaim> localClaimList) {
+    private Optional<LocalClaim> getMappedLocalClaim(ExternalClaim externalClaim, List<LocalClaim> localClaimList) {
 
-        LocalClaim mappedLocalClaim = null;
-        if (localClaimList != null) {
-            for (LocalClaim localClaim : localClaimList) {
-                if (localClaim.getClaimURI().equals(externalClaim.getMappedLocalClaim())) {
-                    mappedLocalClaim = localClaim;
-                    break;
-                }
-            }
+        if (localClaimList == null) {
+            return Optional.empty();
         }
-        return mappedLocalClaim;
+
+        return localClaimList.stream()
+                .filter(localClaim -> localClaim.getClaimURI().equals(externalClaim.getMappedLocalClaim()))
+                .findAny();
     }
 
     /**
@@ -3604,7 +3604,6 @@ public class SCIMUserManager implements UserManager {
                 attribute.setMutability(SCIMDefinitions.Mutability.READ_ONLY);
             } else {
                 attribute.setMutability(SCIMDefinitions.Mutability.READ_WRITE);
-
             }
         }
 
