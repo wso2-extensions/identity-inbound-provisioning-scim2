@@ -35,7 +35,6 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.Instant;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -52,6 +51,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
     @Override
     public int getExecutionOrderId() {
+
         int orderId = getOrderId();
         if (orderId != IdentityCoreConstants.EVENT_LISTENER_ORDER_ID) {
             return orderId;
@@ -73,15 +73,16 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     @Override
     public boolean doPreAddUser(String userName, Object credential, String[] roleList, Map<String, String> claims,
                                 String profile, UserStoreManager userStoreManager) throws UserStoreException {
+
         try {
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
+            this.populateSCIMAttributes(userName, claims);
+            return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
-        this.populateSCIMAttributes(userName, claims);
-        return true;
     }
 
     @Override
@@ -111,6 +112,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     @Override
     public boolean doPostUpdateCredentialByAdmin(String userName, Object credential, UserStoreManager userStoreManager)
             throws UserStoreException {
+
         try {
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
@@ -310,8 +312,6 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException(e);
         }
-
-
     }
 
     @Override
@@ -407,6 +407,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
      * @return attributes map
      */
     public Map<String, String> populateSCIMAttributes(String userName, Map<String, String> claimsMap) {
+
         Map<String, String> attributes;
         if (claimsMap != null) {
             attributes = claimsMap;
@@ -418,8 +419,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
             String userIdLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.ID_URI);
             String createdLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.CREATED_URI);
-            String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
-            String usernameLocalClaimUri = scimToLocalMappings.get(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
+            String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants
+                    .LAST_MODIFIED_URI);
             String resourceTypeLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants
                     .RESOURCE_TYPE_URI);
 
@@ -435,6 +436,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                     break;
                 }
             }
+
+            // If the SCIM ID claims is already there, we don't need to re-generate it.
             if (!containsScimIdClaim) {
                 String id = UUID.randomUUID().toString();
                 attributes.put(userIdLocalClaimUri, id);
@@ -443,9 +446,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             String createdDate = AttributeUtil.formatDateTime(Instant.now());
             attributes.put(createdLocalClaimUri, createdDate);
             attributes.put(modifiedLocalClaimUri, createdDate);
-            attributes.put(usernameLocalClaimUri, userName);
             attributes.put(resourceTypeLocalClaimUri, SCIMConstants.USER);
-
         } catch (UserStoreException ex) {
             log.error("Error occurred while retrieving SCIM-to-Local claims map.", ex);
         }

@@ -154,8 +154,10 @@ public class AdminAttributeUtil {
      * @return
      */
     private static Map<String, String> generateSCIMClaims(String userName) {
+
         Map<String, String> claimsList = new HashMap<>();
-        //Generating new SCIM ID.
+
+        // Generating new SCIM ID.
         String id = UUID.randomUUID().toString();
         if (log.isDebugEnabled()) {
             log.debug("Generated SCIM ID : " + id + " for User : " + userName);
