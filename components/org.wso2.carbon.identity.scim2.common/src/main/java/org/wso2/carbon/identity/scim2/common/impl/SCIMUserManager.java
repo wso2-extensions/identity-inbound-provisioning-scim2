@@ -28,6 +28,11 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
@@ -54,7 +59,9 @@ import org.wso2.carbon.user.core.model.OperationalOperation;
 import org.wso2.carbon.user.core.model.UserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.user.mgt.RolePermissionException;
+import org.wso2.charon3.core.attributes.AbstractAttribute;
 import org.wso2.charon3.core.attributes.Attribute;
+import org.wso2.charon3.core.attributes.ComplexAttribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
@@ -68,6 +75,7 @@ import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.schema.SCIMDefinitions;
 import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.AttributeUtil;
@@ -86,6 +94,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -107,13 +116,28 @@ public class SCIMUserManager implements UserManager {
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
+    private String tenantDomain;
+    private ClaimMetadataManagementService claimMetadataManagementService;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
 
-    public SCIMUserManager(AbstractUserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
+    // Additional wso2 user schema properties.
+    private static final String DISPLAY_NAME_PROPERTY = "displayName";
+    private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
+    private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
 
+    @Deprecated
+    public SCIMUserManager(AbstractUserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
         carbonUM = carbonUserStoreManager;
         carbonClaimManager = claimManager;
+    }
+
+    public SCIMUserManager(AbstractUserStoreManager carbonUserStoreManager,
+                           ClaimMetadataManagementService claimMetadataManagementService, String tenantDomain) {
+
+        this.carbonUM = carbonUserStoreManager;
+        this.tenantDomain = tenantDomain;
+        this.claimMetadataManagementService = claimMetadataManagementService;
     }
 
     @Override
@@ -1175,7 +1199,7 @@ public class SCIMUserManager implements UserManager {
         Map<String, String> attributes;
         try {
             attributes = getAllAttributes(domainName);
-        } catch (UserStoreException e) {
+        } catch (CharonException e) {
             String errorMessage = String.format("Error while retrieving attributes for the domain %s.", domainName);
             throw new CharonException(errorMessage, e);
         }
@@ -1410,37 +1434,76 @@ public class SCIMUserManager implements UserManager {
      *
      * @param domainName Domain name.
      * @return All attributes of user.
-     * @throws UserStoreException
+     * @throws CharonException
      */
-    private Map<String, String> getAllAttributes(String domainName) throws UserStoreException {
+    private Map<String, String> getAllAttributes(String domainName) throws CharonException {
 
-        ClaimMapping[] userClaims;
-        ClaimMapping[] coreClaims;
-        ClaimMapping[] extensionClaims = null;
+        Map<String, String> attributes = new HashMap<>();
 
-        try {
-            coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
-            userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
+        if (claimMetadataManagementService != null) {
+            attributes.putAll(getMappedAttributes(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT, domainName));
+            attributes.putAll(getMappedAttributes(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT, domainName));
+
             if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
-                extensionClaims = carbonClaimManager.getAllClaimMappings(
-                        SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
+                String extensionURI = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI();
+                attributes.putAll(getMappedAttributes(extensionURI, domainName));
             }
-            Map<String, String> attributes = new HashMap<>();
-            for (ClaimMapping claim : coreClaims) {
-                attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
-            }
-            for (ClaimMapping claim : userClaims) {
-                attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
-            }
-            if (extensionClaims != null) {
-                for (ClaimMapping claim : extensionClaims) {
+        } else {
+            try {
+                ClaimMapping[] userClaims;
+                ClaimMapping[] coreClaims;
+                ClaimMapping[] extensionClaims = null;
+
+                coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
+                userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
+                if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+                    extensionClaims = carbonClaimManager.getAllClaimMappings(
+                            SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
+                }
+                for (ClaimMapping claim : coreClaims) {
                     attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
                 }
+                for (ClaimMapping claim : userClaims) {
+                    attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
+                }
+                if (extensionClaims != null) {
+                    for (ClaimMapping claim : extensionClaims) {
+                        attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
+                    }
+                }
+            } catch (UserStoreException e) {
+                throw new CharonException("Error in filtering users by multi attributes ", e);
             }
-            return attributes;
-        } catch (UserStoreException e) {
-            throw new UserStoreException("Error in filtering users by multi attributes ", e);
         }
+        return attributes;
+
+    }
+
+    /**
+     * Get mapped attribute assigned to the specified domain for each claim in the specified external claim dialect.
+     * @param extClaimDialectName
+     * @param domainName
+     * @return
+     * @throws ClaimMetadataException
+     */
+    private Map<String, String> getMappedAttributes(String extClaimDialectName, String domainName)
+            throws CharonException {
+
+        Map<String, String> attributes = new HashMap<>();
+        Map<ExternalClaim, LocalClaim> externalClaimLocalClaimMap = getMappedLocalClaimsForDialect(extClaimDialectName,
+                tenantDomain);
+
+        if (externalClaimLocalClaimMap != null) {
+            for (Map.Entry<ExternalClaim, LocalClaim> entry: externalClaimLocalClaimMap.entrySet()) {
+
+                ExternalClaim externalClaim = entry.getKey();
+                LocalClaim mappedLocalClaim = entry.getValue();
+
+                attributes.put(externalClaim.getClaimURI(), mappedLocalClaim.getMappedAttribute(domainName));
+            }
+        }
+
+        return attributes;
     }
 
     /**
@@ -2629,6 +2692,16 @@ public class SCIMUserManager implements UserManager {
                         attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
                     }
 
+                    // Location URI is not available for users who created from the mgt console also location URI is not
+                    // tenant aware, so need to update the location URI according to the tenant.
+                    String locationURI = SCIMCommonUtils
+                            .getSCIMUserURL(attributes.get(SCIMConstants.CommonSchemaConstants.ID_URI));
+                    attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, locationURI);
+
+                    if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI)) {
+                        attributes.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, SCIMConstants.USER);
+                    }
+
                     //get groups of user and add it as groups attribute
                     List<String> roleList = usersRoles.get(userName);
                     List<String> roles = new ArrayList<>();
@@ -2670,7 +2743,7 @@ public class SCIMUserManager implements UserManager {
                         }
 
                         if (group != null) { // can be null for non SCIM groups
-                            scimUser.setGroup(null, group.getId(), role);
+                            scimUser.setGroup(null, group);
                         }
                     }
                 } catch (UserStoreException | CharonException | NotFoundException | IdentitySCIMException |
@@ -3496,4 +3569,302 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    @Override
+    public List<Attribute> getUserSchema() throws CharonException {
+
+        Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
+                getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT, tenantDomain);
+
+        Map<String, Attribute> filteredFlatAttributeMap = getFilteredUserSchemaAttributes(scimClaimToLocalClaimMap);
+        Map<String, Attribute> hierarchicalAttributeMap = buildHierarchicalAttributeMap(filteredFlatAttributeMap);
+
+        List<Attribute> userSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
+        if (log.isDebugEnabled()) {
+            logSchemaAttributes(userSchemaAttributesList);
+        }
+
+        return userSchemaAttributesList;
+    }
+
+    /**
+     * Get mapped local claims for the claims in specified external claim dialect.
+     *
+     * @param externalClaimDialect
+     * @param tenantDomain
+     * @return
+     * @throws ClaimMetadataException
+     */
+    private Map<ExternalClaim, LocalClaim> getMappedLocalClaimsForDialect(String externalClaimDialect,
+                                                                          String tenantDomain) throws CharonException {
+
+        try {
+            List<ExternalClaim> externalClaimList =
+                    this.claimMetadataManagementService.getExternalClaims(externalClaimDialect, tenantDomain);
+            List<LocalClaim> localClaimList = this.claimMetadataManagementService.getLocalClaims(tenantDomain);
+
+            Map<ExternalClaim, LocalClaim> externalClaimLocalClaimMap = new HashMap<>();
+
+            if (externalClaimList != null && localClaimList != null) {
+
+                externalClaimList.forEach(externalClaim ->
+                        getMappedLocalClaim(externalClaim, localClaimList)
+                                .ifPresent(mappedLocalClaim -> externalClaimLocalClaimMap.put(externalClaim,
+                                        mappedLocalClaim)));
+            }
+            return externalClaimLocalClaimMap;
+
+        } catch (ClaimMetadataException e) {
+            throw new CharonException("Error while retrieving schema attribute details.", e);
+        }
+    }
+
+    /**
+     * Get mapped local claim for specified external claim.
+     *
+     * @param externalClaim
+     * @param localClaimList
+     * @return
+     */
+    private Optional<LocalClaim> getMappedLocalClaim(ExternalClaim externalClaim, List<LocalClaim> localClaimList) {
+
+        if (localClaimList == null) {
+            return Optional.empty();
+        }
+
+        return localClaimList.stream()
+                .filter(localClaim -> localClaim.getClaimURI().equals(externalClaim.getMappedLocalClaim()))
+                .findAny();
+    }
+
+    /**
+     * Get filtered claims that can be used in the schema attributes.
+     * This will allow only the username claim or the claims with supported-by-default value true.
+     *
+     * @param scimClaimToLocalClaimMap
+     * @return
+     */
+    private Map<String, Attribute> getFilteredUserSchemaAttributes(Map<ExternalClaim, LocalClaim>
+                                                                           scimClaimToLocalClaimMap) {
+
+        Map<String, Attribute> filteredFlatAttributeMap = new HashMap<>();
+
+        for (Map.Entry<ExternalClaim, LocalClaim> entry: scimClaimToLocalClaimMap.entrySet()) {
+
+            ExternalClaim scimClaim = entry.getKey();
+            LocalClaim mappedLocalClaim = entry.getValue();
+
+            if (isSupportedByDefault(mappedLocalClaim) || isUsernameClaim(scimClaim)) {
+                // Return only the schema of supported-by-default claims and the username claim.
+                Attribute schemaAttribute = getSchemaAttributes(scimClaim, mappedLocalClaim);
+                filteredFlatAttributeMap.put(schemaAttribute.getName(), schemaAttribute);
+            }
+        }
+
+        return filteredFlatAttributeMap;
+    }
+
+    private boolean isSupportedByDefault(LocalClaim mappedLocalClaim) {
+
+        String supportedByDefault = mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
+        return Boolean.parseBoolean(supportedByDefault);
+    }
+
+    private boolean isUsernameClaim(ExternalClaim scimClaim) {
+
+        return SCIMConstants.UserSchemaConstants.USER_NAME_URI.equals(scimClaim.getClaimURI());
+    }
+
+    /**
+     * Build and return the Charon Attribute representation using the claim metadata.
+     *
+     * @param scimClaim
+     * @param mappedLocalClaim
+     * @return
+     */
+    private Attribute getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim) {
+
+        String name = scimClaim.getClaimURI();
+        if (name.startsWith(scimClaim.getClaimDialectURI())) {
+            name = name.substring(scimClaim.getClaimDialectURI().length() + 1);
+        }
+
+        AbstractAttribute attribute;
+        if (isComplexAttribute(name)) {
+            attribute = new ComplexAttribute(name);
+        } else {
+            attribute = new SimpleAttribute(name, null);
+        }
+
+        pupulateBasicAttributes(mappedLocalClaim, attribute);
+
+        return attribute;
+    }
+
+    private boolean isComplexAttribute(String name) {
+
+        switch(name) {
+            case "name" :
+            case "emails" :
+            case "phoneNumbers" :
+            case "ims" :
+            case "photos" :
+            case "addresses" :
+            case "groups" :
+            case "entitlements" :
+            case "roles" :
+            case "x509Certificates" :
+                return true;
+            default :
+                return false;
+        }
+    }
+
+    private boolean isMultivaluedAttribute(String name) {
+
+        switch(name) {
+            case "emails" :
+            case "phoneNumbers" :
+            case "ims" :
+            case "photos" :
+            case "addresses" :
+            case "groups" :
+            case "entitlements" :
+            case "roles" :
+            case "x509Certificates" :
+                return true;
+            default :
+                return false;
+        }
+    }
+
+    /**
+     * Populates basic Charon Attributes details using the claim metadata.
+     *
+     * @param mappedLocalClaim
+     * @param attribute
+     */
+    private void pupulateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute) {
+
+        if (mappedLocalClaim != null) {
+            attribute.setDescription(mappedLocalClaim.getClaimProperty(ClaimConstants.DESCRIPTION_PROPERTY));
+
+            attribute.setRequired(Boolean.parseBoolean(mappedLocalClaim.
+                    getClaimProperty(ClaimConstants.REQUIRED_PROPERTY)));
+
+            String readOnlyProperty = mappedLocalClaim.getClaimProperty(ClaimConstants.READ_ONLY_PROPERTY);
+            if (Boolean.parseBoolean(readOnlyProperty)) {
+                attribute.setMutability(SCIMDefinitions.Mutability.READ_ONLY);
+            } else {
+                attribute.setMutability(SCIMDefinitions.Mutability.READ_WRITE);
+            }
+        }
+
+        // Fixed schema attributes
+        attribute.setCaseExact(false);
+        if (attribute instanceof ComplexAttribute) {
+            attribute.setType(SCIMDefinitions.DataType.COMPLEX);
+        } else {
+            attribute.setType(SCIMDefinitions.DataType.STRING);
+        }
+
+        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName()));
+        attribute.setReturned(SCIMDefinitions.Returned.DEFAULT);
+        attribute.setUniqueness(SCIMDefinitions.Uniqueness.NONE);
+
+        if (mappedLocalClaim != null) {
+            // Additional schema attributes
+            attribute.addAttributeProperty(DISPLAY_NAME_PROPERTY,
+                    mappedLocalClaim.getClaimProperty(ClaimConstants.DISPLAY_NAME_PROPERTY));
+            attribute.addAttributeProperty(DISPLAY_ORDER_PROPERTY,
+                    mappedLocalClaim.getClaimProperty(ClaimConstants.DISPLAY_ORDER_PROPERTY));
+            attribute.addAttributeProperty(REGULAR_EXPRESSION_PROPERTY,
+                    mappedLocalClaim.getClaimProperty(ClaimConstants.REGULAR_EXPRESSION_PROPERTY));
+        }
+    }
+
+    /**
+     * Builds complex attribute schema with correct sub attributes using the flat attribute map.
+     *
+     * @param filteredFlatAttributeMap
+     * @return
+     */
+    private Map<String, Attribute> buildHierarchicalAttributeMap(Map<String, Attribute> filteredFlatAttributeMap)
+            throws CharonException {
+
+        Map<String, Attribute> simpleAttributeMap = new HashMap<>();
+
+        Map<String, ComplexAttribute> complexAttributeMap = new HashMap<>();
+        for (Map.Entry<String, Attribute> userAttribute: filteredFlatAttributeMap.entrySet()) {
+            String attributeName = userAttribute.getKey();
+            Attribute attribute = userAttribute.getValue();
+
+            if (attributeName.contains(".")) {
+                ComplexAttribute parentAttribute = handleSubAttribute(attribute, filteredFlatAttributeMap,
+                        complexAttributeMap);
+                complexAttributeMap.put(parentAttribute.getName(), parentAttribute);
+            } else {
+                simpleAttributeMap.put(attributeName, attribute);
+            }
+        }
+        simpleAttributeMap.putAll(complexAttributeMap);
+
+        return simpleAttributeMap;
+    }
+
+    /**
+     * Set sub attribute to the correct parent attribute and return complex parent attribute.
+     *
+     * @param attribute
+     * @param flatAttributeMap
+     * @param complexAttributeMap
+     * @return
+     */
+    private ComplexAttribute handleSubAttribute(Attribute attribute, Map<String, Attribute> flatAttributeMap,
+                                                Map<String, ComplexAttribute> complexAttributeMap)
+            throws CharonException {
+
+        String attributeName = attribute.getName();
+        String parentAttributeName = attributeName.substring(0, attributeName.indexOf("."));
+        String subAttributeName = attributeName.substring(attributeName.indexOf(".") + 1);
+
+        ComplexAttribute parentAttribute = (ComplexAttribute) flatAttributeMap.get(parentAttributeName);
+
+        if (parentAttribute == null) {
+            parentAttribute = complexAttributeMap.get(parentAttributeName);
+        }
+
+        if (parentAttribute == null) {
+            parentAttribute = new ComplexAttribute(parentAttributeName);
+            pupulateBasicAttributes(null, parentAttribute);
+            complexAttributeMap.put(parentAttributeName, parentAttribute);
+        }
+
+        if (attribute instanceof AbstractAttribute) {
+            ((AbstractAttribute) attribute).setName(subAttributeName);
+        } else {
+            throw new CharonException("Unsupported attribute type");
+        }
+        parentAttribute.setSubAttribute(attribute);
+
+        return parentAttribute;
+    }
+
+    private void logSchemaAttributes(List<Attribute> userSchemaAttributesList) {
+
+        StringBuffer sb = new StringBuffer();
+        sb.append("Final user schema attribute list calculated as: [");
+        boolean isFirst = true;
+        for (Attribute userSchemaAttribute: userSchemaAttributesList) {
+
+            if (!isFirst) {
+                sb.append(", ");
+            }
+
+            sb.append("{");
+            sb.append(userSchemaAttribute.getName());
+            sb.append("}");
+        }
+        sb.append("]");
+        log.debug(sb);
+    }
 }
