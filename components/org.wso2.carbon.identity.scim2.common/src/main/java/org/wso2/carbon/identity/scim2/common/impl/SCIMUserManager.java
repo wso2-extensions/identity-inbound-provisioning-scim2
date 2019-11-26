@@ -3585,6 +3585,24 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    private boolean isMultivaluedAttribute(String name) {
+
+        switch(name) {
+            case "emails" :
+            case "phoneNumbers" :
+            case "ims" :
+            case "photos" :
+            case "addresses" :
+            case "groups" :
+            case "entitlements" :
+            case "roles" :
+            case "x509Certificates" :
+                return true;
+            default :
+                return false;
+        }
+    }
+
     /**
      * Populates basic Charon Attributes details using the claim metadata.
      *
@@ -3609,8 +3627,13 @@ public class SCIMUserManager implements UserManager {
 
         // Fixed schema attributes
         attribute.setCaseExact(false);
-        attribute.setType(SCIMDefinitions.DataType.STRING);
-        attribute.setMultiValued(false);
+        if (attribute instanceof ComplexAttribute) {
+            attribute.setType(SCIMDefinitions.DataType.COMPLEX);
+        } else {
+            attribute.setType(SCIMDefinitions.DataType.STRING);
+        }
+
+        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName()));
         attribute.setReturned(SCIMDefinitions.Returned.DEFAULT);
         attribute.setUniqueness(SCIMDefinitions.Uniqueness.NONE);
 
