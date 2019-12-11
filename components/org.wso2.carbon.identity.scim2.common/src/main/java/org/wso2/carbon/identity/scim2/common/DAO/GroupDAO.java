@@ -423,6 +423,7 @@ public class GroupDAO {
 
         // Resolve sql query for filtering.
         if (StringUtils.isNotEmpty(domainName)) {
+
             // if the domain is given, domain needs to be searched in ROLE_NAME column as well.
             sqlQuery = SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE_AND_ROLE_NAME;
         } else {
@@ -442,8 +443,9 @@ public class GroupDAO {
                     while (rSet.next()) {
                         String roleName = rSet.getString(1);
                         if (StringUtils.isNotEmpty(roleName)) {
-                                // Remove the primary domain name from roleNames.
-                                roleList.add(removePrimaryDomainName(roleName));
+
+                            // Remove the primary domain name from roleNames.
+                            roleList.add(removePrimaryDomainName(roleName));
                         }
                     }
                 }
@@ -453,7 +455,7 @@ public class GroupDAO {
             throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.",
                     e);
         }
-        return roleList.toArray(new String[roleList.size()]);
+        return roleList.toArray(new String[0]);
     }
 
     /**
