@@ -999,8 +999,9 @@ public class SCIMUserManager implements UserManager {
         Condition condition;
         for (String userStoreDomainName : userStoreDomainNames) {
 
-            // Check whether the used case is for listing users.
+            // Check for a user listing scenario. (For filtering this value will be set to NULL)
             if (conditionForListingUsers == null) {
+
                 // Create filter condition for each domain for single attribute filter.
                 condition = createConditionForSingleAttributeFilter(userStoreDomainName, node);
             } else {
