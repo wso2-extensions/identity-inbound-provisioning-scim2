@@ -3010,7 +3010,7 @@ public class SCIMUserManager implements UserManager {
         String searchAttribute;
         if (log.isDebugEnabled()) {
             log.debug(String.format(
-                    "Domain detected in attribute value: %s for filter attribute: %s for " + "filter operation; %s.",
+                    "Domain detected in attribute value: %s for filter attribute: %s for " + "filter operation: %s.",
                     attributeValue, attributeName, filterOperation));
         }
         if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
