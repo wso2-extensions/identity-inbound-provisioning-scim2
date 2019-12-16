@@ -50,6 +50,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
+import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionAttribute;
 import org.wso2.carbon.user.core.model.ExpressionCondition;
@@ -785,20 +786,22 @@ public class SCIMUserManager implements UserManager {
      * @param sortOrder          Sort order.
      * @param domainName         Domain that the filter should perform.
      * @return Detailed user list.
-     * @throws CharonException
+     * @throws CharonException Error filtering the users.
      */
     private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
                                      String sortBy, String sortOrder, String domainName) throws CharonException {
 
         // Handle limit equals NULL scenario.
         limit = handleLimitEqualsNULL(limit);
+
         // Handle single attribute search.
         if (node instanceof ExpressionNode) {
             return filterUsersBySingleAttribute((ExpressionNode) node, requiredAttributes, offset, limit, sortBy,
                     sortOrder, domainName);
         } else if (node instanceof OperationNode) {
-            if (log.isDebugEnabled())
+            if (log.isDebugEnabled()) {
                 log.debug("Listing users by multi attribute filter");
+            }
 
             // Support multi attribute filtering.
             return getMultiAttributeFilteredUsers(node, requiredAttributes, offset, limit, sortBy, sortOrder,
@@ -893,6 +896,7 @@ public class SCIMUserManager implements UserManager {
         if (limit <= 0) {
             return true;
         } else if (!isPaginatedUserStoreAvailable() && !(carbonUM instanceof PaginatedUserStoreManager)) {
+
             // If the userStore does not support above conditions, filter should use old APIs.
             return true;
         }
