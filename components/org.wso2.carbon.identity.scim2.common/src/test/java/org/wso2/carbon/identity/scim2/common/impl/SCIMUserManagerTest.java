@@ -44,7 +44,6 @@ import org.wso2.carbon.identity.testutil.Whitebox;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
-import org.wso2.carbon.user.core.UniqueIDUserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
@@ -369,7 +368,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                                      int expectedResultCount) throws Exception {
 
         Map<String, String> scimToLocalClaimMap = new HashMap<>();
-        scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", "http://wso2.org/claims/username");
+        scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName",
+                "http://wso2.org/claims/username");
         scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:id", "http://wso2.org/claims/userid");
 
         mockStatic(SCIMCommonUtils.class);
@@ -543,11 +543,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:id", "25850849-eb62-476a-a3ff-641b81cbd251");
 
         return new Object[][]{
-                {
-                        startsWithFilter, roles, attributes
-                }, {
-                equalsFilter, roles, attributes
-        }
+                {startsWithFilter, roles, attributes},
+                {equalsFilter, roles, attributes}
         };
     }
 

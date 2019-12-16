@@ -124,7 +124,7 @@ public class IdentitySCIMManager {
                 // Get tenant's user realm.
                 UserRealm userRealm = realmService.getTenantUserRealm(tenantId);
                 if (userRealm != null) {
-                    scimUserManager = new SCIMUserManager((UserStoreManager) userRealm.getUserStoreManager(),
+                    scimUserManager = new SCIMUserManager((AbstractUserStoreManager) userRealm.getUserStoreManager(),
                             SCIMCommonComponentHolder.getClaimManagementService(), tenantDomain);
                 }
             } else {
