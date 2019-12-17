@@ -2876,8 +2876,6 @@ public class SCIMUserManager implements UserManager {
             }
         } else {
             if (users.length > limit + offset) {
-
-                // If users.length > limit + offset, then return only the users bounded by the offset and the limit.
                 return Arrays.copyOfRange(users, offset - 1, limit + offset - 1);
             } else {
                 // Return all the users from the offset.
