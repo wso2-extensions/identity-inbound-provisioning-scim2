@@ -670,6 +670,22 @@ public class SCIMUserManager implements UserManager {
                 claims.remove(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
             }
 
+            // Since we are already populating last_modified claim value from SCIMUserOperationListener, we need to
+            // remove this claim value which is coming from charon-level.
+            if (claims.containsKey(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI)) {
+                claims.remove(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
+            }
+
+            // Location is a meta attribute of user object.
+            if (claims.containsKey(SCIMConstants.CommonSchemaConstants.LOCATION)) {
+                claims.remove(SCIMConstants.CommonSchemaConstants.LOCATION);
+            }
+
+            // Resource-Type is a meta attribute of user object.
+            if (claims.containsKey(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE)) {
+                claims.remove(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE);
+            }
+
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
@@ -699,10 +715,12 @@ public class SCIMUserManager implements UserManager {
             log.info("User: " + user.getUserName() + " updated through SCIM.");
             return getUser(user.getId(),requiredAttributes);
         } catch (UserStoreException e) {
+            log.error("Error while updating attributes of user: " + user.getUserName(), e);
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
         } catch (BadRequestException | CharonException e) {
-            throw new CharonException("Error occured while trying to update the user", e);
+            log.error("Error occurred while trying to update the user", e);
+            throw new CharonException("Error occurred while trying to update the user", e);
         }
     }
 
