@@ -442,8 +442,8 @@ public class GroupDAO {
                     while (rSet.next()) {
                         String roleName = rSet.getString(1);
                         if (StringUtils.isNotEmpty(roleName)) {
-                                // Remove the primary domain name from roleNames.
-                                roleList.add(removePrimaryDomainName(roleName));
+                            // Remove the primary domain name from roleNames.
+                            roleList.add(removePrimaryDomainName(roleName));
                         }
                     }
                 }
@@ -453,7 +453,7 @@ public class GroupDAO {
             throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.",
                     e);
         }
-        return roleList.toArray(new String[roleList.size()]);
+        return roleList.toArray(new String[0]);
     }
 
     /**
