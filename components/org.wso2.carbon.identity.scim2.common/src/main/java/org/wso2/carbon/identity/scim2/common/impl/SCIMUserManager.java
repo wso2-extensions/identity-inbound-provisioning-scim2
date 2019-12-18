@@ -2889,13 +2889,13 @@ public class SCIMUserManager implements UserManager {
         // If the limit is zero, all the users needs to be returned after verifying the offset.
         if (limit <= 0) {
             if (offset == 1) {
+
                 // This is to support backward compatibility.
                 return users;
             } else {
                 return Arrays.copyOfRange(users, offset - 1, users.length);
             }
         } else {
-            // If users.length > limit + offset, then return only the users bounded by the offset and the limit.
             if (users.length > limit + offset) {
                 return Arrays.copyOfRange(users, offset - 1, limit + offset - 1);
             } else {
