@@ -345,7 +345,7 @@ public class SCIMUserManager implements UserManager {
                 throw new NotFoundException();
             } else if (userStoreDomainFromSP != null &&
                     !(userStoreDomainFromSP
-                            .equalsIgnoreCase(IdentityUtil.extractDomainFromName(coreUser.getUsername())))) {
+                            .equalsIgnoreCase(coreUser.getUserStoreDomain()))) {
                 throw new CharonException("User :" + coreUser.getUsername() + "is not belong to user store " +
                         userStoreDomainFromSP + "Hence user updating fail");
             } else {
