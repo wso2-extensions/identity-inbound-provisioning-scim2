@@ -723,6 +723,22 @@ public class SCIMUserManager implements UserManager {
 
             claims.remove(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
 
+            // Since we are already populating last_modified claim value from SCIMUserOperationListener, we need to
+            // remove this claim value which is coming from charon-level.
+            if (claims.containsKey(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI)) {
+                claims.remove(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
+            }
+
+            // Location is a meta attribute of user object.
+            if (claims.containsKey(SCIMConstants.CommonSchemaConstants.LOCATION)) {
+                claims.remove(SCIMConstants.CommonSchemaConstants.LOCATION);
+            }
+
+            // Resource-Type is a meta attribute of user object.
+            if (claims.containsKey(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE)) {
+                claims.remove(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE);
+            }
+
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
@@ -752,10 +768,12 @@ public class SCIMUserManager implements UserManager {
             log.info("User: " + user.getUserName() + " updated through SCIM.");
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreException e) {
+            log.error("Error while updating attributes of user: " + user.getUserName(), e);
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
         } catch (BadRequestException | CharonException e) {
-            throw new CharonException("Error occured while trying to update the user", e);
+            log.error("Error occurred while trying to update the user", e);
+            throw new CharonException("Error occurred while trying to update the user", e);
         }
     }
 
@@ -1062,8 +1080,9 @@ public class SCIMUserManager implements UserManager {
         Condition condition;
         for (String userStoreDomainName : userStoreDomainNames) {
 
-            // Check whether the used case is for listing users.
+            // Check for a user listing scenario. (For filtering this value will be set to NULL)
             if (conditionForListingUsers == null) {
+
                 // Create filter condition for each domain for single attribute filter.
                 condition = createConditionForSingleAttributeFilter(userStoreDomainName, node);
             } else {
@@ -2990,6 +3009,7 @@ public class SCIMUserManager implements UserManager {
         // If the limit is zero, all the users needs to be returned after verifying the offset.
         if (limit <= 0) {
             if (offset == 1) {
+
                 // This is to support backward compatibility.
                 return users;
             } else {
@@ -3132,7 +3152,7 @@ public class SCIMUserManager implements UserManager {
         String searchAttribute;
         if (log.isDebugEnabled()) {
             log.debug(String.format(
-                    "Domain detected in attribute value: %s for filter attribute: %s for " + "filter operation; %s.",
+                    "Domain detected in attribute value: %s for filter attribute: %s for " + "filter operation: %s.",
                     attributeValue, attributeName, filterOperation));
         }
         if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
