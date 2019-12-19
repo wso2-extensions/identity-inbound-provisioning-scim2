@@ -30,15 +30,14 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.Instant;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -52,6 +51,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
     @Override
     public int getExecutionOrderId() {
+
         int orderId = getOrderId();
         if (orderId != IdentityCoreConstants.EVENT_LISTENER_ORDER_ID) {
             return orderId;
@@ -60,59 +60,70 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPreAuthenticate(String s, Object o, UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
+    public boolean doPreAddUserWithID(String userID, Object credential, String[] roleList, Map<String, String> claims,
+                                      String profile, UserStoreManager userStoreManager) throws UserStoreException {
 
-    @Override
-    public boolean doPostAuthenticate(String userName, boolean authenticated, UserStoreManager userStoreManager)
-            throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPreAddUser(String userName, Object credential, String[] roleList, Map<String, String> claims,
-                                String profile, UserStoreManager userStoreManager) throws UserStoreException {
         try {
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
+            this.populateSCIMAttributes(userID, claims);
+            return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
-        this.populateSCIMAttributes(userName, claims);
-        return true;
     }
 
     @Override
-    public boolean doPostAddUser(String userName, Object credential, String[] roleList, Map<String, String> claims,
-                                 String profile, UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
+    public boolean doPostAddUserWithID(String userID, Object credential, String[] roleList, Map<String, String> claims,
+                                       String profile, UserStoreManager userStoreManager) throws UserStoreException {
 
-    @Override
-    public boolean doPreUpdateCredential(String s, Object o, Object o1, UserStoreManager userStoreManager)
-            throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPostUpdateCredential(String userName, Object credential, UserStoreManager userStoreManager)
-            throws UserStoreException {
-        return doPostUpdateCredentialByAdmin(userName, credential, userStoreManager);
-    }
-
-    @Override
-    public boolean doPreUpdateCredentialByAdmin(String s, Object o, UserStoreManager userStoreManager)
-            throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPostUpdateCredentialByAdmin(String userName, Object credential, UserStoreManager userStoreManager)
-            throws UserStoreException {
         try {
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
+                return true;
+            }
+
+            Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
+            String userIdLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.ID_URI);
+
+            Pattern pattern = Pattern.compile("urn:.*scim:schemas:core:.\\.0:id");
+            boolean containsSCIMIdClaim = false;
+            for (String claimUri : claims.keySet()) {
+                if (pattern.matcher(claimUri).matches()) {
+                    containsSCIMIdClaim = true;
+                    break;
+                }
+                if (StringUtils.equals(claimUri, userIdLocalClaimUri)) {
+                    containsSCIMIdClaim = true;
+                    break;
+                }
+            }
+
+            // If the SCIM ID claims is already there, we don't need to re-generate it.
+            if (!containsSCIMIdClaim) {
+                claims.put(userIdLocalClaimUri, userID);
+                ((AbstractUserStoreManager)userStoreManager).setUserClaimValueWithID(userID, userIdLocalClaimUri,
+                        userID, UserCoreConstants.DEFAULT_PROFILE);
+            }
+            return true;
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            throw new UserStoreException("Error while reading isSCIMEnabled from user store manager", e);
+        }
+    }
+
+    @Override
+    public boolean doPostUpdateCredentialWithID(String userId, Object credential, UserStoreManager userStoreManager)
+            throws UserStoreException {
+        return doPostUpdateCredentialByAdminWithID(userId, credential, userStoreManager);
+    }
+
+    @Override
+    public boolean doPostUpdateCredentialByAdminWithID(String userID, Object credential,
+                                                       UserStoreManager userStoreManager) throws UserStoreException {
+
+        try {
+            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()
+                    || !(userStoreManager instanceof AbstractUserStoreManager)) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -121,13 +132,14 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         // Update last-modified-date.
         try {
+            AbstractUserStoreManager abstractUserStoreManager = (AbstractUserStoreManager) userStoreManager;
             String lastModifiedDate = AttributeUtil.formatDateTime(Instant.now());
-            userStoreManager.setUserClaimValue(
-                    userName, SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, lastModifiedDate, null);
+            abstractUserStoreManager.setUserClaimValueWithID(
+                    userID, SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, lastModifiedDate, null);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             if (e.getMessage().contains("UserNotFound")) {
                 if (log.isDebugEnabled()) {
-                    log.debug("User " + userName + " doesn't exist");
+                    log.debug("User " + userID + " doesn't exist");
                 }
             } else {
                 throw new UserStoreException("Error updating SCIM metadata in doPostUpdateCredentialByAdmin " +
@@ -138,33 +150,17 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPreDeleteUser(String userName, UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPostDeleteUser(String s, UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPreSetUserClaimValue(String s, String s1, String s2, String s3, UserStoreManager
-            userStoreManager) throws UserStoreException {
-        return true;
-    }
-
-    @Override
     public boolean doPostSetUserClaimValue(String s, UserStoreManager userStoreManager) throws UserStoreException {
         //TODO: need to set last modified time.
         return true;
     }
 
     @Override
-    public boolean doPreSetUserClaimValues(String userName, Map<String, String> claims, String profileName,
-                                           UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean doPreSetUserClaimValuesWithID(String userID, Map<String, String> claims, String profileName,
+                                                 UserStoreManager userStoreManager) throws UserStoreException {
         try {
-            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled() || userStoreManager
-                    .isReadOnly()) {
+            if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()
+                    || userStoreManager.isReadOnly()) {
                 return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -175,40 +171,6 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
         String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
         claims.put(modifiedLocalClaimUri, lastModifiedDate);
-        return true;
-    }
-
-    @Override
-    public boolean doPostSetUserClaimValues(String userName, Map<String, String> claims, String profileName,
-                                            UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPreDeleteUserClaimValues(String s, String[] strings, String s1, UserStoreManager userStoreManager)
-            throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPostDeleteUserClaimValues(String s, UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPreDeleteUserClaimValue(String s, String s1, String s2, UserStoreManager userStoreManager)
-            throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPostDeleteUserClaimValue(String s, UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPreAddRole(String s, String[] strings, org.wso2.carbon.user.api.Permission[] permissions,
-                                UserStoreManager userStoreManager) throws UserStoreException {
         return true;
     }
 
@@ -299,8 +261,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             }
             String roleNameWithDomain = IdentityUtil.addDomainToName(roleName, domainName);
             try {
-                //delete group attributes - no need to check existence here,
-                //since it is checked in below method.
+                // Delete group attributes - no need to check existence here, since it is checked in below method.
                 scimGroupHandler.deleteGroupAttributes(roleNameWithDomain);
             } catch (IdentitySCIMException e) {
                 throw new UserStoreException("Error retrieving group information from SCIM Tables.", e);
@@ -310,19 +271,6 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException(e);
         }
-
-
-    }
-
-    @Override
-    public boolean doPostDeleteRole(String roleName, UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPreUpdateRoleName(String s, String s1, UserStoreManager userStoreManager)
-            throws UserStoreException {
-        return true;
     }
 
     @Override
@@ -356,42 +304,13 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             String newRoleNameWithDomain = UserCoreUtil.addDomainToName(newRoleName, domainName);
             try {
                 scimGroupHandler.updateRoleName(roleNameWithDomain, newRoleNameWithDomain);
-
             } catch (IdentitySCIMException e) {
                 throw new UserStoreException("Error updating group information in SCIM Tables.", e);
             }
             return true;
-
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException(e);
         }
-
-
-    }
-
-    @Override
-    public boolean doPreUpdateUserListOfRole(String s, String[] strings, String[] strings1,
-                                             UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPostUpdateUserListOfRole(String roleName, String[] deletedUsers, String[] newUsers,
-                                              UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-
-    }
-
-    @Override
-    public boolean doPreUpdateRoleListOfUser(String s, String[] strings, String[] strings1,
-                                             UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
-    }
-
-    @Override
-    public boolean doPostUpdateRoleListOfUser(String s, String[] strings, String[] strings1,
-                                              UserStoreManager userStoreManager) throws UserStoreException {
-        return true;
     }
 
     @Deprecated
@@ -402,11 +321,12 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     /**
      * Populate SCIM Attributes map.
      *
-     * @param userName  userName
+     * @param userId  userName
      * @param claimsMap claimsMap
      * @return attributes map
      */
-    public Map<String, String> populateSCIMAttributes(String userName, Map<String, String> claimsMap) {
+    public Map<String, String> populateSCIMAttributes(String userId, Map<String, String> claimsMap) {
+
         Map<String, String> attributes;
         if (claimsMap != null) {
             attributes = claimsMap;
@@ -416,41 +336,19 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         try {
             Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
-            String userIdLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.ID_URI);
             String createdLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.CREATED_URI);
-            String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
-            String usernameLocalClaimUri = scimToLocalMappings.get(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
+            String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants
+                    .LAST_MODIFIED_URI);
             String resourceTypeLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants
                     .RESOURCE_TYPE_URI);
-
-            Pattern pattern = Pattern.compile("urn:.*scim:schemas:core:.\\.0:id");
-            boolean containsScimIdClaim = false;
-            for (String claimUri : attributes.keySet()) {
-                if (pattern.matcher(claimUri).matches()) {
-                    containsScimIdClaim = true;
-                    break;
-                }
-                if (StringUtils.equals(claimUri, userIdLocalClaimUri)) {
-                    containsScimIdClaim = true;
-                    break;
-                }
-            }
-            if (!containsScimIdClaim) {
-                String id = UUID.randomUUID().toString();
-                attributes.put(userIdLocalClaimUri, id);
-            }
 
             String createdDate = AttributeUtil.formatDateTime(Instant.now());
             attributes.put(createdLocalClaimUri, createdDate);
             attributes.put(modifiedLocalClaimUri, createdDate);
-            attributes.put(usernameLocalClaimUri, userName);
             attributes.put(resourceTypeLocalClaimUri, SCIMConstants.USER);
-
         } catch (UserStoreException ex) {
             log.error("Error occurred while retrieving SCIM-to-Local claims map.", ex);
         }
-
         return attributes;
     }
-
 }

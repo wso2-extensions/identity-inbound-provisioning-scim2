@@ -240,6 +240,7 @@ public class SCIMCommonUtils {
             // Retrieve Local to SCIM Claim Mappings from db.
             scimToLocalClaimMappings = getSCIMtoLocalMappings();
         }
+
         Map<String, String> claimsInSCIMDialect = new HashMap<>();
         if (MapUtils.isNotEmpty(scimToLocalClaimMappings)) {
             for (Map.Entry entry : scimToLocalClaimMappings.entrySet()) {
@@ -265,25 +266,29 @@ public class SCIMCommonUtils {
 
         Map<String, String> scimToLocalClaimMap = new HashMap<>();
         try {
+            // Get the SCIM "Core" claims.
             Map<String, String> coreClaims = ClaimMetadataHandler.getInstance()
                     .getMappingsMapFromOtherDialectToCarbon(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT, null,
                             spTenantDomain, false);
             scimToLocalClaimMap.putAll(coreClaims);
+
+            // Get the SCIM "User" claims.
             Map<String, String> userClaims = ClaimMetadataHandler.getInstance()
                     .getMappingsMapFromOtherDialectToCarbon(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT, null,
                             spTenantDomain, false);
             scimToLocalClaimMap.putAll(userClaims);
-            if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null){
+
+            // Get the extension claims, if there are any extensions enabled.
+            if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
                 Map<String, String> extensionClaims = ClaimMetadataHandler.getInstance()
-                        .getMappingsMapFromOtherDialectToCarbon(SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI(), null,
-                                spTenantDomain, false);
+                        .getMappingsMapFromOtherDialectToCarbon(SCIMUserSchemaExtensionBuilder.getInstance()
+                                .getExtensionSchema().getURI(), null, spTenantDomain, false);
                 scimToLocalClaimMap.putAll(extensionClaims);
             }
             return scimToLocalClaimMap;
         } catch (ClaimMetadataException e) {
-            throw new UserStoreException(
-                    "Error occurred while retrieving SCIM to Local claim mappings for tenant domain : " +
-                            spTenantDomain , e);
+            throw new UserStoreException("Error occurred while retrieving SCIM to Local claim mappings for tenant " +
+                    "domain : " + spTenantDomain, e);
         }
     }
 

@@ -34,6 +34,7 @@ import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.charon3.core.config.CharonConfiguration;
@@ -65,7 +66,7 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
     ClaimManager mockedClaimManager;
 
     @Mock
-    UserStoreManager mockedUserStoreManager;
+    AbstractUserStoreManager mockedUserStoreManager;
 
     private SCIMConfigProcessor scimConfigProcessor;
     private IdentitySCIMManager identitySCIMManager;

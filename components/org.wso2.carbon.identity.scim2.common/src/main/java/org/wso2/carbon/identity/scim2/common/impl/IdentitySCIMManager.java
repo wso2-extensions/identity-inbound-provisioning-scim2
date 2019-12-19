@@ -31,6 +31,7 @@ import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import org.wso2.charon3.core.config.CharonConfiguration;
@@ -45,13 +46,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class IdentitySCIMManager {
+
     private static final Log log = LogFactory.getLog(IdentitySCIMManager.class);
 
     private static volatile IdentitySCIMManager identitySCIMManager;
     private JSONEncoder encoder = null;
-    private static Map<String, String> endpointURLs = new HashMap<String, String>();
+    private static Map<String, String> endpointURLs = new HashMap<>();
 
     private IdentitySCIMManager() throws CharonException {
+
         init();
     }
 
@@ -62,6 +65,7 @@ public class IdentitySCIMManager {
      * @return
      */
     public static IdentitySCIMManager getInstance() throws CharonException {
+
         if (identitySCIMManager == null) {
             synchronized (IdentitySCIMManager.class) {
                 if (identitySCIMManager == null) {
@@ -80,47 +84,53 @@ public class IdentitySCIMManager {
      * Perform initialization at the deployment of the webapp.
      */
     private void init() throws CharonException {
-        //this is necessary to instantiate here as we need to encode exceptions if they occur.
+
+        // This is necessary to instantiate here as we need to encode exceptions if they occur.
         encoder = new JSONEncoder();
-        //Define endpoint urls to be used in Location Header
+
+        // Define endpoint urls to be used in Location Header.
         endpointURLs.put(SCIMConstants.USER_ENDPOINT, SCIMCommonUtils.getSCIMUserURL());
         endpointURLs.put(SCIMConstants.GROUP_ENDPOINT, SCIMCommonUtils.getSCIMGroupURL());
-        endpointURLs.put(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT, SCIMCommonUtils.getSCIMServiceProviderConfigURL());
+        endpointURLs.put(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT, SCIMCommonUtils
+                .getSCIMServiceProviderConfigURL());
         endpointURLs.put(SCIMConstants.RESOURCE_TYPE_ENDPOINT, SCIMCommonUtils.getSCIMResourceTypeURL());
-        //register endpoint URLs in AbstractResourceEndpoint since they are called with in the API
+
+        // Register endpoint URLs in AbstractResourceEndpoint since they are called with in the API.
         registerEndpointURLs();
-        //register the charon related configurations
+
+        // Register the charon related configurations.
         registerCharonConfig();
     }
 
     /**
      * return json encoder
+     *
      * @return
      */
     public JSONEncoder getEncoder() {
+
         return encoder;
     }
 
-
     public UserManager getUserManager() throws CharonException {
+
         SCIMUserManager scimUserManager = null;
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         try {
-            //get super tenant context and get realm service which is an osgi service
+            // Get super tenant context and get realm service which is an osgi service.
             RealmService realmService = SCIMCommonComponentHolder.getRealmService();
             if (realmService != null) {
                 int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
-                //get tenant's user realm
+                // Get tenant's user realm.
                 UserRealm userRealm = realmService.getTenantUserRealm(tenantId);
                 if (userRealm != null) {
-                    scimUserManager = new SCIMUserManager((UserStoreManager) userRealm.getUserStoreManager(),
+                    scimUserManager = new SCIMUserManager((AbstractUserStoreManager) userRealm.getUserStoreManager(),
                             SCIMCommonComponentHolder.getClaimManagementService(), tenantDomain);
                 }
             } else {
                 String error = "Can not obtain carbon realm service..";
                 throw new CharonException(error);
             }
-            //get user store manager
         } catch (UserStoreException e) {
             String error = "Error obtaining user realm for tenant: " + tenantDomain;
             throw new CharonException(error, e);
@@ -132,6 +142,7 @@ public class IdentitySCIMManager {
      * Resgister endpoint URLs in AbstractResourceEndpoint.
      */
     private void registerEndpointURLs() {
+
         if (MapUtils.isNotEmpty(endpointURLs)) {
             AbstractResourceManager.setEndpointURLMap(endpointURLs);
         }
@@ -141,10 +152,11 @@ public class IdentitySCIMManager {
      * This create the basic operational configurations for charon
      */
     private void registerCharonConfig() throws CharonException {
+
         try {
 
-            //config charon
-            //this values will be used in /ServiceProviderConfigResource endpoint and some default charon configs
+            // Config charon.
+            // This values will be used in /ServiceProviderConfigResource endpoint and some default charon configs.
             CharonConfiguration charonConfiguration = CharonConfiguration.getInstance();
             SCIMConfigProcessor scimConfigProcessor = SCIMConfigProcessor.getInstance();
             charonConfiguration.setDocumentationURL
@@ -152,7 +164,8 @@ public class IdentitySCIMManager {
             charonConfiguration.setBulkSupport
                     (Boolean.parseBoolean(scimConfigProcessor.getProperty(SCIMCommonConstants.BULK_SUPPORTED)),
                             Integer.parseInt(scimConfigProcessor.getProperty(SCIMCommonConstants.BULK_MAX_OPERATIONS)),
-                            Integer.parseInt(scimConfigProcessor.getProperty(SCIMCommonConstants.BULK_MAX_PAYLOAD_SIZE)));
+                            Integer.parseInt(scimConfigProcessor.getProperty(SCIMCommonConstants
+                                    .BULK_MAX_PAYLOAD_SIZE)));
             charonConfiguration.setSortSupport
                     (Boolean.parseBoolean(scimConfigProcessor.getProperty(SCIMCommonConstants.SORT_SUPPORTED)));
             charonConfiguration.setPatchSupport
@@ -160,12 +173,13 @@ public class IdentitySCIMManager {
             charonConfiguration.setETagSupport
                     (Boolean.parseBoolean(scimConfigProcessor.getProperty(SCIMCommonConstants.ETAG_SUPPORTED)));
             charonConfiguration.setChangePasswordSupport
-                    (Boolean.parseBoolean(scimConfigProcessor.getProperty(SCIMCommonConstants.CHNAGE_PASSWORD_SUPPORTED)));
+                    (Boolean.parseBoolean(scimConfigProcessor.getProperty(SCIMCommonConstants
+                            .CHNAGE_PASSWORD_SUPPORTED)));
             charonConfiguration.setFilterSupport
                     (Boolean.parseBoolean(scimConfigProcessor.getProperty(SCIMCommonConstants.FILTER_SUPPORTED)),
                             Integer.parseInt(scimConfigProcessor.getProperty(SCIMCommonConstants.FILTER_MAX_RESULTS)));
 
-            ArrayList<Object[]> schemaList = new ArrayList<Object[]>();
+            ArrayList<Object[]> schemaList = new ArrayList<>();
             for (AuthenticationSchema authenticationSchema : scimConfigProcessor.getAuthenticationSchemas()) {
                 Object[] schema = {authenticationSchema.getName(),
                         authenticationSchema.getDescription(),
@@ -181,5 +195,4 @@ public class IdentitySCIMManager {
             throw new CharonException("Error in setting up charon configurations.", e);
         }
     }
-
 }

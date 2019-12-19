@@ -60,6 +60,7 @@ import static org.testng.Assert.assertTrue;
 public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
     private String userName = "testUser";
+    private String userId = "e235e3b6-49a3-45ad-a2b8-097733ee73ff";
     private Object credential = new Object();
     private String roleName = "testRole";
     private String[] roleList = new String[]{"testRole1, testRole2"};
@@ -132,7 +133,7 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         when(scimUserOperationListener.isEnable()).thenReturn(isEnabled);
         when(userStoreManager.isSCIMEnabled()).thenReturn(isSCIMEnabled);
 
-        assertTrue(scimUserOperationListener.doPreAddUser(userName, credential, roleList, claims, profile,
+        assertTrue(scimUserOperationListener.doPreAddUserWithID(userId, credential, roleList, claims, profile,
                 userStoreManager));
     }
 
@@ -141,112 +142,111 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         when(scimUserOperationListener.isEnable()).thenReturn(true);
         when(userStoreManager.isSCIMEnabled()).thenThrow(new UserStoreException());
 
-        scimUserOperationListener.doPreAddUser(userName, credential, roleList, claims, profile, userStoreManager);
+        scimUserOperationListener.doPreAddUserWithID(userName, credential, roleList, claims, profile, userStoreManager);
     }
 
     @Test
     public void testDoPostAddUser() throws Exception {
-        assertTrue(scimUserOperationListener.doPostAddUser(userName, credential, roleList, claims, profile,
+        assertTrue(scimUserOperationListener.doPostAddUserWithID(userId, credential, roleList, claims, profile,
                 userStoreManager));
     }
 
     @Test
     public void testDoPreUpdateCredential() throws Exception {
-        assertTrue(scimUserOperationListener.doPreUpdateCredential(userName, credential, credential, userStoreManager));
+        assertTrue(scimUserOperationListener.doPreUpdateCredentialWithID(userId, credential, credential,
+                userStoreManager));
     }
 
     @Test
     public void testDoPostUpdateCredential() throws Exception {
-        assertTrue(scimUserOperationListener.doPostUpdateCredential(userName, credential, userStoreManager));
+        assertTrue(scimUserOperationListener.doPostUpdateCredentialWithID(userId, credential, userStoreManager));
     }
 
     @Test
     public void testDoPreUpdateCredentialByAdmin() throws Exception {
-        assertTrue(scimUserOperationListener.doPreUpdateCredentialByAdmin(userName, credential, userStoreManager));
+        assertTrue(scimUserOperationListener.doPreUpdateCredentialByAdminWithID(userId, credential,
+                userStoreManager));
     }
 
     @Test(dataProvider = "testDoPreAddUserData")
     public void testDoPostUpdateCredentialByAdmin(boolean isEnabled, boolean isSCIMEnabled)
             throws Exception {
+
         when(scimUserOperationListener.isEnable()).thenReturn(isEnabled);
         when(userStoreManager.isSCIMEnabled()).thenReturn(isSCIMEnabled);
-
-        assertTrue(scimUserOperationListener.doPostUpdateCredentialByAdmin(userName, credential, userStoreManager));
+        assertTrue(scimUserOperationListener.doPostUpdateCredentialByAdminWithID(userId, credential, userStoreManager));
     }
 
     @Test(expectedExceptions = UserStoreException.class)
     public void testDoPostUpdateCredentialByAdmin1() throws Exception {
+
         when(scimUserOperationListener.isEnable()).thenReturn(true);
         when(userStoreManager.isSCIMEnabled()).thenThrow(new UserStoreException());
-        scimUserOperationListener.doPostUpdateCredentialByAdmin(userName, credential, userStoreManager);
+        scimUserOperationListener.doPostUpdateCredentialByAdminWithID(userId, credential, userStoreManager);
     }
 
     @Test
     public void testDoPreDeleteUser() throws Exception {
-        assertTrue(scimUserOperationListener.doPreDeleteUser(userName, userStoreManager));
+        assertTrue(scimUserOperationListener.doPreDeleteUserWithID(userId, userStoreManager));
     }
 
     @Test
     public void testDoPostDeleteUser() throws Exception {
-        assertTrue(scimUserOperationListener.doPostDeleteUser(userName, userStoreManager));
+        assertTrue(scimUserOperationListener.doPostDeleteUserWithID(userId, userStoreManager));
     }
 
     @Test
     public void testDoPreSetUserClaimValue() throws Exception {
-        assertTrue(scimUserOperationListener.doPreSetUserClaimValue(eq(userName), anyString(), anyString(), anyString(),
-                eq(userStoreManager)));
+        assertTrue(scimUserOperationListener.doPreSetUserClaimValueWithID(eq(userId), anyString(), anyString(),
+                anyString(), eq(userStoreManager)));
     }
 
     @Test
     public void testDoPostSetUserClaimValue() throws Exception {
-        assertTrue(scimUserOperationListener.doPostSetUserClaimValue(userName, userStoreManager));
+        assertTrue(scimUserOperationListener.doPostSetUserClaimValueWithID(userId, userStoreManager));
     }
 
     @Test(dataProvider = "testDoPreAddUserData")
     public void testDoPreSetUserClaimValues(boolean isEnabled, boolean isSCIMEnabled) throws Exception {
+
         when(scimUserOperationListener.isEnable()).thenReturn(isEnabled);
         when(userStoreManager.isSCIMEnabled()).thenReturn(isSCIMEnabled);
-
-        assertTrue(scimUserOperationListener.doPreSetUserClaimValues(userName, claims, profile, userStoreManager));
+        assertTrue(scimUserOperationListener.doPreSetUserClaimValuesWithID(userId, claims, profile, userStoreManager));
     }
 
     @Test(expectedExceptions = UserStoreException.class)
     public void testDoPreSetUserClaimValues1() throws Exception {
+
         when(scimUserOperationListener.isEnable()).thenReturn(true);
         when(userStoreManager.isSCIMEnabled()).thenThrow(new UserStoreException());
-        scimUserOperationListener.doPreSetUserClaimValues(userName, claims, profile, userStoreManager);
+        scimUserOperationListener.doPreSetUserClaimValuesWithID(userId, claims, profile, userStoreManager);
     }
 
     @Test
     public void testDoPostSetUserClaimValues() throws Exception {
-        assertTrue(scimUserOperationListener.doPostSetUserClaimValues(userName, claims, profile, userStoreManager));
+        assertTrue(scimUserOperationListener.doPostSetUserClaimValuesWithID(userId, claims, profile, userStoreManager));
     }
 
     @Test
     public void testDoPreDeleteUserClaimValues() throws Exception {
-        assertTrue(scimUserOperationListener.doPreDeleteUserClaimValues(userName, roleList, userName,
+        assertTrue(scimUserOperationListener.doPreDeleteUserClaimValuesWithID(userId, roleList, userName,
                 userStoreManager));
     }
 
     @Test
     public void testDoPostDeleteUserClaimValues() throws Exception {
-        assertTrue(scimUserOperationListener.doPostDeleteUserClaimValues(userName, userStoreManager));
+        assertTrue(scimUserOperationListener.doPostDeleteUserClaimValuesWithID(userId, userStoreManager));
     }
 
     @Test
     public void testDoPreDeleteUserClaimValue() throws Exception {
-        assertTrue(scimUserOperationListener.doPreDeleteUserClaimValue(anyString(), anyString(), anyString(),
+        assertTrue(scimUserOperationListener.doPreDeleteUserClaimValueWithID(anyString(), anyString(), anyString(),
                 eq(userStoreManager)));
     }
 
     @Test
     public void testDoPostDeleteUserClaimValue() throws Exception {
-        assertTrue(scimUserOperationListener.doPostDeleteUserClaimValue(userName, userStoreManager));
-    }
-
-    @Test
-    public void testDoPreAddRole() throws Exception {
-        assertTrue(scimUserOperationListener.doPreAddRole(userName, roleList, permissions, userStoreManager));
+        assertTrue(scimUserOperationListener.doPostDeleteUserClaimValueWithID(userId, userStoreManager));
     }
 
     @DataProvider(name = "testDoPostAddRoleData")
@@ -352,7 +352,8 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
     @Test(expectedExceptions = UserStoreException.class)
     public void testDoPostUpdateRoleName2() throws Exception {
         mockTestEnvironment(true, true, "testDomain");
-        when(groupDAO.isExistingGroup(anyString(), anyInt())).thenThrow(new IdentitySCIMException("IdentitySCIMException"));
+        when(groupDAO.isExistingGroup(anyString(), anyInt()))
+                .thenThrow(new IdentitySCIMException("IdentitySCIMException"));
 
         scimUserOperationListener.doPostUpdateRoleName(roleName, roleName, userStoreManager);
     }
@@ -383,15 +384,15 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
     @DataProvider(name = "testSCIMAttributesData")
     public Object[][] testSCIMAttributesData() {
+
         Map<String, String> claimsMap1 = new HashMap<>();
 
-        Map<String, String> claimsMap2 = claimsMap1;
         String id = UUID.randomUUID().toString();
-        claimsMap2.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
+        claimsMap1.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
 
         return new Object[][]{
                 {claimsMap1},
-                {claimsMap2},
+                {claimsMap1},
                 {null}
         };
     }
@@ -402,9 +403,11 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, "http://wso2.org/claims/created");
-        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, "http://wso2.org/claims/modified");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
+                "http://wso2.org/claims/modified");
         scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, "http://wso2.org/claims/username");
-        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, "http://wso2.org/claims/resourceType");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI,
+                "http://wso2.org/claims/resourceType");
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         assertNotNull(scimUserOperationListener.getSCIMAttributes(userName, claimsMap));
     }
@@ -415,9 +418,11 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, "http://wso2.org/claims/created");
-        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, "http://wso2.org/claims/modified");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
+                "http://wso2.org/claims/modified");
         scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, "http://wso2.org/claims/username");
-        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, "http://wso2.org/claims/resourceType");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI,
+                "http://wso2.org/claims/resourceType");
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         assertNotNull(scimUserOperationListener.populateSCIMAttributes(userName, claimsMap));
     }
@@ -430,6 +435,4 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         when(UserCoreUtil.addDomainToName(anyString(), anyString())).thenReturn("testRoleNameWithDomain");
         when(SCIMCommonUtils.getGroupNameWithDomain(anyString())).thenReturn("testRoleNameWithDomain");
     }
-
 }
-
