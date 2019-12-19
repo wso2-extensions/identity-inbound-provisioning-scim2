@@ -57,6 +57,7 @@ import org.wso2.carbon.user.core.model.ExpressionCondition;
 import org.wso2.carbon.user.core.model.ExpressionOperation;
 import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.model.OperationalOperation;
+import org.wso2.carbon.user.core.model.UniqueIDUserClaimSearchEntry;
 import org.wso2.carbon.user.core.model.UserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.user.mgt.RolePermissionException;
@@ -2662,7 +2663,7 @@ public class SCIMUserManager implements UserManager {
         List<User> scimUsers = new ArrayList<>();
 
         //obtain user claim values
-        List<UserClaimSearchEntry> searchEntries;
+        List<UniqueIDUserClaimSearchEntry> searchEntries;
         Map<String, List<String>> usersRoles;
 
         try {
@@ -2689,9 +2690,9 @@ public class SCIMUserManager implements UserManager {
                 }
                 User scimUser;
                 Map<String, String> userClaimValues = new HashMap<>();
-                for (UserClaimSearchEntry entry : searchEntries) {
-                    if (StringUtils.isNotBlank(entry.getUserName()) && entry.getUserName()
-                            .equals(user.getUsername())) {
+                for (UniqueIDUserClaimSearchEntry entry : searchEntries) {
+                    if (entry.getUser() != null && StringUtils.isNotBlank(entry.getUser().getUsername())
+                            && entry.getUser().getUsername().equals(user.getUsername())) {
                         userClaimValues = entry.getClaims();
                     }
                 }
