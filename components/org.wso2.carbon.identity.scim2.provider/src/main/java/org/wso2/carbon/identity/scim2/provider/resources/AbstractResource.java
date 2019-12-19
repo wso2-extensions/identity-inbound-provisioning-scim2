@@ -58,6 +58,37 @@ public class AbstractResource {
     }
     //identify the input format
     public boolean isValidInputFormat(String format) {
+
+        if (isCharsetDefined(format)) {
+            String encodingFormat = format.split(SCIMProviderConstants.SEMI_COLON)[1].trim();
+            if (StringUtils.isNotEmpty(encodingFormat) &&
+                    encodingFormat.equalsIgnoreCase(SCIMProviderConstants.CHARSET_UTF8)) {
+                String contentType = format.split(SCIMProviderConstants.SEMI_COLON)[0].trim();
+                return isValidContentType(contentType);
+            }
+        }
+        return isValidContentType(format);
+    }
+
+    /**
+     * To check whether the request has charset param in Content-Type.
+     *
+     * @param format the input format
+     * @return true or false
+     */
+    private boolean isCharsetDefined(String format) {
+
+        return format != null && format.toLowerCase().contains(SCIMProviderConstants.CHARSET);
+    }
+
+    /**
+     * To validate the Content-Type.
+     *
+     * @param format the input format
+     * @return true or false
+     */
+    private boolean isValidContentType(String format) {
+
         return format == null || "*/*".equals(format) ||
                 format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION__JSON)
                 || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON)
