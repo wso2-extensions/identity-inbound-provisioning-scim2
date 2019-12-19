@@ -150,7 +150,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostSetUserClaimValue(String s, UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean doPostSetUserClaimValueWithID(String s, UserStoreManager userStoreManager)
+            throws UserStoreException {
         //TODO: need to set last modified time.
         return true;
     }
@@ -175,15 +176,16 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostAddInternalRole(String roleName, String[] userList, org.wso2.carbon.user.api.Permission[]
+    public boolean doPostAddInternalRoleWithID(String roleName, String[] userList, org.wso2.carbon.user.api.Permission[]
             permissions, UserStoreManager userStoreManager) throws UserStoreException {
 
         return doPostAddRole(roleName, userList, permissions, userStoreManager);
     }
 
     @Override
-    public boolean doPostAddRole(String roleName, String[] userList, org.wso2.carbon.user.api.Permission[] permissions,
-                                 UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean doPostAddRoleWithID(String roleName, String[] userList,
+                                       org.wso2.carbon.user.api.Permission[] permissions,
+                                       UserStoreManager userStoreManager) throws UserStoreException {
 
         try {
             if (!isEnable() || userStoreManager == null) {
