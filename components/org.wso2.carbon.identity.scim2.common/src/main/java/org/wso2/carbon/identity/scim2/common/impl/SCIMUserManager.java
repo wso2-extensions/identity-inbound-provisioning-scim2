@@ -328,7 +328,14 @@ public class SCIMUserManager implements UserManager {
                     .CommonSchemaConstants.ID_URI);
 
             if (StringUtils.isNotBlank(userIdLocalClaim)) {
-                coreUser = carbonUM.getUserWithID(userId, null, UserCoreConstants.DEFAULT_PROFILE);
+                // We cannot use getUserWithID because it throws exception when the user cannot be found.
+                // (Generic user store exception). If we can send a specific user not found exception in user core level
+                // we can use that method.
+                List<org.wso2.carbon.user.core.common.User> coreUsers = carbonUM.getUserListWithID(userIdLocalClaim,
+                        userId, UserCoreConstants.DEFAULT_PROFILE);
+                if (coreUsers.size() > 0) {
+                    coreUser = coreUsers.get(0);
+                }
             }
 
             String userStoreDomainFromSP = null;
@@ -1296,7 +1303,8 @@ public class SCIMUserManager implements UserManager {
                     attributeValue);
             throw new CharonException(errorMessage, e);
         }
-        users = new TreeSet<>(paginateUsers(users, limit, offset));
+
+        paginateUsers(users, limit, offset);
         return users;
     }
 

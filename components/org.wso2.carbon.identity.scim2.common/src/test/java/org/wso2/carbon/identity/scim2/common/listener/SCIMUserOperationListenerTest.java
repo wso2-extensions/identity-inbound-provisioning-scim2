@@ -274,7 +274,7 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         when(scimUserOperationListener.isEnable()).thenReturn(true);
         when(userStoreManager.isSCIMEnabled()).thenThrow(new UserStoreException());
 
-        scimUserOperationListener.doPostAddRole(roleName, userList, permissions, userStoreManager);
+        scimUserOperationListener.doPostAddRoleWithID(roleName, userList, permissions, userStoreManager);
     }
 
     @Test(expectedExceptions = UserStoreException.class)
@@ -283,7 +283,7 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         when(groupDAO.isExistingGroup(anyString(), anyInt())).thenThrow(new IdentitySCIMException
                 ("IdentitySCIMException"));
 
-        scimUserOperationListener.doPostAddRole(roleName, userList, permissions, userStoreManager);
+        scimUserOperationListener.doPostAddRoleWithID(roleName, userList, permissions, userStoreManager);
     }
 
     @Test(dataProvider = "testDoPostAddRoleData")
