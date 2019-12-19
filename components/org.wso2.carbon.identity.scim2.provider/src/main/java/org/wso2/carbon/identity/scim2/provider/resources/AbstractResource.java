@@ -60,10 +60,11 @@ public class AbstractResource {
     public boolean isValidInputFormat(String format) {
 
         if (isCharsetDefined(format)) {
-            String encodingFormat = format.split(SCIMProviderConstants.SEMI_COLON)[1].trim();
+            String[] inputFormats = format.split(SCIMProviderConstants.SEMI_COLON);
+            String encodingFormat = inputFormats[1].trim();
             if (StringUtils.isNotEmpty(encodingFormat) &&
                     encodingFormat.equalsIgnoreCase(SCIMProviderConstants.CHARSET_UTF8)) {
-                String contentType = format.split(SCIMProviderConstants.SEMI_COLON)[0].trim();
+                String contentType = inputFormats[0].trim();
                 return isValidContentType(contentType);
             }
         }
