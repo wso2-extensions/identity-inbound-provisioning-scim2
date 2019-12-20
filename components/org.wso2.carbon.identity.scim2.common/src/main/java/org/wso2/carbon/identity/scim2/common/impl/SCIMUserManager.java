@@ -2578,11 +2578,10 @@ public class SCIMUserManager implements UserManager {
         }
 
         try {
-            // Obtain user claim values if not provided.
-            if (userClaimValues == null) {
-                userClaimValues = carbonUM.getUserClaimValuesWithID(coreUser.getUserID(),
-                        claimURIList.toArray(new String[0]), null);
-            }
+            // TODO: If we can get the updated user claim values from the add user method, we don't need to do
+            //  this call. Please check the status of the issue: https://github.com/wso2/product-is/issues/7160
+            userClaimValues = carbonUM.getUserClaimValuesWithID(coreUser.getUserID(),
+                    claimURIList.toArray(new String[0]), null);
 
             Map<String, String> attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues,
                     scimToLocalClaimsMap);
