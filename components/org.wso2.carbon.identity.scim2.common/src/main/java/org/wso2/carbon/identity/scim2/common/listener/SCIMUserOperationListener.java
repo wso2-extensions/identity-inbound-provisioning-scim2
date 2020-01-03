@@ -31,6 +31,7 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
@@ -75,7 +76,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostAddUserWithID(String userID, Object credential, String[] roleList, Map<String, String> claims,
+    public boolean doPostAddUserWithID(User user, Object credential, String[] roleList, Map<String, String> claims,
                                        String profile, UserStoreManager userStoreManager) throws UserStoreException {
 
         try {
@@ -101,9 +102,9 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
             // If the SCIM ID claims is already there, we don't need to re-generate it.
             if (!containsSCIMIdClaim) {
-                claims.put(userIdLocalClaimUri, userID);
-                ((AbstractUserStoreManager)userStoreManager).setUserClaimValueWithID(userID, userIdLocalClaimUri,
-                        userID, UserCoreConstants.DEFAULT_PROFILE);
+                claims.put(userIdLocalClaimUri, user.getUserID());
+                ((AbstractUserStoreManager)userStoreManager).setUserClaimValueWithID(user.getUserID(), userIdLocalClaimUri,
+                        user.getUserID(), UserCoreConstants.DEFAULT_PROFILE);
             }
             return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
