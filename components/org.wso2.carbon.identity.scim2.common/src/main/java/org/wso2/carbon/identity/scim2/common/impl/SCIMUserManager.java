@@ -2868,7 +2868,7 @@ public class SCIMUserManager implements UserManager {
         if (coreUsers != null && coreUsers.size() != 0) {
             for (org.wso2.carbon.user.core.common.User coreUser : coreUsers) {
                 String userId = coreUser.getUserID();
-                String userName = coreUser.getUsername();
+                String userName = coreUser.getDomainQualifiedUsername();
                 if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
                     userName = prependDomain(userName);
                 }
