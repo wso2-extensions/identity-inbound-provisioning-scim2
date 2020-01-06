@@ -25,9 +25,11 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.common.impl.SCIMUserManager;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -516,8 +518,12 @@ public class GroupResource extends AbstractResource {
                             excludedAttributes));
                 }
             } else if (PATCH.class.getSimpleName().equals(httpVerb)) {
-                scimResponse = groupResourceManager
-                        .updateWithPATCH(id, resourceString, userManager, attributes, excludedAttributes);
+                if (isGroupReturnedInPatchResponse()) {
+                    scimResponse = groupResourceManager
+                            .updateWithPATCH(id, resourceString, userManager, attributes, excludedAttributes);
+                } else {
+                    scimResponse = groupResourceManager.updateWithPATCH(id, resourceString, userManager);
+                }
             } else if (DELETE.class.getSimpleName().equals(httpVerb)) {
                 scimResponse = groupResourceManager.delete(id, userManager);
             }
@@ -532,6 +538,12 @@ public class GroupResource extends AbstractResource {
             return handleCharonException(new CharonException("Error occurred when getting the permissions from server",
                     e), encoder);
         }
+    }
+
+    private boolean isGroupReturnedInPatchResponse() {
+
+        String property = IdentityUtil.getProperty(SCIMCommonConstants.SCIM_RETURN_UPDATED_GROUP_IN_PATCH_RESPONSE);
+        return property == null || Boolean.parseBoolean(property);
     }
 
     /**
