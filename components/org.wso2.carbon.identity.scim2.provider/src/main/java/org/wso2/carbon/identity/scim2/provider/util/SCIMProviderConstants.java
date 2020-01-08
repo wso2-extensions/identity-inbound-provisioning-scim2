@@ -32,6 +32,9 @@ public class SCIMProviderConstants {
     public static final String APPLICATION_SCIM_JSON = "application/scim+json";
     public static final String APPLICATION__JSON = "application/json";
     public static final String APPLICATION_ALL = "application/*";
+    public static final String CHARSET_UTF8= "charset=utf-8";
+    public static final String SEMI_COLON = ";";
+    public static final String CHARSET= "charset";
     public static final String ACCEPT_HEADER = "Accept";
     public static final String ID = "id";
     public static final String DOMAIN = "domain";
