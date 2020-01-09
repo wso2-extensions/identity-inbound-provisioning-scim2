@@ -518,7 +518,7 @@ public class GroupResource extends AbstractResource {
                             excludedAttributes));
                 }
             } else if (PATCH.class.getSimpleName().equals(httpVerb)) {
-                if (isGroupReturnedInPatchResponse()) {
+                if (isGroupReturnedInPatchResponse() || isAttributesRequested(attributes)) {
                     scimResponse = groupResourceManager
                             .updateWithPATCH(id, resourceString, userManager, attributes, excludedAttributes);
                 } else {
@@ -544,6 +544,11 @@ public class GroupResource extends AbstractResource {
 
         String property = IdentityUtil.getProperty(SCIMCommonConstants.SCIM_RETURN_UPDATED_GROUP_IN_PATCH_RESPONSE);
         return property == null || Boolean.parseBoolean(property);
+    }
+
+    private boolean isAttributesRequested(String attributes) {
+
+        return StringUtils.isNotBlank(attributes);
     }
 
     /**
