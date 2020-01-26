@@ -22,10 +22,12 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.database.utils.jdbc.NamedPreparedStatement;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.utils.dbcreator.DatabaseCreator;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.sql.Connection;
@@ -46,6 +48,9 @@ import java.util.Set;
 public class GroupDAO {
 
     private static final Log log = LogFactory.getLog(GroupDAO.class);
+    private static final String DB2 = "db2";
+    private static final String MSSQL = "mssql";
+    private static final String ORACLE = "oracle";
 
     /**
      * Lists the groups that are created from SCIM
@@ -75,6 +80,72 @@ public class GroupDAO {
             throw new IdentitySCIMException("Error when reading the SCIM Group information from persistence store.", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
+        }
+        return groups;
+    }
+
+    /**
+     * Lists the groups that are created from SCIM
+     *
+     * @return The set of groups that were created from SCIM
+     * @throws IdentitySCIMException If there is an issue while listing scim groups.
+     */
+    public Set<String> listSCIMGroups(int startIndex, Integer count) throws IdentitySCIMException {
+
+        Set<String> groups = new HashSet<>();
+        String sqlStmt;
+
+        if (startIndex <= 0) {
+            startIndex = 0;
+        } else {
+            startIndex = startIndex - 1;
+        }
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+
+            String dbType = DatabaseCreator.getDatabaseType(connection);
+
+            if (DB2.equalsIgnoreCase(dbType)) {
+                int initialOffset = startIndex;
+                startIndex = startIndex + count;
+                count = initialOffset + 1;
+                sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_PAGINATED_DB2;
+            } else if (ORACLE.equalsIgnoreCase(dbType)) {
+                count = startIndex + count;
+                sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_PAGINATED_ORACLE;
+            } else if (MSSQL.equalsIgnoreCase(dbType)) {
+                int initialOffset = startIndex;
+                startIndex = count + startIndex;
+                count = initialOffset + 1;
+                sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_PAGINATED_MSSQL;
+            } else {
+                sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_PAGINATION_SQL;
+            }
+
+            try (NamedPreparedStatement statement =
+                         new NamedPreparedStatement(connection, sqlStmt)) {
+                statement.setString(1, SCIMConstants.CommonSchemaConstants.ID_URI);
+                statement.setInt(2, count);
+                statement.setInt(3, startIndex);
+
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        String group = resultSet.getString(1);
+                        if (StringUtils.isNotEmpty(group)) {
+                            group = SCIMCommonUtils.getPrimaryFreeGroupName(group);
+                            groups.add(group);
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from persistence store.", e);
+        } catch (Exception e) {
+            String msg = "Error occur while listing scim groups";
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
+            throw new IdentitySCIMException(msg, e);
         }
         return groups;
     }

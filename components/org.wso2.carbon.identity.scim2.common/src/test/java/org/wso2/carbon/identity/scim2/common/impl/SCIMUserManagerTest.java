@@ -355,7 +355,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
 
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
+        List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, null, null, null,
                 null, requiredAttributes);
 
         assertEquals(roleList.size(), 2);

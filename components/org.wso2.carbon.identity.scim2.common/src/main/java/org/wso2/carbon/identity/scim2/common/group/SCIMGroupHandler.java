@@ -233,6 +233,18 @@ public class SCIMGroupHandler {
     }
 
     /**
+     * Lists the Groups created from SCIM
+     *
+     * @return list of SCIM groups
+     * @throws IdentitySCIMException If there is an issue while listing scim groups.
+     */
+    public Set<String> listSCIMRoles(int startIndex, Integer count) throws IdentitySCIMException {
+
+        GroupDAO groupDAO = new GroupDAO();
+        return groupDAO.listSCIMGroups(startIndex, count);
+    }
+
+    /**
      * Lists the Groups created from SCIM with a attribute filter and search regex.
      *
      * @param attributeName   Search attribute name
