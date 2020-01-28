@@ -2767,8 +2767,8 @@ public class SCIMUserManager implements UserManager {
                 User scimUser;
                 Map<String, String> userClaimValues = new HashMap<>();
                 for (UniqueIDUserClaimSearchEntry entry : searchEntries) {
-                    if (entry.getUser() != null && StringUtils.isNotBlank(entry.getUser().getUsername())
-                            && entry.getUser().getUsername().equals(user.getUsername())) {
+                    if (entry.getUser() != null && StringUtils.isNotBlank(entry.getUser().getUserID())
+                            && entry.getUser().getUserID().equals(user.getUserID())) {
                         userClaimValues = entry.getClaims();
                     }
                 }
@@ -2782,6 +2782,11 @@ public class SCIMUserManager implements UserManager {
 
                 try {
                     if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.ID_URI)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format("Skipping adding user %s with id %s as attribute %s is not " +
+                                            "available.", user.getFullQualifiedUsername(), user.getUserID(),
+                                    SCIMConstants.CommonSchemaConstants.ID_URI));
+                        }
                         continue;
                     }
                     //skip simple type addresses claim because it is complex with sub types in the schema
@@ -2800,10 +2805,15 @@ public class SCIMUserManager implements UserManager {
                     }
 
                     //get groups of user and add it as groups attribute
-                    List<String> roleList = usersRoles.get(user.getFullQualifiedUsername());
+                    List<String> roleList = usersRoles.get(user.getUserID());
                     List<String> roles = new ArrayList<>();
                     if (isNotEmpty(roleList)) {
                         roles = roleList;
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format("Roles not found for user %s with id %s .",
+                                    user.getFullQualifiedUsername(), user.getUserID()));
+                        }
                     }
                     checkForSCIMDisabledHybridRoles(roles);
 
