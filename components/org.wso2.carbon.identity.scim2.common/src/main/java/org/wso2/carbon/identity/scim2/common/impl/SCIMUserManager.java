@@ -1526,12 +1526,16 @@ public class SCIMUserManager implements UserManager {
                 tenantDomain);
 
         if (externalClaimLocalClaimMap != null) {
-            for (Map.Entry<ExternalClaim, LocalClaim> entry: externalClaimLocalClaimMap.entrySet()) {
+            for (Map.Entry<ExternalClaim, LocalClaim> entry : externalClaimLocalClaimMap.entrySet()) {
 
                 ExternalClaim externalClaim = entry.getKey();
                 LocalClaim mappedLocalClaim = entry.getValue();
 
-                attributes.put(externalClaim.getClaimURI(), mappedLocalClaim.getMappedAttribute(domainName));
+                String mappedAttribute = mappedLocalClaim.getMappedAttribute(domainName);
+                if (StringUtils.isEmpty(mappedAttribute)) {
+                    mappedAttribute = mappedLocalClaim.getMappedAttribute(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+                }
+                attributes.put(externalClaim.getClaimURI(), mappedAttribute);
             }
         }
 
