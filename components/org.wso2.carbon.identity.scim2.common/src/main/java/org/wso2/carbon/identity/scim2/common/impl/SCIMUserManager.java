@@ -127,6 +127,8 @@ public class SCIMUserManager implements UserManager {
     private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
     private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
 
+    private static final String PRIMARY_DOMAIN = "PRIMARY";
+
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
         carbonUM = (AbstractUserStoreManager) carbonUserStoreManager;
@@ -1558,7 +1560,7 @@ public class SCIMUserManager implements UserManager {
 
         try {
             if (StringUtils.isEmpty(domainName)) {
-                domainName = "PRIMARY";
+                domainName = PRIMARY_DOMAIN;
             }
             Map<String, String> attributes = getAllAttributes(domainName);
             if (log.isDebugEnabled()) {
@@ -2016,7 +2018,7 @@ public class SCIMUserManager implements UserManager {
             // Handle limit equals NULL scenario.
             count = handleLimitEqualsNULL(count);
 
-            Set<String> roleNames = getRoleNamesForGroupsEndpoint(startIndex, count, sortBy, sortOrder, domainName);
+            Set<String> roleNames = getRoleNamesForGroupsEndpoint(startIndex, count, domainName);
             for (String roleName : roleNames) {
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
                 if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
@@ -2051,26 +2053,35 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Get role names according to the given domain. If the domain is not specified, roles of all the user
-     * stores will be returned.
-     *
-     * @param domainName Domain name
-     * @return Roles List
+     * Get role names according to the given domain. If the domain is not specified, roles of all the user stores
+     * will be returned.
+     * @param startIndex
+     * @param count
+     * @param domainName
+     * @return
      * @throws UserStoreException
      * @throws IdentitySCIMException
+     * @throws CharonException
      */
-    private Set<String> getRoleNamesForGroupsEndpoint(int startIndex, Integer count, String sortBy, String sortOrder,
-                                                      String domainName)
+    private Set<String> getRoleNamesForGroupsEndpoint(int startIndex, Integer count, String domainName)
             throws UserStoreException, IdentitySCIMException, CharonException {
 
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+        Set<String> hybridRoles = new HashSet<>();
+        // If the domain is empty then we are retrieving all the roles and if we have the domain then reteive the
+        // roles from that domain only.
         if (StringUtils.isEmpty(domainName)) {
             Set<String> roleNames;
+            // If the request is a pagination request then we are not creating the scim ids for scim disabled hybrid
+            // roles due to the issue https://github.com/wso2/product-is/issues/7423. This will be fixed soon.
             if (canPaginate(startIndex, count)) {
                 roleNames = groupHandler.listSCIMRoles(startIndex, count);
             } else {
                 roleNames = groupHandler.listSCIMRoles();
-                Set<String> hybridRoles = new HashSet<>(Arrays.asList(carbonUM.getHybridRoles()));
+                String[] hybridRoleArray = carbonUM.getHybridRoles();
+                if (ArrayUtils.isNotEmpty(hybridRoleArray)) {
+                    hybridRoles.addAll(Arrays.asList(hybridRoleArray));
+                }
                 List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(hybridRoles, roleNames);
                 if (!scimDisabledHybridRoles.isEmpty()) {
                     createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
@@ -2079,43 +2090,37 @@ public class SCIMUserManager implements UserManager {
             }
             return roleNames;
         } else {
-            // If the domain is specified create a attribute value with the domain name.
+            // If the domain is specified create a attribute value with the domain name and search using the created
+            // attribute values.
+            if (PRIMARY_DOMAIN.equalsIgnoreCase(domainName)) {
+                domainName = domainName.toUpperCase();
+            }
             String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
-            Set<String> scimRoles = null;
             List<String> roleList;
             Set<String> roleNames = new HashSet<>();
-            if (!canPaginate(startIndex, count)) {
-                scimRoles = groupHandler.listSCIMRoles();
-            }
+
             // Retrieve roles using the above search value.
             if (isInternalOrApplicationGroup(domainName)) {
                 // Support for hybrid roles listing with domain parameter. ex: domain=Application.
-                roleList = filterHybridRoles(domainName, searchValue, startIndex, count);
+                roleList = filterHybridRoles(searchValue, startIndex, count);
+                roleNames.addAll(roleList);
                 if (!canPaginate(startIndex, count)) {
-                    List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(roleNames, scimRoles);
+                    String[] hybridRoleArray = carbonUM.getHybridRoles(searchValue);
+                    if (ArrayUtils.isNotEmpty(hybridRoleArray)) {
+                        hybridRoles.addAll(Arrays.asList(hybridRoleArray));
+                    }
+                    List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(hybridRoles, roleNames);
                     if (!scimDisabledHybridRoles.isEmpty()) {
                         createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
-                        roleList.addAll(scimDisabledHybridRoles);
+                        roleNames.addAll(scimDisabledHybridRoles);
                     }
                 }
-                roleNames.addAll(roleList);
             } else {
                 if (canPaginate(startIndex, count)) {
-                    roleList = Arrays.asList(((AbstractUserStoreManager) carbonUM)
-                            .getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true,
-                                    true, startIndex, count));
-                    roleNames.addAll(roleList);
+                    roleNames = groupHandler.listSCIMRoles(searchValue, startIndex, count);
                 } else {
                     // Retrieve roles using the above attribute value.
-                    roleList = Arrays.asList(((AbstractUserStoreManager) carbonUM)
-                            .getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true,
-                                    true));
-                    List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(roleNames, scimRoles);
-                    if (!scimDisabledHybridRoles.isEmpty()) {
-                        createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
-                        roleList.addAll(scimDisabledHybridRoles);
-                    }
-                    roleNames.addAll(roleList);
+                    roleNames = groupHandler.listSCIMRoles(searchValue);
                 }
             }
             return roleNames;
@@ -2186,6 +2191,9 @@ public class SCIMUserManager implements UserManager {
         // EnableFilteringEnhancements' properties in identity.xml or domain name embedded in the filter attribute
         // value.
         domainName = resolveDomain(domainName, node);
+        if (PRIMARY_DOMAIN.equalsIgnoreCase(domainName)) {
+            domainName = domainName.toUpperCase();
+        }
         List<Object> filteredGroups = new ArrayList<>();
         // 0th index is to store total number of results.
         filteredGroups.add(0);
@@ -3337,7 +3345,7 @@ public class SCIMUserManager implements UserManager {
      */
     private List<String> getRoleNames(String attributeName, String filterOperation, String attributeValue,
                                       int startIndex, int count)
-            throws org.wso2.carbon.user.core.UserStoreException {
+            throws org.wso2.carbon.user.core.UserStoreException, CharonException {
 
         String searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue,
                 FILTERING_DELIMITER);
@@ -3345,16 +3353,31 @@ public class SCIMUserManager implements UserManager {
             log.debug(String.format("Filtering roleNames from search attribute: %s", searchAttribute));
         }
         String domain = SCIMCommonUtils.extractDomain(attributeValue);
+        SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+        Set<String> roleNames;
         // Extract domain from attribute value.
         if (isInternalOrApplicationGroup(domain)) {
-            return filterHybridRoles(domain, searchAttribute, startIndex, count);
+            return filterHybridRoles(searchAttribute, startIndex, count);
         } else if (StringUtils.isEmpty(domain)) {
+            searchAttribute = SCIMCommonConstants.ANY + CarbonConstants.DOMAIN_SEPARATOR + searchAttribute;
             // When domain is empty filter through all the domains.
-            return Arrays.asList(carbonUM.getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, false, true,
-                    true, startIndex, count));
+            try {
+                roleNames = groupHandler.listSCIMRoles(searchAttribute, startIndex, count);
+            } catch (IdentitySCIMException e) {
+                throw new CharonException("Error in retrieving SCIM Groups from database.", e);
+            }
+            List<String> roleList = new ArrayList<>(roleNames);
+            Collections.sort(roleList);
+            return roleList;
         } else {
-            return Arrays.asList(carbonUM.getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, true, true,
-                    true, startIndex, count));
+            try {
+                roleNames = groupHandler.listSCIMRoles(searchAttribute, startIndex, count);
+                List<String> roleList = new ArrayList<>(roleNames);
+                Collections.sort(roleList);
+                return roleList;
+            } catch (IdentitySCIMException e) {
+                throw new CharonException("Error in retrieving SCIM Groups from database.", e);
+            }
         }
     }
 
@@ -3369,7 +3392,7 @@ public class SCIMUserManager implements UserManager {
      * @throws org.wso2.carbon.user.core.UserStoreException Error getting roleNames.
      */
     private List<String> getRoleNames(String attributeName, String filterOperation, String attributeValue)
-            throws org.wso2.carbon.user.core.UserStoreException {
+            throws org.wso2.carbon.user.core.UserStoreException, CharonException {
 
         String searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue,
                 FILTERING_DELIMITER);
@@ -3379,7 +3402,7 @@ public class SCIMUserManager implements UserManager {
         String domain = SCIMCommonUtils.extractDomain(attributeValue);
         // Extract domain from attribute value.
         if (isInternalOrApplicationGroup(domain)) {
-            return filterHybridRoles(domain, searchAttribute, 1, 0);
+            return filterHybridRoles(searchAttribute, 1, 0);
         } else if (StringUtils.isEmpty(domain)) {
             // When domain is empty filter through all the domains.
             return Arrays.asList(carbonUM.getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, false, true, true));
@@ -3641,37 +3664,27 @@ public class SCIMUserManager implements UserManager {
     /**
      * Method to filter hybrid roles (Application & Internal) from a search value.
      *
-     * @param domainInAttributeValue domain of the hybrid role
      * @param searchAttribute        search value
      * @return Array of filtered hybrid roles.
      * @throws org.wso2.carbon.user.core.UserStoreException
      */
-    private List<String> filterHybridRoles(String domainInAttributeValue, String searchAttribute, int startIndex,
+    private List<String> filterHybridRoles(String searchAttribute, int startIndex,
                                            Integer count)
-            throws org.wso2.carbon.user.core.UserStoreException {
+            throws org.wso2.carbon.user.core.UserStoreException, CharonException {
 
-        List<String> roleList = new ArrayList<>();
-        String[] hybridRoles;
+        List<String> roleList;
+        SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         // Get filtered hybrid roles by passing noInternalRoles=false.
-        if (canPaginate(startIndex, count)) {
-            hybridRoles = ((AbstractUserStoreManager) carbonUM)
-                    .getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, false, true,
-                            true, startIndex, count);
-        } else {
-            hybridRoles = ((AbstractUserStoreManager) carbonUM)
-                    .getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, false, true,
-                            true);
-        }
-        // Iterate through received hybrid roles and filter out specific hybrid role
-        // domain(Application or Internal) values.
-        for (String hybridRole : hybridRoles) {
-            if (domainInAttributeValue != null && !hybridRole.startsWith(domainInAttributeValue)) {
-                continue;
+        try {
+            if (canPaginate(startIndex, count)) {
+                Set<String> roleSet = groupHandler.listSCIMRoles(searchAttribute, startIndex, count);
+                roleList = new ArrayList<>(roleSet);
+            } else {
+                Set<String> roleSet = groupHandler.listSCIMRoles(searchAttribute);
+                roleList = new ArrayList<>(roleSet);
             }
-            if (hybridRole.toLowerCase().startsWith(SCIMCommonConstants.INTERNAL_DOMAIN.toLowerCase()) || hybridRole
-                    .toLowerCase().startsWith(SCIMCommonConstants.APPLICATION_DOMAIN.toLowerCase())) {
-                roleList.add(hybridRole);
-            }
+        } catch (IdentitySCIMException e) {
+            throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
         return roleList;
     }

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.impl;
 
+import edu.emory.mathcs.backport.java.util.Arrays;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.api.support.membermodification.MemberModifier;
@@ -65,7 +66,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
@@ -467,6 +470,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(true);
         when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
+
+        Set<String> roleSet = new HashSet<>();
+        Collections.addAll(roleSet, roles);
+        when(mockedGroupDAO.listSCIMGroups(anyString(), anyInt()))
+                .thenReturn(roleSet);
+        when(abstractUserStoreManager.getHybridRoles()).thenReturn(new String[0]);
         mockStatic(UserCoreUtil.class);
         when(UserCoreUtil.isEveryoneRole("role", mockedRealmConfig)).thenReturn(false);
         mockStatic(SCIMCommonUtils.class);

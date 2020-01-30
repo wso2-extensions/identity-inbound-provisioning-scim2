@@ -233,7 +233,7 @@ public class SCIMGroupHandler {
     }
 
     /**
-     * Lists the Groups created from SCIM
+     * Lists the Groups created from SCIM.
      *
      * @return list of SCIM groups
      * @throws IdentitySCIMException If there is an issue while listing scim groups.
@@ -241,7 +241,31 @@ public class SCIMGroupHandler {
     public Set<String> listSCIMRoles(int startIndex, Integer count) throws IdentitySCIMException {
 
         GroupDAO groupDAO = new GroupDAO();
-        return groupDAO.listSCIMGroups(startIndex, count);
+        return groupDAO.listSCIMGroups(this.tenantId, startIndex, count);
+    }
+
+    /**
+     * Lists the Groups created from SCIM.
+     *
+     * @return list of SCIM groups
+     * @throws IdentitySCIMException If there is an issue while listing scim groups.
+     */
+    public Set<String> listSCIMRoles(String filter, int startIndex, Integer count) throws IdentitySCIMException {
+
+        GroupDAO groupDAO = new GroupDAO();
+        return groupDAO.listSCIMGroups(filter, this.tenantId, startIndex, count);
+    }
+
+    /**
+     * Lists the Groups created from SCIM.
+     *
+     * @return list of SCIM groups
+     * @throws IdentitySCIMException If there is an issue while listing scim groups.
+     */
+    public Set<String> listSCIMRoles(String filter) throws IdentitySCIMException {
+
+        GroupDAO groupDAO = new GroupDAO();
+        return groupDAO.listSCIMGroups(filter, this.tenantId);
     }
 
     /**

@@ -51,6 +51,7 @@ public class GroupDAO {
     private static final String DB2 = "db2";
     private static final String MSSQL = "mssql";
     private static final String ORACLE = "oracle";
+    private static final String TENANT_ID = "TENANT_ID";
 
     /**
      * Lists the groups that are created from SCIM
@@ -90,7 +91,7 @@ public class GroupDAO {
      * @return The set of groups that were created from SCIM
      * @throws IdentitySCIMException If there is an issue while listing scim groups.
      */
-    public Set<String> listSCIMGroups(int startIndex, Integer count) throws IdentitySCIMException {
+    public Set<String> listSCIMGroups(int tenantId, int startIndex, Integer count) throws IdentitySCIMException {
 
         Set<String> groups = new HashSet<>();
         String sqlStmt;
@@ -102,9 +103,7 @@ public class GroupDAO {
         }
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-
             String dbType = DatabaseCreator.getDatabaseType(connection);
-
             if (DB2.equalsIgnoreCase(dbType)) {
                 int initialOffset = startIndex;
                 startIndex = startIndex + count;
@@ -124,10 +123,139 @@ public class GroupDAO {
 
             try (NamedPreparedStatement statement =
                          new NamedPreparedStatement(connection, sqlStmt)) {
-                statement.setString(1, SCIMConstants.CommonSchemaConstants.ID_URI);
-                statement.setInt(2, count);
-                statement.setInt(3, startIndex);
+                byte increment = 0;
+                statement.setString(++increment, SCIMConstants.CommonSchemaConstants.ID_URI);
+                if (sqlStmt.contains(TENANT_ID)) {
+                    statement.setInt(++increment, tenantId);
+                }
+                statement.setInt(++increment, count);
+                statement.setInt(++increment, startIndex);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        String group = resultSet.getString(1);
+                        if (StringUtils.isNotEmpty(group)) {
+                            group = SCIMCommonUtils.getPrimaryFreeGroupName(group);
+                            groups.add(group);
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from persistence store.", e);
+        } catch (Exception e) {
+            String msg = "Error occur while listing scim groups";
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
+            throw new IdentitySCIMException(msg, e);
+        }
+        return groups;
+    }
 
+    /**
+     * Lists the groups that are created from SCIM
+     *
+     * @return The set of groups that were created from SCIM
+     * @throws IdentitySCIMException If there is an issue while listing scim groups.
+     */
+    public Set<String> listSCIMGroups(String filter, int tenantId, int startIndex, Integer count) throws
+            IdentitySCIMException {
+
+        Set<String> groups = new HashSet<>();
+        String sqlStmt;
+
+        if (startIndex <= 0) {
+            startIndex = 0;
+        } else {
+            startIndex = startIndex - 1;
+        }
+
+        if (filter != null && filter.trim().length() != 0) {
+            filter = filter.trim();
+            filter = filter.replace("*", "%");
+            filter = filter.replace("?", "_");
+        } else {
+            filter = "%";
+        }
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            String dbType = DatabaseCreator.getDatabaseType(connection);
+            if (DB2.equalsIgnoreCase(dbType)) {
+                int initialOffset = startIndex;
+                startIndex = startIndex + count;
+                count = initialOffset + 1;
+                sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_FILTER_PAGINATED_DB2;
+            } else if (ORACLE.equalsIgnoreCase(dbType)) {
+                count = startIndex + count;
+                sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_FILTER_PAGINATED_ORACLE;
+            } else if (MSSQL.equalsIgnoreCase(dbType)) {
+                int initialOffset = startIndex;
+                startIndex = count + startIndex;
+                count = initialOffset + 1;
+                sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_FILTER_PAGINATED_MSSQL;
+            } else {
+                sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_FILTER_PAGINATION_SQL;
+            }
+
+            try (NamedPreparedStatement statement = new NamedPreparedStatement(connection, sqlStmt)) {
+                byte increment = 0;
+                statement.setString(++increment, filter);
+                if (sqlStmt.contains(TENANT_ID)) {
+                    statement.setInt(++increment, tenantId);
+                }
+                statement.setInt(++increment, count);
+                statement.setInt(++increment, startIndex);
+
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        String group = resultSet.getString(1);
+                        if (StringUtils.isNotEmpty(group)) {
+                            group = SCIMCommonUtils.getPrimaryFreeGroupName(group);
+                            groups.add(group);
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from persistence store.", e);
+        } catch (Exception e) {
+            String msg = "Error occur while listing scim groups";
+            if (log.isDebugEnabled()) {
+                log.debug(msg, e);
+            }
+            throw new IdentitySCIMException(msg, e);
+        }
+        return groups;
+    }
+
+    /**
+     * Lists the groups that are created from SCIM
+     *
+     * @return The set of groups that were created from SCIM
+     * @throws IdentitySCIMException If there is an issue while listing scim groups.
+     */
+    public Set<String> listSCIMGroups(String filter, int tenantId) throws IdentitySCIMException {
+
+        Set<String> groups = new HashSet<>();
+        String sqlStmt;
+
+        if (filter != null && filter.trim().length() != 0) {
+            filter = filter.trim();
+            filter = filter.replace("*", "%");
+            filter = filter.replace("?", "_");
+        } else {
+            filter = "%";
+        }
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_FILTER_SQL;
+            try (NamedPreparedStatement statement =
+                         new NamedPreparedStatement(connection, sqlStmt)) {
+                byte increment = 0;
+                statement.setString(++increment, filter);
+                if (sqlStmt.contains(TENANT_ID)) {
+                    statement.setInt(++increment, tenantId);
+                }
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         String group = resultSet.getString(1);
