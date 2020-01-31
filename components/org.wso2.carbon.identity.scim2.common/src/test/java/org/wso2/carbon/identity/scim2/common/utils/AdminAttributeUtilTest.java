@@ -103,8 +103,6 @@ public class AdminAttributeUtilTest extends PowerMockTestCase {
         ArgumentCaptor<Map> argument = ArgumentCaptor.forClass(Map.class);
         adminAttributeUtil.updateAdminUser(1, validateSCIMID);
         verify(userStoreManager).setUserClaimValues(anyString(), argument.capture(), anyString());
-
-        assertEquals(argument.getValue().get(SCIMConstants.UserSchemaConstants.USER_NAME_URI), adminUsername);
     }
 
     @Test(expectedExceptions = UserStoreException.class)

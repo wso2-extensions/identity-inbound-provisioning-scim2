@@ -162,8 +162,6 @@ public class AdminAttributeUtil {
         if (log.isDebugEnabled()) {
             log.debug("Generated SCIM ID : " + id + " for User : " + userName);
         }
-        claimsList.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
-        claimsList.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, userName);
 
         String createdDate = AttributeUtil.formatDateTime(Instant.now());
         claimsList.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);

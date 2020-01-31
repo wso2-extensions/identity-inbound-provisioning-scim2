@@ -179,7 +179,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPostAddInternalRoleWithID(String roleName, String[] userList, org.wso2.carbon.user.api.Permission[]
             permissions, UserStoreManager userStoreManager) throws UserStoreException {
 
-        return doPostAddRole(roleName, userList, permissions, userStoreManager);
+        return doPostAddRoleWithID(roleName, userList, permissions, userStoreManager);
     }
 
     @Override
