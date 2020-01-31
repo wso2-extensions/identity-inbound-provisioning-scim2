@@ -1422,12 +1422,13 @@ public class SCIMUserManager implements UserManager {
             domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
         }
 
-        if (carbonUM.getSecondaryUserStoreManager(domainName).getRealmConfiguration()
+        UserStoreManager secondaryUserStoreManager = carbonUM.getSecondaryUserStoreManager(domainName);
+
+        if (secondaryUserStoreManager != null && secondaryUserStoreManager.getRealmConfiguration()
                 .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_ROLE_LIST) != null) {
             givenMax = Integer.parseInt(carbonUM.getSecondaryUserStoreManager(domainName).getRealmConfiguration()
                     .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_ROLE_LIST));
         }
-
         return givenMax;
     }
 
@@ -2041,6 +2042,7 @@ public class SCIMUserManager implements UserManager {
             count = handleLimitEqualsNULL(count);
 
             Set<String> roleNames = getRoleNamesForGroupsEndpoint(startIndex, count, domainName);
+            roleNames = new TreeSet<>(roleNames);
             for (String roleName : roleNames) {
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
                 if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
@@ -2090,10 +2092,10 @@ public class SCIMUserManager implements UserManager {
 
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         Set<String> hybridRoles = new HashSet<>();
-        int maxGroupList = getGroupMaxLimit(domainName);
         // If the domain is empty then we are retrieving all the roles and if we have the domain then reteive the
         // roles from that domain only.
         if (StringUtils.isEmpty(domainName)) {
+            int maxGroupList = getGroupMaxLimit(domainName);
             Set<String> roleNames;
             // If the request is a pagination request then we are not creating the scim ids for scim disabled hybrid
             // roles due to the issue https://github.com/wso2/product-is/issues/7423. This will be fixed soon.
@@ -2124,9 +2126,6 @@ public class SCIMUserManager implements UserManager {
             String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
             List<String> roleList;
             Set<String> roleNames = new HashSet<>();
-            if (count < 0 || count > maxGroupList) {
-                count = maxGroupList;
-            }
             // Retrieve roles using the above search value.
             if (isInternalOrApplicationGroup(domainName)) {
                 // Support for hybrid roles listing with domain parameter. ex: domain=Application.
@@ -2144,6 +2143,7 @@ public class SCIMUserManager implements UserManager {
                     }
                 }
             } else {
+                int maxGroupList = getGroupMaxLimit(domainName);
                 if (count <= 0 || count > maxGroupList) {
                     count = maxGroupList;
                 }
@@ -3518,9 +3518,11 @@ public class SCIMUserManager implements UserManager {
             attributeValue = prependDomainNameToTheAttributeValue(attributeValue, domainName);
             List<String> roles;
             if (canPaginate(startIndex, count)) {
-                int maxGroupList = getGroupMaxLimit(domainName);
-                if (count < 0 || count > maxGroupList) {
-                    count = maxGroupList;
+                if (isNotInternalOrApplicationGroup(domainName)) {
+                    int maxGroupList = getGroupMaxLimit(domainName);
+                    if (count < 0 || count > maxGroupList) {
+                        count = maxGroupList;
+                    }
                 }
                 roles = getRoleNames(attributeName, filterOperation, attributeValue, startIndex, count);
             } else {
@@ -3703,19 +3705,20 @@ public class SCIMUserManager implements UserManager {
             throws org.wso2.carbon.user.core.UserStoreException, CharonException {
 
         List<String> roleList;
+        Set<String> roleSet;
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         // Get filtered hybrid roles by passing noInternalRoles=false.
         try {
             if (canPaginate(startIndex, count)) {
-                Set<String> roleSet = groupHandler.listSCIMRoles(searchAttribute, startIndex, count);
-                roleList = new ArrayList<>(roleSet);
+                roleSet = groupHandler.listSCIMRoles(searchAttribute, startIndex, count);
             } else {
-                Set<String> roleSet = groupHandler.listSCIMRoles(searchAttribute);
-                roleList = new ArrayList<>(roleSet);
+                roleSet = groupHandler.listSCIMRoles(searchAttribute);
             }
+            roleList = new ArrayList<>(roleSet);
         } catch (IdentitySCIMException e) {
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
+        Collections.sort(roleList);
         return roleList;
     }
 

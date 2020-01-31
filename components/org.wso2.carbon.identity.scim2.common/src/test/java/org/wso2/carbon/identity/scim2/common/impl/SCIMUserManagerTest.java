@@ -482,6 +482,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
 
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
+
+        when(abstractUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
+        when(mockedRealmConfig.getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_ROLE_LIST)).thenReturn
+                ("20");
         List<Object> roleList = scimUserManager
                 .listGroupsWithGET(null, 1, null, null, null, "Application", requiredAttributes);
         roleList.remove(0);//The first entry is the count of roles.
