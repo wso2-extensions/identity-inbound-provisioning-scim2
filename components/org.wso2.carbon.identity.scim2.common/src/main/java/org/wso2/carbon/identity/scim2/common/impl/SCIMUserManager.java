@@ -1410,6 +1410,28 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
+     * Get maximum role limit to retrieve.
+     *
+     * @param domainName Name of the user store
+     * @return Max role limit.
+     */
+    private int getGroupMaxLimit(String domainName) {
+
+        int givenMax = UserCoreConstants.MAX_USER_ROLE_LIST;
+        if (StringUtils.isEmpty(domainName)) {
+            domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+        }
+
+        if (carbonUM.getSecondaryUserStoreManager(domainName).getRealmConfiguration()
+                .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_ROLE_LIST) != null) {
+            givenMax = Integer.parseInt(carbonUM.getSecondaryUserStoreManager(domainName).getRealmConfiguration()
+                    .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_ROLE_LIST));
+        }
+
+        return givenMax;
+    }
+
+    /**
      * Generate condition tree for given filters.
      *
      * @param node       Filter condition tree.
@@ -2068,6 +2090,7 @@ public class SCIMUserManager implements UserManager {
 
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         Set<String> hybridRoles = new HashSet<>();
+        int maxGroupList = getGroupMaxLimit(domainName);
         // If the domain is empty then we are retrieving all the roles and if we have the domain then reteive the
         // roles from that domain only.
         if (StringUtils.isEmpty(domainName)) {
@@ -2075,6 +2098,9 @@ public class SCIMUserManager implements UserManager {
             // If the request is a pagination request then we are not creating the scim ids for scim disabled hybrid
             // roles due to the issue https://github.com/wso2/product-is/issues/7423. This will be fixed soon.
             if (canPaginate(startIndex, count)) {
+                if (count < 0 || count > maxGroupList) {
+                    count = maxGroupList;
+                }
                 roleNames = groupHandler.listSCIMRoles(startIndex, count);
             } else {
                 roleNames = groupHandler.listSCIMRoles();
@@ -2098,7 +2124,9 @@ public class SCIMUserManager implements UserManager {
             String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
             List<String> roleList;
             Set<String> roleNames = new HashSet<>();
-
+            if (count < 0 || count > maxGroupList) {
+                count = maxGroupList;
+            }
             // Retrieve roles using the above search value.
             if (isInternalOrApplicationGroup(domainName)) {
                 // Support for hybrid roles listing with domain parameter. ex: domain=Application.
@@ -2116,12 +2144,10 @@ public class SCIMUserManager implements UserManager {
                     }
                 }
             } else {
-                if (canPaginate(startIndex, count)) {
-                    roleNames = groupHandler.listSCIMRoles(searchValue, startIndex, count);
-                } else {
-                    // Retrieve roles using the above attribute value.
-                    roleNames = groupHandler.listSCIMRoles(searchValue);
+                if (count <= 0 || count > maxGroupList) {
+                    count = maxGroupList;
                 }
+                roleNames = groupHandler.listSCIMRoles(searchValue, startIndex, count);
             }
             return roleNames;
         }
@@ -3492,11 +3518,15 @@ public class SCIMUserManager implements UserManager {
             attributeValue = prependDomainNameToTheAttributeValue(attributeValue, domainName);
             List<String> roles;
             if (canPaginate(startIndex, count)) {
+                int maxGroupList = getGroupMaxLimit(domainName);
+                if (count < 0 || count > maxGroupList) {
+                    count = maxGroupList;
+                }
                 roles = getRoleNames(attributeName, filterOperation, attributeValue, startIndex, count);
             } else {
                 roles = getRoleNames(attributeName, filterOperation, attributeValue);
+                checkForSCIMDisabledHybridRoles(roles);
             }
-            checkForSCIMDisabledHybridRoles(roles);
             return roles;
         } else {
             try {
