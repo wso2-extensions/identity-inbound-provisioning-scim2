@@ -114,15 +114,14 @@ public class GroupDAO {
                 sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_PAGINATED_ORACLE;
             } else if (MSSQL.equalsIgnoreCase(dbType)) {
                 int initialOffset = startIndex;
-                startIndex = count + startIndex;
-                count = initialOffset + 1;
+                startIndex = count;
+                count = initialOffset;
                 sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_PAGINATED_MSSQL;
             } else {
                 sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_PAGINATION_SQL;
             }
 
-            try (NamedPreparedStatement statement =
-                         new NamedPreparedStatement(connection, sqlStmt)) {
+            try (NamedPreparedStatement statement = new NamedPreparedStatement(connection, sqlStmt)) {
                 byte increment = 0;
                 statement.setString(++increment, SCIMConstants.CommonSchemaConstants.ID_URI);
                 if (sqlStmt.contains(TENANT_ID)) {
@@ -190,8 +189,8 @@ public class GroupDAO {
                 sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_FILTER_PAGINATED_ORACLE;
             } else if (MSSQL.equalsIgnoreCase(dbType)) {
                 int initialOffset = startIndex;
-                startIndex = count + startIndex;
-                count = initialOffset + 1;
+                startIndex = count;
+                count = initialOffset;
                 sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_FILTER_PAGINATED_MSSQL;
             } else {
                 sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_FILTER_PAGINATION_SQL;
