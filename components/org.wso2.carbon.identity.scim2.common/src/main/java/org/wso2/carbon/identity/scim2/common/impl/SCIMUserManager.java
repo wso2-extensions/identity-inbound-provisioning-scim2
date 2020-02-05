@@ -115,6 +115,7 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
+    private static final String ERROR_CODE_USER_NOT_FOUND = "30007";
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
     private String tenantDomain;
@@ -303,8 +304,15 @@ public class SCIMUserManager implements UserManager {
             }
 
         } catch (UserStoreException e) {
-            throw new CharonException("Error in getting user information from Carbon User Store for" +
-                    "user: " + userId, e);
+            if (e.getMessage().contains(ERROR_CODE_USER_NOT_FOUND)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("User with SCIM id: " + userId + " does not exist in the system.");
+                }
+                return null;
+            } else {
+                throw new CharonException("Error in getting user information from Carbon User Store for" +
+                        "user: " + userId, e);
+            }
         }
         return scimUser;
     }
