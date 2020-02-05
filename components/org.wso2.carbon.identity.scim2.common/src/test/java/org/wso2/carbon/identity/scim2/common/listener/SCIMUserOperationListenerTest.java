@@ -35,6 +35,7 @@ import org.wso2.carbon.user.api.Permission;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.common.UserStore;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -147,7 +148,9 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
     @Test
     public void testDoPostAddUser() throws Exception {
-        assertTrue(scimUserOperationListener.doPostAddUserWithID(userId, credential, roleList, claims, profile,
+
+        User user = new User(userId);
+        assertTrue(scimUserOperationListener.doPostAddUserWithID(user, credential, roleList, claims, profile,
                 userStoreManager));
     }
 
