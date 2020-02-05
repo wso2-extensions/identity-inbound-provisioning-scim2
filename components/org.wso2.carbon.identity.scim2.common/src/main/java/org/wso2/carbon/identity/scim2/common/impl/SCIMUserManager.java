@@ -3710,20 +3710,15 @@ public class SCIMUserManager implements UserManager {
         // Get filtered hybrid roles by passing noInternalRoles=false.
         try {
             if (canPaginate(startIndex, count)) {
-//                roleSet = groupHandler.listSCIMRoles(searchAttribute, startIndex, count);
-                String[] roleArray = new String[0];
-                roleArray = ((AbstractUserStoreManager) carbonUM)
-                        .getRoleNames(searchAttribute, MAX_ITEM_LIMIT_UNLIMITED, false, true,
-                                true, startIndex, count);
-                roleList = Arrays.asList(roleArray);
+                roleSet = groupHandler.listSCIMRoles(searchAttribute, startIndex, count);
             } else {
                 roleSet = groupHandler.listSCIMRoles(searchAttribute);
-                roleList = new ArrayList<>(roleSet);
             }
+            roleList = new ArrayList<>(roleSet);
         } catch (IdentitySCIMException e) {
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
-       // Collections.sort(roleList);
+        Collections.sort(roleList);
         return roleList;
     }
 
