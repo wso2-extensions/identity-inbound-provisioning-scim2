@@ -1412,7 +1412,7 @@ public class SCIMUserManager implements UserManager {
     /**
      * Get maximum role limit to retrieve.
      *
-     * @param domainName Name of the user store
+     * @param domainName Name of the user store.
      * @return Max role limit.
      */
     private int getGroupMaxLimit(String domainName) {
@@ -2079,10 +2079,10 @@ public class SCIMUserManager implements UserManager {
     /**
      * Get role names according to the given domain. If the domain is not specified, roles of all the user stores
      * will be returned.
-     * @param startIndex
-     * @param count
-     * @param domainName
-     * @return
+     * @param startIndex Start index.
+     * @param count Number of groups to be returned.
+     * @param domainName Domain name.
+     * @return Set of groups.
      * @throws UserStoreException
      * @throws IdentitySCIMException
      * @throws CharonException
@@ -2092,13 +2092,17 @@ public class SCIMUserManager implements UserManager {
 
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         Set<String> hybridRoles = new HashSet<>();
-        // If the domain is empty then we are retrieving all the roles and if we have the domain then reteive the
-        // roles from that domain only.
+        /*
+        If the domain is empty then we are retrieving all the roles and if we have the domain then retrieves the
+         roles from that domain only.
+         */
         if (StringUtils.isEmpty(domainName)) {
             int maxGroupList = getGroupMaxLimit(domainName);
             Set<String> roleNames;
-            // If the request is a pagination request then we are not creating the scim ids for scim disabled hybrid
-            // roles due to the issue https://github.com/wso2/product-is/issues/7423. This will be fixed soon.
+            /*
+             If the request is a pagination request then we are not creating the scim ids for scim disabled hybrid
+             roles due to the issue https://github.com/wso2/product-is/issues/7423. This will be fixed soon.
+              */
             if (canPaginate(startIndex, count)) {
                 if (count < 0 || count > maxGroupList) {
                     count = maxGroupList;
@@ -2118,8 +2122,10 @@ public class SCIMUserManager implements UserManager {
             }
             return roleNames;
         } else {
-            // If the domain is specified create a attribute value with the domain name and search using the created
-            // attribute values.
+            /*
+            If the domain is specified create a attribute value with the domain name and search using the created
+             attribute values.
+             */
             if (PRIMARY_DOMAIN.equalsIgnoreCase(domainName)) {
                 domainName = domainName.toUpperCase();
             }
@@ -3700,8 +3706,7 @@ public class SCIMUserManager implements UserManager {
      * @return Array of filtered hybrid roles.
      * @throws org.wso2.carbon.user.core.UserStoreException
      */
-    private List<String> filterHybridRoles(String searchAttribute, int startIndex,
-                                           Integer count)
+    private List<String> filterHybridRoles(String searchAttribute, int startIndex, Integer count)
             throws org.wso2.carbon.user.core.UserStoreException, CharonException {
 
         List<String> roleList;

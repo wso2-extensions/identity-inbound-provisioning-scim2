@@ -86,9 +86,9 @@ public class GroupDAO {
     }
 
     /**
-     * Lists the groups that are created from SCIM
+     * Lists the groups that are created from SCIM.
      *
-     * @return The set of groups that were created from SCIM
+     * @return The set of groups that were created from SCIM.
      * @throws IdentitySCIMException If there is an issue while listing scim groups.
      */
     public Set<String> listSCIMGroups(int tenantId, int startIndex, Integer count) throws IdentitySCIMException {
@@ -152,9 +152,9 @@ public class GroupDAO {
     }
 
     /**
-     * Lists the groups that are created from SCIM
+     * Lists the groups that are created from SCIM.
      *
-     * @return The set of groups that were created from SCIM
+     * @return The set of groups that were created from SCIM.
      * @throws IdentitySCIMException If there is an issue while listing scim groups.
      */
     public Set<String> listSCIMGroups(String filter, int tenantId, int startIndex, Integer count) throws
@@ -228,9 +228,9 @@ public class GroupDAO {
     }
 
     /**
-     * Lists the groups that are created from SCIM
+     * Lists the groups that are created from SCIM.
      *
-     * @return The set of groups that were created from SCIM
+     * @return The set of groups that were created from SCIM.
      * @throws IdentitySCIMException If there is an issue while listing scim groups.
      */
     public Set<String> listSCIMGroups(String filter, int tenantId) throws IdentitySCIMException {
@@ -248,8 +248,7 @@ public class GroupDAO {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             sqlStmt = SQLQueries.LIST_SCIM_GROUPS_WITH_FILTER_SQL;
-            try (NamedPreparedStatement statement =
-                         new NamedPreparedStatement(connection, sqlStmt)) {
+            try (NamedPreparedStatement statement = new NamedPreparedStatement(connection, sqlStmt)) {
                 byte increment = 0;
                 statement.setString(++increment, filter);
                 if (sqlStmt.contains(TENANT_ID)) {

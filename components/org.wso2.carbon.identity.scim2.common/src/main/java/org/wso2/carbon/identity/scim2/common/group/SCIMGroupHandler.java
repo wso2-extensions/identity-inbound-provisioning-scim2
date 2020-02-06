@@ -235,7 +235,7 @@ public class SCIMGroupHandler {
     /**
      * Lists the Groups created from SCIM.
      *
-     * @return list of SCIM groups
+     * @return A list of SCIM groups.
      * @throws IdentitySCIMException If there is an issue while listing scim groups.
      */
     public Set<String> listSCIMRoles(int startIndex, Integer count) throws IdentitySCIMException {
@@ -247,7 +247,7 @@ public class SCIMGroupHandler {
     /**
      * Lists the Groups created from SCIM.
      *
-     * @return list of SCIM groups
+     * @return A list of SCIM groups.
      * @throws IdentitySCIMException If there is an issue while listing scim groups.
      */
     public Set<String> listSCIMRoles(String filter, int startIndex, Integer count) throws IdentitySCIMException {
@@ -259,7 +259,7 @@ public class SCIMGroupHandler {
     /**
      * Lists the Groups created from SCIM.
      *
-     * @return list of SCIM groups
+     * @return A list of SCIM groups.
      * @throws IdentitySCIMException If there is an issue while listing scim groups.
      */
     public Set<String> listSCIMRoles(String filter) throws IdentitySCIMException {
