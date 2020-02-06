@@ -1697,16 +1697,7 @@ public class SCIMUserManager implements UserManager {
                 requiredClaimsInLocalDialect = new ArrayList<>();
             }
 
-            List<org.wso2.carbon.user.core.common.User> coreUsers = carbonUM.getUserListWithID(
-                    UserCoreClaimConstants.USERNAME_CLAIM_URI, userName, UserCoreConstants.DEFAULT_PROFILE);
-
-            if (coreUsers.size() > 1) {
-                throw new CharonException("Multiple user's found for the given username.");
-            } else if (coreUsers.isEmpty()) {
-                throw new NotFoundException("User not found the given username.");
-            }
-
-            org.wso2.carbon.user.core.common.User coreUser = coreUsers.get(0);
+            org.wso2.carbon.user.core.common.User coreUser = carbonUM.getUser(null, userName);
 
             // We assume (since id is unique per user) only one user exists for a given id.
             scimUser = this.getSCIMUser(coreUser, requiredClaimsInLocalDialect, scimToLocalClaimsMap, null);
