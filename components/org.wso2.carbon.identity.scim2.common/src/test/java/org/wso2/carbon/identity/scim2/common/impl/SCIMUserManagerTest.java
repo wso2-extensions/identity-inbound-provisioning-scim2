@@ -221,10 +221,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         org.wso2.carbon.user.core.common.User user = new org.wso2.carbon.user.core.common.User();
         user.setUsername("testUserName");
         user.setUserID(UUID.randomUUID().toString());
-        List<org.wso2.carbon.user.core.common.User> users = new ArrayList<>();
-        users.add(user);
-        when(mockedUserStoreManager.getUserListWithID(eq(UserCoreClaimConstants.USERNAME_CLAIM_URI), anyString(),
-                eq(UserCoreConstants.DEFAULT_PROFILE))).thenReturn(users);
+        when(mockedUserStoreManager.getUser(anyString(), anyString())).thenReturn(user);
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         CommonTestUtils.initPrivilegedCarbonContext(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         mockStatic(ClaimMetadataHandler.class);
