@@ -115,6 +115,7 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
+    private static final String ERROR_CODE_USER_NOT_FOUND = "30007";
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
     private String tenantDomain;
@@ -126,8 +127,6 @@ public class SCIMUserManager implements UserManager {
     private static final String DISPLAY_NAME_PROPERTY = "displayName";
     private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
     private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
-
-    private static final String PRIMARY_DOMAIN = "PRIMARY";
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -305,8 +304,15 @@ public class SCIMUserManager implements UserManager {
             }
 
         } catch (UserStoreException e) {
-            throw new CharonException("Error in getting user information from Carbon User Store for" +
-                    "user: " + userId, e);
+            if (e.getMessage().contains(ERROR_CODE_USER_NOT_FOUND)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("User with SCIM id: " + userId + " does not exist in the system.");
+                }
+                return null;
+            } else {
+                throw new CharonException("Error in getting user information from Carbon User Store for" +
+                        "user: " + userId, e);
+            }
         }
         return scimUser;
     }
@@ -438,16 +444,16 @@ public class SCIMUserManager implements UserManager {
         users.add(0);
 
         // Handle limit equals NULL scenario.
-        limit = handleLimitEqualsNULL(limit);
+        limit = validateLimit(limit);
         Set<org.wso2.carbon.user.core.common.User> coreUsers;
         if (StringUtils.isNotEmpty(domainName)) {
-            if (canPaginate(offset, limit)) {
+            if (isAPaginationRequest(offset, limit)) {
                 coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName);
             } else {
                 coreUsers = listUsernamesUsingLegacyAPIs(domainName);
             }
         } else {
-            if (canPaginate(offset, limit)) {
+            if (isAPaginationRequest(offset, limit)) {
                 coreUsers = listUsernamesAcrossAllDomains(offset, limit, sortBy, sortOrder);
             } else {
                 coreUsers = listUsernamesAcrossAllDomainsUsingLegacyAPIs();
@@ -478,7 +484,7 @@ public class SCIMUserManager implements UserManager {
      * @param limit  Counting value
      * @return true if pagination is possible, false otherwise
      */
-    private boolean canPaginate(int offset, int limit) {
+    private boolean isAPaginationRequest(int offset, int limit) {
 
         return (offset != 1 || limit != 0);
     }
@@ -792,7 +798,7 @@ public class SCIMUserManager implements UserManager {
      * @param limit Limit in the request.
      * @return Updated limit.
      */
-    private int handleLimitEqualsNULL(Integer limit) {
+    private int validateLimit(Integer limit) {
 
         // Limit equal to null implies return all users. Return all users scenario handled by the following methods by
         // expecting count as zero.
@@ -819,7 +825,7 @@ public class SCIMUserManager implements UserManager {
                                      String sortBy, String sortOrder, String domainName) throws CharonException {
 
         // Handle limit equals NULL scenario.
-        limit = handleLimitEqualsNULL(limit);
+        limit = validateLimit(limit);
 
         // Handle single attribute search.
         if (node instanceof ExpressionNode) {
@@ -1551,12 +1557,16 @@ public class SCIMUserManager implements UserManager {
                 tenantDomain);
 
         if (externalClaimLocalClaimMap != null) {
-            for (Map.Entry<ExternalClaim, LocalClaim> entry: externalClaimLocalClaimMap.entrySet()) {
+            for (Map.Entry<ExternalClaim, LocalClaim> entry : externalClaimLocalClaimMap.entrySet()) {
 
                 ExternalClaim externalClaim = entry.getKey();
                 LocalClaim mappedLocalClaim = entry.getValue();
 
-                attributes.put(externalClaim.getClaimURI(), mappedLocalClaim.getMappedAttribute(domainName));
+                String mappedAttribute = mappedLocalClaim.getMappedAttribute(domainName);
+                if (StringUtils.isEmpty(mappedAttribute)) {
+                    mappedAttribute = mappedLocalClaim.getMappedAttribute(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+                }
+                attributes.put(externalClaim.getClaimURI(), mappedAttribute);
             }
         }
 
@@ -1710,16 +1720,7 @@ public class SCIMUserManager implements UserManager {
                 requiredClaimsInLocalDialect = new ArrayList<>();
             }
 
-            List<org.wso2.carbon.user.core.common.User> coreUsers = carbonUM.getUserListWithID(
-                    UserCoreClaimConstants.USERNAME_CLAIM_URI, userName, UserCoreConstants.DEFAULT_PROFILE);
-
-            if (coreUsers.size() > 1) {
-                throw new CharonException("Multiple user's found for the given username.");
-            } else if (coreUsers.isEmpty()) {
-                throw new NotFoundException("User not found the given username.");
-            }
-
-            org.wso2.carbon.user.core.common.User coreUser = coreUsers.get(0);
+            org.wso2.carbon.user.core.common.User coreUser = carbonUM.getUser(null, userName);
 
             // We assume (since id is unique per user) only one user exists for a given id.
             scimUser = this.getSCIMUser(coreUser, requiredClaimsInLocalDialect, scimToLocalClaimsMap, null);
@@ -2039,9 +2040,9 @@ public class SCIMUserManager implements UserManager {
         groupList.add(0);
         try {
             // Handle limit equals NULL scenario.
-            count = handleLimitEqualsNULL(count);
+            int limit = validateLimit(count);
 
-            Set<String> roleNames = getRoleNamesForGroupsEndpoint(startIndex, count, domainName);
+            Set<String> roleNames = getRoleNamesForGroupsEndpoint(startIndex, limit, domainName);
             roleNames = new TreeSet<>(roleNames);
             for (String roleName : roleNames) {
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
@@ -2087,7 +2088,7 @@ public class SCIMUserManager implements UserManager {
      * @throws IdentitySCIMException
      * @throws CharonException
      */
-    private Set<String> getRoleNamesForGroupsEndpoint(int startIndex, Integer count, String domainName)
+    private Set<String> getRoleNamesForGroupsEndpoint(int startIndex, int count, String domainName)
             throws UserStoreException, IdentitySCIMException, CharonException {
 
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
@@ -2103,8 +2104,8 @@ public class SCIMUserManager implements UserManager {
              If the request is a pagination request then we are not creating the scim ids for scim disabled hybrid
              roles due to the issue https://github.com/wso2/product-is/issues/7423. This will be fixed soon.
               */
-            if (canPaginate(startIndex, count)) {
-                if (count < 0 || count > maxGroupList) {
+            if (isAPaginationRequest(startIndex, count)) {
+                if (count > maxGroupList) {
                     count = maxGroupList;
                 }
                 roleNames = groupHandler.listSCIMRoles(startIndex, count);
@@ -2126,8 +2127,8 @@ public class SCIMUserManager implements UserManager {
             If the domain is specified create a attribute value with the domain name and search using the created
              attribute values.
              */
-            if (PRIMARY_DOMAIN.equalsIgnoreCase(domainName)) {
-                domainName = domainName.toUpperCase();
+            if (UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(domainName)) {
+                domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
             }
             String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
             List<String> roleList;
@@ -2137,7 +2138,7 @@ public class SCIMUserManager implements UserManager {
                 // Support for hybrid roles listing with domain parameter. ex: domain=Application.
                 roleList = filterHybridRoles(searchValue, startIndex, count);
                 roleNames.addAll(roleList);
-                if (!canPaginate(startIndex, count)) {
+                if (!isAPaginationRequest(startIndex, count)) {
                     String[] hybridRoleArray = carbonUM.getHybridRoles(searchValue);
                     if (ArrayUtils.isNotEmpty(hybridRoleArray)) {
                         hybridRoles.addAll(Arrays.asList(hybridRoleArray));
@@ -2178,7 +2179,7 @@ public class SCIMUserManager implements UserManager {
             throws NotImplementedException, CharonException {
 
         // Handle count equals NULL scenario.
-        count = handleLimitEqualsNULL(count);
+        count = validateLimit(count);
         if (rootNode instanceof ExpressionNode) {
             return filterGroupsBySingleAttribute((ExpressionNode) rootNode, startIndex, count, sortBy, sortOrder,
                     domainName, requiredAttributes);
@@ -2835,8 +2836,8 @@ public class SCIMUserManager implements UserManager {
                 User scimUser;
                 Map<String, String> userClaimValues = new HashMap<>();
                 for (UniqueIDUserClaimSearchEntry entry : searchEntries) {
-                    if (entry.getUser() != null && StringUtils.isNotBlank(entry.getUser().getUsername())
-                            && entry.getUser().getUsername().equals(user.getUsername())) {
+                    if (entry.getUser() != null && StringUtils.isNotBlank(entry.getUser().getUserID())
+                            && entry.getUser().getUserID().equals(user.getUserID())) {
                         userClaimValues = entry.getClaims();
                     }
                 }
@@ -2850,6 +2851,11 @@ public class SCIMUserManager implements UserManager {
 
                 try {
                     if (!attributes.containsKey(SCIMConstants.CommonSchemaConstants.ID_URI)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format("Skipping adding user %s with id %s as attribute %s is not " +
+                                            "available.", user.getFullQualifiedUsername(), user.getUserID(),
+                                    SCIMConstants.CommonSchemaConstants.ID_URI));
+                        }
                         continue;
                     }
                     //skip simple type addresses claim because it is complex with sub types in the schema
@@ -2868,10 +2874,15 @@ public class SCIMUserManager implements UserManager {
                     }
 
                     //get groups of user and add it as groups attribute
-                    List<String> roleList = usersRoles.get(user.getFullQualifiedUsername());
+                    List<String> roleList = usersRoles.get(user.getUserID());
                     List<String> roles = new ArrayList<>();
                     if (isNotEmpty(roleList)) {
                         roles = roleList;
+                    } else {
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format("Roles not found for user %s with id %s .",
+                                    user.getFullQualifiedUsername(), user.getUserID()));
+                        }
                     }
                     checkForSCIMDisabledHybridRoles(roles);
 
@@ -3523,7 +3534,7 @@ public class SCIMUserManager implements UserManager {
         } else if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI)) {
             attributeValue = prependDomainNameToTheAttributeValue(attributeValue, domainName);
             List<String> roles;
-            if (canPaginate(startIndex, count)) {
+            if (isAPaginationRequest(startIndex, count)) {
                 if (isNotInternalOrApplicationGroup(domainName)) {
                     int maxGroupList = getGroupMaxLimit(domainName);
                     if (count < 0 || count > maxGroupList) {
@@ -3706,7 +3717,7 @@ public class SCIMUserManager implements UserManager {
      * @return Array of filtered hybrid roles.
      * @throws org.wso2.carbon.user.core.UserStoreException
      */
-    private List<String> filterHybridRoles(String searchAttribute, int startIndex, Integer count)
+    private List<String> filterHybridRoles(String searchAttribute, int startIndex, int count)
             throws org.wso2.carbon.user.core.UserStoreException, CharonException {
 
         List<String> roleList;
@@ -3714,7 +3725,7 @@ public class SCIMUserManager implements UserManager {
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         // Get filtered hybrid roles by passing noInternalRoles=false.
         try {
-            if (canPaginate(startIndex, count)) {
+            if (isAPaginationRequest(startIndex, count)) {
                 roleSet = groupHandler.listSCIMRoles(searchAttribute, startIndex, count);
             } else {
                 roleSet = groupHandler.listSCIMRoles(searchAttribute);
