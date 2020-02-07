@@ -1593,7 +1593,7 @@ public class SCIMUserManager implements UserManager {
 
         try {
             if (StringUtils.isEmpty(domainName)) {
-                domainName = PRIMARY_DOMAIN;
+                domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
             }
             Map<String, String> attributes = getAllAttributes(domainName);
             if (log.isDebugEnabled()) {
@@ -2224,8 +2224,8 @@ public class SCIMUserManager implements UserManager {
         // EnableFilteringEnhancements' properties in identity.xml or domain name embedded in the filter attribute
         // value.
         domainName = resolveDomain(domainName, node);
-        if (PRIMARY_DOMAIN.equalsIgnoreCase(domainName)) {
-            domainName = domainName.toUpperCase();
+        if (UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(domainName)) {
+            domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
         }
         List<Object> filteredGroups = new ArrayList<>();
         // 0th index is to store total number of results.
@@ -3409,15 +3409,11 @@ public class SCIMUserManager implements UserManager {
             } catch (IdentitySCIMException e) {
                 throw new CharonException("Error in retrieving SCIM Groups from database.", e);
             }
-            List<String> roleList = new ArrayList<>(roleNames);
-            Collections.sort(roleList);
-            return roleList;
+            return new ArrayList<>(roleNames);
         } else {
             try {
                 roleNames = groupHandler.listSCIMRoles(searchAttribute, startIndex, count);
-                List<String> roleList = new ArrayList<>(roleNames);
-                Collections.sort(roleList);
-                return roleList;
+                return new ArrayList<>(roleNames);
             } catch (IdentitySCIMException e) {
                 throw new CharonException("Error in retrieving SCIM Groups from database.", e);
             }
@@ -3537,7 +3533,7 @@ public class SCIMUserManager implements UserManager {
             if (isAPaginationRequest(startIndex, count)) {
                 if (isNotInternalOrApplicationGroup(domainName)) {
                     int maxGroupList = getGroupMaxLimit(domainName);
-                    if (count < 0 || count > maxGroupList) {
+                    if (count > maxGroupList) {
                         count = maxGroupList;
                     }
                 }
@@ -3734,7 +3730,6 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentitySCIMException e) {
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
-        Collections.sort(roleList);
         return roleList;
     }
 

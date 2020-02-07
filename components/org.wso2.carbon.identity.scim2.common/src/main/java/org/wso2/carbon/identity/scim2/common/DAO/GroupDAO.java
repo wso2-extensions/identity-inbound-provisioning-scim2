@@ -96,9 +96,7 @@ public class GroupDAO {
         Set<String> groups = new HashSet<>();
         String sqlStmt;
 
-        if (startIndex <= 0) {
-            startIndex = 0;
-        } else {
+        if (startIndex > 0) {
             startIndex = startIndex - 1;
         }
 
@@ -163,9 +161,7 @@ public class GroupDAO {
         Set<String> groups = new HashSet<>();
         String sqlStmt;
 
-        if (startIndex <= 0) {
-            startIndex = 0;
-        } else {
+        if (startIndex > 0) {
             startIndex = startIndex - 1;
         }
 
