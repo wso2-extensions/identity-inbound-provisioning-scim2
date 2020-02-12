@@ -649,14 +649,19 @@ public class AttributeMapper {
                     attributeNames[2]);
             AttributeSchema typeAttributeSchema = getAttributeSchema(subAttributeSchema.getURI()
                     + ".type", scimObjectType);
-            DefaultAttributeFactory.createAttribute(typeAttributeSchema, typeSimpleAttribute);
+            if (typeAttributeSchema != null) {
+                DefaultAttributeFactory.createAttribute(typeAttributeSchema, typeSimpleAttribute);
+            }
 
             AttributeSchema valueAttributeSchema = getAttributeSchema(subAttributeSchema.getURI()
                     + ".value", scimObjectType);
-            SimpleAttribute valueSimpleAttribute = new SimpleAttribute(SCIMConstants.CommonSchemaConstants.VALUE,
-                    AttributeUtil.getAttributeValueFromString(attributeEntry.getValue(),
-                            valueAttributeSchema.getType()));
-            DefaultAttributeFactory.createAttribute(valueAttributeSchema, valueSimpleAttribute);
+            SimpleAttribute valueSimpleAttribute = null;
+            if (valueAttributeSchema != null) {
+                valueSimpleAttribute = new SimpleAttribute(SCIMConstants.CommonSchemaConstants.VALUE,
+                        AttributeUtil.getAttributeValueFromString(attributeEntry.getValue(),
+                                valueAttributeSchema.getType()));
+                DefaultAttributeFactory.createAttribute(valueAttributeSchema, valueSimpleAttribute);
+            }
 
             //need to set a complex type value for multivalued attribute
             Object type = SCIMCommonConstants.DEFAULT;
@@ -665,13 +670,17 @@ public class AttributeMapper {
             if (typeSimpleAttribute.getValue() != null) {
                 type = typeSimpleAttribute.getValue();
             }
-            if (valueSimpleAttribute.getValue() != null) {
+            if (valueSimpleAttribute != null && valueSimpleAttribute.getValue()!= null) {
                 value = valueSimpleAttribute.getValue();
             }
             String complexName = immediateParentAttributeName + "_" + value + "_" + type;
             ComplexAttribute complexAttribute = new ComplexAttribute(complexName);
-            complexAttribute.setSubAttribute(typeSimpleAttribute);
-            complexAttribute.setSubAttribute(valueSimpleAttribute);
+            if (typeAttributeSchema != null) {
+                complexAttribute.setSubAttribute(typeSimpleAttribute);
+            }
+            if (valueSimpleAttribute != null) {
+                complexAttribute.setSubAttribute(valueSimpleAttribute);
+            }
             DefaultAttributeFactory.createAttribute(subAttributeSchema, complexAttribute);
 
             ComplexAttribute extensionComplexAttribute = null;
