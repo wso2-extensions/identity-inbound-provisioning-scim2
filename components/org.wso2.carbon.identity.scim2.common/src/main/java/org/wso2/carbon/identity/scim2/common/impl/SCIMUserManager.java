@@ -50,6 +50,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
+import org.wso2.carbon.user.core.jdbc.JDBCUserStoreManager;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionAttribute;
 import org.wso2.carbon.user.core.model.ExpressionCondition;
@@ -446,15 +447,25 @@ public class SCIMUserManager implements UserManager {
         // Handle limit equals NULL scenario.
         limit = handleLimitEqualsNULL(limit);
         Set<org.wso2.carbon.user.core.common.User> coreUsers;
+        long totalUsers = 0;
         if (StringUtils.isNotEmpty(domainName)) {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName);
+                totalUsers = getTotalUsers(domainName);
             } else {
                 coreUsers = listUsernamesUsingLegacyAPIs(domainName);
             }
         } else {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernamesAcrossAllDomains(offset, limit, sortBy, sortOrder);
+
+                String[] userStoreDomainNames = getDomainNames();
+                boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
+                if (canCountTotalUserCount) {
+                    for (String userStoreDomainName : userStoreDomainNames) {
+                        totalUsers += getTotalUsers(userStoreDomainName);
+                    }
+                }
             } else {
                 coreUsers = listUsernamesAcrossAllDomainsUsingLegacyAPIs();
             }
@@ -471,10 +482,41 @@ public class SCIMUserManager implements UserManager {
             }
         } else {
             List<Object> scimUsers = getUserDetails(coreUsers, requiredAttributes);
-            users.set(0, scimUsers.size()); // Set total number of results to 0th index.
+            if (totalUsers != 0) {
+                users.set(0, Math.toIntExact(totalUsers)); // Set total number of results to 0th index.
+            } else {
+                users.set(0, scimUsers.size());
+            }
             users.addAll(scimUsers); // Set user details from index 1.
         }
         return users;
+    }
+
+    private boolean canCountTotalUserCount(String[] userStoreDomainNames) {
+
+        for (String userStoreDomainName : userStoreDomainNames) {
+            AbstractUserStoreManager secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
+                    .getSecondaryUserStoreManager(userStoreDomainName);
+            if (!(secondaryUserStoreManager instanceof JDBCUserStoreManager)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private long getTotalUsers(String domainName) throws CharonException {
+
+        long totalUsers = 0;
+        if (carbonUM instanceof JDBCUserStoreManager) {
+            try {
+                AbstractUserStoreManager secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
+                        .getSecondaryUserStoreManager(domainName);
+                totalUsers = secondaryUserStoreManager.countUsersWithClaims("http://wso2.org/claims/username", "*");
+            } catch (org.wso2.carbon.user.core.UserStoreException e) {
+                throw new CharonException("Error while getting total user count in domain: " + domainName);
+            }
+        }
+        return totalUsers;
     }
 
     /**
