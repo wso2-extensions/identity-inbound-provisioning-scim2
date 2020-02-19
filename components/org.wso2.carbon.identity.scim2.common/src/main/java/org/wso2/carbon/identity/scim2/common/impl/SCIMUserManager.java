@@ -2394,7 +2394,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public Group updateGroup(Group oldGroup, Group newGroup, Map<String, Boolean> requiredAttributes)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         try {
             boolean updated = doUpdateGroup(oldGroup, newGroup);
@@ -2414,7 +2414,7 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException(e.getMessage(), e);
         } catch (IdentityApplicationManagementException e){
             throw new CharonException("Error retrieving User Store name. ", e);
-        } catch (BadRequestException | CharonException e) {
+        } catch (CharonException e) {
             throw new CharonException("Error in updating the group", e);
         }
     }
@@ -2534,12 +2534,13 @@ public class SCIMUserManager implements UserManager {
     }
 
     private void validateUserIds(Set<String> addedMemberIdsFromUserstore, Set<Object> newlyAddedMemberIds) throws
-            IdentitySCIMException {
+            BadRequestException {
 
         for (Object addedUserId : newlyAddedMemberIds) {
             if (!addedMemberIdsFromUserstore.contains(addedUserId.toString())) {
-                throw new IdentitySCIMException(String.format("Provided SCIM user Id: %s doesn't match with the "
-                        + "userID obtained from user-store for the provided username.", addedUserId.toString()));
+                throw new BadRequestException(String.format("Provided SCIM user Id: %s doesn't match with the "
+                        + "userID obtained from user-store for the provided username.", addedUserId.toString()),
+                        ResponseCodeConstants.INVALID_VALUE);
             }
         }
     }
