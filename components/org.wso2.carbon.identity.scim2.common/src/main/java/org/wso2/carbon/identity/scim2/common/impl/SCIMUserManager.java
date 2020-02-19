@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
@@ -2007,7 +2008,7 @@ public class SCIMUserManager implements UserManager {
     @Override
     public List<Object> listGroupsWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
                                           String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
-            throws CharonException, NotImplementedException {
+            throws CharonException, NotImplementedException, BadRequestException {
 
         // Validate NULL value for startIndex.
         startIndex = handleStartIndexEqualsNULL(startIndex);
@@ -2155,7 +2156,7 @@ public class SCIMUserManager implements UserManager {
      */
     private List<Object> filterGroups(Node rootNode, int startIndex, Integer count, String sortBy, String sortOrder,
                                       String domainName, Map<String, Boolean> requiredAttributes)
-            throws NotImplementedException, CharonException {
+            throws NotImplementedException, CharonException, BadRequestException {
 
         // Handle count equals NULL scenario.
         count = handleLimitEqualsNULL(count);
@@ -2185,7 +2186,8 @@ public class SCIMUserManager implements UserManager {
      */
     private List<Object> filterGroupsBySingleAttribute(ExpressionNode node, int startIndex, int count, String sortBy,
                                                        String sortOrder, String domainName,
-                                                       Map<String, Boolean> requiredAttributes) throws CharonException {
+                                                       Map<String, Boolean> requiredAttributes)
+            throws CharonException, BadRequestException {
 
         String attributeName = node.getAttributeValue();
         String filterOperation = node.getOperation();
@@ -2251,23 +2253,16 @@ public class SCIMUserManager implements UserManager {
      * @return Domain name
      * @throws CharonException
      */
-    private String resolveDomain(String domainName, ExpressionNode node) throws CharonException {
+    private String resolveDomain(String domainName, ExpressionNode node) throws CharonException, BadRequestException {
 
-        try {
-            // Update the domain name if a domain is appended to the attribute value.
-            domainName = resolveDomainInAttributeValue(domainName, node);
+        // Update the domain name if a domain is appended to the attribute value.
+        domainName = resolveDomainInAttributeValue(domainName, node);
 
-            // Apply filter enhancements if the domain is not specified in the request.
-            if (StringUtils.isEmpty(domainName)) {
-                domainName = getDomainWithFilterProperties(node);
-            }
-            return domainName;
-        } catch (BadRequestException e) {
-            String errorMessage = String
-                    .format(" Domain name in the attribute value: %s does not match with the domain parameter: %s in "
-                            + "the request.", node.getValue(), domainName);
-            throw new CharonException(errorMessage, e);
+        // Apply filter enhancements if the domain is not specified in the request.
+        if (StringUtils.isEmpty(domainName)) {
+            domainName = getDomainWithFilterProperties(node);
         }
+        return domainName;
     }
 
     /**
@@ -2300,7 +2295,8 @@ public class SCIMUserManager implements UserManager {
      * @param node       Expression Node.
      * @return Domain name
      */
-    private String resolveDomainInAttributeValue(String domainName, ExpressionNode node) throws BadRequestException {
+    private String resolveDomainInAttributeValue(String domainName, ExpressionNode node)
+            throws CharonException, BadRequestException {
 
         String attributeName = node.getAttributeValue();
         String attributeValue = node.getValue();
@@ -2324,15 +2320,8 @@ public class SCIMUserManager implements UserManager {
                 } else {
                     extractedDomain = domainInAttributeValue.toUpperCase();
                 }
+                validateExtractedDomain(domainName, attributeName, extractedDomain);
 
-                // Check whether the domain name is equal to the extracted domain name from attribute value.
-                if (StringUtils.isNotEmpty(domainName) && StringUtils.isNotEmpty(extractedDomain) && !extractedDomain
-                        .equalsIgnoreCase(domainName)) {
-                    throw new BadRequestException(String.format(
-                            " Domain name: %s in the domain parameter does not match with the domain name: %s in "
-                                    + "search attribute value of %s claim.", domainName, extractedDomain,
-                            attributeName));
-                }
                 // Remove the domain name from the attribute value and update it in the expression node.
                 node.setValue(contentInAttributeValue[1]);
                 return extractedDomain;
@@ -2655,7 +2644,6 @@ public class SCIMUserManager implements UserManager {
         }
         return null;
     }
-
     /**
      * This method will return whether SCIM is enabled or not for a particular userStore. (from SCIMEnabled user
      * store property)
@@ -4060,5 +4048,42 @@ public class SCIMUserManager implements UserManager {
         }
         sb.append("]");
         log.debug(sb);
+    }
+
+    private void validateExtractedDomain(String domainName, String attributeName, String extractedDomain)
+            throws BadRequestException, CharonException {
+
+        // Check whether the domain name is equal to the extracted domain name from attribute value.
+        if (StringUtils.isNotEmpty(domainName) && StringUtils.isNotEmpty(extractedDomain) && !extractedDomain
+                .equalsIgnoreCase(domainName)) {
+            throw new BadRequestException(String.format(
+                    " Domain name: %s in the domain parameter does not match with the domain name: %s in "
+                            + "search attribute value of %s claim.", domainName, extractedDomain,
+                    attributeName));
+        }
+
+        // Check whether the domain name is an actually existing domain name.
+        if (IdentityUtil.getPrimaryDomainName().equals(extractedDomain)) {
+            return;
+        }
+        try {
+            org.wso2.carbon.user.api.UserStoreManager userStoreManager = SCIMCommonComponentHolder.getRealmService()
+                    .getTenantUserRealm(IdentityTenantUtil.getTenantId(tenantDomain)).getUserStoreManager();
+            if (!(userStoreManager instanceof UserStoreManager)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Cannot resolve secondary user store domain names as user-store manager: "
+                            + userStoreManager.getClass() + ", for the tenant domain: " + tenantDomain + ", is " +
+                            "not an instance of " + UserStoreManager.class);
+                }
+                throw new CharonException("Error while resolving user-store domain for the provided value: "
+                        + extractedDomain);
+            }
+            if (((UserStoreManager) userStoreManager).getSecondaryUserStoreManager(extractedDomain) == null) {
+                throw new BadRequestException("The provided domain name: " + extractedDomain + ", must be a valid " +
+                        "user-store domain");
+            }
+        } catch (UserStoreException e) {
+            throw new CharonException("Unable to retrieve user realm for the tenant domain: " + tenantDomain, e);
+        }
     }
 }
