@@ -2854,7 +2854,7 @@ public class SCIMUserManager implements UserManager {
                     // Add username with domain name
                     if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
                         attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, user
-                                .getFullQualifiedUsername());
+                                .getDomainQualifiedUsername());
                     } else {
                         attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, user.getUsername());
                     }
