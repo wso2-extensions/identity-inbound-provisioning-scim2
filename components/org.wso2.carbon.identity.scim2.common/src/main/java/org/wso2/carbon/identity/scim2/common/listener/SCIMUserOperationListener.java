@@ -88,31 +88,12 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
             String userIdLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.ID_URI);
 
-            Pattern pattern = Pattern.compile("urn:.*scim:schemas:core:.\\.0:id");
-            boolean containsSCIMIdClaim = false;
-            for (String claimUri : claims.keySet()) {
-                if (pattern.matcher(claimUri).matches()) {
-                    containsSCIMIdClaim = true;
-                    break;
-                }
-                if (StringUtils.equals(claimUri, userIdLocalClaimUri)) {
-                    containsSCIMIdClaim = true;
-                    break;
-                }
-            }
-
             // If the SCIM ID claims is already there, we don't need to re-generate it.
-            if (!containsSCIMIdClaim) {
-                if (StringUtils.isBlank(user.getUserID())) {
-                    String userId = UUID.randomUUID().toString();
-                    claims.put(userIdLocalClaimUri, userId);
-                    userStoreManager.setUserClaimValue(user.getUsername(), userIdLocalClaimUri, userId,
-                            UserCoreConstants.DEFAULT_PROFILE);
-                } else {
-                    claims.put(userIdLocalClaimUri, user.getUserID());
-                    ((AbstractUserStoreManager) userStoreManager).setUserClaimValueWithID(user.getUserID(),
-                            userIdLocalClaimUri, user.getUserID(), UserCoreConstants.DEFAULT_PROFILE);
-                }
+            if (StringUtils.isBlank(user.getUserID())) {
+                String userId = UUID.randomUUID().toString();
+                claims.put(userIdLocalClaimUri, userId);
+                userStoreManager.setUserClaimValue(user.getUsername(), userIdLocalClaimUri, userId,
+                        UserCoreConstants.DEFAULT_PROFILE);
             }
             return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
