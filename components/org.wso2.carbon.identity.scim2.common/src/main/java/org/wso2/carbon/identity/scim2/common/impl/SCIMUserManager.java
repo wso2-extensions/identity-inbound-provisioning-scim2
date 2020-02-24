@@ -2722,7 +2722,9 @@ public class SCIMUserManager implements UserManager {
 
             // Add username with domain name.
             if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
-                scimUser.setUserName(prependDomain(coreUser.getUsername()));
+                scimUser.setUserName(prependDomain(coreUser.getDomainQualifiedUsername()));
+            } else {
+                scimUser.setUserName(coreUser.getDomainQualifiedUsername());
             }
 
             Map<String, Group> groupMetaAttributesCache = new HashMap<>();
@@ -2853,10 +2855,11 @@ public class SCIMUserManager implements UserManager {
 
                     // Add username with domain name
                     if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
-                        attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, user
-                                .getFullQualifiedUsername());
+                        attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, prependDomain(user
+                                .getDomainQualifiedUsername()));
                     } else {
-                        attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, user.getUsername());
+                        attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI,
+                                user.getDomainQualifiedUsername());
                     }
 
                     //construct the SCIM Object from the attributes
