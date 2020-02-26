@@ -305,7 +305,6 @@ public class SCIMUserManager implements UserManager {
                 scimUser = this.getSCIMUser(coreUser, requiredClaimsInLocalDialect, scimToLocalClaimsMap, null);
                 //set the schemas of the scim user
                 scimUser.setSchemas();
-                log.info("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
             }
 
         } catch (UserStoreException e) {
@@ -1754,7 +1753,6 @@ public class SCIMUserManager implements UserManager {
             } else {
                 // Set the schemas of the scim user.
                 scimUser.setSchemas();
-                log.info("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
                 return scimUser;
             }
         } catch (UserStoreException e) {
