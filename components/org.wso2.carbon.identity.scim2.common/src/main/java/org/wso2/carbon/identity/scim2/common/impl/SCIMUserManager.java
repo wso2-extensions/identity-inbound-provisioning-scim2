@@ -129,6 +129,9 @@ public class SCIMUserManager implements UserManager {
     private static final String DISPLAY_NAME_PROPERTY = "displayName";
     private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
     private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
+    private static final String LOCATION_CLAIM = "http://wso2.org/claims/location";
+    private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
+    private static final String RESOURCE_TYPE_CLAIM = "http://wso2.org/claims/resourceType";
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -783,19 +786,13 @@ public class SCIMUserManager implements UserManager {
 
             // Since we are already populating last_modified claim value from SCIMUserOperationListener, we need to
             // remove this claim value which is coming from charon-level.
-            if (claims.containsKey(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI)) {
-                claims.remove(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
-            }
+            claims.remove(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
 
             // Location is a meta attribute of user object.
-            if (claims.containsKey(SCIMConstants.CommonSchemaConstants.LOCATION)) {
-                claims.remove(SCIMConstants.CommonSchemaConstants.LOCATION);
-            }
+            claims.remove(SCIMConstants.CommonSchemaConstants.LOCATION_URI);
 
             // Resource-Type is a meta attribute of user object.
-            if (claims.containsKey(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE)) {
-                claims.remove(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE);
-            }
+            claims.remove(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI);
 
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
@@ -813,6 +810,10 @@ public class SCIMUserManager implements UserManager {
             // Get existing user claims.
             Map<String, String> oldClaimList = carbonUM.getUserClaimValuesWithID(user.getId(),
                     requiredClaimsInLocalDialect.toArray(new String[0]), null);
+
+            oldClaimList.remove(LOCATION_CLAIM);
+            oldClaimList.remove(LAST_MODIFIED_CLAIM);
+            oldClaimList.remove(RESOURCE_TYPE_CLAIM);
 
             // Get user claims mapped from SCIM dialect to WSO2 dialect.
             Map<String, String> claimValuesInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claims);
