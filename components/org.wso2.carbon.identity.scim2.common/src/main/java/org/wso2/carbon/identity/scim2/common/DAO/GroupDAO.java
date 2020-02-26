@@ -48,12 +48,16 @@ public class GroupDAO {
     private static final Log log = LogFactory.getLog(GroupDAO.class);
 
     /**
-     * Lists the groups that are created from SCIM
+     * This method is deprecated.
      *
-     * @return The set of groups that were created from SCIM
-     * @throws IdentitySCIMException
+     * @since 1.4.43
+     * @deprecated New APIs have been provided to list the groups that belong to a tenant by its tenant id that are
+     * created from SCIM
+     * Use {@link org.wso2.carbon.identity.scim2.common.DAO.GroupDAO#listSCIMGroups(int tenantId)} method.
      */
+    @Deprecated
     public Set<String> listSCIMGroups() throws IdentitySCIMException {
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         ResultSet resultSet = null;
