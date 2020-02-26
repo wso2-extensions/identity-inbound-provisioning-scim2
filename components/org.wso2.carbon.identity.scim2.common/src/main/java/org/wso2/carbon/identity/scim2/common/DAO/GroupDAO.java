@@ -79,6 +79,40 @@ public class GroupDAO {
         return groups;
     }
 
+    /**
+     * Lists the groups that belong to a tenant by its tenant id that are created from SCIM
+     *
+     * @param tenantId tenant Id
+     * @return The set of groups that were created from SCIM
+     * @throws IdentitySCIMException Error when reading from persistence store.
+     */
+    public Set<String> listSCIMGroups(int tenantId) throws IdentitySCIMException {
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        ResultSet resultSet = null;
+        Set<String> groups = new HashSet<>();
+
+        try {
+            //retrieve groups from the DB
+            prepStmt = connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_BY_TENANT_ID_SQL);
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, SCIMConstants.CommonSchemaConstants.ID_URI);
+            resultSet = prepStmt.executeQuery();
+            while (resultSet.next()) {
+                String group = resultSet.getString(1);
+                if (StringUtils.isNotEmpty(group)) {
+                    group = SCIMCommonUtils.getPrimaryFreeGroupName(group);
+                    groups.add(group);
+                }
+            }
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from persistence store.", e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
+        }
+        return groups;
+    }
+
     public boolean isExistingGroup(String groupName, int tenantId) throws IdentitySCIMException {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection();
