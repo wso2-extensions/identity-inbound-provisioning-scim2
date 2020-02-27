@@ -229,7 +229,7 @@ public class SCIMGroupHandler {
      */
     public Set<String> listSCIMRoles() throws IdentitySCIMException {
         GroupDAO groupDAO = new GroupDAO();
-        return groupDAO.listSCIMGroups();
+        return groupDAO.listSCIMGroups(tenantId);
     }
 
     /**
