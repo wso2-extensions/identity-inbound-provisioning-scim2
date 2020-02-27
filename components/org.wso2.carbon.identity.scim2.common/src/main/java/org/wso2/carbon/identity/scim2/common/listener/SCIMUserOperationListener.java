@@ -181,8 +181,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null) {
                 return true;
             } else if (!userStoreManager.isSCIMEnabled() && SCIMCommonUtils.isHybridRole(roleName)) {
-                log.info("Persisting SCIM metadata for hybrid role: " + roleName + ", created while SCIM is " +
-                        "disabled in the user store.");
+                if (log.isDebugEnabled()) {
+                    log.debug("Persisting SCIM metadata for hybrid role: " + roleName + ", created while SCIM is " +
+                            "disabled in the user store.");
+                }
                 return postAddRole(roleName, userStoreManager);
             } else if (!userStoreManager.isSCIMEnabled()) {
                 return true;
