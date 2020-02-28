@@ -825,12 +825,13 @@ public class SCIMUserManager implements UserManager {
             // Get user claims mapped from SCIM dialect to WSO2 dialect.
             Map<String, String> claimValuesInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claims);
 
-            updateUserClaims(user, oldClaimList, claimValuesInLocalDialect);
-
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
             }
+
+            updateUserClaims(user, oldClaimList, claimValuesInLocalDialect);
+
             if (log.isDebugEnabled()) {
                 log.debug("User: " + user.getUserName() + " updated through SCIM.");
             }
