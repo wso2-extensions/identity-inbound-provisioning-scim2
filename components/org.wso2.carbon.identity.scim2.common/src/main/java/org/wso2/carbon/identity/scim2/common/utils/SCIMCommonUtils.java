@@ -405,4 +405,15 @@ public class SCIMCommonUtils {
                         CarbonConstants.DOMAIN_SEPARATOR).toLowerCase());
     }
 
+    /**
+     * Check if SCIM enterprise user extension has been enabled.
+     *
+     * @return True if enterprise user extension enabled
+     */
+    public static boolean isEnterpriseUserExtensionEnabled() {
+
+        return Boolean.parseBoolean(SCIMConfigProcessor.getInstance()
+                .getProperty(SCIMCommonConstants.ENTERPRISE_USER_EXTENSION_ENABLED));
+    }
+
 }
