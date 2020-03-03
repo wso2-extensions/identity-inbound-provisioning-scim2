@@ -18,12 +18,14 @@
 
 package org.wso2.carbon.identity.scim2.common.impl;
 
+import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.api.support.membermodification.MemberModifier;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
+import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -31,7 +33,10 @@ import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.AttributeMapping;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
@@ -51,6 +56,7 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
@@ -81,6 +87,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertNotNull;
+import static org.testng.AssertJUnit.assertTrue;
 
 /*
  * Unit tests for SCIMUserManager
@@ -123,6 +130,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Mock
     private AbstractUserStoreManager secondaryUserStoreManager;
+
+    @Mock
+    private ClaimMetadataManagementService mockClaimMetadataManagementService;
 
 
     @BeforeMethod
@@ -549,5 +559,62 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     public IObjectFactory getObjectFactory() {
 
         return new org.powermock.modules.testng.PowerMockObjectFactory();
+    }
+
+    @Test
+    public void testGetEnterpriseUserSchemaWhenEnabled() throws Exception {
+
+        String tenantDomain = "carbon.super";
+        String externalClaimURI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
+
+        Map<String, String> properties = new HashMap<String, String>() {{
+            put("ReadOnly", "true");
+            put("SupportedByDefault", "true");
+            put("Description", "sample");
+            put("Required", "true");
+        }};
+        Map<String, String> notSupportedByDefaultProperties = new HashMap<String, String>() {{
+            put("ReadOnly", "true");
+            put("SupportedByDefault", "false");
+            put("Description", "sample");
+            put("Required", "true");
+        }};
+
+        List<LocalClaim> localClaimMap = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim("sample/department", new ArrayList<AttributeMapping>(), properties));
+            add(new LocalClaim("sample/organization", new ArrayList<AttributeMapping>(),
+                    notSupportedByDefaultProperties));
+            add(new LocalClaim("sample/manager", new ArrayList<AttributeMapping>(), properties));
+        }};
+        List<ExternalClaim> externalClaimMap = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(externalClaimURI, externalClaimURI + ":department",
+                    "sample/department"));
+            add(new ExternalClaim(externalClaimURI, externalClaimURI + ":organization",
+                    "sample/organization"));
+            add(new ExternalClaim(externalClaimURI, externalClaimURI + ":manager",
+                    "sample/manager"));
+        }};
+
+        when(mockClaimMetadataManagementService.getExternalClaims(SCIMCommonConstants.
+                SCIM_ENTERPRISE_USER_CLAIM_DIALECT, tenantDomain)).thenReturn(externalClaimMap);
+        when(mockClaimMetadataManagementService.getLocalClaims(tenantDomain)).thenReturn(localClaimMap);
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(true);
+
+        SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
+                tenantDomain);
+        assertEquals(userManager.getEnterpriseUserSchema().size(), 2);
+    }
+
+    @Test
+    public void testGetEnterpriseUserSchemaWhenDisabled() throws Exception {
+
+        String tenantDomain = "carbon.super";
+
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(false);
+        SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
+                tenantDomain);
+        assertEquals(userManager.getEnterpriseUserSchema(), null);
     }
 }
