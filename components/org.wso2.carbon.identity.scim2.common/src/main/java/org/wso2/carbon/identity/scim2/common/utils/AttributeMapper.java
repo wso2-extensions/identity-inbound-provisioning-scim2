@@ -54,8 +54,7 @@ import java.util.Map;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_COMPLEX_MULTIVALUED_ATTRIBUTE_SUPPORT_ENABLED;
 
 /**
- * This class is responsible for converting SCIM attributes in a SCIM object to
- * carbon claims and vice versa.
+ * This class is responsible for converting SCIM attributes in a SCIM object to carbon claims and vice versa.
  */
 public class AttributeMapper {
 
@@ -65,8 +64,8 @@ public class AttributeMapper {
     /**
      * Return claims as a map of <ClaimUri (which is mapped to SCIM attribute uri),ClaimValue>.
      *
-     * @param scimObject
-     * @return
+     * @param scimObject SCIM object.
+     * @return A map of claims.
      */
     public static Map<String, String> getClaimsMap(AbstractSCIMObject scimObject) throws CharonException {
 
@@ -84,8 +83,10 @@ public class AttributeMapper {
             } else if (attribute instanceof MultiValuedAttribute) {
                 setClaimsForMultivaluedAttribute(attribute, claimsMap);
             } else if (attribute instanceof ComplexAttribute) {
-                // NOTE: in carbon, we only support storing of type and value of a complex multi-valued attribute
-                // reading attributes list of the complex attribute
+                /*
+                NOTE: in carbon, we only support storing of type and value of a complex multi-valued attribute
+                reading attributes list of the complex attribute.
+                 */
                 ComplexAttribute complexAttribute = (ComplexAttribute) attribute;
                 Map<String, Attribute> attributes = null;
                 if (complexAttribute.getSubAttributesList() != null &&
@@ -112,10 +113,10 @@ public class AttributeMapper {
     }
 
     /**
-     * set claim mapping for simple attribute.
+     * Set claim mapping for simple attribute.
      *
-     * @param attribute
-     * @param claimsMap
+     * @param attribute Target attribute.
+     * @param claimsMap A map containing claims and corresponding values to be set for the target attribute.
      */
     private static void setClaimsForSimpleAttribute(Attribute attribute, Map<String, String> claimsMap)
             throws CharonException {
@@ -143,18 +144,18 @@ public class AttributeMapper {
     }
 
     /**
-     * set claim mapping for multivalued attribute.
+     * Set claim mapping for multivalued attribute.
      *
-     * @param attribute
-     * @param claimsMap
+     * @param attribute Target attribute.
+     * @param claimsMap A map containing claims and corresponding values to be set for the target attribute.
      */
     private static void setClaimsForMultivaluedAttribute(Attribute attribute, Map<String, String> claimsMap)
             throws CharonException {
 
         MultiValuedAttribute multiValAttribute = (MultiValuedAttribute) attribute;
-        // get the URI of root attribute
+        // Get the URI of root attribute.
         String attributeURI = multiValAttribute.getURI();
-        // check if values are set as primitive values
+        // Check if values are set as primitive values.
         List<Object> attributeValues = multiValAttribute.getAttributePrimitiveValues();
         if (CollectionUtils.isNotEmpty(attributeValues)) {
             String values = null;
@@ -195,7 +196,7 @@ public class AttributeMapper {
                         (SimpleAttribute) subAttributes.get(SCIMConstants.CommonSchemaConstants.VALUE);
             }
             if (valueAttribute != null && valueAttribute.getValue() != null) {
-                // put it in claims
+                // Put it in claims.
                 claimsMap.put(valueAttriubuteURI,
                         AttributeUtil.getStringValueOfAttribute(valueAttribute.getValue(), valueAttribute.getType()));
 
@@ -218,15 +219,15 @@ public class AttributeMapper {
     }
 
     /**
-     * set claim mapping for complex attribute.
+     * Set claim mapping for complex attribute.
      *
-     * @param entry
-     * @param claimsMap
+     * @param entry     Target attribute.
+     * @param claimsMap A map containing claims and corresponding values to be set for the target attribute.
      */
     private static void setClaimsForComplexAttribute(Attribute entry, Map<String, String> claimsMap)
             throws CharonException {
 
-        // reading attributes list of the complex attribute
+        // Reading attributes list of the complex attribute.
         ComplexAttribute entryOfComplexAttribute = (ComplexAttribute) entry;
         Map<String, Attribute> entryAttributes;
         if (entryOfComplexAttribute.getSubAttributesList() != null &&
@@ -456,13 +457,13 @@ public class AttributeMapper {
             complexAttribute.setSubAttribute(valueSimpleAttribute);
             DefaultAttributeFactory.createAttribute(parentAttributeSchema, complexAttribute);
 
-            //check whether parent multivalued attribute already exists
+            // Check whether parent multivalued attribute already exists.
             if (((AbstractSCIMObject) scimObject).isAttributeExist(parentAttributeSchema.getName())) {
-                //create attribute value as complex value
+                // Create attribute value as complex value.
                 updateComplexAttribute(scimObject, parentAttributeSchema.getName(), typeSimpleAttribute,
                         valueSimpleAttribute, complexAttribute);
             } else {
-                //create the attribute and set it in the scim object
+                // Create the attribute and set it in the scim object.
                 MultiValuedAttribute multivaluedAttribute = new MultiValuedAttribute(parentAttributeSchema.getName());
                 multivaluedAttribute.setAttributeValue(complexAttribute);
                 DefaultAttributeFactory.createAttribute(parentAttributeSchema, multivaluedAttribute);
@@ -546,7 +547,7 @@ public class AttributeMapper {
                     ((AbstractSCIMObject) scimObject).setAttribute(multivaluedAttribute);
                 }
             } else {
-                //sub attribute of a complex attribute
+                // Sub attribute of a complex attribute.
                 AttributeSchema subAttributeSchema = getAttributeSchema(attributeEntry.getKey(), scimObjectType);
                 AbstractAttribute attribute;
 
@@ -570,13 +571,13 @@ public class AttributeMapper {
                     DefaultAttributeFactory.createAttribute(subAttributeSchema, attribute);
                 }
 
-                //check whether parent attribute exists.
+                // Check whether parent attribute exists.
                 if (((AbstractSCIMObject) scimObject).isAttributeExist(parentAttributeSchema.getName())) {
                     ComplexAttribute complexAttribute =
                             (ComplexAttribute) scimObject.getAttribute(parentAttributeSchema.getName());
                     complexAttribute.setSubAttribute(attribute);
                 } else {
-                    //create parent attribute and set sub attribute
+                    // Create parent attribute and set sub attribute.
                     ComplexAttribute complexAttribute = new ComplexAttribute(parentAttributeSchema.getName());
                     complexAttribute.setSubAttribute(attribute);
                     DefaultAttributeFactory.createAttribute(parentAttributeSchema, complexAttribute);
@@ -641,8 +642,7 @@ public class AttributeMapper {
         String parentAttributeURI = subAttributeURI.replace(":" + attributeNames[1], "");
         AttributeSchema attributeSchema = getAttributeSchema(parentAttributeURI, scimObjectType);
 
-                /*differentiate between sub attribute of Complex attribute and a Multivalued attribute
-                with complex value*/
+        // Differentiate between sub attribute of Complex attribute and a Multivalued attribute with complex value.
         if (subAttributeSchema.getMultiValued()) {
 
             SimpleAttribute typeSimpleAttribute = new SimpleAttribute(SCIMConstants.CommonSchemaConstants.TYPE,
@@ -663,7 +663,7 @@ public class AttributeMapper {
                 DefaultAttributeFactory.createAttribute(valueAttributeSchema, valueSimpleAttribute);
             }
 
-            //need to set a complex type value for multivalued attribute
+            // Need to set a complex type value for multivalued attribute.
             Object type = SCIMCommonConstants.DEFAULT;
             Object value = SCIMCommonConstants.DEFAULT;
 
@@ -732,46 +732,50 @@ public class AttributeMapper {
                 DefaultAttributeFactory.createAttribute(subSubAttributeSchema, attribute);
             }
 
-            // check if the super parent exist
+            // Check if the super parent exist.
             boolean superParentExist = ((AbstractSCIMObject) scimObject).isAttributeExist(attributeSchema.getName());
             if (superParentExist) {
                 ComplexAttribute superParentAttribute = (ComplexAttribute) ((AbstractSCIMObject) scimObject)
                         .getAttribute(attributeSchema.getName());
-                // check if the immediate parent exist
+                // Check if the immediate parent exist.
                 boolean immediateParentExist = superParentAttribute.isSubAttributeExist(immediateParentAttributeName);
                 if (immediateParentExist) {
-                    // both the parent and super parent exists
+                    // Both the parent and super parent exists.
                     ComplexAttribute immediateParentAttribute = (ComplexAttribute) superParentAttribute
                             .getSubAttribute(immediateParentAttributeName);
                     immediateParentAttribute.setSubAttribute(attribute);
-                } else { // immediate parent does not exist
+                } else {
+                    // Immediate parent does not exist.
                     ComplexAttribute immediateParentAttribute = new ComplexAttribute(immediateParentAttributeName);
                     immediateParentAttribute.setSubAttribute(attribute);
                     DefaultAttributeFactory.createAttribute(subAttributeSchema, immediateParentAttribute);
-                    // created the immediate parent and now set to super
+                    // Created the immediate parent and now set to super.
                     superParentAttribute.setSubAttribute(immediateParentAttribute);
                 }
-            } else { // now have to create both the super parent and immediate parent
-                // immediate first
+            } else {
+                /*
+                Now have to create both the super parent and immediate parent.
+                Immediate first.
+                 */
                 ComplexAttribute immediateParentAttribute = new ComplexAttribute(immediateParentAttributeName);
                 immediateParentAttribute.setSubAttribute(attribute);
                 DefaultAttributeFactory.createAttribute(subAttributeSchema, immediateParentAttribute);
-                // now super parent
+                // Now super parent.
                 ComplexAttribute superParentAttribute = new ComplexAttribute(attributeSchema.getName());
                 superParentAttribute.setSubAttribute(immediateParentAttribute);
                 DefaultAttributeFactory.createAttribute(attributeSchema, superParentAttribute);
-                // now add the super to the scim object
+                // Now add the super to the scim object.
                 ((AbstractSCIMObject) scimObject).setAttribute(superParentAttribute);
             }
         }
     }
 
     /**
-     * return the attribute schema for the asked attribute URI.
+     * Return the attribute schema for the asked attribute URI.
      *
-     * @param attributeURI
-     * @param scimObjectType
-     * @return
+     * @param attributeURI   URI of the SCIM attribute.
+     * @param scimObjectType Type of the SCIM object.
+     * @return Schema of the SCIM attribute belonging to the specified attributeURI and scimObjectType.
      */
     private static AttributeSchema getAttributeSchema(String attributeURI, int scimObjectType) {
 
@@ -797,7 +801,7 @@ public class AttributeMapper {
                                 return subAttributeSchema;
                             }
                             if (subAttributeSchema.getType().equals(SCIMDefinitions.DataType.COMPLEX)) {
-                                // this is only valid for extension schema
+                                // This is only valid for extension schema.
                                 List<AttributeSchema> subSubAttributeSchemaList = subAttributeSchema
                                         .getSubAttributeSchemas();
                                 for (AttributeSchema subSubAttributeSchema : subSubAttributeSchemaList) {
@@ -815,10 +819,10 @@ public class AttributeMapper {
     }
 
     /**
-     * return the corresponding resource type schema.
+     * Return the corresponding resource type schema.
      *
-     * @param scimObjectType
-     * @return
+     * @param scimObjectType SCIM object type.
+     * @return Resource type schema of the given SCIM object type.
      */
     private static ResourceTypeSchema getResourceSchema(int scimObjectType) {
 
