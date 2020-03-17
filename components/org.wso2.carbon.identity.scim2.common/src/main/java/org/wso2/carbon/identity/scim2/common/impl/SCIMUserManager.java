@@ -519,24 +519,17 @@ public class SCIMUserManager implements UserManager {
     private long getTotalUsers(String domainName) throws CharonException {
 
         long totalUsers = 0;
-        if (carbonUM instanceof JDBCUserStoreManager) {
-            try {
-                AbstractUserStoreManager secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
-                        .getSecondaryUserStoreManager(domainName);
+        AbstractUserStoreManager secondaryUserStoreManager = null;
+        if (StringUtils.isNotBlank(domainName)) {
+            secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
+                    .getSecondaryUserStoreManager(domainName);
+        }
+        try {
+            if (secondaryUserStoreManager instanceof JDBCUserStoreManager) {
                 totalUsers = secondaryUserStoreManager.countUsersWithClaims(USERNAME_CLAIM, "*");
-            } catch (org.wso2.carbon.user.core.UserStoreException e) {
-                throw new CharonException("Error while getting total user count in domain: " + domainName);
             }
-        } else if (StringUtils.isNotBlank(domainName)) {
-            try {
-                AbstractUserStoreManager secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
-                        .getSecondaryUserStoreManager(domainName);
-                if (secondaryUserStoreManager instanceof JDBCUserStoreManager) {
-                    totalUsers = secondaryUserStoreManager.countUsersWithClaims(USERNAME_CLAIM, "*");
-                }
-            } catch (org.wso2.carbon.user.core.UserStoreException e) {
-                throw new CharonException("Error while getting total user count in domain: " + domainName);
-            }
+        } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            throw new CharonException("Error while getting total user count in domain: " + domainName);
         }
         return totalUsers;
     }
