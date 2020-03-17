@@ -526,6 +526,16 @@ public class SCIMUserManager implements UserManager {
             } catch (org.wso2.carbon.user.core.UserStoreException e) {
                 throw new CharonException("Error while getting total user count in domain: " + domainName);
             }
+        } else if (domainName != null) {
+            try {
+                AbstractUserStoreManager secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
+                        .getSecondaryUserStoreManager(domainName);
+                if (secondaryUserStoreManager instanceof JDBCUserStoreManager) {
+                    totalUsers = secondaryUserStoreManager.countUsersWithClaims("http://wso2.org/claims/username", "*");
+                }
+            } catch (org.wso2.carbon.user.core.UserStoreException e) {
+                throw new CharonException("Error while getting total user count in domain: " + domainName);
+            }
         }
         return totalUsers;
     }
