@@ -132,6 +132,7 @@ public class SCIMUserManager implements UserManager {
     private static final String LOCATION_CLAIM = "http://wso2.org/claims/location";
     private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
     private static final String RESOURCE_TYPE_CLAIM = "http://wso2.org/claims/resourceType";
+    private static final String USERNAME_CLAIM = "http://wso2.org/claims/username";
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -522,16 +523,16 @@ public class SCIMUserManager implements UserManager {
             try {
                 AbstractUserStoreManager secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
                         .getSecondaryUserStoreManager(domainName);
-                totalUsers = secondaryUserStoreManager.countUsersWithClaims("http://wso2.org/claims/username", "*");
+                totalUsers = secondaryUserStoreManager.countUsersWithClaims(USERNAME_CLAIM, "*");
             } catch (org.wso2.carbon.user.core.UserStoreException e) {
                 throw new CharonException("Error while getting total user count in domain: " + domainName);
             }
-        } else if (domainName != null) {
+        } else if (StringUtils.isNotBlank(domainName)) {
             try {
                 AbstractUserStoreManager secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
                         .getSecondaryUserStoreManager(domainName);
                 if (secondaryUserStoreManager instanceof JDBCUserStoreManager) {
-                    totalUsers = secondaryUserStoreManager.countUsersWithClaims("http://wso2.org/claims/username", "*");
+                    totalUsers = secondaryUserStoreManager.countUsersWithClaims(USERNAME_CLAIM, "*");
                 }
             } catch (org.wso2.carbon.user.core.UserStoreException e) {
                 throw new CharonException("Error while getting total user count in domain: " + domainName);
