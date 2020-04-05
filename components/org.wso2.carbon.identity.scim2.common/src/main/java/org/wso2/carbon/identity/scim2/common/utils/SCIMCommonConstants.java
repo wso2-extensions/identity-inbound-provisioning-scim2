@@ -36,6 +36,8 @@ public class SCIMCommonConstants {
 
     public static final String SCIM_CORE_CLAIM_DIALECT = "urn:ietf:params:scim:schemas:core:2.0";
     public static final String SCIM_USER_CLAIM_DIALECT = "urn:ietf:params:scim:schemas:core:2.0:User";
+    public static final String SCIM_ENTERPRISE_USER_CLAIM_DIALECT =
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
 
     public static final String EQ = "eq";
     public static final String CO = "co";
@@ -64,6 +66,7 @@ public class SCIMCommonConstants {
     public static final String BULK_MAX_OPERATIONS = "bulk-maxOperations";
     public static final String BULK_MAX_PAYLOAD_SIZE = "bulk-maxPayloadSize";
     public static final String FILTER_MAX_RESULTS = "filter-maxResults";
+    public static final String ENTERPRISE_USER_EXTENSION_ENABLED = "user-schema-extension-enabled";
 
     public static final java.lang.String ASK_PASSWORD_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:askPassword";
     public static final java.lang.String VERIFY_EMAIL_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:verifyEmail";

@@ -98,8 +98,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
@@ -3799,6 +3801,39 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
+     * Returns the schema of the enterprise user extension in SCIM 2.0.
+     *
+     * @return List of attributes of enterprise user extension
+     * @throws CharonException
+     */
+    @Override
+    public List<Attribute> getEnterpriseUserSchema() throws CharonException {
+
+        List<Attribute> enterpriseUserSchemaAttributesList = null;
+
+        if (SCIMCommonUtils.isEnterpriseUserExtensionEnabled()) {
+            Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
+                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT, tenantDomain);
+
+            Map<String, Attribute> filteredAttributeMap =
+                    getFilteredEnterpriseUserSchemaAttributes(scimClaimToLocalClaimMap);
+            Map<String, Attribute> hierarchicalAttributeMap =
+                    buildHierarchicalAttributeMap(filteredAttributeMap);
+
+            enterpriseUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
+
+            if (log.isDebugEnabled()) {
+               logSchemaAttributes(enterpriseUserSchemaAttributesList);
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Enterprise user schema support disabled.");
+            }
+        }
+        return enterpriseUserSchemaAttributesList;
+    }
+
+    /**
      * Get mapped local claims for the claims in specified external claim dialect.
      *
      * @param externalClaimDialect
@@ -3875,6 +3910,15 @@ public class SCIMUserManager implements UserManager {
         return filteredFlatAttributeMap;
     }
 
+    private Map<String, Attribute> getFilteredEnterpriseUserSchemaAttributes(Map<ExternalClaim, LocalClaim>
+                                                                                     scimClaimToLocalClaimMap) {
+
+        return scimClaimToLocalClaimMap.entrySet().stream()
+                .filter(entry -> isSupportedByDefault(entry.getValue()))
+                .map(e -> getSchemaAttributes(e.getKey(), e.getValue()))
+                .collect(Collectors.toMap(attr -> attr.getName(), Function.identity()));
+    }
+
     private boolean isSupportedByDefault(LocalClaim mappedLocalClaim) {
 
         String supportedByDefault = mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
@@ -3915,6 +3959,7 @@ public class SCIMUserManager implements UserManager {
     private boolean isComplexAttribute(String name) {
 
         switch(name) {
+            case "manager":
             case "name" :
             case "emails" :
             case "phoneNumbers" :
