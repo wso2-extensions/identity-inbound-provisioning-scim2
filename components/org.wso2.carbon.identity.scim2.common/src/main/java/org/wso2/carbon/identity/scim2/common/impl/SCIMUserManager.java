@@ -769,6 +769,16 @@ public class SCIMUserManager implements UserManager {
                             .addDomainToName(UserCoreUtil.removeDomainFromName(user.getUserName()),
                                     getUserStoreDomainFromSP()));
                 }
+                // This is handled here as the IS is still not capable of updating the username via SCIM.
+                if (!StringUtils.equals(user.getUserName(), oldUser.getUserName())) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Failing the request as attempting to modify username. Old username: "
+                                + oldUser.getUserName() + ", new username: " + user.getUserName());
+                    }
+
+                    throw new BadRequestException("Attribute userName cannot be modified.",
+                            ResponseCodeConstants.MUTABILITY);
+                }
             } catch (IdentityApplicationManagementException e) {
                 throw new CharonException("Error retrieving User Store name. ", e);
             }
@@ -846,7 +856,16 @@ public class SCIMUserManager implements UserManager {
             log.error("Error while updating attributes of user: " + user.getUserName(), e);
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
-        } catch (BadRequestException | CharonException e) {
+        } catch (BadRequestException e) {
+            // This is needed as most BadRequests are thrown to charon as
+            // CharonExceptions but if there are any bad requests handled
+            // due to MUTABILITY at this level we need to properly notify
+            // the end party.
+            reThrowMutabilityBadRequests(e);
+
+            log.error("Error occurred while trying to update the user", e);
+            throw new CharonException("Error occurred while trying to update the user", e);
+        } catch (CharonException e) {
             log.error("Error occurred while trying to update the user", e);
             throw new CharonException("Error occurred while trying to update the user", e);
         }
@@ -4159,6 +4178,13 @@ public class SCIMUserManager implements UserManager {
             }
         } catch (UserStoreException e) {
             throw new CharonException("Unable to retrieve user realm for the tenant domain: " + tenantDomain, e);
+        }
+    }
+
+    private void reThrowMutabilityBadRequests(BadRequestException e) throws BadRequestException {
+
+        if (ResponseCodeConstants.MUTABILITY.equals(e.getScimType())) {
+            throw e;
         }
     }
 }
