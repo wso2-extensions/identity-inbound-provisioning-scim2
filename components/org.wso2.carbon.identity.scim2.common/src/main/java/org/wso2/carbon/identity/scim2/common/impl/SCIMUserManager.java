@@ -2801,7 +2801,8 @@ public class SCIMUserManager implements UserManager {
             }
         } catch (UserStoreException | CharonException | NotFoundException | IdentitySCIMException |
                 BadRequestException e) {
-            throw new CharonException("Error in getting user information for user: " + scimUser.getUserName(), e);
+            throw new CharonException("Error in getting user information for user: " +
+                    coreUser.getDomainQualifiedUsername(), e);
         }
 
         return scimUser;
