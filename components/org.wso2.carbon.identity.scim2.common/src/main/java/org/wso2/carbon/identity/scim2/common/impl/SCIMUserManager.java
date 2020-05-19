@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -118,6 +119,7 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_INVALID_USERNAME = "31301";
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
+    private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private static final String ERROR_CODE_USER_NOT_FOUND = "30007";
     private AbstractUserStoreManager carbonUM;
@@ -274,6 +276,10 @@ public class SCIMUserManager implements UserManager {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             if (e instanceof PolicyViolationException) {
+                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+            }
+            if ((e instanceof IdentityEventException) && StringUtils
+                    .equals(ERROR_CODE_PASSWORD_HISTORY_VIOLATION, ((IdentityEventException) e).getErrorCode())) {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             e = e.getCause();
