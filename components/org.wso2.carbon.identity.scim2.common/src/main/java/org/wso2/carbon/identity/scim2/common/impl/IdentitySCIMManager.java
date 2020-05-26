@@ -22,6 +22,8 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AuthenticationSchema;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -29,11 +31,8 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
-import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
-import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import org.wso2.charon3.core.config.CharonConfiguration;
 import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -66,6 +65,9 @@ public class IdentitySCIMManager {
      */
     public static IdentitySCIMManager getInstance() throws CharonException {
 
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            return new IdentitySCIMManager();
+        }
         if (identitySCIMManager == null) {
             synchronized (IdentitySCIMManager.class) {
                 if (identitySCIMManager == null) {
@@ -89,11 +91,15 @@ public class IdentitySCIMManager {
         encoder = new JSONEncoder();
 
         // Define endpoint urls to be used in Location Header.
-        endpointURLs.put(SCIMConstants.USER_ENDPOINT, SCIMCommonUtils.getSCIMUserURL());
-        endpointURLs.put(SCIMConstants.GROUP_ENDPOINT, SCIMCommonUtils.getSCIMGroupURL());
-        endpointURLs.put(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT, SCIMCommonUtils
-                .getSCIMServiceProviderConfigURL());
-        endpointURLs.put(SCIMConstants.RESOURCE_TYPE_ENDPOINT, SCIMCommonUtils.getSCIMResourceTypeURL());
+        try {
+            endpointURLs.put(SCIMConstants.USER_ENDPOINT, SCIMCommonUtils.getSCIMUserURL());
+            endpointURLs.put(SCIMConstants.GROUP_ENDPOINT, SCIMCommonUtils.getSCIMGroupURL());
+            endpointURLs.put(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT, SCIMCommonUtils
+                    .getSCIMServiceProviderConfigURL());
+            endpointURLs.put(SCIMConstants.RESOURCE_TYPE_ENDPOINT, SCIMCommonUtils.getSCIMResourceTypeURL());
+        } catch (IdentitySCIMException e) {
+            throw new CharonException("Error occurred while retrieving the SCIM2 endpoints.", e);
+        }
 
         // Register endpoint URLs in AbstractResourceEndpoint since they are called with in the API.
         registerEndpointURLs();
@@ -115,7 +121,13 @@ public class IdentitySCIMManager {
     public UserManager getUserManager() throws CharonException {
 
         SCIMUserManager scimUserManager = null;
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantDomain;
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
+        } else {
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+
         try {
             // Get super tenant context and get realm service which is an osgi service.
             RealmService realmService = SCIMCommonComponentHolder.getRealmService();

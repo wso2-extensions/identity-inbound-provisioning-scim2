@@ -61,7 +61,7 @@ public class UserResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
@@ -112,7 +112,7 @@ public class UserResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
@@ -151,7 +151,7 @@ public class UserResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM user resource manager and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
@@ -197,14 +197,14 @@ public class UserResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM user resource manager and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
 
             SCIMResponse scimResponse;
 
-            scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
+             scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
                     sortBy, sortOrder, domainName, attribute, excludedAttributes);
 
             return SupportUtils.buildResponse(scimResponse);
@@ -247,7 +247,7 @@ public class UserResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM user resource manager and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
@@ -300,7 +300,7 @@ public class UserResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceEndpoint = new UserResourceManager();
@@ -353,7 +353,7 @@ public class UserResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceEndpoint = new UserResourceManager();

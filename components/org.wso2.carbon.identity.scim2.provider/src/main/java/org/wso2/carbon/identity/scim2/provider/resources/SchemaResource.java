@@ -50,7 +50,7 @@ public class SchemaResource extends AbstractResource {
             // obtain the encoder at this layer in case exceptions needs to be encoded.
             encoder = identitySCIMManager.getEncoder();
 
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM schemas endpoint and hand-over the request.
             SchemaResourceManager schemaResourceManager = new SchemaResourceManager();

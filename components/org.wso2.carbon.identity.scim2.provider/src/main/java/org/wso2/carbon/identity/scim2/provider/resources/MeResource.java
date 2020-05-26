@@ -59,7 +59,7 @@ public class MeResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM me endpoint and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
@@ -112,7 +112,7 @@ public class MeResource extends AbstractResource {
             MeResourceManager meResourceManager = new MeResourceManager();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             SCIMResponse response = meResourceManager.create(resourceString, userManager,
                     attribute, excludedAttributes);
@@ -148,7 +148,7 @@ public class MeResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM me resource manager and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
@@ -198,7 +198,7 @@ public class MeResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM me resource manager and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
@@ -248,7 +248,7 @@ public class MeResource extends AbstractResource {
             encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            UserManager userManager = identitySCIMManager.getUserManager();
 
             // create charon-SCIM me resource manager and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
