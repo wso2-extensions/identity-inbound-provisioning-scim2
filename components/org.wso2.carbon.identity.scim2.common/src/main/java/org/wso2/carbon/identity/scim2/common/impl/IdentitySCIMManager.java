@@ -22,6 +22,8 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AuthenticationSchema;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -143,6 +145,7 @@ public class IdentitySCIMManager {
      */
     private void registerEndpointURLs() {
 
+        AbstractResourceManager.setResourceURLBuilder(new IdentityResourceURLBuilder());
         if (MapUtils.isNotEmpty(endpointURLs)) {
             AbstractResourceManager.setEndpointURLMap(endpointURLs);
         }

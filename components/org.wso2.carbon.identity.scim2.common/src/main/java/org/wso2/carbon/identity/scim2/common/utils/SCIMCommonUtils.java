@@ -28,7 +28,11 @@ import org.wso2.carbon.identity.application.common.model.ThreadLocalProvisioning
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -74,7 +78,7 @@ public class SCIMCommonUtils {
         return StringUtils.isNotBlank(id) ? getSCIMGroupURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
     }
 
-    public static String getSCIMServiceProviderConfigURL(String id){
+    public static String getSCIMServiceProviderConfigURL(String id) {
         return getSCIMServiceProviderConfigURL() ;
     }
 
@@ -90,7 +94,43 @@ public class SCIMCommonUtils {
         return scimURL + SCIMCommonConstants.GROUPS;
     }
 
+    public static String getTenantDomainFromContext() {
+
+        String tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
+        if (StringUtils.isBlank(tenantDomain)) {
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+        return tenantDomain;
+    }
+
     private static String getSCIMURL() {
+
+        String scimURL;
+        try {
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                scimURL = ServiceURLBuilder.create().addPath(SCIMCommonConstants.SCIM2_ENDPOINT).build()
+                        .getAbsolutePublicURL();
+            } else {
+                String serverUrl = ServiceURLBuilder.create().build().getAbsolutePublicURL();
+                String tenantDomain = getTenantDomainFromContext();
+                if (isNotASuperTenantFlow(tenantDomain)) {
+                    scimURL = serverUrl + "/t/" + tenantDomain + SCIMCommonConstants.SCIM2_ENDPOINT;
+                } else {
+                    scimURL = serverUrl + SCIMCommonConstants.SCIM2_ENDPOINT;
+                }
+            }
+            return scimURL;
+        } catch (URLBuilderException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while building the SCIM2 endpoint with tenant " +
+                        "qualified URL.", e);
+            }
+            // Fallback to legacy approach during error scenarios to maintain backward compatibility.
+            return getSCIMURLLegacy();
+        }
+    }
+
+    private static String getSCIMURLLegacy() {
         String scimURL;
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         if (isNotASuperTenantFlow(tenantDomain)) {
@@ -108,13 +148,13 @@ public class SCIMCommonUtils {
     }
 
     public static String getSCIMServiceProviderConfigURL() {
-        String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
+        String scimURL = getSCIMURL();
         String scimServiceProviderConfig = scimURL + SCIMCommonConstants.SERVICE_PROVIDER_CONFIG;
         return scimServiceProviderConfig;
     }
 
     public static String getSCIMResourceTypeURL() {
-        String scimURL = IdentityUtil.getServerURL(SCIMCommonConstants.SCIM2_ENDPOINT, true, true);
+        String scimURL = getSCIMURL();
         String scimResourceType = scimURL + SCIMCommonConstants.RESOURCE_TYPE;
         return scimResourceType;
     }
@@ -177,12 +217,12 @@ public class SCIMCommonUtils {
     }
 
     public static String getGlobalConsumerId() {
-        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        return getTenantDomainFromContext();
     }
 
     public static String getUserConsumerId() {
         String userName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-        String currentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String currentTenantDomain = getTenantDomainFromContext();
         return UserCoreUtil.addTenantDomainToEntry(userName, currentTenantDomain);
     }
 
@@ -304,6 +344,8 @@ public class SCIMCommonUtils {
                 .getThreadLocalProvisioningServiceProvider();
         if (threadLocalSP != null) {
             return threadLocalSP.getTenantDomain();
+        } else if (IdentityTenantUtil.getTenantDomainFromContext() != null) {
+            return IdentityTenantUtil.getTenantDomainFromContext();
         } else if (PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain() != null) {
             tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         } else {
