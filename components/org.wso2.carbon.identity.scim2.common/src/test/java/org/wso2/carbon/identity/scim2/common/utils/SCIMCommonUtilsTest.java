@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.scim2.common.utils;
 
+import org.mockito.Mock;
+import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
@@ -28,6 +30,10 @@ import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.core.ServiceURL;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.internal.DefaultServiceURLBuilder;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -35,13 +41,14 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 
 
-@PrepareForTest({IdentityUtil.class, UserCoreUtil.class})
+@PrepareForTest({IdentityUtil.class, UserCoreUtil.class, IdentityTenantUtil.class, ServiceURLBuilder.class})
 public class SCIMCommonUtilsTest extends PowerMockTestCase {
 
     private static final String ID = "8a439cf6-3c6b-47d2-94bf-34d072495af3";
@@ -51,6 +58,18 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
     private String scimServiceProviderConfig = SCIM_URL + SCIMCommonConstants.SERVICE_PROVIDER_CONFIG;
     private String scimResourceType = SCIM_URL + SCIMCommonConstants.RESOURCE_TYPE;
 
+    @Mock
+    ServiceURL serviceURL;
+
+    @Mock
+    ServiceURL serviceURL1;
+
+    @Mock
+    DefaultServiceURLBuilder defaultServiceURLBuilder;
+
+    @Mock
+    DefaultServiceURLBuilder defaultServiceURLBuilder1;
+
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
         return new org.powermock.modules.testng.PowerMockObjectFactory();
@@ -58,10 +77,21 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() throws Exception {
+        initMocks(this);
         mockStatic(IdentityUtil.class);
         mockStatic(UserCoreUtil.class);
+        mockStatic(IdentityTenantUtil.class);
+        mockStatic(ServiceURLBuilder.class);
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(SCIM_URL);
         when(IdentityUtil.getPrimaryDomainName()).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        when(ServiceURLBuilder.create()).thenReturn(defaultServiceURLBuilder);
+        when(defaultServiceURLBuilder.build()).thenReturn(serviceURL);
+        when(defaultServiceURLBuilder.addPath(SCIMCommonConstants.SCIM2_ENDPOINT)).thenReturn
+                (defaultServiceURLBuilder1);
+        when(defaultServiceURLBuilder1.build()).thenReturn(serviceURL1);
+        when(serviceURL1.getAbsolutePublicURL()).thenReturn("https://localhost:9443/scim2");
+        when(serviceURL.getAbsolutePublicURL()).thenReturn("https://localhost:9443");
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn("carbon.super");
     }
 
     @AfterMethod
@@ -69,56 +99,74 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
         System.clearProperty(CarbonBaseConstants.CARBON_HOME);
     }
 
-    @Test
-    public void testGetSCIMUserURL() throws Exception {
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMUserURL(boolean isTenantQualifyURLEnabled) throws Exception {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
         String scimUserURL = SCIMCommonUtils.getSCIMUserURL(ID);
         assertEquals(scimUserURL, scimUserLocation + "/" + ID);
     }
 
-    @Test
-    public void testGetSCIMUserURLForNullId() throws Exception {
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMUserURLForNullId(boolean isTenantQualifyURLEnabled) throws Exception {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
         String scimUserURL = SCIMCommonUtils.getSCIMUserURL(null);
         assertEquals(scimUserURL, null);
     }
 
-    @Test
-    public void testGetSCIMGroupURL() throws Exception {
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMGroupURL(boolean isTenantQualifyURLEnabled) throws Exception {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
         String scimGroupURL = SCIMCommonUtils.getSCIMGroupURL(ID);
         assertEquals(scimGroupURL, scimGroupLocation + "/" + ID);
     }
 
-    @Test
-    public void testGetSCIMGroupURLForNullId() throws Exception {
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMGroupURLForNullId(boolean isTenantQualifyURLEnabled) throws Exception {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
         String scimGroupURL = SCIMCommonUtils.getSCIMGroupURL(null);
         assertEquals(scimGroupURL, null);
     }
 
-    @Test
-    public void testGetSCIMServiceProviderConfigURL() throws Exception {
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMServiceProviderConfigURL(boolean isTenantQualifyURLEnabled) throws Exception {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
         String scimServiceProviderConfigURL = SCIMCommonUtils.getSCIMServiceProviderConfigURL(ID);
         assertEquals(scimServiceProviderConfigURL, scimServiceProviderConfig);
     }
 
-    @Test
-    public void testGetSCIMUserURL1() throws Exception {
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMUserURL1(boolean isTenantQualifyURLEnabled) throws Exception {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
         String scimUsersURL = SCIMCommonUtils.getSCIMUserURL();
         assertEquals(scimUsersURL, scimUserLocation);
     }
 
-    @Test
-    public void testGetSCIMGroupURL1() throws Exception {
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMGroupURL1(boolean isTenantQualifyURLEnabled) throws Exception {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
         String scimGroupsURL = SCIMCommonUtils.getSCIMGroupURL();
         assertEquals(scimGroupsURL, scimGroupLocation);
     }
 
-    @Test
-    public void testGetSCIMServiceProviderConfigURL1() throws Exception {
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMServiceProviderConfigURL1(boolean isTenantQualifyURLEnabled) throws Exception {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
         String scimServiceProviderConfigURL = SCIMCommonUtils.getSCIMServiceProviderConfigURL();
         assertEquals(scimServiceProviderConfigURL, scimServiceProviderConfig);
     }
 
-    @Test
-    public void testGetSCIMResourceTypeURL() throws Exception {
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMResourceTypeURL(boolean isTenantQualifyURLEnabled) throws Exception {
+
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
         String scimResourceTypeURL = SCIMCommonUtils.getSCIMResourceTypeURL();
         assertEquals(scimResourceTypeURL, scimResourceType);
     }
@@ -200,7 +248,7 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
     public void testGetGlobalConsumerId() throws Exception {
         String tenantDomain = "testTenantDomain";
         CommonTestUtils.initPrivilegedCarbonContext(tenantDomain);
-
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(tenantDomain);
         assertEquals(SCIMCommonUtils.getGlobalConsumerId(), tenantDomain);
     }
 
@@ -211,6 +259,14 @@ public class SCIMCommonUtilsTest extends PowerMockTestCase {
         when(UserCoreUtil.addTenantDomainToEntry(anyString(), anyString())).thenReturn(userConsumerId);
 
         assertEquals(SCIMCommonUtils.getUserConsumerId(), userConsumerId);
+    }
+
+    @DataProvider(name = "tenantURLQualifyData")
+    public Object[][] tenantURLQualifyData() {
+        return new Object[][]{
+                {true},
+                {false}
+        };
     }
 
 }
