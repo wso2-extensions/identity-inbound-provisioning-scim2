@@ -4104,9 +4104,9 @@ public class SCIMUserManager implements UserManager {
     private Map<String, List<String>> convertClaimValuesToList(Map<String, String> claimMap) {
 
         Map<String, List<String>> claimMapWithListValues = new HashMap<>();
-        String claimValueSeparator = ",";
-        if (StringUtils.isNotEmpty(FrameworkUtils.getMultiAttributeSeparator())) {
-            claimValueSeparator = FrameworkUtils.getMultiAttributeSeparator();
+        String claimValueSeparator = FrameworkUtils.getMultiAttributeSeparator();
+        if (StringUtils.isEmpty(claimValueSeparator)) {
+            claimValueSeparator = ",";
         }
         for (Map.Entry<String, String> entry : claimMap.entrySet()) {
             String[] claimValue = entry.getValue().split(claimValueSeparator);
