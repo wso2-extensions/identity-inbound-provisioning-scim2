@@ -2497,7 +2497,9 @@ public class SCIMUserManager implements UserManager {
         Set<Object> newlyAddedMemberIds = getNewlyAddedMemberIds(oldGroup, newGroup);
 
         // Validate the memberIds sent in the update request against the Ids retrieved from the user store.
-        validateUserIds(addedMemberIdsFromUserstore, newlyAddedMemberIds);
+        if (isNotEmpty(addedMembers)) {
+            validateUserIds(addedMemberIdsFromUserstore, newlyAddedMemberIds);
+        }
 
         // We do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
         // Update name if it is changed.
