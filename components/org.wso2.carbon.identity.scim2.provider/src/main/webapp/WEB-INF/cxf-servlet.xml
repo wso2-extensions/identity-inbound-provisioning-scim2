@@ -87,4 +87,13 @@
     </jaxrs:server>
 
     <bean id="schemasBean" class="org.wso2.carbon.identity.scim2.provider.resources.SchemaResource"/>
+
+    <jaxrs:server id="roleResource" address="/Roles">
+        <jaxrs:serviceBeans>
+            <ref bean="roleBean"/>
+        </jaxrs:serviceBeans>
+
+    </jaxrs:server>
+
+    <bean id="roleBean" class="org.wso2.carbon.identity.scim2.provider.resources.RoleResource"/>
 </beans>
