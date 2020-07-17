@@ -31,6 +31,7 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMTenantMgtListener;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListener;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
@@ -206,6 +207,36 @@ public class SCIMCommonComponent {
             logger.debug("claimManagementService unset in SCIMCommonComponent bundle");
         }
         SCIMCommonComponentHolder.setClaimManagementService(null);
+    }
+
+    /**
+     * Set role management service implementation.
+     *
+     * @param roleManagementService RoleManagementService
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.role.mgt.core.RoleManagementService",
+            service = org.wso2.carbon.identity.role.mgt.core.RoleManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRoleManagementService")
+    protected void setRoleManagementService(RoleManagementService roleManagementService) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("RoleManagementService set in SCIMCommonComponent bundle.");
+        }
+        SCIMCommonComponentHolder.setRoleManagementService(roleManagementService);
+    }
+
+    /**
+     * Unset role management service implementation.
+     */
+    protected void unsetRoleManagementService(RoleManagementService roleManagementService) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("RoleManagementService unset in SCIMCommonComponent bundle.");
+        }
+        SCIMCommonComponentHolder.setRoleManagementService(null);
     }
 
     @Deactivate
