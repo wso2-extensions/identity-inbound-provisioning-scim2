@@ -133,7 +133,7 @@ public class SCIMRoleManager implements RoleManager {
             }
             if (CollectionUtils.isNotEmpty(role.getGroups())) {
                 for (GroupBasicInfo groupInfo : role.getGroups()) {
-                    String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(roleID);
+                    String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupInfo.getId());
                     Group group = new Group();
                     group.setDisplayName(groupInfo.getName());
                     group.setId(groupInfo.getId());
