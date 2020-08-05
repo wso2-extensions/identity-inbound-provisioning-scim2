@@ -24,8 +24,10 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.governance.model.UserIdentityClaim;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -37,6 +39,7 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -344,5 +347,32 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             log.error("Error occurred while retrieving SCIM-to-Local claims map.", ex);
         }
         return attributes;
+    }
+
+    @Override
+    public boolean doPostGetUserClaimValues(String userName, String[] claims, String profileName, Map<String, String>
+            claimMap, UserStoreManager storeManager) throws UserStoreException {
+
+        if (!isEnable()) {
+            return true;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("doPostGetUserClaimValues getting executed in the SCIMUserOperationListener for user: " +
+                    userName);
+        }
+
+        // Check whether http://wso2.org/claims/identity/isReadOnlyUser claim is requested.
+        if (claims == null || !Arrays.asList(claims).contains(SCIMCommonConstants.READ_ONLY_USER_CLAIM)) {
+            return true;
+        }
+
+        if (claimMap == null) {
+            claimMap = new HashMap<>();
+        }
+
+        // If http://wso2.org/claims/identity/isReadOnlyUser claim is requested, set the value checking the user store.
+        claimMap.put(SCIMCommonConstants.READ_ONLY_USER_CLAIM, String.valueOf(storeManager.isReadOnly()));
+        return true;
     }
 }
