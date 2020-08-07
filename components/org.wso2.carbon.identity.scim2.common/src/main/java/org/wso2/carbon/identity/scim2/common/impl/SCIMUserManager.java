@@ -108,6 +108,7 @@ import java.util.stream.Collectors;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilteringEnhancementsEnabled;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isNotifyUserstoreStatusEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForGroupNamesInGroupsResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForUsernamesAndGroupNamesInResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
@@ -329,8 +330,12 @@ public class SCIMUserManager implements UserManager {
                 }
                 return null;
             } else {
-                throw new CharonException("Error in getting user information from Carbon User Store for" +
-                        "user: " + userId, e);
+                String errMsg = "Error in getting user information from Carbon User Store for user: " + userId;
+                if (isNotifyUserstoreStatusEnabled()) {
+                    throw new CharonException(errMsg + ". " + e.getMessage(), e);
+                } else {
+                    throw new CharonException(errMsg, e);
+                }
             }
         }
         return scimUser;
@@ -399,7 +404,12 @@ public class SCIMUserManager implements UserManager {
             }
 
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            throw new CharonException("Error in deleting user: " + userName, e);
+            String errMsg = "Error in deleting user: ";
+            if (isNotifyUserstoreStatusEnabled()) {
+                throw new CharonException(errMsg + userId + ". " + e.getMessage(), e);
+            } else {
+                throw new CharonException(errMsg + userName, e);
+            }
         }
     }
 
@@ -859,9 +869,14 @@ public class SCIMUserManager implements UserManager {
             }
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreException e) {
-            log.error("Error while updating attributes of user: " + user.getUserName(), e);
+            String errMsg = "Error while updating attributes of user: " + user.getUserName();
+            log.error(errMsg, e);
             handleErrorsOnUserNameAndPasswordPolicy(e);
-            throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
+            if (isNotifyUserstoreStatusEnabled()) {
+                throw new CharonException(errMsg + ". " + e.getMessage(), e);
+            } else {
+                throw new CharonException(errMsg, e);
+            }
         } catch (BadRequestException e) {
             // This is needed as most BadRequests are thrown to charon as
             // CharonExceptions but if there are any bad requests handled
@@ -1393,7 +1408,11 @@ public class SCIMUserManager implements UserManager {
             String errorMessage = String.format("Error while filtering the users for filter with attribute name: %s ,"
                             + " filter operation: %s and attribute value: %s. ", attributeName, filterOperation,
                     attributeValue);
-            throw new CharonException(errorMessage, e);
+            if (isNotifyUserstoreStatusEnabled()) {
+                throw new CharonException(errorMessage + e.getMessage(), e);
+            } else {
+                throw new CharonException(errorMessage, e);
+            }
         }
 
         paginateUsers(users, limit, offset);
