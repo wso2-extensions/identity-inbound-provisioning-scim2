@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
+import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
@@ -75,6 +76,7 @@ import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.Group;
+import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -99,7 +101,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
@@ -138,6 +139,7 @@ public class SCIMUserManager implements UserManager {
     private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
     private static final String RESOURCE_TYPE_CLAIM = "http://wso2.org/claims/resourceType";
     private static final String USERNAME_CLAIM = "http://wso2.org/claims/username";
+    private static final String ROLE_CLAIM = "http://wso2.org/claims/role";
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -2128,22 +2130,28 @@ public class SCIMUserManager implements UserManager {
         //0th index is to store total number of results;
         groupList.add(0);
         try {
-            Set<String> roleNames = getRoleNamesForGroupsEndpoint(domainName);
-            for (String roleName : roleNames) {
-                String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
+            Set<String> groupNames;
+            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                groupNames = getGroupNamesForGroupsEndpoint(domainName);
+            } else {
+                groupNames = getRoleNamesForGroupsEndpoint(domainName);
+            }
+
+            for (String groupName : groupNames) {
+                String userStoreDomainName = IdentityUtil.extractDomainFromName(groupName);
                 if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
                     if (log.isDebugEnabled()) {
                         log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". "
-                                + "Including group with name : " + roleName + " in the response.");
+                                + "Including group with name : " + groupName + " in the response.");
                     }
-                    Group group = this.getGroupWithName(roleName);
+                    Group group = this.getGroupWithName(groupName);
                     if (group.getId() != null) {
                         groupList.add(group);
                     }
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". Hence "
-                                + "group with name : " + roleName + " is excluded in the response.");
+                                + "group with name : " + groupName + " is excluded in the response.");
                     }
                 }
             }
@@ -2206,6 +2214,34 @@ public class SCIMUserManager implements UserManager {
                 roleNames.addAll(scimDisabledHybridRoles);
             }
             return roleNames;
+        }
+    }
+
+    /**
+     * Get group names according to the given domain. If the domain is not specified, groups of all the user
+     * stores will be returned.
+     *
+     * @param domainName Domain name.
+     * @return Roles List.
+     * @throws UserStoreException    UserStoreException.
+     * @throws IdentitySCIMException IdentitySCIMException.
+     */
+    private Set<String> getGroupNamesForGroupsEndpoint(String domainName)
+            throws UserStoreException, IdentitySCIMException {
+
+        SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+        if (StringUtils.isEmpty(domainName)) {
+            Set<String> groupsList = groupHandler.listSCIMRoles();
+            // Remove roles.
+            groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+            return groupsList;
+        } else {
+            // If the domain is specified create a attribute value with the domain name.
+            String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
+            // Retrieve roles using the above attribute value.
+            List<String> roleList = Arrays
+                    .asList(carbonUM.getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true, true));
+            return new HashSet<>(roleList);
         }
     }
 
@@ -2278,16 +2314,22 @@ public class SCIMUserManager implements UserManager {
         // 0th index is to store total number of results.
         filteredGroups.add(0);
         try {
-            List<String> roleList = getGroupList(node, domainName);
-            if (roleList != null) {
-                for (String roleName : roleList) {
-                    if (roleName != null && carbonUM.isExistingRole(roleName, false)) {
+            List<String> groupsList = new ArrayList<>(getGroupList(node, domainName));
+
+            // Remove roles, if the role and group separation feature is enabled.
+            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+            }
+
+            if (groupsList != null) {
+                for (String groupName : groupsList) {
+                    if (groupName != null && carbonUM.isExistingRole(groupName, false)) {
                         // Skip internal roles.
-                        if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(roleName) || UserCoreUtil
-                                .isEveryoneRole(roleName, carbonUM.getRealmConfiguration())) {
+                        if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(groupName) || UserCoreUtil
+                                .isEveryoneRole(groupName, carbonUM.getRealmConfiguration())) {
                             continue;
                         }
-                        Group group = getRoleWithDefaultAttributes(roleName);
+                        Group group = getRoleWithDefaultAttributes(groupName);
                         if (group != null && group.getId() != null) {
                             filteredGroups.add(group);
                         }
@@ -2758,6 +2800,11 @@ public class SCIMUserManager implements UserManager {
         }
 
         try {
+            // Remove role claim since the roles will be added as a separate attribute.
+            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                claimURIList.remove(ROLE_CLAIM);
+            }
+
             // TODO: If we can get the updated user claim values from the add user method, we don't need to do
             //  this call. Please check the status of the issue: https://github.com/wso2/product-is/issues/7160
             userClaimValues = carbonUM.getUserClaimValuesWithID(coreUser.getUserID(),
@@ -2786,9 +2833,16 @@ public class SCIMUserManager implements UserManager {
                 attributes.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI, SCIMConstants.USER);
             }
 
+            Map<String, Group> groupMetaAttributesCache = new HashMap<>();
             // Get groups of user and add it as groups attribute.
-            List<String> roles = carbonUM.getRoleListOfUserWithID(coreUser.getUserID());
-            checkForSCIMDisabledHybridRoles(roles);
+            List<String> groupsList = new ArrayList<>(carbonUM.getRoleListOfUserWithID(coreUser.getUserID()));
+
+            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                // Remove roles, if the role and group separation feature is enabled.
+                groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+            } else {
+                checkForSCIMDisabledHybridRoles(groupsList);
+            }
 
             // Construct the SCIM Object from the attributes.
             scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
@@ -2800,32 +2854,36 @@ public class SCIMUserManager implements UserManager {
                 scimUser.setUserName(coreUser.getDomainQualifiedUsername());
             }
 
-            Map<String, Group> groupMetaAttributesCache = new HashMap<>();
-
             // Add groups of user.
-            for (String role : roles) {
-                if (UserCoreUtil.isEveryoneRole(role, carbonUM.getRealmConfiguration())
-                        || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(role)) {
+            for (String groupName : groupsList) {
+                if (UserCoreUtil.isEveryoneRole(groupName, carbonUM.getRealmConfiguration())
+                        || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(groupName)) {
                     // Carbon specific roles do not possess SCIM info, hence skipping them.
                     continue;
                 }
 
                 if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
-                    role = prependDomain(role);
+                    groupName = prependDomain(groupName);
                 } else if (isFilteringEnhancementsEnabled()) {
-                    role = prependDomain(role);
+                    groupName = prependDomain(groupName);
                 }
 
-                Group group = groupMetaAttributesCache.get(role);
-                if (group == null && !groupMetaAttributesCache.containsKey(role)) {
-                    group = getGroupOnlyWithMetaAttributes(role);
-                    groupMetaAttributesCache.put(role, group);
+                Group groupObject = groupMetaAttributesCache.get(groupName);
+                if (groupObject == null && !groupMetaAttributesCache.containsKey(groupName)) {
+                    groupObject = getGroupOnlyWithMetaAttributes(groupName);
+                    groupMetaAttributesCache.put(groupName, groupObject);
                 }
 
-                if (group != null) { // can be null for non SCIM groups
-                    scimUser.setGroup(null, group);
+                if (groupObject != null) { // can be null for non SCIM groups
+                    scimUser.setGroup(null, groupObject);
                 }
             }
+
+            // Set the roles attribute if the the role and group separation feature is enabled.
+            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                setRolesOfUser(groupMetaAttributesCache, coreUser, scimUser);
+            }
+
         } catch (UserStoreException | CharonException | NotFoundException | IdentitySCIMException |
                 BadRequestException e) {
             throw new CharonException("Error in getting user information for user: " +
@@ -2916,16 +2974,22 @@ public class SCIMUserManager implements UserManager {
 
                     //get groups of user and add it as groups attribute
                     List<String> roleList = usersRoles.get(user.getUserID());
-                    List<String> roles = new ArrayList<>();
+                    List<String> groupsList = new ArrayList<>();
                     if (isNotEmpty(roleList)) {
-                        roles = roleList;
+                        groupsList = new ArrayList<>(roleList);
                     } else {
                         if (log.isDebugEnabled()) {
                             log.debug(String.format("Roles not found for user %s with id %s .",
                                     user.getFullQualifiedUsername(), user.getUserID()));
                         }
                     }
-                    checkForSCIMDisabledHybridRoles(roles);
+
+                    if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                        // Remove roles, if the role and group separation feature is enabled.
+                        groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+                    } else {
+                        checkForSCIMDisabledHybridRoles(groupsList);
+                    }
 
                     // Add username with domain name
                     if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
@@ -2940,29 +3004,35 @@ public class SCIMUserManager implements UserManager {
                     scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
 
                     //add groups of user
-                    for (String role : roles) {
-                        if (UserCoreUtil.isEveryoneRole(role, carbonUM.getRealmConfiguration())
-                                || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(role)) {
+                    for (String group : groupsList) {
+                        if (UserCoreUtil.isEveryoneRole(group, carbonUM.getRealmConfiguration())
+                                || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(group)) {
                             // Carbon specific roles do not possess SCIM info, hence skipping them.
                             continue;
                         }
 
                         if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
-                            role = prependDomain(role);
+                            group = prependDomain(group);
                         } else if (isFilteringEnhancementsEnabled()) {
-                            role = prependDomain(role);
+                            group = prependDomain(group);
                         }
 
-                        Group group = groupMetaAttributesCache.get(role);
-                        if (group == null && !groupMetaAttributesCache.containsKey(role)) {
-                            group = getGroupOnlyWithMetaAttributes(role);
-                            groupMetaAttributesCache.put(role, group);
+                        Group groupObject = groupMetaAttributesCache.get(group);
+                        if (groupObject == null && !groupMetaAttributesCache.containsKey(group)) {
+                            groupObject = getGroupOnlyWithMetaAttributes(group);
+                            groupMetaAttributesCache.put(group, groupObject);
                         }
 
-                        if (group != null) { // can be null for non SCIM groups
-                            scimUser.setGroup(null, group);
+                        if (groupObject != null) { // can be null for non SCIM groups
+                            scimUser.setGroup(null, groupObject);
                         }
                     }
+
+                    // Set the roles attribute if the the role and group separation feature is enabled.
+                    if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                        setRolesOfUser(groupMetaAttributesCache, user, scimUser);
+                    }
+
                 } catch (UserStoreException | CharonException | NotFoundException | IdentitySCIMException |
                         BadRequestException e) {
                     throw new CharonException("Error in getting user information for user: " + user.getUsername(), e);
@@ -2981,6 +3051,36 @@ public class SCIMUserManager implements UserManager {
         TreeSet<User> scimUserSet = new TreeSet<>(Comparator.comparing(User::getUsername));
         scimUserSet.addAll(scimUsers);
         return scimUserSet;
+    }
+
+    private void setRolesOfUser(Map<String, Group> groupMetaAttributesCache, org.wso2.carbon.user.core.common.User user,
+            User scimUser) throws org.wso2.carbon.user.core.UserStoreException, CharonException, IdentitySCIMException,
+            BadRequestException {
+
+        List<String> rolesOfUser = carbonUM.getHybridRoleListOfUser(user.getUsername(), user.getUserStoreDomain());
+        checkForSCIMDisabledHybridRoles(rolesOfUser);
+
+        // Add roles of user.
+        for (String roleName : rolesOfUser) {
+            if (UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration())
+                    || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
+                // Carbon specific roles do not possess SCIM info, hence skipping them.
+                continue;
+            }
+
+            Group groupObject = groupMetaAttributesCache.get(roleName);
+            if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
+                groupObject = getGroupOnlyWithMetaAttributes(roleName);
+                groupMetaAttributesCache.put(roleName, groupObject);
+            }
+
+            Role role = new Role();
+            role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+            role.setId(groupObject.getId());
+            String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
+            role.setLocation(location);
+            scimUser.setRole(role);
+        }
     }
 
     /**
@@ -3101,6 +3201,37 @@ public class SCIMUserManager implements UserManager {
                 group.setMember(user);
             }
         }
+
+        Map<String, Group> groupMetaAttributesCache = new HashMap<>();
+
+        if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+            List<String> rolesOfGroup = carbonUM.getHybridRoleListOfGroup(UserCoreUtil.removeDomainFromName(groupName),
+                    UserCoreUtil.extractDomainFromName(groupName));
+            checkForSCIMDisabledHybridRoles(rolesOfGroup);
+
+            // Add roles of group.
+            for (String roleName : rolesOfGroup) {
+                if (UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration())
+                        || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
+                    // Carbon specific roles do not possess SCIM info, hence skipping them.
+                    continue;
+                }
+
+                Group groupObject = groupMetaAttributesCache.get(roleName);
+                if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
+                    groupObject = getGroupOnlyWithMetaAttributes(roleName);
+                    groupMetaAttributesCache.put(roleName, groupObject);
+                }
+
+                Role role = new Role();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
+                role.setLocation(location);
+                group.setRole(role);
+            }
+        }
+
         //get other group attributes and set.
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         group = groupHandler.getGroupWithAttributes(group, groupName);
@@ -4214,5 +4345,13 @@ public class SCIMUserManager implements UserManager {
         if (ResponseCodeConstants.MUTABILITY.equals(e.getScimType())) {
             throw e;
         }
+    }
+
+    private String removeInternalDomain(String roleName) {
+
+        if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(IdentityUtil.extractDomainFromName(roleName))) {
+            return UserCoreUtil.removeDomainFromName(roleName);
+        }
+        return roleName;
     }
 }
