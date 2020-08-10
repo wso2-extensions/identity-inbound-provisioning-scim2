@@ -469,4 +469,14 @@ public class SCIMCommonUtils {
                 .getProperty(SCIMCommonConstants.ENTERPRISE_USER_EXTENSION_ENABLED));
     }
 
+    /**
+     * Checks whether the identity.xml config is available to notify userstore availability.
+     *
+     * @return whether 'NotifyUserstoreStatus' property is enabled in the identity.xml.
+     */
+    public static boolean isNotifyUserstoreStatusEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(SCIMCommonConstants.SCIM_NOTIFY_USERSTORE_STATUS));
+    }
+
 }
