@@ -4339,6 +4339,12 @@ public class SCIMUserManager implements UserManager {
         if (IdentityUtil.getPrimaryDomainName().equals(extractedDomain)) {
             return;
         }
+
+        // Check whether the domain name is an internal or application domain.
+        if (isInternalOrApplicationGroup(extractedDomain)) {
+            return;
+        }
+
         try {
             org.wso2.carbon.user.api.UserStoreManager userStoreManager = SCIMCommonComponentHolder.getRealmService()
                     .getTenantUserRealm(IdentityTenantUtil.getTenantId(tenantDomain)).getUserStoreManager();
