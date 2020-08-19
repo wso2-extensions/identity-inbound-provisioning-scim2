@@ -32,6 +32,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.AttributeMapping;
@@ -97,7 +98,8 @@ import static org.testng.AssertJUnit.assertTrue;
  */
 @PrepareForTest({SCIMGroupHandler.class, IdentityUtil.class, SCIMUserSchemaExtensionBuilder.class,
         SCIMAttributeSchema.class, AttributeMapper.class, ClaimMetadataHandler.class, SCIMCommonUtils.class,
-        IdentityTenantUtil.class, AbstractUserStoreManager.class, Group.class, UserCoreUtil.class})
+        IdentityTenantUtil.class, AbstractUserStoreManager.class, Group.class, UserCoreUtil.class,
+        ApplicationManagementService.class})
 @PowerMockIgnore("java.sql.*")
 public class SCIMUserManagerTest extends PowerMockTestCase {
 
@@ -136,6 +138,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Mock
     private ClaimMetadataManagementService mockClaimMetadataManagementService;
+
+    @Mock
+    private ApplicationManagementService applicationManagementService;
 
 
     @BeforeMethod
@@ -632,6 +637,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         User newUser = new User();
         newUser.setUserName("newUser");
+
+        mockStatic(ApplicationManagementService.class);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
 
         String tenantDomain = "carbon.super";
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
