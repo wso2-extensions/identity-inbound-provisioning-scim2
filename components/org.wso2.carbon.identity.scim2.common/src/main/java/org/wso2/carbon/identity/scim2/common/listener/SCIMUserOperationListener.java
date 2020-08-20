@@ -350,16 +350,17 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
-    public boolean doPostGetUserClaimValues(String userName, String[] claims, String profileName, Map<String, String>
-            claimMap, UserStoreManager storeManager) throws UserStoreException {
+    public boolean doPostGetUserClaimValuesWithID(String userID, String[] claims, String profileName,
+                                                  Map<String, String> claimMap, UserStoreManager userStoreManager)
+            throws UserStoreException {
 
         if (!isEnable()) {
             return true;
         }
 
         if (log.isDebugEnabled()) {
-            log.debug("doPostGetUserClaimValues getting executed in the SCIMUserOperationListener for user: " +
-                    userName);
+            log.debug("doPostGetUserClaimValues getting executed in the SCIMUserOperationListener for user id: " +
+                    userID);
         }
 
         // Check whether http://wso2.org/claims/identity/isReadOnlyUser claim is requested.
@@ -372,7 +373,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
 
         // If http://wso2.org/claims/identity/isReadOnlyUser claim is requested, set the value checking the user store.
-        claimMap.put(SCIMCommonConstants.READ_ONLY_USER_CLAIM, String.valueOf(storeManager.isReadOnly()));
+        claimMap.put(SCIMCommonConstants.READ_ONLY_USER_CLAIM, String.valueOf(userStoreManager.isReadOnly()));
         return true;
     }
 }
