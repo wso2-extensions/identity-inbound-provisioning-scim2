@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
@@ -37,6 +38,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
+import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -130,6 +132,8 @@ public class SCIMUserManager implements UserManager {
     private ClaimMetadataManagementService claimMetadataManagementService;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
+    private static final String SERVICE_PROVIDER = "serviceProvider";
+    private final String SERVICE_PROVIDER_TENANT_DOMAIN = "serviceProviderTenantDomain";
 
     // Additional wso2 user schema properties.
     private static final String DISPLAY_NAME_PROPERTY = "displayName";
@@ -2747,15 +2751,38 @@ public class SCIMUserManager implements UserManager {
                 requiredAttributes);
     }
 
-    // TODO: fix this method. Looks like the intended purpose of this method is not fulfilled with the current
-    //  implementation.
     private String getUserStoreDomainFromSP() throws IdentityApplicationManagementException {
 
+        Object threadLocalSP = IdentityUtil.threadLocalProperties.get().get(SERVICE_PROVIDER);
+        Object threadLocalSPTenantDomain = IdentityUtil.threadLocalProperties.get().get(SERVICE_PROVIDER_TENANT_DOMAIN);
+
         ServiceProvider serviceProvider = null;
+        if (threadLocalSP instanceof String && threadLocalSPTenantDomain instanceof String) {
+            serviceProvider = ApplicationManagementService.getInstance().getServiceProvider((String) threadLocalSP,
+                    (String) threadLocalSPTenantDomain);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Thread Local SP or SP tenant domain is null. Checking for provisioning configurations in " +
+                        "resident SP: " + IdentityProvisioningConstants.LOCAL_SP + " for tenantDomain: "
+                        + this.tenantDomain);
+            }
+            serviceProvider = ApplicationManagementService.getInstance().getServiceProvider(
+                    IdentityProvisioningConstants.LOCAL_SP, this.tenantDomain);
+        }
+
+        if (serviceProvider != null && log.isDebugEnabled()) {
+            log.debug("Service provider found as: " + serviceProvider.getApplicationName()
+                    + " when retrieving userstore domain.");
+        }
 
         if (serviceProvider != null && serviceProvider.getInboundProvisioningConfig() != null &&
                 !StringUtils.isBlank(serviceProvider.getInboundProvisioningConfig().getProvisioningUserStore())) {
-            return serviceProvider.getInboundProvisioningConfig().getProvisioningUserStore();
+            String userStoreDomain = serviceProvider.getInboundProvisioningConfig().getProvisioningUserStore();
+            if (log.isDebugEnabled()) {
+                log.debug("Userstore domain set to: " + userStoreDomain + " after retrieving info from service " +
+                        "provider provisioning config: " + serviceProvider.getApplicationName());
+            }
+            return userStoreDomain;
         }
         return null;
     }
