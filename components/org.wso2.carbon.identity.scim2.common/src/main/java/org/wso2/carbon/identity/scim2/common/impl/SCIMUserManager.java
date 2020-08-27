@@ -39,7 +39,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
-import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
@@ -2827,11 +2826,6 @@ public class SCIMUserManager implements UserManager {
         }
 
         try {
-            // Remove role claim since the roles will be added as a separate attribute.
-            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-                claimURIList.remove(ROLE_CLAIM);
-            }
-
             // TODO: If we can get the updated user claim values from the add user method, we don't need to do
             //  this call. Please check the status of the issue: https://github.com/wso2/product-is/issues/7160
             userClaimValues = carbonUM.getUserClaimValuesWithID(coreUser.getUserID(),
@@ -3231,32 +3225,31 @@ public class SCIMUserManager implements UserManager {
 
         Map<String, Group> groupMetaAttributesCache = new HashMap<>();
 
-        if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-            List<String> rolesOfGroup = carbonUM.getHybridRoleListOfGroup(UserCoreUtil.removeDomainFromName(groupName),
-                    UserCoreUtil.extractDomainFromName(groupName));
-            checkForSCIMDisabledHybridRoles(rolesOfGroup);
+        // Set roles of the group.
+        List<String> rolesOfGroup = carbonUM.getHybridRoleListOfGroup(UserCoreUtil.removeDomainFromName(groupName),
+                UserCoreUtil.extractDomainFromName(groupName));
+        checkForSCIMDisabledHybridRoles(rolesOfGroup);
 
-            // Add roles of group.
-            for (String roleName : rolesOfGroup) {
-                if (UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration())
-                        || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
-                    // Carbon specific roles do not possess SCIM info, hence skipping them.
-                    continue;
-                }
-
-                Group groupObject = groupMetaAttributesCache.get(roleName);
-                if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
-                    groupObject = getGroupOnlyWithMetaAttributes(roleName);
-                    groupMetaAttributesCache.put(roleName, groupObject);
-                }
-
-                Role role = new Role();
-                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
-                role.setId(groupObject.getId());
-                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
-                role.setLocation(location);
-                group.setRole(role);
+        // Add roles of group.
+        for (String roleName : rolesOfGroup) {
+            if (UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration())
+                    || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
+                // Carbon specific roles do not possess SCIM info, hence skipping them.
+                continue;
             }
+
+            Group groupObject = groupMetaAttributesCache.get(roleName);
+            if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
+                groupObject = getGroupOnlyWithMetaAttributes(roleName);
+                groupMetaAttributesCache.put(roleName, groupObject);
+            }
+
+            Role role = new Role();
+            role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+            role.setId(groupObject.getId());
+            String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
+            role.setLocation(location);
+            group.setRole(role);
         }
 
         //get other group attributes and set.

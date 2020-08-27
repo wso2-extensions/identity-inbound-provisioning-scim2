@@ -1556,7 +1556,7 @@ definitions:
               example: "https://localhost:9443/scim2/Roles/4645709c-ea8c-4495-8590-e1fa0efe3de0"
             display:
               type: string
-              example: 'Internal/loginRole'
+              example: 'loginRole'
             value:
               type: string
               example: '4645709c-ea8c-4495-8590-e1fa0efe3de0'
@@ -1706,9 +1706,16 @@ definitions:
         type: array
         items:
           type: object
-          example:
-            type: "default"
-            value: "Internal/everyone"
+          properties:
+            $ref:
+              type: string
+              example: "https://localhost:9443/scim2/Roles/4645709c-ea8c-4495-8590-e1fa0efe3de0"
+            display:
+              type: string
+              example: 'loginRole'
+            value:
+              type: string
+              example: '4645709c-ea8c-4495-8590-e1fa0efe3de0'
       nickName:
         type: string
         example: "shaggy"
@@ -1793,7 +1800,7 @@ definitions:
               example: "https://localhost:9443/scim2/Roles/4645709c-ea8c-4495-8590-e1fa0efe3de0"
             display:
               type: string
-              example: 'Internal/loginRole'
+              example: 'loginRole'
             value:
               type: string
               example: '4645709c-ea8c-4495-8590-e1fa0efe3de0'
@@ -1906,7 +1913,7 @@ definitions:
               example: "https://localhost:9443/scim2/Roles/4645709c-ea8c-4495-8590-e1fa0efe3de0"
             display:
               type: string
-              example: 'Internal/loginRole'
+              example: 'loginRole'
             value:
               type: string
               example: '4645709c-ea8c-4495-8590-e1fa0efe3de0'
@@ -2121,6 +2128,9 @@ definitions:
       startIndex:
         type: integer
         example: 1
+      count:
+        type: integer
+        example: 10
       filter:
         type: string
         example: 'displayName eq loginRole'
