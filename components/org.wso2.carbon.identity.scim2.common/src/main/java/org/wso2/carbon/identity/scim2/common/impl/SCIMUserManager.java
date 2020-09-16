@@ -48,8 +48,10 @@ import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
+import org.wso2.carbon.identity.scim2.common.utils.IdentityEventExceptionSettings;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
@@ -368,9 +370,16 @@ public class SCIMUserManager implements UserManager {
             if (e instanceof PolicyViolationException) {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
-            if ((e instanceof IdentityEventException) && StringUtils
-                    .equals(ERROR_CODE_PASSWORD_HISTORY_VIOLATION, ((IdentityEventException) e).getErrorCode())) {
-                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+            if (e instanceof IdentityEventException) {
+                IdentityEventException iee = ((IdentityEventException) e);
+                IdentityEventExceptionSettings ieeSettings = SCIMConfigProcessor.getInstance().getIdentityEventExceptionSettings();
+                if (ieeSettings.getBadRequestErrorCodes().contains(iee.getErrorCode())) {
+                    String errorMessage = e.getMessage();
+                    if (ieeSettings.isExposeErrorCodeInMessage()) {
+                        errorMessage = "[" + iee.getErrorCode() + "] " + errorMessage;
+                    }
+                    throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+                }
             }
             e = e.getCause();
             i++;

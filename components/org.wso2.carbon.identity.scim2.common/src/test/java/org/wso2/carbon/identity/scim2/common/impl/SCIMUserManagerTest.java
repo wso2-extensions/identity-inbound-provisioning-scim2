@@ -44,8 +44,10 @@ import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
+import org.wso2.carbon.identity.scim2.common.utils.IdentityEventExceptionSettings;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.identity.testutil.Whitebox;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimMapping;
@@ -100,6 +102,7 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertNotNull;
 import static org.testng.AssertJUnit.assertTrue;
+import static org.testng.AssertJUnit.assertFalse;
 
 /*
  * Unit tests for SCIMUserManager
@@ -107,7 +110,7 @@ import static org.testng.AssertJUnit.assertTrue;
 @PrepareForTest({SCIMGroupHandler.class, IdentityUtil.class, SCIMUserSchemaExtensionBuilder.class,
         SCIMAttributeSchema.class, AttributeMapper.class, ClaimMetadataHandler.class, SCIMCommonUtils.class,
         IdentityTenantUtil.class, AbstractUserStoreManager.class, Group.class, UserCoreUtil.class,
-        ApplicationManagementService.class})
+        ApplicationManagementService.class, SCIMConfigProcessor.class})
 @PowerMockIgnore("java.sql.*")
 public class SCIMUserManagerTest extends PowerMockTestCase {
 
@@ -155,7 +158,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() throws Exception {
-
         initMocks(this);
     }
 
@@ -814,6 +816,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
 
+        mockStatic(SCIMConfigProcessor.class);
+        SCIMConfigProcessor scimConfigProcessor = new SCIMConfigProcessor();
+        IdentityEventExceptionSettings ieeSettings = scimConfigProcessor.getIdentityEventExceptionSettings();
+        ieeSettings.setExposeErrorCodeInMessage(false);
+        ieeSettings.getBadRequestErrorCodes().add("NOT42");
+        when(SCIMConfigProcessor.getInstance()).thenReturn(scimConfigProcessor);
+
         String tenantDomain = "carbon.super";
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, tenantDomain));
@@ -844,11 +853,18 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
 
+        mockStatic(SCIMConfigProcessor.class);
+        SCIMConfigProcessor scimConfigProcessor = new SCIMConfigProcessor();
+        IdentityEventExceptionSettings ieeSettings = scimConfigProcessor.getIdentityEventExceptionSettings();
+        ieeSettings.setExposeErrorCodeInMessage(false);
+        ieeSettings.getBadRequestErrorCodes().add("42");
+        when(SCIMConfigProcessor.getInstance()).thenReturn(scimConfigProcessor);
+
         String tenantDomain = "carbon.super";
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, tenantDomain));
         doReturn(user).when(scimUserManager).getUser(anyString(), anyMap());
-        Throwable expectedException = new UserStoreException(new IdentityEventException("22001", "This is a special code"));
+        Throwable expectedException = new UserStoreException(new IdentityEventException("42", "response to everything"));
         doThrow(expectedException).when(mockedUserStoreManager).isExistingUser(anyString());
 
         boolean hasExpectedBehaviour = false;
@@ -856,6 +872,45 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
             scimUserManager.updateUser(user, null);
         } catch (BadRequestException e) {
               assertEquals(ResponseCodeConstants.INVALID_VALUE, e.getScimType());
+              assertFalse("Error code shouldn't be exposed", e.getDetail().startsWith("[42] "));
+              hasExpectedBehaviour = true;
+        }
+
+        assertTrue("IdentityEventException is not properly handled.", hasExpectedBehaviour);
+    }
+
+    @Test
+    public void testUpdateUserWithIdentityEventExceptionInterceptedAndExposeCode() throws Exception {
+        User user = new User();
+        user.setUserName("newUser");
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
+
+        mockStatic(ApplicationManagementService.class);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        mockStatic(SCIMConfigProcessor.class);
+        SCIMConfigProcessor scimConfigProcessor = new SCIMConfigProcessor();
+        IdentityEventExceptionSettings ieeSettings = scimConfigProcessor.getIdentityEventExceptionSettings();
+        ieeSettings.setExposeErrorCodeInMessage(true);
+        ieeSettings.getBadRequestErrorCodes().add("42");
+        when(SCIMConfigProcessor.getInstance()).thenReturn(scimConfigProcessor);
+
+        String tenantDomain = "carbon.super";
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, tenantDomain));
+        doReturn(user).when(scimUserManager).getUser(anyString(), anyMap());
+        Throwable expectedException = new UserStoreException(new IdentityEventException("42", "response to everything"));
+        doThrow(expectedException).when(mockedUserStoreManager).isExistingUser(anyString());
+
+        boolean hasExpectedBehaviour = false;
+        try {
+            scimUserManager.updateUser(user, null);
+        } catch (BadRequestException e) {
+              assertEquals(ResponseCodeConstants.INVALID_VALUE, e.getScimType());
+              assertTrue("Error code should be exposed", e.getDetail().startsWith("[42] "));
               hasExpectedBehaviour = true;
         }
 
