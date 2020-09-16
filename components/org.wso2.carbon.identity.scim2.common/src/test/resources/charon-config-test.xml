@@ -47,4 +47,13 @@
             <Property name="primary">false</Property>
         </schema>
     </authenticationSchemes>
+    <identityEventExceptionSettings>
+		<Property name="exposeErrorCodeInMessage">false</Property>
+		<badRequestErrorCodes>
+			<badRequestErrorCode>
+				<!-- ERROR_CODE_PASSWORD_HISTORY_VIOLATION -->
+				22001
+			</badRequestErrorCode>
+		</badRequestErrorCodes>
+    </identityEventExceptionSettings>
 </provisioning-config>

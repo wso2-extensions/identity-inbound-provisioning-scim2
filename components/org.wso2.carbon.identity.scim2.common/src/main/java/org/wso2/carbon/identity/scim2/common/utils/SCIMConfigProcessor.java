@@ -21,6 +21,7 @@ import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.user.core.NotImplementedException;
 import org.wso2.charon3.core.exceptions.CharonException;
 
 import javax.xml.namespace.QName;
@@ -46,9 +47,10 @@ public class SCIMConfigProcessor {
     private static SCIMConfigProcessor scimConfigProcessor = new SCIMConfigProcessor();
 
     //map to keep the properties values
-    Map<String, String> properties = new HashMap<String, String>();
+    Map<String, String> properties = new HashMap<>();
     //list to keep the authentication schemas
-    List<AuthenticationSchema> authenticationSchemas = null;
+    List<AuthenticationSchema> authenticationSchemas = new ArrayList<>();
+    IdentityEventExceptionSettings identityEventExceptionSettings = new IdentityEventExceptionSettings();
 
     private static final Log logger = LogFactory.getLog(SCIMConfigProcessor.class);
 
@@ -67,6 +69,10 @@ public class SCIMConfigProcessor {
         return authenticationSchemas;
     }
 
+    public IdentityEventExceptionSettings getIdentityEventExceptionSettings() {
+        return identityEventExceptionSettings;
+    }
+
     public void buildConfigFromFile(String filePath) throws CharonException {
         try {
             InputStream inputStream = null;
@@ -83,19 +89,15 @@ public class SCIMConfigProcessor {
                 throw new FileNotFoundException();
             }
         } catch (FileNotFoundException e) {
-            throw new CharonException(SCIMCommonConstants.CHARON_CONFIG_NAME + "not found.");
+            throw new CharonException(filePath + "not found.");
         } catch (XMLStreamException e) {
-            throw new CharonException("Error in building the configuration file: " +
-                    SCIMCommonConstants.CHARON_CONFIG_NAME);
+            throw new CharonException("Error in building the configuration file: " + filePath);
         } catch (IOException e) {
-            throw new CharonException("Error in building the configuration file: " +
-                    SCIMCommonConstants.CHARON_CONFIG_NAME);
+            throw new CharonException("Error in building the configuration file: " + filePath);
         }
     }
 
     private void buildConfigFromRootElement(OMElement rootElement) {
-
-
         //read any properties defined.
         Iterator<OMElement> propertiesIterator = rootElement.getChildrenWithName(
                 new QName(SCIMCommonConstants.ELEMENT_NAME_PROPERTY));
@@ -119,8 +121,13 @@ public class SCIMConfigProcessor {
         if (authenticationSchemasIterator != null) {
            authenticationSchemas  = buildAuthenticationSchemasMap(authenticationSchemasIterator);
         }
-    }
 
+        OMElement identityEventExceptionSettingsElement = rootElement.getFirstChildWithName(
+                new QName(SCIMCommonConstants.ELEMENT_NAME_IEE_SETTINGS));
+        if (identityEventExceptionSettingsElement != null) {
+            identityEventExceptionSettings = buildIdentityEventExceptionSettings(identityEventExceptionSettingsElement);
+        }
+    }
 
     private List<AuthenticationSchema> buildAuthenticationSchemasMap
             (Iterator<OMElement> schemasIterator) {
@@ -147,6 +154,43 @@ public class SCIMConfigProcessor {
         }
 
         return schemasList;
+    }
+
+    private IdentityEventExceptionSettings buildIdentityEventExceptionSettings(OMElement ieeSettingsElement) {
+        IdentityEventExceptionSettings result = new IdentityEventExceptionSettings();
+
+        // extract exposeErrorCodeInMessage
+        Iterator<OMElement> ieesPropertyIterator = ieeSettingsElement.getChildrenWithName(
+                new QName(SCIMCommonConstants.ELEMENT_NAME_PROPERTY));
+        if (ieesPropertyIterator != null) {
+            while (ieesPropertyIterator.hasNext()) {
+                OMElement propertyElement = ieesPropertyIterator.next();
+                String propertyName = propertyElement.getAttributeValue(
+                        new QName(SCIMCommonConstants.ATTRIBUTE_NAME_NAME));
+                if (SCIMCommonConstants.ELEMENT_NAME_IEE_SETTINGS_EXPOSE_ERROR_CODE_IN_MESSAGE.equals(propertyName)) {
+                    boolean exposeErrorCodeInMessage = "true".equals(propertyElement.getText());
+                    result.setExposeErrorCodeInMessage(exposeErrorCodeInMessage);
+                }
+            }
+        }
+
+        // extract badRequestErrorCodes
+        Iterator<OMElement> ieesBadRequestErrorCodesIterator = ieeSettingsElement.getChildrenWithName(
+                new QName(SCIMCommonConstants.ELEMENT_NAME_IEE_SETTINGS_BAD_REQUEST_ERROR_CODES));
+        if (ieesBadRequestErrorCodesIterator != null && ieesBadRequestErrorCodesIterator.hasNext()) {
+            OMElement ieesBadRequestErrorCodesElement = ieesBadRequestErrorCodesIterator.next();
+            Iterator<OMElement> ieesBadRequestErrorCodeIterator = ieesBadRequestErrorCodesElement.getChildrenWithName(
+                    new QName(SCIMCommonConstants.ELEMENT_NAME_IEE_SETTINGS_BAD_REQUEST_ERROR_CODE));
+            if (ieesBadRequestErrorCodeIterator != null && ieesBadRequestErrorCodeIterator.hasNext()) {
+                while (ieesBadRequestErrorCodeIterator.hasNext()) {
+                    OMElement ieesBadRequestErrorCodeElement =ieesBadRequestErrorCodeIterator.next();
+                    String errorCode = ieesBadRequestErrorCodeElement.getText();
+                    result.getBadRequestErrorCodes().add(errorCode.trim());
+                }
+            }
+        }
+
+        return result;
     }
 
     public static SCIMConfigProcessor getInstance() {

@@ -29,12 +29,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
 public class SCIMConfigProcessorTest {
     private SCIMConfigProcessor scimConfigProcessor;
     private AuthenticationSchema authenticationSchema;
+    private IdentityEventExceptionSettings identityEventExceptionSettings;
 
     @DataProvider(name = "propertyProvider")
     public static Object[][] propertyProvider() {
@@ -70,6 +73,11 @@ public class SCIMConfigProcessorTest {
         authenticationSchema.setPrimary("true");
         scimConfigProcessor.authenticationSchemas = new ArrayList<>();
         scimConfigProcessor.authenticationSchemas.add(authenticationSchema);
+
+        identityEventExceptionSettings = scimConfigProcessor.getIdentityEventExceptionSettings();
+        identityEventExceptionSettings.setExposeErrorCodeInMessage(true);
+        identityEventExceptionSettings.getBadRequestErrorCodes().add("FOO");
+        identityEventExceptionSettings.getBadRequestErrorCodes().add("BAR");
     }
 
     @Test
@@ -102,6 +110,15 @@ public class SCIMConfigProcessorTest {
         }
     }
 
+    @Test
+    public void testGetIdentityEventExceptionSettings() throws Exception {
+        IdentityEventExceptionSettings ieeSettings = scimConfigProcessor.getIdentityEventExceptionSettings();
+        assertTrue(ieeSettings.isExposeErrorCodeInMessage());
+        assertEquals(ieeSettings.getBadRequestErrorCodes().size(), 2);
+        assertEquals(ieeSettings.getBadRequestErrorCodes().get(0), identityEventExceptionSettings.getBadRequestErrorCodes().get(0));
+        assertEquals(ieeSettings.getBadRequestErrorCodes().get(1), identityEventExceptionSettings.getBadRequestErrorCodes().get(1));
+    }
+
     @Test(dataProvider = "filePathProvider", expectedExceptions = CharonException.class)
     public void testBuildConfigFromFile(String filePath) throws Exception {
         scimConfigProcessor.buildConfigFromFile(filePath);
@@ -113,11 +130,15 @@ public class SCIMConfigProcessorTest {
                 "charon-config-test.xml").toString();
         scimConfigProcessor.buildConfigFromFile(filePath);
 
+        IdentityEventExceptionSettings ieeSettings = scimConfigProcessor.getIdentityEventExceptionSettings();
+        assertFalse(ieeSettings.isExposeErrorCodeInMessage());
+        assertEquals(ieeSettings.getBadRequestErrorCodes().size(), 1);
+        assertEquals(ieeSettings.getBadRequestErrorCodes().get(0), "22001");
     }
 
     @Test
     public void testGetInstance() throws Exception {
-        SCIMConfigProcessor scimConfigProcessor1 = scimConfigProcessor.getInstance();
+        SCIMConfigProcessor scimConfigProcessor1 = SCIMConfigProcessor.getInstance();
         assertNotNull(scimConfigProcessor1);
     }
 }
