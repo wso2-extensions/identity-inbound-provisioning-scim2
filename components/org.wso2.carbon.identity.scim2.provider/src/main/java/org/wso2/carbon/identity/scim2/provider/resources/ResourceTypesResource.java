@@ -18,13 +18,8 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
-import org.wso2.charon3.core.encoder.JSONEncoder;
-import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.ResourceTypeResourceManager;
 
@@ -36,29 +31,15 @@ import javax.ws.rs.core.Response;
 
 @Path("/")
 public class ResourceTypesResource extends AbstractResource {
-    private static final Log logger = LogFactory.getLog(ResourceTypesResource.class);
-
     @GET
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getUser() {
+        // create charon-SCIM service provider config endpoint and hand-over the request.
+        ResourceTypeResourceManager resourceTypeResourceManager = new ResourceTypeResourceManager();
 
-        JSONEncoder encoder = null;
-        try {
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
-
-            // create charon-SCIM service provider config endpoint and hand-over the request.
-            ResourceTypeResourceManager resourceTypeResourceManager = new ResourceTypeResourceManager();
-
-            SCIMResponse scimResponse = resourceTypeResourceManager.get(null, null, null, null);
-            // needs to check the code of the response and return 200 0k or other error codes
-            // appropriately.
-            return SupportUtils.buildResponse(scimResponse);
-
-        } catch (CharonException e) {
-            return handleCharonException(e,encoder);
-        }
+        SCIMResponse scimResponse = resourceTypeResourceManager.get(null, null, null, null);
+        // needs to check the code of the response and return 200 0k or other error codes
+        // appropriately.
+        return SupportUtils.buildResponse(scimResponse);
     }
 }

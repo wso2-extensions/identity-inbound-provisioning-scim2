@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.scim2.provider.resources;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
-import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.extensions.RoleManager;
@@ -41,8 +40,6 @@ public class BulkResource extends AbstractResource {
                                @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                String resourceString) {
-
-        JSONEncoder encoder = null;
         try {
 
             // content-type header is compulsory in post request.
@@ -61,10 +58,6 @@ public class BulkResource extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
@@ -80,7 +73,7 @@ public class BulkResource extends AbstractResource {
             return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            return handleCharonException(e,encoder);
+            return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }

@@ -19,14 +19,7 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
-import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
-import org.wso2.charon3.core.encoder.JSONEncoder;
-import org.wso2.charon3.core.exceptions.CharonException;
-import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.ServiceProviderConfigResourceManager;
 
@@ -36,33 +29,16 @@ import javax.ws.rs.core.Response;
 
 @Path("/")
 public class ServiceProviderConfigResource extends AbstractResource {
-    private static final Log logger = LogFactory.getLog(ServiceProviderConfigResource.class);
-
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getUser() {
+        // create charon-SCIM service provider config endpoint and hand-over the request.
+        ServiceProviderConfigResourceManager serviceProviderConfigResourceManager =
+                new ServiceProviderConfigResourceManager();
 
-        JSONEncoder encoder = null;
-        try {
-
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
-
-            // obtain the user store manager
-
-            // create charon-SCIM service provider config endpoint and hand-over the request.
-            ServiceProviderConfigResourceManager serviceProviderConfigResourceManager =
-                    new ServiceProviderConfigResourceManager();
-
-            SCIMResponse scimResponse = serviceProviderConfigResourceManager.get(null, null, null, null);
-            // needs to check the code of the response and return 200 0k or other error codes
-            // appropriately.
-            return SupportUtils.buildResponse(scimResponse);
-
-        } catch (CharonException e) {
-            return handleCharonException(e,encoder);
-        }
+        SCIMResponse scimResponse = serviceProviderConfigResourceManager.get(null, null, null, null);
+        // needs to check the code of the response and return 200 0k or other error codes
+        // appropriately.
+        return SupportUtils.buildResponse(scimResponse);
     }
 }

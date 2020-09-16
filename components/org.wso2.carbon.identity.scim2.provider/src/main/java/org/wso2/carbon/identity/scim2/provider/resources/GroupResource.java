@@ -35,7 +35,6 @@ import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.mgt.RolePermissionException;
 import org.wso2.charon3.core.encoder.JSONDecoder;
-import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
@@ -435,16 +434,11 @@ public class GroupResource extends AbstractResource {
         String attributes = requestAttributes.get(SCIMProviderConstants.ATTRIBUTES);
         String excludedAttributes = requestAttributes.get(SCIMProviderConstants.EXCLUDE_ATTRIBUTES);
         String search = requestAttributes.get(SCIMProviderConstants.SEARCH);
-        JSONEncoder encoder = null;
         JSONArray outputPermissions;
         Gson gson = new Gson();
         HashMap<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("Content-Type", SCIMProviderConstants.APPLICATION_SCIM_JSON);
         try {
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-            // Obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
-
             // Obtain the user store manager
             SCIMUserManager userManager = (SCIMUserManager) IdentitySCIMManager.getInstance().getUserManager();
 
@@ -533,10 +527,10 @@ public class GroupResource extends AbstractResource {
             return SupportUtils.buildResponse(new SCIMResponse(ResponseCodeConstants.CODE_BAD_REQUEST,
                     "The Patch request is invalid.", responseHeaders));
         } catch (CharonException e) {
-            return handleCharonException(e, encoder);
+            return handleCharonException(e);
         } catch (UserStoreException | RolePermissionException e) {
             return handleCharonException(new CharonException("Error occurred when getting the permissions from server",
-                    e), encoder);
+                    e));
         }
     }
 
