@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
+import org.wso2.charon3.core.extensions.RoleManager;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.BulkResourceManager;
@@ -67,11 +68,13 @@ public class BulkResource extends AbstractResource {
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+            // Obtain the role manager.
+            RoleManager roleManager = IdentitySCIMManager.getInstance().getRoleManager();
 
             // create charon-SCIM bulk endpoint and hand-over the request.
             BulkResourceManager bulkResourceManager = new BulkResourceManager();
-            //call for process bulk data
-            SCIMResponse scimResponse = bulkResourceManager.processBulkData(resourceString, userManager);
+            // Call for process bulk data.
+            SCIMResponse scimResponse = bulkResourceManager.processBulkData(resourceString, userManager, roleManager);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
             return SupportUtils.buildResponse(scimResponse);
