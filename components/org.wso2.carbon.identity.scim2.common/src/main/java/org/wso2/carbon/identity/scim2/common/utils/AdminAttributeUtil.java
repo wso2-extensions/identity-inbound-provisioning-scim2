@@ -31,6 +31,7 @@ import org.wso2.carbon.stratos.common.util.ClaimsMgtUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
@@ -121,11 +122,11 @@ public class AdminAttributeUtil {
                     }
                     domainName = IdentityUtil.getPrimaryDomainName();
                 }
-                String roleNameWithDomain = UserCoreUtil
-                        .addDomainToName(userStoreManager.getRealmConfiguration().getAdminRoleName(), domainName);
-                //UserCore Util functionality does not append primary
-                roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleNameWithDomain);
 
+                String adminRoleName = userStoreManager.getRealmConfiguration().getAdminRoleName();
+                String roleNameWithDomain = UserCoreUtil.addDomainToName(adminRoleName, domainName);
+                // UserCore Util functionality does not append primary domain.
+                roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleNameWithDomain);
                 try {
                     //Validate the SCIM IS is avaialble for Groups.
                     if (!scimGroupHandler.isGroupExisting(roleNameWithDomain)) {
@@ -134,6 +135,20 @@ public class AdminAttributeUtil {
                                     "Group does not exist, setting scim attribute group value: " + roleNameWithDomain);
                         }
                         scimGroupHandler.addMandatoryAttributes(roleNameWithDomain);
+                    }
+
+                    // Adding the SCIM attributes for admin group
+                    if (((AbstractUserStoreManager) userStoreManager).isRoleAndGroupSeparationEnabled()) {
+                        String groupNameWithDomain = getAdminGroupName(domainName, adminRoleName);
+                        // Validate the SCIM ID is available for groups.
+                        if (userStoreManager.isExistingRole(groupNameWithDomain) && !scimGroupHandler
+                                .isGroupExisting(groupNameWithDomain)) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Group does not exist, setting scim attributes for group: "
+                                        + groupNameWithDomain);
+                            }
+                            scimGroupHandler.addMandatoryAttributes(groupNameWithDomain);
+                        }
                     }
                 } catch (IdentitySCIMException e) {
                     throw new UserStoreException(
@@ -145,6 +160,22 @@ public class AdminAttributeUtil {
             log.error("Error occurred while updating the admin groups's attributes in Tenant ID : " + tenantId + ", "
                       + "Error : " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * This will derive the admin group name.
+     *
+     * @param adminRoleName Admin role name.
+     * @param domainName    Domain name.
+     * @return Admin group name.
+     */
+    private static String getAdminGroupName(String adminRoleName, String domainName) {
+
+        String adminGroupName = UserCoreUtil.removeDomainFromName(adminRoleName);
+        String groupNameWithDomain = UserCoreUtil.addDomainToName(adminGroupName, domainName);
+        // UserCore Util functionality does not append primary domain.
+        groupNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(groupNameWithDomain);
+        return groupNameWithDomain;
     }
 
     /**
