@@ -925,7 +925,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, String> allSimpleMultiValuedClaims = new HashMap<>();
 
             for (String simpleMultiValuedAttribute : allSimpleMultiValuedAttributes) {
-                allSimpleMultiValuedClaims.put(simpleMultiValuedAttribute, "");
+                allSimpleMultiValuedClaims.put(simpleMultiValuedAttribute, StringUtils.EMPTY);
             }
             Map<String, String> allSimpleMultiValuedClaimsList =
                     SCIMCommonUtils.convertSCIMtoLocalDialect(allSimpleMultiValuedClaims);
@@ -935,26 +935,27 @@ public class SCIMUserManager implements UserManager {
                 String userStoreDomainFromSP = getUserStoreDomainFromSP();
                 SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
                 User oldUser = this.getUser(user.getId(), ResourceManagerUtil.getAllAttributeURIs(schema));
-                if (userStoreDomainFromSP != null && !userStoreDomainFromSP
-                        .equalsIgnoreCase(IdentityUtil.extractDomainFromName(oldUser.getUserName()))) {
-                    String errorMessage =
-                            String.format("User :  %s is not belong to userstore %s. Hence user updating fail",
-                                    oldUser.getUserName(), userStoreDomainFromSP);
-                    throw new CharonException(errorMessage);
+                if (userStoreDomainFromSP != null) {
+                    if (!userStoreDomainFromSP
+                            .equalsIgnoreCase(IdentityUtil.extractDomainFromName(oldUser.getUserName()))) {
+                        String errorMessage =
+                                String.format("User : %s does not belong to userstore %s. Hence user updating failed",
+                                        oldUser.getUserName(), userStoreDomainFromSP);
+                        throw new CharonException(errorMessage);
+                    }
+                    if (!UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(userStoreDomainFromSP)) {
+                        user.setUserName(IdentityUtil
+                                .addDomainToName(UserCoreUtil.removeDomainFromName(user.getUserName()),
+                                        userStoreDomainFromSP));
+                    }
                 }
-                if (getUserStoreDomainFromSP() != null &&
-                        !UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(getUserStoreDomainFromSP())) {
-                    user.setUserName(IdentityUtil
-                            .addDomainToName(UserCoreUtil.removeDomainFromName(user.getUserName()),
-                                    getUserStoreDomainFromSP()));
-                }
+
                 // This is handled here as the IS is still not capable of updating the username via SCIM.
                 if (!StringUtils.equals(user.getUserName(), oldUser.getUserName())) {
                     if (log.isDebugEnabled()) {
                         log.debug("Failing the request as attempting to modify username. Old username: "
                                 + oldUser.getUserName() + ", new username: " + user.getUserName());
                     }
-
                     throw new BadRequestException("Attribute userName cannot be modified.",
                             ResponseCodeConstants.MUTABILITY);
                 }
@@ -962,14 +963,7 @@ public class SCIMUserManager implements UserManager {
                 throw new CharonException("Error retrieving Userstore name. ", e);
             }
 
-            boolean isExistingUser;
-            if (StringUtils.isNotEmpty(user.getId())) {
-                isExistingUser = carbonUM.isExistingUserWithID(user.getId());
-            } else {
-                isExistingUser = carbonUM.isExistingUser(user.getUserName());
-            }
-
-            if (!isExistingUser) {
+            if (!validateUserExistence(user)) {
                 throw new CharonException("User name is immutable in carbon user store.");
             }
 
@@ -1038,7 +1032,6 @@ public class SCIMUserManager implements UserManager {
             }
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreException e) {
-            log.error("Error while updating attributes of user: " + user.getUserName(), e);
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
         } catch (BadRequestException e) {
@@ -1049,12 +1042,9 @@ public class SCIMUserManager implements UserManager {
             the end party.
              */
             reThrowMutabilityBadRequests(e);
-
-            log.error("Error occurred while trying to update the user", e);
-            throw new CharonException("Error occurred while trying to update the user", e);
+            throw new CharonException("Error occurred while trying to update the user: " + user.getUserName(), e);
         } catch (CharonException e) {
-            log.error("Error occurred while trying to update the user", e);
-            throw new CharonException("Error occurred while trying to update the user", e);
+            throw new CharonException("Error occurred while trying to update the user: " + user.getUserName(), e);
         }
     }
 
@@ -4046,10 +4036,11 @@ public class SCIMUserManager implements UserManager {
                 simpleMultiValuedClaimsToBeAdded.put(key, Arrays.asList(newClaimList.get(key).split(separator)));
             }
         }
-
-        // Prepare user claims expect multi-valued claims to be added, deleted and modified.
-        /* Remove simple multi-valued claims URIS from existing claims and updated user's claims.
-           oldClaimList and newClaimList are not modifying to reuse for NotImplemented exception. */
+        /*
+        Prepare user claims expect multi-valued claims to be added, deleted and modified.
+        Remove simple multi-valued claims URIS from existing claims and updated user's claims.
+        oldClaimList and newClaimList are not modifying to reuse for NotImplemented exception.
+         */
         Map<String, String> oldClaimListExcludingMultiValuedClaims = new HashMap<>(oldClaimList);
         oldClaimListExcludingMultiValuedClaims.keySet().removeAll(allSimpleMultiValuedClaimsList.keySet());
 
@@ -4096,7 +4087,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Convert the claim values to list of strings. Main usage is for multi-valued claims.
+     * Convert the claim values to list of strings.
      *
      * @param claimMap Map of claim URIs against claim value as string.
      * @return Map of claim URIs against claim value as a list of string.
@@ -4113,6 +4104,24 @@ public class SCIMUserManager implements UserManager {
             claimMapWithListValues.put(entry.getKey(), Arrays.asList(claimValue));
         }
         return claimMapWithListValues;
+    }
+
+    /**
+     * Validate whether the user exists in a userstore.
+     *
+     * @param user User object.
+     * @return Whether the user exists in the userstore.
+     * @throws org.wso2.carbon.user.core.UserStoreException Error occurred while checking user existence by id.
+     * @throws CharonException                              Error occurred while checking user existence by username.
+     */
+    private boolean validateUserExistence(User user)
+            throws org.wso2.carbon.user.core.UserStoreException, CharonException {
+
+        if (StringUtils.isNotEmpty(user.getId())) {
+            return carbonUM.isExistingUserWithID(user.getId());
+        } else {
+            return carbonUM.isExistingUser(user.getUserName());
+        }
     }
 
     /**
