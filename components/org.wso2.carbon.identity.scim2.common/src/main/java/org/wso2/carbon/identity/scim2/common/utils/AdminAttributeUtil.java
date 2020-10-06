@@ -139,7 +139,7 @@ public class AdminAttributeUtil {
 
                     // Adding the SCIM attributes for admin group
                     if (((AbstractUserStoreManager) userStoreManager).isRoleAndGroupSeparationEnabled()) {
-                        String groupNameWithDomain = getAdminGroupName(domainName, adminRoleName);
+                        String groupNameWithDomain = getAdminGroupName(adminRoleName, domainName);
                         // Validate the SCIM ID is available for groups.
                         if (userStoreManager.isExistingRole(groupNameWithDomain) && !scimGroupHandler
                                 .isGroupExisting(groupNameWithDomain)) {
