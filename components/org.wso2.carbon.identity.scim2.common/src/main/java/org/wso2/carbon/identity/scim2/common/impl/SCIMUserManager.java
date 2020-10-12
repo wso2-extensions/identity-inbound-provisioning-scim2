@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -894,6 +895,156 @@ public class SCIMUserManager implements UserManager {
         } catch (CharonException e) {
             log.error("Error occurred while trying to update the user", e);
             throw new CharonException("Error occurred while trying to update the user", e);
+        }
+    }
+
+    /**
+     * Update the SCIM user.
+     *
+     * @param user                           {@link User} object.
+     * @param requiredAttributes             A map of required attributes in SCIM schema.
+     * @param allSimpleMultiValuedAttributes A List of simple multi-valued attributes in SCIM schema.
+     * @return The updated user.
+     * @throws CharonException     Exception occurred in charon level.
+     * @throws BadRequestException Exception occurred due to a bad request.
+     */
+    public User updateUser(User user, Map<String, Boolean> requiredAttributes,
+                           List<String> allSimpleMultiValuedAttributes) throws CharonException, BadRequestException {
+
+        try {
+            if (log.isDebugEnabled()) {
+                log.debug("Updating user: " + user.getUserName());
+            }
+
+             /* Set thread local property to signal the downstream SCIMUserOperationListener
+                about the provisioning route. */
+            SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
+            // Get user claim values.
+            Map<String, String> claims = AttributeMapper.getClaimsMap(user);
+            // Get claims mapped with simple multi-valued attributes.
+            Map<String, String> allSimpleMultiValuedClaims = new HashMap<>();
+
+            for (String simpleMultiValuedAttribute : allSimpleMultiValuedAttributes) {
+                allSimpleMultiValuedClaims.put(simpleMultiValuedAttribute, StringUtils.EMPTY);
+            }
+            Map<String, String> allSimpleMultiValuedClaimsList =
+                    SCIMCommonUtils.convertSCIMtoLocalDialect(allSimpleMultiValuedClaims);
+
+            // Check if username of the updating user existing in the userstore.
+            try {
+                String userStoreDomainFromSP = getUserStoreDomainFromSP();
+                SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+                User oldUser = this.getUser(user.getId(), ResourceManagerUtil.getAllAttributeURIs(schema));
+                if (userStoreDomainFromSP != null) {
+                    if (!userStoreDomainFromSP
+                            .equalsIgnoreCase(IdentityUtil.extractDomainFromName(oldUser.getUserName()))) {
+                        String errorMessage =
+                                String.format("User : %s does not belong to userstore %s. Hence user updating failed",
+                                        oldUser.getUserName(), userStoreDomainFromSP);
+                        throw new CharonException(errorMessage);
+                    }
+                    if (!UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(userStoreDomainFromSP)) {
+                        user.setUserName(IdentityUtil
+                                .addDomainToName(UserCoreUtil.removeDomainFromName(user.getUserName()),
+                                        userStoreDomainFromSP));
+                    }
+                }
+
+                // This is handled here as the IS is still not capable of updating the username via SCIM.
+                if (!StringUtils.equals(user.getUserName(), oldUser.getUserName())) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Failing the request as attempting to modify username. Old username: "
+                                + oldUser.getUserName() + ", new username: " + user.getUserName());
+                    }
+                    throw new BadRequestException("Attribute userName cannot be modified.",
+                            ResponseCodeConstants.MUTABILITY);
+                }
+            } catch (IdentityApplicationManagementException e) {
+                throw new CharonException("Error retrieving Userstore name. ", e);
+            }
+
+            if (!validateUserExistence(user)) {
+                throw new CharonException("User name is immutable in carbon user store.");
+            }
+
+            /*
+            Skip groups attribute since we map groups attribute to actual groups in ldap.
+            and do not update it as an attribute in user schema.
+             */
+            claims.remove(SCIMConstants.UserSchemaConstants.GROUP_URI);
+
+            /*
+            Skip roles list since we map SCIM groups to local roles internally. It shouldn't be allowed to
+            manipulate SCIM groups from user endpoint as this attribute has a mutability of "readOnly". Group
+            changes must be applied via Group Resource.
+             */
+            if (claims.containsKey(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT)) {
+                claims.remove(SCIMConstants.UserSchemaConstants.ROLES_URI);
+            }
+
+            claims.remove(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
+
+            /*
+            Since we are already populating last_modified claim value from SCIMUserOperationListener, we need to
+            remove this claim value which is coming from charon-level.
+             */
+            claims.remove(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
+
+            // Location is a meta attribute of user object.
+            claims.remove(SCIMConstants.CommonSchemaConstants.LOCATION_URI);
+
+            // Resource-Type is a meta attribute of user object.
+            claims.remove(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI);
+
+            Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
+            List<String> requiredClaimsInLocalDialect;
+            if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
+                scimToLocalClaimsMap.keySet().retainAll(requiredClaims);
+                requiredClaimsInLocalDialect = new ArrayList<>(scimToLocalClaimsMap.values());
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("SCIM to Local Claim mappings list is empty.");
+                }
+                requiredClaimsInLocalDialect = new ArrayList<>();
+            }
+
+            // Get existing user claims.
+            Map<String, String> oldClaimList = carbonUM.getUserClaimValuesWithID(user.getId(),
+                    requiredClaimsInLocalDialect.toArray(new String[0]), null);
+
+            oldClaimList.remove(LOCATION_CLAIM);
+            oldClaimList.remove(LAST_MODIFIED_CLAIM);
+            oldClaimList.remove(RESOURCE_TYPE_CLAIM);
+
+            // Get user claims mapped from SCIM dialect to WSO2 dialect.
+            Map<String, String> claimValuesInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claims);
+
+            // If password is updated, set it separately.
+            if (user.getPassword() != null) {
+                carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
+            }
+
+            updateUserClaims(user, oldClaimList, claimValuesInLocalDialect, allSimpleMultiValuedClaimsList);
+
+            if (log.isDebugEnabled()) {
+                log.debug("User: " + user.getUserName() + " updated through SCIM.");
+            }
+            return getUser(user.getId(), requiredAttributes);
+        } catch (UserStoreException e) {
+            handleErrorsOnUserNameAndPasswordPolicy(e);
+            throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
+        } catch (BadRequestException e) {
+            /*
+            This is needed as most BadRequests are thrown to charon as
+            CharonExceptions but if there are any bad requests handled
+            due to MUTABILITY at this level we need to properly notify
+            the end party.
+             */
+            reThrowMutabilityBadRequests(e);
+            throw new CharonException("Error occurred while trying to update the user: " + user.getUserName(), e);
+        } catch (CharonException e) {
+            throw new CharonException("Error occurred while trying to update the user: " + user.getUserName(), e);
         }
     }
 
@@ -3842,6 +3993,135 @@ public class SCIMUserManager implements UserManager {
         // Update user claims.
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
+    }
+
+    /**
+     * Evaluate old user claims and the new claims. Then DELETE, ADD and MODIFY user claim values. The DELETE,
+     * ADD and MODIFY operations are done in the same order. Multivalued claims are treated separately.
+     *
+     * @param user                           {@link User} object.
+     * @param oldClaimList                   User claim list for the user's existing state.
+     * @param newClaimList                   User claim list for the user's new state.
+     * @param allSimpleMultiValuedClaimsList User claim list which maps to simple multi-valued attributes in SCIM schema.
+     * @throws UserStoreException Error while accessing the user store.
+     * @throws CharonException    {@link CharonException}.
+     */
+    private void updateUserClaims(User user, Map<String, String> oldClaimList,
+                                  Map<String, String> newClaimList, Map<String, String> allSimpleMultiValuedClaimsList)
+            throws UserStoreException, CharonException {
+
+        Map<String, List<String>> simpleMultiValuedClaimsToBeAdded = new HashMap<>();
+        Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved = new HashMap<>();
+
+        // Prepare values to be added and removed related to simple multi-valued attributes.
+        for (String key : allSimpleMultiValuedClaimsList.keySet()) {
+            String separator = ",";
+            if (StringUtils.isNotEmpty(FrameworkUtils.getMultiAttributeSeparator())) {
+                separator = FrameworkUtils.getMultiAttributeSeparator();
+            }
+            if (oldClaimList.containsKey(key) && newClaimList.containsKey(key)) {
+                List<String> oldValue = Arrays.asList(oldClaimList.get(key).split(separator));
+                List<String> newValue = Arrays.asList(newClaimList.get(key).split(separator));
+                if (!(CollectionUtils.subtract(oldValue, newValue)).isEmpty()) {
+                    simpleMultiValuedClaimsToBeRemoved.put(key,
+                            (List<String>) CollectionUtils.subtract(oldValue, newValue));
+                }
+                if (!(CollectionUtils.subtract(newValue, oldValue)).isEmpty()) {
+                    simpleMultiValuedClaimsToBeAdded.put(key,
+                            (List<String>) CollectionUtils.subtract(newValue, oldValue));
+                }
+            } else if (oldClaimList.containsKey(key) && !newClaimList.containsKey(key)) {
+                simpleMultiValuedClaimsToBeRemoved.put(key, Arrays.asList(oldClaimList.get(key).split(separator)));
+            } else if (!oldClaimList.containsKey(key) && newClaimList.containsKey(key)) {
+                simpleMultiValuedClaimsToBeAdded.put(key, Arrays.asList(newClaimList.get(key).split(separator)));
+            }
+        }
+        /*
+        Prepare user claims expect multi-valued claims to be added, deleted and modified.
+        Remove simple multi-valued claims URIS from existing claims and updated user's claims.
+        oldClaimList and newClaimList are not modifying to reuse for NotImplemented exception.
+         */
+        Map<String, String> oldClaimListExcludingMultiValuedClaims = new HashMap<>(oldClaimList);
+        oldClaimListExcludingMultiValuedClaims.keySet().removeAll(allSimpleMultiValuedClaimsList.keySet());
+
+        Map<String, String> newClaimListExcludingMultiValuedClaims = new HashMap<>(newClaimList);
+        newClaimListExcludingMultiValuedClaims.keySet().removeAll(allSimpleMultiValuedClaimsList.keySet());
+
+        Map<String, String> userClaimsToBeAdded = new HashMap<>(newClaimListExcludingMultiValuedClaims);
+        Map<String, String> userClaimsToBeDeleted = new HashMap<>(oldClaimListExcludingMultiValuedClaims);
+        Map<String, String> userClaimsToBeModified = new HashMap<>();
+
+        // Get all the old claims, which are not available in the new claims.
+        userClaimsToBeDeleted.keySet().removeAll(newClaimListExcludingMultiValuedClaims.keySet());
+
+        // Get all the new claims, which are not available in the existing claims.
+        userClaimsToBeAdded.keySet().removeAll(oldClaimListExcludingMultiValuedClaims.keySet());
+
+        // Get all new claims, which are only modifying the value of an existing claim.
+        for (Map.Entry<String, String> eachNewClaim : newClaimListExcludingMultiValuedClaims.entrySet()) {
+            if (oldClaimListExcludingMultiValuedClaims.containsKey(eachNewClaim.getKey()) &&
+                    !oldClaimListExcludingMultiValuedClaims.get(eachNewClaim.getKey())
+                            .equals(eachNewClaim.getValue())) {
+                userClaimsToBeModified.put(eachNewClaim.getKey(), eachNewClaim.getValue());
+            }
+        }
+
+        // Remove user claims.
+        for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
+            if (!isImmutableClaim(entry.getKey())) {
+                carbonUM.deleteUserClaimValueWithID(user.getId(), entry.getKey(), null);
+            }
+        }
+
+        // Update user claims.
+        userClaimsToBeModified.putAll(userClaimsToBeAdded);
+        if (MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) &&
+                MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
+            // If no multi-valued attribute is modified.
+            carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
+        } else {
+            carbonUM.setUserClaimValuesWithID(user.getId(), convertClaimValuesToList(oldClaimList),
+                    simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved,
+                    convertClaimValuesToList(userClaimsToBeModified), null);
+        }
+    }
+
+    /**
+     * Convert the claim values to list of strings.
+     *
+     * @param claimMap Map of claim URIs against claim value as string.
+     * @return Map of claim URIs against claim value as a list of string.
+     */
+    private Map<String, List<String>> convertClaimValuesToList(Map<String, String> claimMap) {
+
+        Map<String, List<String>> claimMapWithListValues = new HashMap<>();
+        String claimValueSeparator = FrameworkUtils.getMultiAttributeSeparator();
+        if (StringUtils.isEmpty(claimValueSeparator)) {
+            claimValueSeparator = ",";
+        }
+        for (Map.Entry<String, String> entry : claimMap.entrySet()) {
+            String[] claimValue = entry.getValue().split(claimValueSeparator);
+            claimMapWithListValues.put(entry.getKey(), Arrays.asList(claimValue));
+        }
+        return claimMapWithListValues;
+    }
+
+    /**
+     * Validate whether the user exists in a userstore.
+     *
+     * @param user User object.
+     * @return Whether the user exists in the userstore.
+     * @throws org.wso2.carbon.user.core.UserStoreException Error occurred while checking user existence by id.
+     * @throws CharonException                              Error occurred while checking user existence by username.
+     */
+    private boolean validateUserExistence(User user)
+            throws org.wso2.carbon.user.core.UserStoreException, CharonException {
+
+        if (StringUtils.isNotEmpty(user.getId())) {
+            return carbonUM.isExistingUserWithID(user.getId());
+        } else {
+            return carbonUM.isExistingUser(user.getUserName());
+        }
     }
 
     /**
