@@ -23,6 +23,7 @@ import org.apache.commons.collections.ListUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
@@ -51,6 +52,7 @@ import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -423,7 +425,7 @@ public class SCIMUserManager implements UserManager {
     @Deprecated
     public List<Object> listUsersWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
                                          String domainName, Map<String, Boolean> requiredAttributes)
-            throws CharonException, NotImplementedException {
+            throws CharonException, NotImplementedException, BadRequestException {
 
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
@@ -437,7 +439,7 @@ public class SCIMUserManager implements UserManager {
     @Override
     public List<Object> listUsersWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
                                          String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
-            throws CharonException, NotImplementedException {
+            throws CharonException, NotImplementedException, BadRequestException {
 
         // Validate NULL value for startIndex.
         startIndex = handleStartIndexEqualsNULL(startIndex);
@@ -474,7 +476,8 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error while listing users
      */
     private List<Object> listUsers(Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                   String sortBy, String sortOrder, String domainName) throws CharonException {
+                                   String sortBy, String sortOrder, String domainName) throws CharonException,
+            BadRequestException {
 
         List<Object> users = new ArrayList<>();
         // 0th index is to store total number of results.
@@ -583,7 +586,7 @@ public class SCIMUserManager implements UserManager {
      */
     private Set<org.wso2.carbon.user.core.common.User> listUsernames(int offset, int limit, String sortBy,
                                                                      String sortOrder, String domainName)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         if (isPaginatedUserStoreAvailable()) {
             if (limit == 0) {
@@ -611,7 +614,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error while listing usernames
      */
     private Set<org.wso2.carbon.user.core.common.User> listUsernamesUsingLegacyAPIs(String domainName)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         Set<org.wso2.carbon.user.core.common.User> users = null;
         try {
@@ -624,7 +627,19 @@ public class SCIMUserManager implements UserManager {
                 users.addAll(carbonUM.getUserListWithID(userIdLocalClaim, claimValue, null));
             }
             return users;
+        } catch (UserStoreClientException e) {
+            String errorMessage = String.format("Error while listing usernames from domain: %s. %s", domainName,
+                    e.getMessage());
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable ex = ExceptionUtils.getRootCause(e);
+            if (ex instanceof UserStoreClientException) {
+                String errorMessage = String.format("Error while listing usernames from domain: %s. %s", domainName,
+                        ex.getMessage());
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
             throw new CharonException(String.format("Error while listing usernames from domain: %s.", domainName), e);
         }
     }
@@ -641,7 +656,7 @@ public class SCIMUserManager implements UserManager {
      */
     private Set<org.wso2.carbon.user.core.common.User> listUsernamesAcrossAllDomains(int offset, int limit,
                                                                                      String sortBy, String sortOrder)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         Set<org.wso2.carbon.user.core.common.User> users;
         if (isPaginatedUserStoreAvailable()) {
@@ -1078,7 +1093,8 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error filtering the users.
      */
     private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                     String sortBy, String sortOrder, String domainName) throws CharonException {
+                                     String sortBy, String sortOrder, String domainName) throws CharonException,
+            BadRequestException {
 
         // Handle limit equals NULL scenario.
         limit = handleLimitEqualsNULL(limit);
@@ -1115,7 +1131,7 @@ public class SCIMUserManager implements UserManager {
      */
     private List<Object> filterUsersBySingleAttribute(ExpressionNode node, Map<String, Boolean> requiredAttributes,
                                                       int offset, int limit, String sortBy, String sortOrder,
-                                                      String domainName) throws CharonException {
+                                                      String domainName) throws CharonException, BadRequestException {
 
         Set<org.wso2.carbon.user.core.common.User> users;
 
@@ -1313,7 +1329,7 @@ public class SCIMUserManager implements UserManager {
      */
     private Set<org.wso2.carbon.user.core.common.User> filterUsers(Node node, int offset, int limit, String sortBy,
                                                                    String sortOrder, String domainName)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         // Filter users when the domain is specified in the request.
         if (StringUtils.isNotEmpty(domainName)) {
@@ -1342,7 +1358,7 @@ public class SCIMUserManager implements UserManager {
                                                                                       String sortBy, String sortOrder,
                                                                                       Condition
                                                                                               conditionForListingUsers)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         // Filter users when the domain is not set in the request. Then filter through multiple domains.
         String[] userStoreDomainNames = getDomainNames();
@@ -1420,7 +1436,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error while filtering the domain from index 1 to offset
      */
     private int calculateOffset(Condition condition, int offset, String sortBy, String sortOrder, String domainName)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         if (log.isDebugEnabled()) {
             log.debug(String.format("Checking for number of matches from the beginning to the original offset: %d for "
@@ -1454,7 +1470,8 @@ public class SCIMUserManager implements UserManager {
      */
     private Set<org.wso2.carbon.user.core.common.User> filterUsernames(Condition condition, int offset, int limit,
                                                                        String sortBy, String sortOrder,
-                                                                       String domainName) throws CharonException {
+                                                                       String domainName)
+            throws CharonException, BadRequestException {
 
         if (log.isDebugEnabled()) {
             log.debug(String.format("Filtering users in domain : %s with limit: %d and offset: %d.", domainName, limit,
@@ -1467,7 +1484,19 @@ public class SCIMUserManager implements UserManager {
                     .getUserListWithID(condition, domainName, UserCoreConstants.DEFAULT_PROFILE, limit, offset, sortBy,
                             sortOrder));
             return users;
+        } catch (UserStoreClientException e) {
+            String errorMessage = String.format("Error while retrieving users for the domain: %s with limit: %d and " +
+                    "offset: %d. %s", domainName, limit, offset, e.getMessage());
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable ex = ExceptionUtils.getRootCause(e);
+            if (ex instanceof UserStoreClientException) {
+                String errorMessage = String.format("Error in obtaining role names from user store. %s",
+                        ex.getMessage());
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
             String errorMessage = String
                     .format("Error while retrieving users for the domain: %s with limit: %d and offset: %d.",
                             domainName, limit, offset);
@@ -2278,7 +2307,8 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException
      */
     private List<Object> listGroups(int startIndex, Integer count, String sortBy, String sortOrder, String domainName,
-                                    Map<String, Boolean> requiredAttributes) throws CharonException {
+                                    Map<String, Boolean> requiredAttributes) throws CharonException,
+            BadRequestException {
 
         List<Object> groupList = new ArrayList<>();
         //0th index is to store total number of results;
@@ -2309,7 +2339,18 @@ public class SCIMUserManager implements UserManager {
                     }
                 }
             }
+        } catch (UserStoreClientException e) {
+            String errorMessage = String.format("Error in obtaining role names from user store. %s", e.getMessage());
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable ex = ExceptionUtils.getRootCause(e);
+            if (ex instanceof UserStoreClientException) {
+                String errorMessage = String.format("Error in obtaining role names from user store. %s",
+                        ex.getMessage());
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
             String errMsg = "Error in obtaining role names from user store.";
             errMsg += e.getMessage();
             throw new CharonException(errMsg, e);
