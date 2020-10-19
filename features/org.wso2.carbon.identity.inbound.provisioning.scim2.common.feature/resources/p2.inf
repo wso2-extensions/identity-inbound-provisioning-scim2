@@ -1,2 +1,0 @@
-instructions.configure = \
-org.eclipse.equinox.p2.touchpoint.natives.copy(source:${installFolder}/../../features/org.wso2.carbon.identity.inbound.provisioning.scim2.common_${feature.version}/scim2-schema-extension.config,target:${installFolder}/../../../conf/identity/scim2-schema-extension.config,overwrite:true);
