@@ -630,6 +630,9 @@ public class SCIMUserManager implements UserManager {
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error while listing usernames from domain: %s. %s", domainName,
                     e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
             // Sometimes client exceptions are wrapped in the super class.
@@ -638,6 +641,9 @@ public class SCIMUserManager implements UserManager {
             if (ex instanceof UserStoreClientException) {
                 String errorMessage = String.format("Error while listing usernames from domain: %s. %s", domainName,
                         ex.getMessage());
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage, ex);
+                }
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
             throw new CharonException(String.format("Error while listing usernames from domain: %s.", domainName), e);
@@ -1487,6 +1493,9 @@ public class SCIMUserManager implements UserManager {
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error while retrieving users for the domain: %s with limit: %d and " +
                     "offset: %d. %s", domainName, limit, offset, e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
             // Sometimes client exceptions are wrapped in the super class.
@@ -1495,6 +1504,9 @@ public class SCIMUserManager implements UserManager {
             if (ex instanceof UserStoreClientException) {
                 String errorMessage = String.format("Error in obtaining role names from user store. %s",
                         ex.getMessage());
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage, ex);
+                }
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
             String errorMessage = String
@@ -2341,6 +2353,9 @@ public class SCIMUserManager implements UserManager {
             }
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error in obtaining role names from user store. %s", e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             // Sometimes client exceptions are wrapped in the super class.
@@ -2349,6 +2364,9 @@ public class SCIMUserManager implements UserManager {
             if (ex instanceof UserStoreClientException) {
                 String errorMessage = String.format("Error in obtaining role names from user store. %s",
                         ex.getMessage());
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage, ex);
+                }
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
             String errMsg = "Error in obtaining role names from user store.";
