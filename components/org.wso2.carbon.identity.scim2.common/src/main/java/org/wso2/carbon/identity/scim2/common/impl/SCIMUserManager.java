@@ -1361,9 +1361,13 @@ public class SCIMUserManager implements UserManager {
             }
 
             // Filter users for given condition and domain.
-            Set<org.wso2.carbon.user.core.common.User> coreUsers =
-                    filterUsernames(condition, offset, limit, sortBy, sortOrder, userStoreDomainName);
-
+            Set<org.wso2.carbon.user.core.common.User> coreUsers;
+            try {
+                coreUsers = filterUsernames(condition, offset, limit, sortBy, sortOrder, userStoreDomainName);
+            } catch (CharonException e) {
+                log.error("Error occurred while getting the users list for domain: " + userStoreDomainName, e);
+                continue;
+            }
             // Calculating new offset and limit parameters.
             int numberOfFilteredUsers = coreUsers.size();
             if (numberOfFilteredUsers <= 0 && offset > 1) {
