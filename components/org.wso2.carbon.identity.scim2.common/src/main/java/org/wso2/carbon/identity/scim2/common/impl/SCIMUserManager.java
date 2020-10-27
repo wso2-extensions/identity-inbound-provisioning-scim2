@@ -1591,11 +1591,14 @@ public class SCIMUserManager implements UserManager {
         String filterOperation = node.getOperation();
         String attributeValue = node.getValue();
 
-        // If there is a domain, append the domain with the domain separator in front of the new attribute value if
-        // domain separator is not found in the attribute value.
+        attributeValue = getSearchAttribute(attributeName, filterOperation, attributeValue, FILTERING_DELIMITER);
+        /*
+        If there is a domain param in the request, append the domain with the domain separator in front of the new
+        attribute value. If domain is specified in the attributeValue, do not need to append the tenant domain.
+         */
         if (StringUtils.isNotEmpty(domainName) && StringUtils
                 .containsNone(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
-            attributeValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR + node.getValue();
+            attributeValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR + attributeValue;
         }
         try {
             if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
@@ -3796,8 +3799,13 @@ public class SCIMUserManager implements UserManager {
     private List<String> getRoleNames(String attributeName, String filterOperation, String attributeValue)
             throws org.wso2.carbon.user.core.UserStoreException {
 
-        String searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue,
-                FILTERING_DELIMITER);
+        String searchAttribute;
+        // If the attributeValue has the delimiter already, the prior methods have build the searchAttribute value.
+        if (attributeValue.contains(FILTERING_DELIMITER)) {
+            searchAttribute = attributeValue;
+        } else {
+            searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue, FILTERING_DELIMITER);
+        }
         if (log.isDebugEnabled()) {
             log.debug(String.format("Filtering roleNames from search attribute: %s", searchAttribute));
         }
@@ -3826,8 +3834,13 @@ public class SCIMUserManager implements UserManager {
                                                                     String attributeValue)
             throws org.wso2.carbon.user.core.UserStoreException {
 
-        String searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue,
-                FILTERING_DELIMITER);
+        String searchAttribute;
+        // If the attributeValue has the delimiter already, the prior methods have build the searchAttribute value.
+        if (attributeValue.contains(FILTERING_DELIMITER)) {
+            searchAttribute = attributeValue;
+        } else {
+            searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue, FILTERING_DELIMITER);
+        }
         String attributeNameInLocalDialect = SCIMCommonUtils.getSCIMtoLocalMappings().get(attributeName);
         if (StringUtils.isBlank(attributeNameInLocalDialect)) {
             attributeNameInLocalDialect = attributeName;
