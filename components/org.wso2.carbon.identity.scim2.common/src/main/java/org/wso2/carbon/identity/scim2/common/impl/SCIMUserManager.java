@@ -414,8 +414,12 @@ public class SCIMUserManager implements UserManager {
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             String errMsg = "Error in deleting user: ";
             if (isNotifyUserstoreStatusEnabled()) {
-                throw new CharonException(errMsg + userId + ". " + e.getMessage(), e);
+                errMsg = errMsg + userId + ". " + e.getMessage();
+                log.error(errMsg, e);
+                throw new CharonException(errMsg, e);
             } else {
+                errMsg = errMsg + userName;
+                log.error(errMsg, e);
                 throw new CharonException(errMsg + userName, e);
             }
         }
@@ -556,7 +560,9 @@ public class SCIMUserManager implements UserManager {
                 totalUsers = secondaryUserStoreManager.countUsersWithClaims(USERNAME_CLAIM, "*");
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            throw new CharonException("Error while getting total user count in domain: " + domainName);
+            String errorMsg = "Error while getting total user count in domain: " + domainName;
+            log.error(errorMsg, e);
+            throw new CharonException(errorMsg);
         }
         return totalUsers;
     }
@@ -2196,9 +2202,13 @@ public class SCIMUserManager implements UserManager {
                 return null;
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            throw new CharonException("Error in retrieving group : " + id, e);
+            String errorMsg = "Error in retrieving group : " + id;
+            log.error(errorMsg, e);
+            throw new CharonException(errorMsg, e);
         } catch (IdentitySCIMException e) {
-            throw new CharonException("Error in retrieving SCIM Group information from database.", e);
+            String errorMsg = "Error in retrieving SCIM Group information from database.";
+            log.error(errorMsg, e);
+            throw new CharonException(errorMsg, e);
         } catch (CharonException | BadRequestException e) {
             throw new CharonException("Error in retrieving the group", e);
         }
@@ -2378,6 +2388,7 @@ public class SCIMUserManager implements UserManager {
             }
             String errMsg = "Error in obtaining role names from user store.";
             errMsg += e.getMessage();
+            log.error(errMsg, e);
             throw new CharonException(errMsg, e);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             String errMsg = "Error in retrieving role names from user store.";
@@ -2562,9 +2573,10 @@ public class SCIMUserManager implements UserManager {
                 }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            throw new CharonException(
-                    "Error in filtering groups by attribute name : " + attributeName + ", " + "attribute value : "
-                            + attributeValue + " and filter operation : " + filterOperation, e);
+            String errorMsg = "Error in filtering groups by attribute name : " + attributeName + ", "
+                    + "attribute value : " + attributeValue + " and filter operation : " + filterOperation;
+            log.error(errorMsg, e);
+            throw new CharonException(errorMsg, e);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new CharonException(
                     "Error in filtering group with filter: " + attributeName + " + " + filterOperation + " + "
@@ -2684,7 +2696,9 @@ public class SCIMUserManager implements UserManager {
             try {
                 return getGroupWithName(roleName);
             } catch (IdentitySCIMException e) {
-                throw new CharonException("Error in retrieving SCIM Group information from database.", e);
+                String errorMsg = "Error in retrieving SCIM Group information from database.";
+                log.error(errorMsg, e);
+                throw new CharonException(errorMsg, e);
             } catch (BadRequestException e) {
                 throw new CharonException("Error in retrieving SCIM Group.", e);
             }
@@ -3158,7 +3172,9 @@ public class SCIMUserManager implements UserManager {
                     .map(org.wso2.carbon.user.core.common.User::getUserID)
                     .collect(Collectors.toList()));
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            throw new CharonException("Error occurred while retrieving SCIM user information", e);
+            String errorMsg = "Error occurred while retrieving SCIM user information";
+            log.error(errorMsg, e);
+            throw new CharonException(errorMsg, e);
         }
 
         Map<String, Group> groupMetaAttributesCache = new HashMap<>();
@@ -3912,7 +3928,9 @@ public class SCIMUserManager implements UserManager {
             try {
                 return getGroupNamesFromDB(attributeName, filterOperation, attributeValue, domainName);
             } catch (IdentitySCIMException e) {
-                throw new CharonException("Error in retrieving SCIM Group information from database.", e);
+                String errorMsg = "Error in retrieving SCIM Group information from database.";
+                log.error(errorMsg, e);
+                throw new CharonException(errorMsg, e);
             }
         }
     }
