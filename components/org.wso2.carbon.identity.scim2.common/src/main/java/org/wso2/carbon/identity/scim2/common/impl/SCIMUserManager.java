@@ -57,6 +57,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
+import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 import org.wso2.carbon.user.core.jdbc.JDBCUserStoreManager;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionAttribute;
@@ -268,8 +269,17 @@ public class SCIMUserManager implements UserManager {
             user.setSchemas();
         } catch (UserStoreException e) {
             handleErrorsOnUserNameAndPasswordPolicy(e);
-            String errMsg = "Error in adding the user: " + user.getUserName() + " to the user store. ";
-            throw new CharonException(errMsg, e);
+            CharonException charonException;
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
+                    .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_USERNAME_CANNOT_BE_EMPTY.getCode(),
+                            ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode())) {
+                charonException = new CharonException("Unable to create the user. Username is a mandatory field.", e);
+                charonException.setStatus(ResponseCodeConstants.CODE_BAD_REQUEST);
+                throw charonException;
+            }
+            String errMsg = "Error in adding the user: " + user.getUserName() + " to the user store.";
+            charonException = new CharonException(errMsg, e);
+            throw charonException;
         }
         return user;
     }
