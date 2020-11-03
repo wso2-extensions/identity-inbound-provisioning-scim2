@@ -344,6 +344,7 @@ public class SCIMRoleManager implements RoleManager {
         doUpdateRoleName(oldRole, newRole);
         doUpdateUsers(oldRole, newRole);
         doUpdateGroups(oldRole, newRole);
+        doUpdatePermissions(oldRole, newRole);
 
         Role role = new Role();
         role.setDisplayName(newRole.getDisplayName());
@@ -355,6 +356,11 @@ public class SCIMRoleManager implements RoleManager {
 
     private void doUpdateRoleName(Role oldRole, Role newRole)
             throws CharonException, ConflictException, NotFoundException {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Updating name of role %s to %s.", oldRole.getDisplayName(),
+                    newRole.getDisplayName()));
+        }
 
         // Update name if it is changed.
         String oldRoleDisplayName = oldRole.getDisplayName();
@@ -380,7 +386,7 @@ public class SCIMRoleManager implements RoleManager {
     private void doUpdateUsers(Role oldRole, Role newRole) throws CharonException, BadRequestException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Updating role: " + oldRole.getDisplayName());
+            log.debug("Updating users of role: " + oldRole.getDisplayName());
         }
 
         Set<String> userIDsInOldRole = new HashSet<>(oldRole.getUsers());
@@ -411,7 +417,7 @@ public class SCIMRoleManager implements RoleManager {
     private void doUpdateGroups(Role oldRole, Role newRole) throws CharonException, BadRequestException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Updating role: " + oldRole.getDisplayName());
+            log.debug("Updating groups of role: " + oldRole.getDisplayName());
         }
 
         Set<String> groupIDsInOldRole = new HashSet<>(oldRole.getGroups());
@@ -435,6 +441,29 @@ public class SCIMRoleManager implements RoleManager {
                 throw new CharonException(
                         String.format("Error occurred while updating groups in the role: %s", newRole.getDisplayName()),
                         e);
+            }
+        }
+    }
+
+    private void doUpdatePermissions(Role oldRole, Role newRole) throws BadRequestException, CharonException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Updating permissions of role: " + oldRole.getDisplayName());
+        }
+
+        List<String> newRolePermissions = newRole.getPermissions();
+
+        // Update the role with specified permissions.
+        if (isNotEmpty(newRolePermissions)) {
+            try {
+                roleManagementService.setPermissionsForRole(oldRole.getId(), newRolePermissions, tenantDomain);
+            } catch (IdentityRoleManagementException e) {
+                if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage());
+                }
+                throw new CharonException(
+                        String.format("Error occurred while updating permissions for role: %s",
+                                newRole.getDisplayName()), e);
             }
         }
     }
