@@ -191,6 +191,8 @@ public class IdentitySCIMManager {
             charonConfiguration.setFilterSupport
                     (Boolean.parseBoolean(scimConfigProcessor.getProperty(SCIMCommonConstants.FILTER_SUPPORTED)),
                             Integer.parseInt(scimConfigProcessor.getProperty(SCIMCommonConstants.FILTER_MAX_RESULTS)));
+            charonConfiguration.setCountValueForPagination
+                    (Integer.parseInt(scimConfigProcessor.getProperty(SCIMCommonConstants.PAGINATION_DEFAULT_COUNT)));
 
             ArrayList<Object[]> schemaList = new ArrayList<>();
             for (AuthenticationSchema authenticationSchema : scimConfigProcessor.getAuthenticationSchemas()) {
