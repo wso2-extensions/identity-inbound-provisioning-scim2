@@ -2856,11 +2856,11 @@ public class SCIMUserManager implements UserManager {
                 deletedMembers.addAll(temporaryMembers);
             }
 
-            // Check for deleted members
+            // Check for deleted members.
             Set<String> deletedMemberIdsFromUserstore =
                     getMemberValuesFromUserstore(deletedMembers, userStoreDomainForGroup, newGroupName);
 
-            // Check for added members
+            // Check for added members.
             Set<String> addedMemberIdsFromUserstore =
                     getMemberValuesFromUserstore(addedMembers, userStoreDomainForGroup, newGroupName);
 
@@ -2875,31 +2875,21 @@ public class SCIMUserManager implements UserManager {
             */
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
 
-             /*
-             We do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
-             Update the group with added members and deleted members.
-              */
+            /*
+            We do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
+            Update the group with added members and deleted members.
+            */
             if (isNotEmpty(addedMembers) || isNotEmpty(deletedMembers)) {
                 carbonUM.updateUserListOfRoleWithID(newGroupName,
                         deletedMemberIdsFromUserstore.toArray(new String[0]),
                         addedMemberIdsFromUserstore.toArray(new String[0]));
             }
 
-        } catch (UserStoreException e) {
-            log.error(e);
-            throw new CharonException(e.getMessage(), e);
-        } catch (IdentitySCIMException e) {
-            if (log.isDebugEnabled()) {
-                log.debug(e);
-            }
+        } catch (UserStoreException | IdentitySCIMException e) {
             throw new CharonException(e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
-            log.error(e);
             throw new CharonException("Error retrieving User Store name. ", e);
         } catch (BadRequestException e) {
-            if (log.isDebugEnabled()) {
-                log.debug(e);
-            }
             throw new CharonException("Error in updating the group", e);
         }
 
@@ -2947,10 +2937,10 @@ public class SCIMUserManager implements UserManager {
         String updatedGroupDomain = IdentityUtil.extractDomainFromName(newGroupName);
 
         if (isPrimaryDomain(updatedGroupDomain) && !isPrimaryDomain(oldGroupDomain)) {
-             /*
-             This is the case where the updated group name did not contain a domain name but was returned as PRIMARY
-             from IdentityUtil.extractDomainFromName() method.
-              */
+            /*
+            This is the case where the updated group name did not contain a domain name but was returned as PRIMARY
+            from IdentityUtil.extractDomainFromName() method.
+            */
             String newGroupNameWithoutDomain = UserCoreUtil.removeDomainFromName(newGroupName);
             newGroupName = IdentityUtil.addDomainToName(newGroupNameWithoutDomain, oldGroupDomain);
         } else if (!oldGroupDomain.equals(updatedGroupDomain)) {
