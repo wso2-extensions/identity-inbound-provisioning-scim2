@@ -828,8 +828,14 @@ public class SCIMUserManager implements UserManager {
                             .addDomainToName(UserCoreUtil.removeDomainFromName(user.getUserName()),
                                     getUserStoreDomainFromSP()));
                 }
+                String username = user.getUsername();
+                String oldUsername = oldUser.getUsername();
+                if (!IdentityUtil.isUserStoreInUsernameCaseSensitive(oldUser.getUsername())) {
+                    username = username.toLowerCase();
+                    oldUsername = oldUsername.toLowerCase();
+                }
                 // This is handled here as the IS is still not capable of updating the username via SCIM.
-                if (!StringUtils.equals(user.getUserName(), oldUser.getUserName())) {
+                if (!StringUtils.equals(username, oldUsername)) {
                     if (log.isDebugEnabled()) {
                         log.debug("Failing the request as attempting to modify username. Old username: "
                                 + oldUser.getUserName() + ", new username: " + user.getUserName());

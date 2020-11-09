@@ -646,6 +646,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, tenantDomain));
         doReturn(oldUser).when(scimUserManager).getUser(anyString(), anyMap());
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
 
         boolean hasExpectedBehaviour = false;
         try {
