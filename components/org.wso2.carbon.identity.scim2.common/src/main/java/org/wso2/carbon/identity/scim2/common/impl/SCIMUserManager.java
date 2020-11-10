@@ -246,6 +246,16 @@ public class SCIMUserManager implements UserManager {
             org.wso2.carbon.user.core.common.User coreUser = carbonUM.addUserWithID(user.getUserName(),
                     user.getPassword(), null, claimsInLocalDialect, null);
 
+            if (coreUser == null) {
+                coreUser = carbonUM.getUser(null, user.getUserName());
+                // TODO: If a user is added when a workflow engagement related to add user event exists, the created
+                //  user does not have an ID. Until fixed properly, we use this property to identify whether a workflow
+                //  engagement exists. Please check issue : https://github.com/wso2/product-is/issues/10442
+                if (coreUser != null && StringUtils.isBlank(coreUser.getUserID())) {
+                    return user;
+                }
+            }
+
             // We use the generated unique ID of the user core user as the SCIM ID.
             user.setId(coreUser.getUserID());
 
