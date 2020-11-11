@@ -451,10 +451,14 @@ public class SCIMRoleManager implements RoleManager {
             log.debug("Updating permissions of role: " + oldRole.getDisplayName());
         }
 
+        List<String> oldRolePermissions = oldRole.getPermissions();
         List<String> newRolePermissions = newRole.getPermissions();
 
         // Update the role with specified permissions.
-        if (isNotEmpty(newRolePermissions)) {
+        if (hasPermissionsChanged(oldRolePermissions, newRolePermissions)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Permissions have changed. Updating permissions of role: " + oldRole.getDisplayName());
+            }
             try {
                 roleManagementService.setPermissionsForRole(oldRole.getId(), newRolePermissions, tenantDomain);
             } catch (IdentityRoleManagementException e) {
@@ -480,6 +484,23 @@ public class SCIMRoleManager implements RoleManager {
         Set<String> removedIDs = new HashSet<>(oldIDs);
         removedIDs.removeAll(newIDs);
         return removedIDs;
+    }
+
+    private boolean hasPermissionsChanged(List<String> oldRolePermissions, List<String> newRolePermissions) {
+
+        if (newRolePermissions == null) {
+            return false;
+        }
+
+        if (oldRolePermissions == null) {
+            return true;
+        }
+
+        if (CollectionUtils.isEmpty(oldRolePermissions) && CollectionUtils.isEmpty(newRolePermissions)) {
+            return false;
+        }
+
+        return !CollectionUtils.isEqualCollection(oldRolePermissions, newRolePermissions);
     }
 
     @Override
