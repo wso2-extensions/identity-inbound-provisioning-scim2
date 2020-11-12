@@ -3564,8 +3564,7 @@ public class SCIMUserManager implements UserManager {
 
         // Add roles of user.
         for (String roleName : rolesOfUser) {
-            if (UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration())
-                    || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
+            if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
                 // Carbon specific roles do not possess SCIM info, hence skipping them.
                 continue;
             }
@@ -3710,8 +3709,7 @@ public class SCIMUserManager implements UserManager {
 
         // Add roles of group.
         for (String roleName : rolesOfGroup) {
-            if (UserCoreUtil.isEveryoneRole(roleName, carbonUM.getRealmConfiguration())
-                    || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
+            if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
                 // Carbon specific roles do not possess SCIM info, hence skipping them.
                 continue;
             }
