@@ -19,9 +19,14 @@
 package org.wso2.carbon.identity.scim2.common.internal;
 
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * SCIM service holder class.
@@ -33,6 +38,7 @@ public class SCIMCommonComponentHolder {
     private static ClaimMetadataManagementService claimManagementService;
     private static RolePermissionManagementService rolePermissionManagementService;
     private static RoleManagementService roleManagementService;
+    private static final List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
 
     /**
      * Get realm service.
@@ -112,5 +118,22 @@ public class SCIMCommonComponentHolder {
     public static RoleManagementService getRoleManagementService() {
 
         return roleManagementService;
+    }
+
+    public static List<SCIMUserStoreErrorResolver> getScimUserStoreErrorResolverList() {
+
+        return scimUserStoreErrorResolvers;
+    }
+
+    public static void addScimUserStoreErrorResolver(SCIMUserStoreErrorResolver scimUserStoreErrorResolver) {
+
+        scimUserStoreErrorResolvers.add(scimUserStoreErrorResolver);
+        scimUserStoreErrorResolvers.sort(Comparator.comparing(SCIMUserStoreErrorResolver::getOrder).reversed());
+    }
+
+    public static void removeScimUserStoreErrorResolver(SCIMUserStoreErrorResolver scimUserStoreErrorResolver) {
+
+        scimUserStoreErrorResolvers.remove(scimUserStoreErrorResolver);
+        scimUserStoreErrorResolvers.sort(Comparator.comparing(SCIMUserStoreErrorResolver::getOrder).reversed());
     }
 }
