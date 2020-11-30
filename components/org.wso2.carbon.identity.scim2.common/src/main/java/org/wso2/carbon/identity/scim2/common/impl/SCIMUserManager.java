@@ -249,9 +249,21 @@ public class SCIMUserManager implements UserManager {
             // human readable username.
             if (isLoginIdentifiresEnabled() && StringUtils.isNotEmpty(getPrimaryLoginIdentifireClaim())) {
                 String immutableUserIdentifier = getUniqueUserID();
-                claimsInLocalDialect.put(getPrimaryLoginIdentifireClaim(), user.getUserName());
-                coreUser = carbonUM.addUserWithID(immutableUserIdentifier,
-                        user.getPassword(), null, claimsInLocalDialect, null);
+                if (claimsInLocalDialect.containsKey(getPrimaryLoginIdentifireClaim())) {
+                    if (claimsInLocalDialect.get(getPrimaryLoginIdentifireClaim()).equals(user.getUserName())) {
+
+                        coreUser = carbonUM.addUserWithID(immutableUserIdentifier,
+                                user.getPassword(), null, claimsInLocalDialect, null);
+                    } else {
+                        throw new BadRequestException("The claim value for " + getPrimaryLoginIdentifireClaim() + " " +
+                                "and username should be same.");
+                    }
+                } else {
+
+                    claimsInLocalDialect.put(getPrimaryLoginIdentifireClaim(), user.getUserName());
+                    coreUser = carbonUM.addUserWithID(immutableUserIdentifier,
+                            user.getPassword(), null, claimsInLocalDialect, null);
+                }
             } else {
                 // Create the user in the user core.
                 coreUser = carbonUM.addUserWithID(user.getUserName(),
