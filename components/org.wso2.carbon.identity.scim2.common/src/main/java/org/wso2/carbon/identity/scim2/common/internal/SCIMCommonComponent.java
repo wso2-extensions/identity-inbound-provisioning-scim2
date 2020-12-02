@@ -32,6 +32,8 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
+import org.wso2.carbon.identity.scim2.common.impl.DefaultSCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMTenantMgtListener;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListener;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
@@ -92,6 +94,10 @@ public class SCIMCommonComponent {
             SCIMTenantMgtListener scimTenantMgtListener = new SCIMTenantMgtListener();
             tenantMgtListenerServiceReg = ctx.getBundleContext().registerService(TenantMgtListener.class,
                     scimTenantMgtListener, null);
+
+            // Register default implementation of SCIMUserStoreErrorResolver
+            ctx.getBundleContext().registerService(SCIMUserStoreErrorResolver.class.getName(),
+                    new DefaultSCIMUserStoreErrorResolver(), null);
 
             //Update super tenant user/group attributes.
             AdminAttributeUtil.updateAdminUser(MultitenantConstants.SUPER_TENANT_ID, true);
@@ -186,7 +192,7 @@ public class SCIMCommonComponent {
      */
     @Reference(
             name = "claimManagementService",
-            service = org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService .class,
+            service = org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetClaimMetadataManagementService")
@@ -237,6 +243,27 @@ public class SCIMCommonComponent {
             logger.debug("RoleManagementService unset in SCIMCommonComponent bundle.");
         }
         SCIMCommonComponentHolder.setRoleManagementService(null);
+    }
+
+    /**
+     * Set SCIMUserStoreErrorResolver implementation
+     *
+     * @param scimUserStoreErrorResolver SCIMUserStoreErrorResolver
+     */
+    @Reference(
+            name = "scim.user.store.error.resolver",
+            service = org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetScimUserStoreErrorResolver")
+    protected void setScimUserStoreErrorResolver(SCIMUserStoreErrorResolver scimUserStoreErrorResolver) {
+
+        SCIMCommonComponentHolder.addScimUserStoreErrorResolver(scimUserStoreErrorResolver);
+    }
+
+    protected void unsetScimUserStoreErrorResolver(SCIMUserStoreErrorResolver scimUserStoreErrorResolver) {
+
+        SCIMCommonComponentHolder.removeScimUserStoreErrorResolver(scimUserStoreErrorResolver);
     }
 
     @Deactivate
