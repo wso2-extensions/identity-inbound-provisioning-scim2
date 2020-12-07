@@ -23,6 +23,7 @@ import org.apache.http.HttpStatus;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 
 /**
@@ -44,6 +45,10 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
                             ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode())) {
                 return new SCIMUserStoreException("Unable to create the user. Username is a mandatory field.",
                         HttpStatus.SC_BAD_REQUEST);
+        } else if (e instanceof org.wso2.carbon.user.core.UserStoreClientException && UserCoreErrorConstants
+                .ErrorMessages.ERROR_CODE_INVALID_DOMAIN_NAME.getCode().equals(((UserStoreClientException) e)
+                        .getErrorCode())) {
+            return new SCIMUserStoreException("Unable to proceed. Invalid domain name.", HttpStatus.SC_BAD_REQUEST);
         }
         return null;
     }
