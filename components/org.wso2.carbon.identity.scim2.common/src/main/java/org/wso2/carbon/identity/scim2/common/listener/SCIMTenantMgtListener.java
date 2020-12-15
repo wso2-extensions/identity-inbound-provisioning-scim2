@@ -34,8 +34,12 @@ public class SCIMTenantMgtListener extends AbstractIdentityTenantMgtListener {
     @Override
     public void onTenantInitialActivation(int tenantId) throws StratosException {
 
-        if (log.isDebugEnabled()) {
-            log.debug("SCIMTenantMgtListener is fired for Tenant ID : " + tenantId);
+        boolean isEnabled = isEnable();
+        if (!isEnabled) {
+            if (log.isDebugEnabled()) {
+                log.debug("SCIMTenantMgtListener is fired for Tenant ID : " + tenantId);
+            }
+            return;
         }
         //Update admin user attributes.
         AdminAttributeUtil.updateAdminUser(tenantId, false);
