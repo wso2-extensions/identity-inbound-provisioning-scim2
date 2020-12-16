@@ -34,6 +34,13 @@ public class SCIMTenantMgtListener extends AbstractIdentityTenantMgtListener {
     @Override
     public void onTenantInitialActivation(int tenantId) throws StratosException {
 
+        boolean isEnabled = isEnable();
+        if (!isEnabled) {
+            if (log.isDebugEnabled()) {
+                log.debug("SCIMTenantMgtListener is disabled");
+            }
+            return;
+        }
         if (log.isDebugEnabled()) {
             log.debug("SCIMTenantMgtListener is fired for Tenant ID : " + tenantId);
         }
