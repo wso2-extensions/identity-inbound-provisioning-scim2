@@ -2428,7 +2428,12 @@ public class SCIMUserManager implements UserManager {
                         log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". "
                                 + "Including group with name : " + groupName + " in the response.");
                     }
-                    Group group = this.getGroupWithName(groupName);
+                    Group group = null;
+                    if (!isMemberAttributeRequired(requiredAttributes)) {
+                        group = getGroupWithoutMembers(groupName);
+                    } else {
+                        group = getGroupWithName(groupName);
+                    }
                     if (group.getId() != null) {
                         groupList.add(group);
                     }
@@ -2630,7 +2635,7 @@ public class SCIMUserManager implements UserManager {
                                 .isEveryoneRole(groupName, carbonUM.getRealmConfiguration())) {
                             continue;
                         }
-                        Group group = getRoleWithDefaultAttributes(groupName);
+                        Group group = getRoleWithDefaultAttributes(groupName, requiredAttributes);
                         if (group != null && group.getId() != null) {
                             filteredGroups.add(group);
                         }
@@ -2749,10 +2754,11 @@ public class SCIMUserManager implements UserManager {
      * Get the role name with attributes.
      *
      * @param roleName Role name
+     * @param requiredAttributes    Required attributes
      * @throws CharonException
      * @throws UserStoreException
      */
-    private Group getRoleWithDefaultAttributes(String roleName)
+    private Group getRoleWithDefaultAttributes(String roleName, Map<String, Boolean> requiredAttributes)
             throws CharonException, UserStoreException {
 
         String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
@@ -2762,6 +2768,9 @@ public class SCIMUserManager implements UserManager {
                         + "Including group with name : " + roleName + " in the response.");
             }
             try {
+                if (!isMemberAttributeRequired(requiredAttributes)) {
+                    return getGroupWithoutMembers(roleName);
+                }
                 return getGroupWithName(roleName);
             } catch (IdentitySCIMException e) {
                 String errorMsg = "Error in retrieving SCIM Group information from database.";
@@ -3691,22 +3700,24 @@ public class SCIMUserManager implements UserManager {
             group.setDisplayName(groupName);
         }
 
-        List<org.wso2.carbon.user.core.common.User> coreUsers = carbonUM.getUserListOfRoleWithID(groupName);
+        if (!excludeMembers) {
+            List<org.wso2.carbon.user.core.common.User> coreUsers = carbonUM.getUserListOfRoleWithID(groupName);
 
-        //get the ids of the users and set them in the group with id + display name
-        if (coreUsers != null && coreUsers.size() != 0) {
-            for (org.wso2.carbon.user.core.common.User coreUser : coreUsers) {
-                String userId = coreUser.getUserID();
-                String userName = coreUser.getDomainQualifiedUsername();
-                if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
-                    userName = prependDomain(userName);
+            // Get the ids of the users and set them in the group with id + display name.
+            if (coreUsers != null && coreUsers.size() != 0) {
+                for (org.wso2.carbon.user.core.common.User coreUser : coreUsers) {
+                    String userId = coreUser.getUserID();
+                    String userName = coreUser.getDomainQualifiedUsername();
+                    if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
+                        userName = prependDomain(userName);
+                    }
+                    String locationURI = SCIMCommonUtils.getSCIMUserURL(userId);
+                    User user = new User();
+                    user.setUserName(userName);
+                    user.setId(userId);
+                    user.setLocation(locationURI);
+                    group.setMember(user);
                 }
-                String locationURI = SCIMCommonUtils.getSCIMUserURL(userId);
-                User user = new User();
-                user.setUserName(userName);
-                user.setId(userId);
-                user.setLocation(locationURI);
-                group.setMember(user);
             }
         }
 
