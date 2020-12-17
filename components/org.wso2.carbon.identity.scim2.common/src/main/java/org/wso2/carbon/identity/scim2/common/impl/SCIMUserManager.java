@@ -1720,16 +1720,17 @@ public class SCIMUserManager implements UserManager {
             } else {
                 int totalUserCount = 0;
                 // If pagination and domain name are not given, then perform filtering on all available user stores.
-                while (carbonUM != null) {
+                AbstractUserStoreManager userStoreManager = carbonUM;
+                while (userStoreManager != null) {
                     // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
-                    if (carbonUM instanceof AbstractUserStoreManager) {
-                        domainName = carbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
+                    if (userStoreManager instanceof AbstractUserStoreManager) {
+                        domainName = userStoreManager.getRealmConfiguration().getUserStoreProperty("DomainName");
                         users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit,
                                 sortBy, sortOrder, domainName);
                         totalUserCount += users.size();
                         filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
                     }
-                    carbonUM = (AbstractUserStoreManager) carbonUM.getSecondaryUserStoreManager();
+                    userStoreManager = (AbstractUserStoreManager) userStoreManager.getSecondaryUserStoreManager();
                 }
                 //set the total results
                 filteredUsers.set(0, totalUserCount);
