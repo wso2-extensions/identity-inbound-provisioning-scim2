@@ -279,7 +279,7 @@ public class SCIMUserManager implements UserManager {
             // Set the schemas of the SCIM user.
             user.setSchemas();
         } catch (UserStoreClientException e) {
-            String errorMessage = String.format("Error in adding the user: " + user.getUserName() + " to the user store. %s",
+            String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
                     e.getMessage());
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
@@ -290,7 +290,7 @@ public class SCIMUserManager implements UserManager {
             // Therefore checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
             if (ex instanceof UserStoreClientException) {
-                String errorMessage = String.format("Error in adding the user: " + user.getUserName() + " to the user store. %s",
+                String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
                         ex.getMessage());
                 if (log.isDebugEnabled()) {
                     log.debug(errorMessage, ex);
@@ -298,8 +298,6 @@ public class SCIMUserManager implements UserManager {
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
             handleErrorsOnUserNameAndPasswordPolicy(e);
-            String errMsg = "Error in adding the user: " + user.getUserName() + " to the user store.";
-            throw resolveError(e, errMsg);
         }
         return user;
     }
