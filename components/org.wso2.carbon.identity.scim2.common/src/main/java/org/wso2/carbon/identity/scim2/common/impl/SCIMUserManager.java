@@ -85,6 +85,7 @@ import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
+import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.schema.SCIMDefinitions;
 import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
@@ -298,7 +299,7 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug(e);
         }
-        for (SCIMUserStoreErrorResolver resolver: SCIMCommonComponentHolder.getScimUserStoreErrorResolverList()) {
+        for (SCIMUserStoreErrorResolver resolver : SCIMCommonComponentHolder.getScimUserStoreErrorResolverList()) {
             SCIMUserStoreException scimUserStoreException = resolver.resolve(e);
             if (scimUserStoreException != null) {
                 CharonException charonException = new CharonException();
@@ -489,8 +490,8 @@ public class SCIMUserManager implements UserManager {
     public List<Object> listUsersWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
-        return listUsersWithGET(searchRequest.getFilter(), (Integer)searchRequest.getStartIndex(),
-                (Integer)searchRequest.getCount(), searchRequest.getSortBy(), searchRequest.getSortOder(),
+        return listUsersWithGET(searchRequest.getFilter(), (Integer) searchRequest.getStartIndex(),
+                (Integer) searchRequest.getCount(), searchRequest.getSortBy(), searchRequest.getSortOder(),
                 searchRequest.getDomainName(), requiredAttributes);
     }
 
@@ -1867,6 +1868,7 @@ public class SCIMUserManager implements UserManager {
 
     /**
      * Get mapped attribute assigned to the specified domain for each claim in the specified external claim dialect.
+     *
      * @param extClaimDialectName
      * @param domainName
      * @return
@@ -1909,7 +1911,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException
      */
     private Set<org.wso2.carbon.user.core.common.User> getFilteredUsersFromMultiAttributeFiltering(Node node,
-            int offset, int limit, String sortBy, String sortOrder, String domainName)
+                                                                                                   int offset, int limit, String sortBy, String sortOrder, String domainName)
             throws CharonException {
 
         Set<org.wso2.carbon.user.core.common.User> coreUsers;
@@ -2159,8 +2161,8 @@ public class SCIMUserManager implements UserManager {
                             boolean userContains = false;
                             for (String user : userDisplayNames) {
                                 user = user.indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > 0
-                                                ? user.split(UserCoreConstants.DOMAIN_SEPARATOR)[1]
-                                                : user;
+                                        ? user.split(UserCoreConstants.DOMAIN_SEPARATOR)[1]
+                                        : user;
                                 if (user.equalsIgnoreCase(coreUser.getUsername()
                                         .indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > 0
                                         ? coreUser.getUsername().split(UserCoreConstants.DOMAIN_SEPARATOR)[1]
@@ -2754,8 +2756,8 @@ public class SCIMUserManager implements UserManager {
     /**
      * Get the role name with attributes.
      *
-     * @param roleName Role name
-     * @param requiredAttributes    Required attributes
+     * @param roleName           Role name
+     * @param requiredAttributes Required attributes
      * @throws CharonException
      * @throws UserStoreException
      */
@@ -2799,7 +2801,7 @@ public class SCIMUserManager implements UserManager {
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
             throw new CharonException(e.getMessage(), e);
-        } catch (IdentityApplicationManagementException e){
+        } catch (IdentityApplicationManagementException e) {
             throw new CharonException("Error retrieving User Store name. ", e);
         } catch (BadRequestException | CharonException e) {
             throw new CharonException("Error in updating the group", e);
@@ -2913,7 +2915,7 @@ public class SCIMUserManager implements UserManager {
                         addedMemberIdsFromUserstore.toArray(new String[0]));
             }
 
-        } catch (UserStoreException  e) {
+        } catch (UserStoreException e) {
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
             throw new CharonException(e.getMessage(), e);
@@ -3012,7 +3014,7 @@ public class SCIMUserManager implements UserManager {
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
             throw new CharonException(e.getMessage(), e);
-        } catch (IdentityApplicationManagementException e){
+        } catch (IdentityApplicationManagementException e) {
             throw new CharonException("Error retrieving User Store name. ", e);
         } catch (CharonException e) {
             throw new CharonException("Error in updating the group", e);
@@ -3153,7 +3155,7 @@ public class SCIMUserManager implements UserManager {
         String userStoreDomainFromSP = getUserStoreDomainFromSP();
 
         String oldGroupDomain = IdentityUtil.extractDomainFromName(oldGroup.getDisplayName());
-        if(userStoreDomainFromSP != null && !userStoreDomainFromSP.equalsIgnoreCase(oldGroupDomain)) {
+        if (userStoreDomainFromSP != null && !userStoreDomainFromSP.equalsIgnoreCase(oldGroupDomain)) {
             throw new CharonException("Group :" + oldGroup.getDisplayName() + "is not belong to user store " +
                     userStoreDomainFromSP + "Hence group updating fail");
         }
@@ -3280,6 +3282,7 @@ public class SCIMUserManager implements UserManager {
         }
         return null;
     }
+
     /**
      * This method will return whether SCIM is enabled or not for a particular userStore. (from SCIMEnabled user
      * store property)
@@ -3303,7 +3306,7 @@ public class SCIMUserManager implements UserManager {
     /**
      * get the specfied user from the store
      *
-     * @param coreUser User of the underlying user store.
+     * @param coreUser     User of the underlying user store.
      * @param claimURIList
      * @return
      * @throws CharonException
@@ -3415,7 +3418,7 @@ public class SCIMUserManager implements UserManager {
     /**
      * get the specified user from the store
      *
-     * @param users    Set of users
+     * @param users        Set of users
      * @param claimURIList Requested claim list
      * @return Array of SCIM User
      * @throws CharonException CharonException
@@ -3576,7 +3579,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     private void setRolesOfUser(Map<String, Group> groupMetaAttributesCache, org.wso2.carbon.user.core.common.User user,
-            User scimUser) throws org.wso2.carbon.user.core.UserStoreException, CharonException, IdentitySCIMException,
+                                User scimUser) throws org.wso2.carbon.user.core.UserStoreException, CharonException, IdentitySCIMException,
             BadRequestException {
 
         List<String> rolesOfUser = carbonUM.getHybridRoleListOfUser(user.getUsername(), user.getUserStoreDomain());
@@ -4250,7 +4253,7 @@ public class SCIMUserManager implements UserManager {
      * @throws IdentitySCIMException
      */
     private List<String> getGroupNamesFromDB(String attributeName, String filterOperation, String attributeValue,
-                                         String domainName) throws org.wso2.carbon.user.core.UserStoreException,
+                                             String domainName) throws org.wso2.carbon.user.core.UserStoreException,
             IdentitySCIMException {
 
         String searchAttribute = getSearchAttribute(attributeName, filterOperation, attributeValue,
@@ -4629,7 +4632,8 @@ public class SCIMUserManager implements UserManager {
                 getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT, tenantDomain);
 
         Map<String, Attribute> filteredFlatAttributeMap = getFilteredUserSchemaAttributes(scimClaimToLocalClaimMap);
-        Map<String, Attribute> hierarchicalAttributeMap = buildHierarchicalAttributeMap(filteredFlatAttributeMap);
+        Map<String, Attribute> hierarchicalAttributeMap = buildHierarchicalAttributeMap(filteredFlatAttributeMap,
+                false);
 
         List<Attribute> userSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
         if (log.isDebugEnabled()) {
@@ -4657,12 +4661,12 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredEnterpriseUserSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMap(filteredAttributeMap);
+                    buildHierarchicalAttributeMap(filteredAttributeMap, true);
 
             enterpriseUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
             if (log.isDebugEnabled()) {
-               logSchemaAttributes(enterpriseUserSchemaAttributesList);
+                logSchemaAttributes(enterpriseUserSchemaAttributesList);
             }
         } else {
             if (log.isDebugEnabled()) {
@@ -4734,14 +4738,14 @@ public class SCIMUserManager implements UserManager {
 
         Map<String, Attribute> filteredFlatAttributeMap = new HashMap<>();
 
-        for (Map.Entry<ExternalClaim, LocalClaim> entry: scimClaimToLocalClaimMap.entrySet()) {
+        for (Map.Entry<ExternalClaim, LocalClaim> entry : scimClaimToLocalClaimMap.entrySet()) {
 
             ExternalClaim scimClaim = entry.getKey();
             LocalClaim mappedLocalClaim = entry.getValue();
 
             if (isSupportedByDefault(mappedLocalClaim) || isUsernameClaim(scimClaim)) {
                 // Return only the schema of supported-by-default claims and the username claim.
-                Attribute schemaAttribute = getSchemaAttributes(scimClaim, mappedLocalClaim);
+                Attribute schemaAttribute = getSchemaAttributes(scimClaim, mappedLocalClaim, false);
                 filteredFlatAttributeMap.put(schemaAttribute.getName(), schemaAttribute);
             }
         }
@@ -4754,7 +4758,7 @@ public class SCIMUserManager implements UserManager {
 
         return scimClaimToLocalClaimMap.entrySet().stream()
                 .filter(entry -> isSupportedByDefault(entry.getValue()))
-                .map(e -> getSchemaAttributes(e.getKey(), e.getValue()))
+                .map(e -> getSchemaAttributes(e.getKey(), e.getValue(), true))
                 .collect(Collectors.toMap(attr -> attr.getName(), Function.identity()));
     }
 
@@ -4776,7 +4780,8 @@ public class SCIMUserManager implements UserManager {
      * @param mappedLocalClaim
      * @return
      */
-    private Attribute getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim) {
+    private Attribute getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim, boolean
+            isEnterpriseExtensionAttr) {
 
         String name = scimClaim.getClaimURI();
         if (name.startsWith(scimClaim.getClaimDialectURI())) {
@@ -4790,45 +4795,45 @@ public class SCIMUserManager implements UserManager {
             attribute = new SimpleAttribute(name, null);
         }
 
-        pupulateBasicAttributes(mappedLocalClaim, attribute);
+        populateBasicAttributes(mappedLocalClaim, attribute, isEnterpriseExtensionAttr);
 
         return attribute;
     }
 
     private boolean isComplexAttribute(String name) {
 
-        switch(name) {
+        switch (name) {
             case "manager":
-            case "name" :
-            case "emails" :
-            case "phoneNumbers" :
-            case "ims" :
-            case "photos" :
-            case "addresses" :
-            case "groups" :
-            case "entitlements" :
-            case "roles" :
-            case "x509Certificates" :
+            case "name":
+            case "emails":
+            case "phoneNumbers":
+            case "ims":
+            case "photos":
+            case "addresses":
+            case "groups":
+            case "entitlements":
+            case "roles":
+            case "x509Certificates":
                 return true;
-            default :
+            default:
                 return false;
         }
     }
 
     private boolean isMultivaluedAttribute(String name) {
 
-        switch(name) {
-            case "emails" :
-            case "phoneNumbers" :
-            case "ims" :
-            case "photos" :
-            case "addresses" :
-            case "groups" :
-            case "entitlements" :
-            case "roles" :
-            case "x509Certificates" :
+        switch (name) {
+            case "emails":
+            case "phoneNumbers":
+            case "ims":
+            case "photos":
+            case "addresses":
+            case "groups":
+            case "entitlements":
+            case "roles":
+            case "x509Certificates":
                 return true;
-            default :
+            default:
                 return false;
         }
     }
@@ -4839,7 +4844,8 @@ public class SCIMUserManager implements UserManager {
      * @param mappedLocalClaim
      * @param attribute
      */
-    private void pupulateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute) {
+    private void populateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute, boolean
+            isEnterpriseExtensionAttr) {
 
         if (mappedLocalClaim != null) {
             attribute.setDescription(mappedLocalClaim.getClaimProperty(ClaimConstants.DESCRIPTION_PROPERTY));
@@ -4859,6 +4865,15 @@ public class SCIMUserManager implements UserManager {
         attribute.setCaseExact(false);
         if (attribute instanceof ComplexAttribute) {
             attribute.setType(SCIMDefinitions.DataType.COMPLEX);
+        } else if (isEnterpriseExtensionAttr) {
+            AttributeSchema attributeSchema = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getSubAttributeSchema(attribute.getName());
+            if (attributeSchema != null && attributeSchema.getType() != null) {
+                attribute.setType(attributeSchema.getType());
+            } else {
+                attribute.setType(SCIMDefinitions.DataType.STRING);
+            }
+
         } else {
             attribute.setType(SCIMDefinitions.DataType.STRING);
         }
@@ -4884,19 +4899,20 @@ public class SCIMUserManager implements UserManager {
      * @param filteredFlatAttributeMap
      * @return
      */
-    private Map<String, Attribute> buildHierarchicalAttributeMap(Map<String, Attribute> filteredFlatAttributeMap)
+    private Map<String, Attribute> buildHierarchicalAttributeMap(Map<String, Attribute> filteredFlatAttributeMap,
+                                                                 boolean isEnterpriseExtensionAttr)
             throws CharonException {
 
         Map<String, Attribute> simpleAttributeMap = new HashMap<>();
 
         Map<String, ComplexAttribute> complexAttributeMap = new HashMap<>();
-        for (Map.Entry<String, Attribute> userAttribute: filteredFlatAttributeMap.entrySet()) {
+        for (Map.Entry<String, Attribute> userAttribute : filteredFlatAttributeMap.entrySet()) {
             String attributeName = userAttribute.getKey();
             Attribute attribute = userAttribute.getValue();
 
             if (attributeName.contains(".")) {
                 ComplexAttribute parentAttribute = handleSubAttribute(attribute, filteredFlatAttributeMap,
-                        complexAttributeMap);
+                        complexAttributeMap, isEnterpriseExtensionAttr);
                 complexAttributeMap.put(parentAttribute.getName(), parentAttribute);
             } else {
                 simpleAttributeMap.put(attributeName, attribute);
@@ -4916,7 +4932,8 @@ public class SCIMUserManager implements UserManager {
      * @return
      */
     private ComplexAttribute handleSubAttribute(Attribute attribute, Map<String, Attribute> flatAttributeMap,
-                                                Map<String, ComplexAttribute> complexAttributeMap)
+                                                Map<String, ComplexAttribute> complexAttributeMap,
+                                                boolean isEnterpriseExtensionAttr)
             throws CharonException {
 
         String attributeName = attribute.getName();
@@ -4931,7 +4948,7 @@ public class SCIMUserManager implements UserManager {
 
         if (parentAttribute == null) {
             parentAttribute = new ComplexAttribute(parentAttributeName);
-            pupulateBasicAttributes(null, parentAttribute);
+            populateBasicAttributes(null, parentAttribute, isEnterpriseExtensionAttr);
             complexAttributeMap.put(parentAttributeName, parentAttribute);
         }
 
@@ -4950,7 +4967,7 @@ public class SCIMUserManager implements UserManager {
         StringBuffer sb = new StringBuffer();
         sb.append("Final user schema attribute list calculated as: [");
         boolean isFirst = true;
-        for (Attribute userSchemaAttribute: userSchemaAttributesList) {
+        for (Attribute userSchemaAttribute : userSchemaAttributesList) {
 
             if (!isFirst) {
                 sb.append(", ");
