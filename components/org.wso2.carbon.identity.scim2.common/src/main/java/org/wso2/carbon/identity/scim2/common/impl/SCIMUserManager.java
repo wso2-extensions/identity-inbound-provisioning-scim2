@@ -134,6 +134,7 @@ public class SCIMUserManager implements UserManager {
     private ClaimManager carbonClaimManager;
     private String tenantDomain;
     private ClaimMetadataManagementService claimMetadataManagementService;
+    private String primaryIdentifierClaim;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
     private static final String SERVICE_PROVIDER = "serviceProvider";
@@ -250,20 +251,21 @@ public class SCIMUserManager implements UserManager {
              human readable username.*/
             if (isLoginIdentifiersEnabled()) {
                 String immutableUserIdentifier = getUniqueUserID();
-                if (StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
-                    if (claimsInLocalDialect.containsKey(getPrimaryLoginIdentifierClaim())) {
-                        if (claimsInLocalDialect.get(getPrimaryLoginIdentifierClaim()).equals(user.getUserName())) {
+                String primaryLoginIdentifier = getPrimaryLoginIdentifierClaim();
+                if (StringUtils.isNotBlank(primaryLoginIdentifier)) {
+                    if (claimsInLocalDialect.containsKey(primaryLoginIdentifier)) {
+                        if (claimsInLocalDialect.get(primaryLoginIdentifier).equals(user.getUserName())) {
 
                             coreUser = carbonUM.addUserWithID(immutableUserIdentifier,
                                     user.getPassword(), null, claimsInLocalDialect, null);
                         } else {
                             throw new BadRequestException(
-                                    "The claim value for " + getPrimaryLoginIdentifierClaim() + " " +
+                                    "The claim value for " + primaryLoginIdentifier + " " +
                                             "and username should be same.");
                         }
                     } else {
 
-                        claimsInLocalDialect.put(getPrimaryLoginIdentifierClaim(), user.getUserName());
+                        claimsInLocalDialect.put(primaryLoginIdentifier, user.getUserName());
                         coreUser = carbonUM.addUserWithID(immutableUserIdentifier,
                                 user.getPassword(), null, claimsInLocalDialect, null);
                     }
@@ -3576,7 +3578,7 @@ public class SCIMUserManager implements UserManager {
                     } else {
                         if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
                             String primaryLoginIdentifier = userClaimValues.get(getPrimaryLoginIdentifierClaim());
-                            if (primaryLoginIdentifier != null) {
+                            if (StringUtils.isNotBlank(primaryLoginIdentifier)) {
                                 attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI,
                                         primaryLoginIdentifier);
                             } else {
@@ -5111,14 +5113,14 @@ public class SCIMUserManager implements UserManager {
      */
     private boolean isLoginIdentifiersEnabled() {
 
-        String enableLoginIdentifires = IdentityUtil
+        String enableLoginIdentifiers = IdentityUtil
                 .getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS);
-        if (StringUtils.isBlank(enableLoginIdentifires)) {
+        if (StringUtils.isBlank(enableLoginIdentifiers)) {
 
             // Return false if the user has not enabled the detailed response body.
             return SCIMCommonConstants.DEFAULT_ENABLE_LOGIN_IDENTIFIERS;
         } else {
-            return Boolean.parseBoolean(enableLoginIdentifires);
+            return Boolean.parseBoolean(enableLoginIdentifiers);
         }
     }
 
@@ -5129,14 +5131,17 @@ public class SCIMUserManager implements UserManager {
      */
     private String getPrimaryLoginIdentifierClaim() {
 
-        return IdentityUtil.getProperty(SCIMCommonConstants.PRIMARY_LOGIN_IDENTIFIER_CLAIM);
+        if (primaryIdentifierClaim == null) {
+            primaryIdentifierClaim = IdentityUtil.getProperty(SCIMCommonConstants.PRIMARY_LOGIN_IDENTIFIER_CLAIM);
+        }
+        return primaryIdentifierClaim;
     }
 
     private void setUserNameWithDomain(Map<String, String> userClaimValues, Map<String, String> attributes,
                                        org.wso2.carbon.user.core.common.User user) {
         if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
             String primaryLoginIdentifier = userClaimValues.get(getPrimaryLoginIdentifierClaim());
-            if (primaryLoginIdentifier != null) {
+            if (StringUtils.isNotBlank(primaryLoginIdentifier)) {
 
                 attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI,
                         prependDomain(primaryLoginIdentifier));
