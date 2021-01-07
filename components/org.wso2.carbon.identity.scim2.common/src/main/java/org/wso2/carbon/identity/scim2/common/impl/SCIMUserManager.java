@@ -2187,6 +2187,7 @@ public class SCIMUserManager implements UserManager {
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
                 scimGroupHandler.createSCIMAttributes(group);
                 carbonUM.addRoleWithID(group.getDisplayName(), null, null, false);
+                group.getAttributeList().remove(SCIMConstants.GroupSchemaConstants.MEMBERS);
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
                 }
