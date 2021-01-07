@@ -2842,18 +2842,19 @@ public class SCIMUserManager implements UserManager {
             Set<String> addedMembers = new HashSet<>();
             Set<String> deletedMembers = new HashSet<>();
             Set<Object> newlyAddedMemberIds = new HashSet<>();
+            Set<Object> deletedMemberIds = new HashSet<>();
 
             for (PatchOperation memberOperation : memberOperations) {
                 if (memberOperation.getValues() instanceof Map) {
                     Map<String, String> memberObject = (Map<String, String>) memberOperation.getValues();
-                    prepareAddedRemovedMemberLists(addedMembers, deletedMembers, newlyAddedMemberIds, memberOperation,
-                            memberObject);
+                    prepareAddedRemovedMemberLists(addedMembers, deletedMembers, newlyAddedMemberIds,
+                            deletedMemberIds, memberOperation, memberObject);
                 } else if (memberOperation.getValues() instanceof List) {
                     List<Map<String, String>> memberOperationValues =
                             (List<Map<String, String>>) memberOperation.getValues();
                     for (Map<String, String> memberObject : memberOperationValues) {
                         prepareAddedRemovedMemberLists(addedMembers, deletedMembers, newlyAddedMemberIds,
-                                memberOperation, memberObject);
+                                deletedMemberIds, memberOperation, memberObject);
                     }
                 }
             }
@@ -2896,6 +2897,10 @@ public class SCIMUserManager implements UserManager {
                 validateUserIds(addedMemberIdsFromUserstore, newlyAddedMemberIds);
             }
 
+            if (isNotEmpty(deletedMemberIds)) {
+                validateUserIds(deletedMemberIdsFromUserstore, deletedMemberIds);
+            }
+
             /*
             Set thread local property to signal the downstream SCIMUserOperationListener
             about the provisioning route.
@@ -2926,8 +2931,9 @@ public class SCIMUserManager implements UserManager {
     }
 
     private void prepareAddedRemovedMemberLists(Set<String> addedMembers, Set<String> removedMembers,
-                                                Set<Object> newlyAddedMemberIds, PatchOperation memberOperation,
-                                                Map<String, String> memberObject) throws UserStoreException {
+                                                Set<Object> newlyAddedMemberIds, Set<Object> deletedMemberIds,
+                                                PatchOperation memberOperation, Map<String, String> memberObject)
+            throws UserStoreException {
 
         if (StringUtils.isEmpty(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY))) {
             List<org.wso2.carbon.user.core.common.User> userListWithID =
@@ -2947,6 +2953,10 @@ public class SCIMUserManager implements UserManager {
                 SCIMConstants.OperationalConstants.REMOVE)) {
             addedMembers.remove(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
             removedMembers.add(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
+            String value = memberObject.get(SCIMConstants.GroupSchemaConstants.VALUE);
+            if (StringUtils.isNotBlank(value)) {
+                deletedMemberIds.add(value);
+            }
         }
     }
 
@@ -3123,13 +3133,13 @@ public class SCIMUserManager implements UserManager {
             }
 
             // Check if the user ids & associated user name sent in updated (new) group exist in the user store.
-            org.wso2.carbon.user.core.common.User user = getUserFromUsername(userName);
-            if (user == null || StringUtils.isEmpty(user.getUserID())) {
+            String userId = carbonUM.getUserIDFromUserName(userName);
+            if (StringUtils.isEmpty(userId)) {
                 String error = "User: " + userName + " doesn't exist in the user store. Hence can not update the " +
                         "group: " + displayName;
                 throw new IdentitySCIMException(error);
             }
-            memberUserIds.add(user.getUserID());
+            memberUserIds.add(userId);
         }
         return memberUserIds;
     }
