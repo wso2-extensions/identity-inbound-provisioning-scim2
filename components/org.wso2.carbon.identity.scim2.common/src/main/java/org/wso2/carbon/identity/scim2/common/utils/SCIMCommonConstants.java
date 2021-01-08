@@ -93,5 +93,10 @@ public class SCIMCommonConstants {
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
+
+    //Configuration for primary login identifiers
+    public static final String ENABLE_LOGIN_IDENTIFIERS = "LoginIdentifiers.Enable";
+    public static final String PRIMARY_LOGIN_IDENTIFIER_CLAIM = "LoginIdentifiers.PrimaryLoginIdentifier";
+    public static final boolean DEFAULT_ENABLE_LOGIN_IDENTIFIERS = false;
 }
 
