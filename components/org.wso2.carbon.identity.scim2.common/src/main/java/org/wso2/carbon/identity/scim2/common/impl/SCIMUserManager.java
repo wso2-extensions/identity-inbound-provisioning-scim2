@@ -4632,8 +4632,8 @@ public class SCIMUserManager implements UserManager {
                 getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT, tenantDomain);
 
         Map<String, Attribute> filteredFlatAttributeMap = getFilteredUserSchemaAttributes(scimClaimToLocalClaimMap);
-        Map<String, Attribute> hierarchicalAttributeMap = buildHierarchicalAttributeMap(filteredFlatAttributeMap,
-                false);
+        Map<String, Attribute> hierarchicalAttributeMap = buildHierarchicalAttributeMapForStandardSchema
+                (filteredFlatAttributeMap);
 
         List<Attribute> userSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
         if (log.isDebugEnabled()) {
@@ -4661,7 +4661,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredEnterpriseUserSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMap(filteredAttributeMap, true);
+                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap);
 
             enterpriseUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -4893,6 +4893,32 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    /**
+     * Builds complex attribute schema for default user schema with correct sub attributes using the flat attribute map.
+     *
+     * @param filteredFlatAttributeMap
+     * @return
+     */
+    private Map<String, Attribute> buildHierarchicalAttributeMapForEnterpriseSchema(Map<String, Attribute>
+                                                                                            filteredFlatAttributeMap)
+            throws CharonException {
+
+        return buildHierarchicalAttributeMap(filteredFlatAttributeMap, true);
+    }
+
+    /**
+     * Builds complex attribute schema for enterprise user schema with correct sub attributes using the flat attribute
+     * map.
+     *
+     * @param filteredFlatAttributeMap
+     * @return
+     */
+    private Map<String, Attribute> buildHierarchicalAttributeMapForStandardSchema(Map<String, Attribute>
+                                                                                          filteredFlatAttributeMap)
+            throws CharonException {
+
+        return buildHierarchicalAttributeMap(filteredFlatAttributeMap, false);
+    }
     /**
      * Builds complex attribute schema with correct sub attributes using the flat attribute map.
      *
