@@ -98,12 +98,14 @@ import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.time.Instant;
+import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -149,6 +151,7 @@ public class SCIMUserManager implements UserManager {
     private static final String RESOURCE_TYPE_CLAIM = "http://wso2.org/claims/resourceType";
     private static final String USERNAME_CLAIM = "http://wso2.org/claims/username";
     private static final String ROLE_CLAIM = "http://wso2.org/claims/role";
+    private boolean removeDuplicateUsersInUsersResponseEnabled = isRemoveDuplicateUsersInUsersResponseEnabled();
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -682,8 +685,12 @@ public class SCIMUserManager implements UserManager {
             String userIdLocalClaim = scimToLocalClaimsMap.get(SCIMConstants.CommonSchemaConstants.ID_URI);
             String claimValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
             if (StringUtils.isNotBlank(userIdLocalClaim)) {
-                users = new TreeSet<>(Comparator
-                        .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+                if (removeDuplicateUsersInUsersResponseEnabled) {
+                    users = new TreeSet<>(Comparator
+                            .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+                } else {
+                    users = new LinkedHashSet<>();
+                }
                 users.addAll(carbonUM.getUserListWithID(userIdLocalClaim, claimValue, null));
             }
             return users;
@@ -728,7 +735,11 @@ public class SCIMUserManager implements UserManager {
         if (isPaginatedUserStoreAvailable()) {
             if (limit == 0) {
                 users = listUsernamesAcrossAllDomainsUsingLegacyAPIs();
-                users = new TreeSet<>(paginateUsers(users, limit, offset));
+                if (removeDuplicateUsersInUsersResponseEnabled) {
+                    users = new TreeSet<>(paginateUsers(users, limit, offset));
+                } else {
+                    users = new LinkedHashSet<>(paginateUsers(users, limit, offset));
+                }
             } else {
                 ExpressionCondition condition = new ExpressionCondition(ExpressionOperation.SW.toString(),
                         ExpressionAttribute.USERNAME.toString(), "");
@@ -758,8 +769,12 @@ public class SCIMUserManager implements UserManager {
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             String userIdLocalClaim = scimToLocalClaimsMap.get(SCIMConstants.CommonSchemaConstants.ID_URI);
             if (StringUtils.isNotBlank(userIdLocalClaim)) {
-                users = new TreeSet<>(Comparator
-                        .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+                if (removeDuplicateUsersInUsersResponseEnabled) {
+                    users = new TreeSet<>(Comparator
+                            .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+                } else {
+                    users = new LinkedHashSet<>();
+                }
                 users.addAll(carbonUM.getUserListWithID(userIdLocalClaim, SCIMCommonConstants.ANY, null));
             }
             return users;
@@ -1442,8 +1457,13 @@ public class SCIMUserManager implements UserManager {
 
         // Filter users when the domain is not set in the request. Then filter through multiple domains.
         String[] userStoreDomainNames = getDomainNames();
-        Set<org.wso2.carbon.user.core.common.User> filteredUsernames = new TreeSet<>(Comparator
-                .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+        Set<org.wso2.carbon.user.core.common.User> filteredUsernames;
+        if (removeDuplicateUsersInUsersResponseEnabled) {
+            filteredUsernames = new TreeSet<>(Comparator
+                    .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+        } else {
+            filteredUsernames = new LinkedHashSet<>();
+        }
         Condition condition;
         for (String userStoreDomainName : userStoreDomainNames) {
 
@@ -1562,11 +1582,18 @@ public class SCIMUserManager implements UserManager {
                     offset));
         }
         try {
-            Set<org.wso2.carbon.user.core.common.User> users = new TreeSet<>(Comparator
-                    .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
-            users.addAll(carbonUM
-                    .getUserListWithID(condition, domainName, UserCoreConstants.DEFAULT_PROFILE, limit, offset, sortBy,
-                            sortOrder));
+            Set<org.wso2.carbon.user.core.common.User> users;
+            if (removeDuplicateUsersInUsersResponseEnabled) {
+                users = new TreeSet<>(
+                        Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+                users.addAll(carbonUM.getUserListWithID(condition, domainName, UserCoreConstants.DEFAULT_PROFILE, limit,
+                        offset, sortBy, sortOrder));
+            } else {
+                List<org.wso2.carbon.user.core.common.User> usersList =
+                        carbonUM.getUserListWithID(condition, domainName, UserCoreConstants.DEFAULT_PROFILE, limit,
+                                offset, sortBy, sortOrder);
+                users = new LinkedHashSet<>(usersList);
+            }
             return users;
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error while retrieving users for the domain: %s with limit: %d and " +
@@ -1965,8 +1992,12 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug("Invoking the do get user list for domain: " + domainName);
             }
-            coreUsers = new TreeSet<>(Comparator
-                    .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+            if (removeDuplicateUsersInUsersResponseEnabled) {
+                coreUsers = new TreeSet<>(Comparator
+                        .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+            } else {
+                coreUsers = new LinkedHashSet<>();
+            }
             coreUsers.addAll(carbonUM.getUserListWithID(getCondition(node, attributes), domainName,
                     UserCoreConstants.DEFAULT_PROFILE, limit, offset, sortBy, sortOrder));
             return coreUsers;
@@ -3652,7 +3683,12 @@ public class SCIMUserManager implements UserManager {
                 }
             }
         }
-        TreeSet<User> scimUserSet = new TreeSet<>(Comparator.comparing(User::getUsername));
+        if (removeDuplicateUsersInUsersResponseEnabled) {
+            TreeSet<User> scimUserSet = new TreeSet<>(Comparator.comparing(User::getUsername));
+            scimUserSet.addAll(scimUsers);
+            return scimUserSet;
+        }
+        Set<User> scimUserSet = new LinkedHashSet<>();
         scimUserSet.addAll(scimUsers);
         return scimUserSet;
     }
@@ -3944,16 +3980,30 @@ public class SCIMUserManager implements UserManager {
 
         // If the results are empty, an empty list should be returned.
         if (users == null) {
-            return new TreeSet<>(Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+            if (removeDuplicateUsersInUsersResponseEnabled) {
+                return new TreeSet<>(
+                        Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+            }
+            return new LinkedHashSet<>();
         }
 
-        TreeSet<org.wso2.carbon.user.core.common.User> sortedSet;
-        if (!(users instanceof TreeSet)) {
-            sortedSet = new TreeSet<>(Comparator
-                    .comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
-            sortedSet.addAll(users);
+        AbstractSet<org.wso2.carbon.user.core.common.User> sortedSet;
+
+        if (removeDuplicateUsersInUsersResponseEnabled) {
+            if (!(users instanceof TreeSet)) {
+                sortedSet = new TreeSet<>(
+                        Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+                sortedSet.addAll(users);
+            } else {
+                sortedSet = (TreeSet<org.wso2.carbon.user.core.common.User>) users;
+            }
         } else {
-            sortedSet = (TreeSet<org.wso2.carbon.user.core.common.User>) users;
+            if (!(users instanceof LinkedHashSet)) {
+                sortedSet = new LinkedHashSet<>();
+                sortedSet.addAll(users);
+            } else {
+                sortedSet = (AbstractSet<org.wso2.carbon.user.core.common.User>) users;
+            }
         }
 
         // Validate offset value.
@@ -3963,7 +4013,11 @@ public class SCIMUserManager implements UserManager {
 
         // If the results are less than the offset, return an empty user list.
         if (offset > sortedSet.size()) {
-            return new TreeSet<>(Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+            if (removeDuplicateUsersInUsersResponseEnabled) {
+                return new TreeSet<>(
+                        Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+            }
+            return new LinkedHashSet<>();
         }
 
         // If the limit is zero, all the users needs to be returned after verifying the offset.
@@ -4358,6 +4412,16 @@ public class SCIMUserManager implements UserManager {
             return Boolean.parseBoolean(enablePaginatedUserStore);
         }
         return true;
+    }
+
+    private boolean isRemoveDuplicateUsersInUsersResponseEnabled() {
+
+        String removeDuplicateUsersInUsersResponse =
+                IdentityUtil.getProperty(SCIMCommonConstants.SCIM_2_REMOVE_DUPLICATE_USERS_IN_USERS_RESPONSE);
+        if (StringUtils.isNotBlank(removeDuplicateUsersInUsersResponse)) {
+            return Boolean.parseBoolean(removeDuplicateUsersInUsersResponse);
+        }
+        return false;
     }
 
     /**
