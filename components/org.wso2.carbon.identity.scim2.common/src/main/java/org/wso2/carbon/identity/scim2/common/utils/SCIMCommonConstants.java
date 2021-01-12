@@ -90,6 +90,8 @@ public class SCIMCommonConstants {
             "SCIM2.MandateDomainForUsernamesAndGroupNamesInResponse";
     public static final String SCIM_RETURN_UPDATED_GROUP_IN_PATCH_RESPONSE = "SCIM2.ReturnUpdatedGroupInPatchResponse";
     public static final String SCIM_NOTIFY_USERSTORE_STATUS = "SCIM2.NotifyUserstoreStatus";
+    public static final String SCIM_2_REMOVE_DUPLICATE_USERS_IN_USERS_RESPONSE =
+            "SCIM2.RemoveDuplicateUsersInUsersResponse";
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
