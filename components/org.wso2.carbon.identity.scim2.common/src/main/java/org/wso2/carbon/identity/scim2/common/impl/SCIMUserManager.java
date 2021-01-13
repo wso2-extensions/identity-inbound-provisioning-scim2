@@ -233,11 +233,19 @@ public class SCIMUserManager implements UserManager {
             }
 
             // If we have the user id, we can check the user from it instead of username.
-            boolean isExistingUser;
+            boolean isExistingUser = false;
             if (StringUtils.isNotEmpty(user.getId())) {
                 isExistingUser = carbonUM.isExistingUserWithID(user.getId());
             } else {
-                isExistingUser = carbonUM.isExistingUser(user.getUserName());
+                if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
+                    String[] existingUserList = carbonUM.getUserList(getPrimaryLoginIdentifierClaim(),
+                            UserCoreUtil.removeDomainFromName(user.getUserName()), null);
+                    if (ArrayUtils.isNotEmpty(existingUserList)) {
+                        isExistingUser = true;
+                    }
+                } else {
+                    isExistingUser = carbonUM.isExistingUser(user.getUserName());
+                }
             }
 
             if (isExistingUser) {
@@ -258,8 +266,8 @@ public class SCIMUserManager implements UserManager {
                 String primaryLoginIdentifier = getPrimaryLoginIdentifierClaim();
                 if (StringUtils.isNotBlank(primaryLoginIdentifier)) {
                     if (claimsInLocalDialect.containsKey(primaryLoginIdentifier)) {
-                        if (claimsInLocalDialect.get(primaryLoginIdentifier).equals(user.getUserName())) {
-
+                        if (claimsInLocalDialect.get(primaryLoginIdentifier)
+                                .equals(UserCoreUtil.removeDomainFromName(user.getUserName()))) {
                             coreUser = carbonUM.addUserWithID(immutableUserIdentifier,
                                     user.getPassword(), null, claimsInLocalDialect, null);
                         } else {
@@ -268,8 +276,8 @@ public class SCIMUserManager implements UserManager {
                                             "and username should be same.");
                         }
                     } else {
-
-                        claimsInLocalDialect.put(primaryLoginIdentifier, user.getUserName());
+                        claimsInLocalDialect.put(getPrimaryLoginIdentifierClaim(),
+                                UserCoreUtil.removeDomainFromName(user.getUserName()));
                         coreUser = carbonUM.addUserWithID(immutableUserIdentifier,
                                 user.getPassword(), null, claimsInLocalDialect, null);
                     }
@@ -969,9 +977,10 @@ public class SCIMUserManager implements UserManager {
 
             // Get user claims mapped from SCIM dialect to WSO2 dialect.
             Map<String, String> claimValuesInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claims);
-            //If primary login identifire claim is enabled, pass that as a claim for userstoremanger.
+            //If primary login identifier claim is enabled, pass that as a claim for userstoremanger.
             if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
-                claimValuesInLocalDialect.put(getPrimaryLoginIdentifierClaim(), user.getUsername());
+                claimValuesInLocalDialect.put(getPrimaryLoginIdentifierClaim(),
+                        UserCoreUtil.removeDomainFromName(user.getUsername()));
             }
 
             // If password is updated, set it separately.
@@ -2236,10 +2245,7 @@ public class SCIMUserManager implements UserManager {
                                 user = user.indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > 0
                                         ? user.split(UserCoreConstants.DOMAIN_SEPARATOR)[1]
                                         : user;
-                                if (user.equalsIgnoreCase(coreUser.getUsername()
-                                        .indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > 0
-                                        ? coreUser.getUsername().split(UserCoreConstants.DOMAIN_SEPARATOR)[1]
-                                        : coreUser.getUsername())) {
+                                if (isUserContains(coreUser, user)) {
                                     userContains = true;
                                     break;
                                 }
@@ -3827,9 +3833,30 @@ public class SCIMUserManager implements UserManager {
             if (coreUsers != null && coreUsers.size() != 0) {
                 for (org.wso2.carbon.user.core.common.User coreUser : coreUsers) {
                     String userId = coreUser.getUserID();
-                    String userName = coreUser.getDomainQualifiedUsername();
+                    String userName;
+                    if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
+                        String primaryLoginIdentifier = carbonUM.getUserClaimValue(coreUser.getUsername(),
+                                getPrimaryLoginIdentifierClaim(), null);
+                        if (StringUtils.isNotBlank(primaryLoginIdentifier)) {
+                            userName = getDomainQualifiedUsername(primaryLoginIdentifier, coreUser);
+                        } else {
+                            userName = coreUser.getDomainQualifiedUsername();
+                        }
+                    } else {
+                        userName = coreUser.getDomainQualifiedUsername();
+                    }
                     if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
-                        userName = prependDomain(userName);
+                        if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
+                            String primaryLoginIdentifierName = carbonUM.getUserClaimValue(coreUser.getUsername(),
+                                    getPrimaryLoginIdentifierClaim(), null);
+                            if (StringUtils.isNotBlank(primaryLoginIdentifierName)) {
+                                userName = prependDomain(primaryLoginIdentifierName);
+                            } else {
+                                userName = prependDomain(userName);
+                            }
+                        } else {
+                            userName = prependDomain(userName);
+                        }
                     }
                     String locationURI = SCIMCommonUtils.getSCIMUserURL(userId);
                     User user = new User();
@@ -3873,6 +3900,11 @@ public class SCIMUserManager implements UserManager {
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         group = groupHandler.getGroupWithAttributes(group, groupName);
         return group;
+    }
+
+    private String getDomainQualifiedUsername(String username, org.wso2.carbon.user.core.common.User coreuser) {
+
+        return UserCoreUtil.addDomainToName(username, coreuser.getUserStoreDomain());
     }
 
     /**
@@ -5267,6 +5299,26 @@ public class SCIMUserManager implements UserManager {
         } else {
             attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, prependDomain(user
                     .getDomainQualifiedUsername()));
+        }
+    }
+
+    private boolean isUserContains(org.wso2.carbon.user.core.common.User coreUser, String user) throws
+            org.wso2.carbon.user.core.UserStoreException {
+
+        if (isLoginIdentifiersEnabled() &&
+                StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
+            String primaryLoginIdentifier = carbonUM.getUserClaimValue(coreUser.getUsername(),
+                    getPrimaryLoginIdentifierClaim(), null);
+            if (StringUtils.isBlank(primaryLoginIdentifier)) {
+                return user.equalsIgnoreCase(coreUser.getUsername().indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > 0
+                        ? coreUser.getUsername().split(UserCoreConstants.DOMAIN_SEPARATOR)[1] : coreUser.getUsername());
+            } else {
+                return user.equalsIgnoreCase(primaryLoginIdentifier.indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > 0
+                        ? primaryLoginIdentifier.split(UserCoreConstants.DOMAIN_SEPARATOR)[1] : primaryLoginIdentifier);
+            }
+        } else {
+            return user.equalsIgnoreCase(coreUser.getUsername().indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > 0
+                    ? coreUser.getUsername().split(UserCoreConstants.DOMAIN_SEPARATOR)[1] : coreUser.getUsername());
         }
     }
 }
