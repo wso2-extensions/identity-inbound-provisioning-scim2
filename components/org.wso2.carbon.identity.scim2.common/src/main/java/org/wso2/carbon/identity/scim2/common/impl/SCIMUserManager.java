@@ -117,11 +117,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
+        .isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilteringEnhancementsEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isNotifyUserstoreStatusEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForGroupNamesInGroupsResponse;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForUsernamesAndGroupNamesInResponse;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
+        .mandateDomainForUsernamesAndGroupNamesInResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
 
 public class SCIMUserManager implements UserManager {
@@ -1491,6 +1493,14 @@ public class SCIMUserManager implements UserManager {
             // Check for a user listing scenario. (For filtering this value will be set to NULL)
             if (conditionForListingUsers == null) {
 
+                if (isLoginIdentifiersEnabled() && SCIMConstants.UserSchemaConstants.USER_NAME_URI
+                        .equals(((ExpressionNode) node).getAttributeValue())) {
+                    try {
+                        ((ExpressionNode) node).setAttributeValue(getScimUriForPrimaryLoginIdentifier(node));
+                    } catch (org.wso2.carbon.user.core.UserStoreException e) {
+                        throw new CharonException("Error in retrieving scim to local mappings.", e);
+                    }
+                }
                 // Create filter condition for each domain for single attribute filter.
                 condition = createConditionForSingleAttributeFilter(userStoreDomainName, node);
             } else {
@@ -1860,6 +1870,17 @@ public class SCIMUserManager implements UserManager {
             String operation = ((ExpressionNode) node).getOperation();
             String attributeName = ((ExpressionNode) node).getAttributeValue();
             String attributeValue = ((ExpressionNode) node).getValue();
+
+            try {
+                /* If primary login identifier feature is enabled, the username uri should be replaced with
+                appropriate scim attribute of the primary login identifier claim. */
+                if (SCIMConstants.UserSchemaConstants.USER_NAME_URI.equals(attributeName) &&
+                        isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
+                    attributeName = getScimUriForPrimaryLoginIdentifier(node);
+                }
+            } catch (org.wso2.carbon.user.core.UserStoreException e) {
+                throw new CharonException("Error in retrieving scim to local mappings.", e);
+            }
 
             String conditionOperation;
             String conditionAttributeName;
@@ -3733,8 +3754,8 @@ public class SCIMUserManager implements UserManager {
     }
 
     private void setRolesOfUser(Map<String, Group> groupMetaAttributesCache, org.wso2.carbon.user.core.common.User user,
-                                User scimUser) throws org.wso2.carbon.user.core.UserStoreException, CharonException, IdentitySCIMException,
-            BadRequestException {
+                                User scimUser) throws org.wso2.carbon.user.core.UserStoreException, CharonException,
+            IdentitySCIMException, BadRequestException {
 
         List<String> rolesOfUser = carbonUM.getHybridRoleListOfUser(user.getUsername(), user.getUserStoreDomain());
         checkForSCIMDisabledHybridRoles(rolesOfUser);
@@ -4574,7 +4595,8 @@ public class SCIMUserManager implements UserManager {
      * @param user                           {@link User} object.
      * @param oldClaimList                   User claim list for the user's existing state.
      * @param newClaimList                   User claim list for the user's new state.
-     * @param allSimpleMultiValuedClaimsList User claim list which maps to simple multi-valued attributes in SCIM schema.
+     * @param allSimpleMultiValuedClaimsList User claim list which maps to simple multi-valued attributes in SCIM
+     *                                       schema.
      * @throws UserStoreException Error while accessing the user store.
      * @throws CharonException    {@link CharonException}.
      */
@@ -4864,7 +4886,8 @@ public class SCIMUserManager implements UserManager {
 
         if (SCIMCommonUtils.isEnterpriseUserExtensionEnabled()) {
             Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
-                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT, tenantDomain);
+                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT,
+                            tenantDomain);
 
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredEnterpriseUserSchemaAttributes(scimClaimToLocalClaimMap);
@@ -5127,6 +5150,7 @@ public class SCIMUserManager implements UserManager {
 
         return buildHierarchicalAttributeMap(filteredFlatAttributeMap, false);
     }
+
     /**
      * Builds complex attribute schema with correct sub attributes using the flat attribute map.
      *
@@ -5307,6 +5331,29 @@ public class SCIMUserManager implements UserManager {
             primaryIdentifierClaim = IdentityUtil.getProperty(SCIMCommonConstants.PRIMARY_LOGIN_IDENTIFIER_CLAIM);
         }
         return primaryIdentifierClaim;
+    }
+
+    /**
+     * Method to retrieve the SCIM URI related to the primary login identifier claim.
+     *
+     * @param node  Expression node containing the filtering the condition.
+     * @return SCIM URI for the login identifier.
+     * @throws org.wso2.carbon.user.core.UserStoreException if the SCIM URI cannot be retrieves.
+     */
+    private String getScimUriForPrimaryLoginIdentifier(Node node)
+            throws org.wso2.carbon.user.core.UserStoreException {
+
+        String scimClaimUri = ((ExpressionNode) node).getAttributeValue();
+        Map<String, String> scimToLocalClaimMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
+        String primaryLoginIdentifierClaim = getPrimaryLoginIdentifierClaim();
+        if (MapUtils.isNotEmpty(scimToLocalClaimMappings) && StringUtils.isNotBlank(primaryLoginIdentifierClaim)) {
+            for (Map.Entry entry : scimToLocalClaimMappings.entrySet()) {
+                if (primaryLoginIdentifierClaim.equals(entry.getValue())) {
+                    scimClaimUri = (String) entry.getKey();
+                }
+            }
+        }
+        return scimClaimUri;
     }
 
     private void setUserNameWithDomain(Map<String, String> userClaimValues, Map<String, String> attributes,

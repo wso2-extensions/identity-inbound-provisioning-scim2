@@ -55,6 +55,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
+import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.attributes.Attribute;
@@ -68,7 +69,11 @@ import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMAttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.schema.SCIMDefinitions;
+import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
+import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
+import org.wso2.charon3.core.utils.codeutils.FilterTreeManager;
+import org.wso2.charon3.core.utils.codeutils.Node;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,12 +83,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyMap;
-import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anySet;
+import static org.mockito.Matchers.anyMap;
+
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -453,6 +459,131 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 // If no users are present in user-stores, result should contain a single entry for metadata.
                 {Collections.EMPTY_LIST, true, true, 1}
         };
+    }
+
+    @Test(dataProvider = "userInfoForFiltering")
+    public void testFilteringUsersWithGET(List<org.wso2.carbon.user.core.common.User> users, String filter,
+                                          int expectedResultCount, List<org.wso2.carbon.user.core.common.User>
+                                                  filteredUsers) throws Exception {
+
+        Map<String, String> scimToLocalClaimMap = new HashMap<>();
+        scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName",
+                "http://wso2.org/claims/username");
+        scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:id", "http://wso2.org/claims/userid");
+        scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:User:emails",
+                "http://wso2.org/claims/emailaddress");
+        scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:User:name.givenName",
+                "http://wso2.org/claims/givenname");
+
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimMap);
+        when(SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap())).thenReturn(new HashMap<String, String>() {{
+            put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c");
+        }});
+
+        mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
+
+        when(mockedUserStoreManager.getUserListWithID("http://wso2.org/claims/userid", "*", null)).thenReturn(users);
+        when(mockedUserStoreManager.getUserListWithID("http://wso2.org/claims/givenname", "testUser", "default"))
+                .thenReturn(filteredUsers);
+        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
+                anyInt(), anyString(), anyString())).thenReturn(filteredUsers);
+        when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
+        whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
+        when(mockedGroupDAO.listSCIMGroups(anyInt())).thenReturn(anySet());
+        when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
+
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
+        when(mockedRealmConfig.getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_USER_LIST))
+                .thenReturn("100");
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockedRealmConfig);
+
+        ClaimMapping[] claimMappings = getTestClaimMappings();
+        when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(claimMappings);
+
+        HashMap<String, Boolean> requiredClaimsMap = new HashMap<>();
+        requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+
+        Node node = null;
+        if (StringUtils.isNotBlank(filter)) {
+            SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+            FilterTreeManager filterTreeManager = new FilterTreeManager(filter, schema);
+            node = filterTreeManager.buildTree();
+        }
+
+        List<Object> result = scimUserManager.listUsersWithGET(node, 1, null, null, null, null,
+                requiredClaimsMap);
+        assertEquals(expectedResultCount, result.size());
+    }
+
+    @DataProvider(name = "userInfoForFiltering")
+    public Object[][] userInfoForFiltering() {
+
+        List<org.wso2.carbon.user.core.common.User> users = new ArrayList<org.wso2.carbon.user.core.common.User>();
+
+        org.wso2.carbon.user.core.common.User testUser1 = new org.wso2.carbon.user.core.common.User(UUID.randomUUID()
+                .toString(), "testUser1", "testUser1");
+        Map<String, String> testUser1Attributes = new HashMap<>();
+        testUser1Attributes.put("http://wso2.org/claims/givenname", "testUser");
+        testUser1Attributes.put("http://wso2.org/claims/emailaddress", "testUser1@wso2.com");
+        testUser1.setAttributes(testUser1Attributes);
+        users.add(testUser1);
+
+        org.wso2.carbon.user.core.common.User testUser2 = new org.wso2.carbon.user.core.common.User(UUID.randomUUID()
+                .toString(), "testUser2", "testUser2");
+        Map<String, String> testUser2Attributes = new HashMap<>();
+        testUser2Attributes.put("http://wso2.org/claims/givenname", "testUser");
+        testUser2Attributes.put("http://wso2.org/claims/emailaddress", "testUser2@wso2.com");
+        testUser2.setAttributes(testUser2Attributes);
+        users.add(testUser2);
+
+        return new Object[][]{
+
+                {users, "name.givenName eq testUser", 3,
+                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser1);
+                            add(testUser2);
+                        }}},
+                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", 2,
+                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser1);
+                        }}}
+        };
+    }
+
+    private ClaimMapping[] getTestClaimMappings() {
+
+        ClaimMapping[] claimMappings = new ClaimMapping[3];
+
+        Claim claim1 = new Claim();
+        claim1.setClaimUri("urn:ietf:params:scim:schemas:core:2.0:User:userName");
+        ClaimMapping claimMapping1 = new ClaimMapping();
+        claimMapping1.setClaim(claim1);
+        claimMapping1.setMappedAttribute("PRIMARY", "http://wso2.org/claims/username");
+        claimMappings[0] = claimMapping1;
+
+        Claim claim2 = new Claim();
+        claim2.setClaimUri("urn:ietf:params:scim:schemas:core:2.0:User:emails");
+        ClaimMapping claimMapping2 = new ClaimMapping();
+        claimMapping2.setClaim(claim2);
+        claimMapping2.setMappedAttribute("PRIMARY", "http://wso2.org/claims/emailaddress");
+        claimMappings[1] = claimMapping2;
+
+        Claim claim3 = new Claim();
+        claim3.setClaimUri("urn:ietf:params:scim:schemas:core:2.0:User:name.givenName");
+        ClaimMapping claimMapping3 = new ClaimMapping();
+        claimMapping3.setClaim(claim3);
+        claimMapping3.setMappedAttribute("PRIMARY", "http://wso2.org/claims/givenname");
+        claimMappings[2] = claimMapping3;
+
+        return claimMappings;
     }
 
     @Test(dataProvider = "getSearchAttribute")
