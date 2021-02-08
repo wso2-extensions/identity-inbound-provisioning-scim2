@@ -301,19 +301,25 @@ public class AttributeMapper {
                 }
                 attributeNames = tempAttributeNames.toArray(attributeNames);
             }
+            try {
+                if (attributeNames.length == 1) {
 
-            if (attributeNames.length == 1) {
+                    constructSCIMObjectFromAttributesOfLevelOne(attributeEntry, scimObject, attributeNames,
+                            scimObjectType);
 
-                constructSCIMObjectFromAttributesOfLevelOne(attributeEntry, scimObject, attributeNames, scimObjectType);
+                } else if (attributeNames.length == 2) {
 
-            } else if (attributeNames.length == 2) {
+                    constructSCIMObjectFromAttributesOfLevelTwo(attributeEntry, scimObject, attributeNames,
+                            scimObjectType);
 
-                constructSCIMObjectFromAttributesOfLevelTwo(attributeEntry, scimObject, attributeNames, scimObjectType);
+                } else if (attributeNames.length == 3) {
 
-            } else if (attributeNames.length == 3) {
-
-                constructSCIMObjectFromAttributesOfLevelThree(attributeEntry, scimObject,
-                        attributeNames, scimObjectType);
+                    constructSCIMObjectFromAttributesOfLevelThree(attributeEntry, scimObject,
+                            attributeNames, scimObjectType);
+                }
+            } catch (CharonException e) {
+                log.error(e);
+                continue;
             }
         }
         return scimObject;
