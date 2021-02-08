@@ -319,7 +319,6 @@ public class AttributeMapper {
                 }
             } catch (CharonException e) {
                 log.error(e);
-                continue;
             }
         }
         return scimObject;
