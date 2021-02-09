@@ -174,26 +174,31 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, claimURI)) {
             String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-            String dateOfBirthRegex = null;
-            try {
-                List<LocalClaim> localClaims =
-                        SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
-                for (LocalClaim localClaim : localClaims) {
-                    if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, localClaim.getClaimURI())) {
-                        dateOfBirthRegex = localClaim.getClaimProperties().get(PROP_REG_EX);
-                    }
-                }
-            } catch (ClaimMetadataException e) {
-                log.error("Error while retrieving local claim meta data.");
-            }
+            String dateOfBirthRegex = getDateOfBirthRegex(tenantDomain);
             if (StringUtils.isEmpty(dateOfBirthRegex)) {
                 dateOfBirthRegex = DATE_OF_BIRTH_REGEX;
             }
-
             if (StringUtils.isNotEmpty(claimValue) && !claimValue.matches(dateOfBirthRegex)) {
                 throw new UserStoreException("Date of Birth doesn't match with the regex: " + dateOfBirthRegex);
             }
         }
+    }
+
+    private String getDateOfBirthRegex(String tenantDomain) {
+
+        String dateOfBirthRegex = null;
+        try {
+            List<LocalClaim> localClaims =
+                    SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
+            for (LocalClaim localClaim : localClaims) {
+                if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, localClaim.getClaimURI())) {
+                    dateOfBirthRegex = localClaim.getClaimProperties().get(PROP_REG_EX);
+                }
+            }
+        } catch (ClaimMetadataException e) {
+            log.error("Error while retrieving local claim meta data.");
+        }
+        return dateOfBirthRegex;
     }
 
     @Override
@@ -223,18 +228,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         if (claims.containsKey(DATE_OF_BIRTH_LOCAL_CLAIM)) {
             String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-            String dateOfBirthRegex = null;
-            try {
-                List<LocalClaim> localClaims =
-                        SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
-                for (LocalClaim localClaim : localClaims) {
-                    if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, localClaim.getClaimURI())) {
-                        dateOfBirthRegex = localClaim.getClaimProperties().get(PROP_REG_EX);
-                    }
-                }
-            } catch (ClaimMetadataException e) {
-                log.error("Error while retrieving local claim meta data.");
-            }
+            String dateOfBirthRegex = getDateOfBirthRegex(tenantDomain);
             if (StringUtils.isEmpty(dateOfBirthRegex)) {
                 dateOfBirthRegex = DATE_OF_BIRTH_REGEX;
             }
