@@ -100,5 +100,10 @@ public class SCIMCommonConstants {
     public static final String ENABLE_LOGIN_IDENTIFIERS = "LoginIdentifiers.Enable";
     public static final String PRIMARY_LOGIN_IDENTIFIER_CLAIM = "LoginIdentifiers.PrimaryLoginIdentifier";
     public static final boolean DEFAULT_ENABLE_LOGIN_IDENTIFIERS = false;
+
+    // Date of Birth related constants.
+    public static final String DATE_OF_BIRTH_LOCAL_CLAIM = "http://wso2.org/claims/dob";
+    public static final String DATE_OF_BIRTH_REGEX = "^\\d{4}-\\d{2}-\\d{2}$";
+    public static final String TIME_SUFFIX = "T00:00:00Z";
 }
 

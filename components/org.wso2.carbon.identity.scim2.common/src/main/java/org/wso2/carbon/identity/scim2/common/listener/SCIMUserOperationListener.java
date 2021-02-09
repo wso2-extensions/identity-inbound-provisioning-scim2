@@ -45,6 +45,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.TIME_SUFFIX;
+
 /**
  * This is to perform SCIM related operation on User Operations.
  * For eg: when a user is created through UserAdmin API, we need to set some SCIM specific properties
@@ -165,6 +169,12 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
         String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
         claims.put(modifiedLocalClaimUri, lastModifiedDate);
+
+        // Change dateOfBirth value to datetime format if dob is in yyyy-mm-dd format.
+        if (claims.containsKey(DATE_OF_BIRTH_LOCAL_CLAIM) &&
+                claims.get(DATE_OF_BIRTH_LOCAL_CLAIM).matches(DATE_OF_BIRTH_REGEX)) {
+            claims.put(DATE_OF_BIRTH_LOCAL_CLAIM, claims.get(DATE_OF_BIRTH_LOCAL_CLAIM) + TIME_SUFFIX);
+        }
         return true;
     }
 
