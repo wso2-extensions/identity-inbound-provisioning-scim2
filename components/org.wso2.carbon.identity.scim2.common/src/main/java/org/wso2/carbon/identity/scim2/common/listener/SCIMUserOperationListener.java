@@ -21,12 +21,16 @@ package org.wso2.carbon.identity.scim2.common.listener;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.governance.model.UserIdentityClaim;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -41,13 +45,14 @@ import org.wso2.charon3.core.utils.AttributeUtil;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.TIME_SUFFIX;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 
 /**
  * This is to perform SCIM related operation on User Operations.
@@ -76,6 +81,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
+            // Validate dob value against the regex.
+            validateDateOfBirthClaimValue(claims, userStoreManager);
             this.populateSCIMAttributes(userID, claims);
             return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -170,12 +177,36 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
         claims.put(modifiedLocalClaimUri, lastModifiedDate);
 
-        // Change dateOfBirth value to datetime format if dob is in yyyy-mm-dd format.
-        if (claims.containsKey(DATE_OF_BIRTH_LOCAL_CLAIM) &&
-                claims.get(DATE_OF_BIRTH_LOCAL_CLAIM).matches(DATE_OF_BIRTH_REGEX)) {
-            claims.put(DATE_OF_BIRTH_LOCAL_CLAIM, claims.get(DATE_OF_BIRTH_LOCAL_CLAIM) + TIME_SUFFIX);
-        }
+        // Validate dob value against the regex.
+        validateDateOfBirthClaimValue(claims, userStoreManager);
         return true;
+    }
+
+    private void validateDateOfBirthClaimValue(Map<String, String> claims, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        String dateOfBirthRegex = null;
+        try {
+            List<LocalClaim> localClaims =
+                    SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
+            for (LocalClaim localClaim : localClaims) {
+                if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, localClaim.getClaimURI())) {
+                    dateOfBirthRegex = localClaim.getClaimProperties().get(PROP_REG_EX);
+                }
+            }
+        } catch (ClaimMetadataException e) {
+            log.error("Error while retrieving local claim meta data.");
+        }
+        if (StringUtils.isEmpty(dateOfBirthRegex)) {
+            dateOfBirthRegex = DATE_OF_BIRTH_REGEX;
+        }
+        if (claims.containsKey(DATE_OF_BIRTH_LOCAL_CLAIM)) {
+            if (StringUtils.isNotEmpty(claims.get(DATE_OF_BIRTH_LOCAL_CLAIM)) &&
+                    !claims.get(DATE_OF_BIRTH_LOCAL_CLAIM).matches(dateOfBirthRegex)) {
+                throw new UserStoreException("Date of Birth doesn't match with the regex: " + dateOfBirthRegex);
+            }
+        }
     }
 
     @Override
