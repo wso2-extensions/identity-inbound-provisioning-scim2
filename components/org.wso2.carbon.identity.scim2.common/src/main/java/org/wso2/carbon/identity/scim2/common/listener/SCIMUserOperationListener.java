@@ -185,23 +185,24 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     private void validateDateOfBirthClaimValue(Map<String, String> claims, UserStoreManager userStoreManager)
             throws UserStoreException {
 
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-        String dateOfBirthRegex = null;
-        try {
-            List<LocalClaim> localClaims =
-                    SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
-            for (LocalClaim localClaim : localClaims) {
-                if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, localClaim.getClaimURI())) {
-                    dateOfBirthRegex = localClaim.getClaimProperties().get(PROP_REG_EX);
-                }
-            }
-        } catch (ClaimMetadataException e) {
-            log.error("Error while retrieving local claim meta data.");
-        }
-        if (StringUtils.isEmpty(dateOfBirthRegex)) {
-            dateOfBirthRegex = DATE_OF_BIRTH_REGEX;
-        }
         if (claims.containsKey(DATE_OF_BIRTH_LOCAL_CLAIM)) {
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+            String dateOfBirthRegex = null;
+            try {
+                List<LocalClaim> localClaims =
+                        SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
+                for (LocalClaim localClaim : localClaims) {
+                    if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, localClaim.getClaimURI())) {
+                        dateOfBirthRegex = localClaim.getClaimProperties().get(PROP_REG_EX);
+                    }
+                }
+            } catch (ClaimMetadataException e) {
+                log.error("Error while retrieving local claim meta data.");
+            }
+            if (StringUtils.isEmpty(dateOfBirthRegex)) {
+                dateOfBirthRegex = DATE_OF_BIRTH_REGEX;
+            }
+
             if (StringUtils.isNotEmpty(claims.get(DATE_OF_BIRTH_LOCAL_CLAIM)) &&
                     !claims.get(DATE_OF_BIRTH_LOCAL_CLAIM).matches(dateOfBirthRegex)) {
                 throw new UserStoreException("Date of Birth doesn't match with the regex: " + dateOfBirthRegex);
