@@ -209,7 +209,6 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
         ResultSet resultSet = mock(ResultSet.class);
         mockStatic(IdentityDatabaseUtil.class);
         mockStatic(IdentityTenantUtil.class);
-        mockStatic(StringUtils.class);
         mockStatic(SCIMCommonUtils.class);
 
         Date today = Calendar.getInstance().getTime();
@@ -228,7 +227,6 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
         when(mockedGroupDAO.isExistingGroup("EXISTING_GROUP_NAME", 1)).thenReturn(true);
         whenNew(GroupDAO.class).withNoArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
-        when(StringUtils.isNotEmpty(resultSet.getString(anyInt()))).thenReturn(true);
         when(IdentityTenantUtil.getTenantDomain(1)).thenReturn("TENANT_DOMAIN");
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/t/TENANT_DOMAIN/Groups");
         assertEquals(new SCIMGroupHandler(1).getGroupWithAttributes(group, "EXISTING_GROUP_NAME"), group);
