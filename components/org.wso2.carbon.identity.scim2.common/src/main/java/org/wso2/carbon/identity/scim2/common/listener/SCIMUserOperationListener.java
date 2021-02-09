@@ -161,6 +161,42 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     @Override
+    public boolean doPreSetUserClaimValueWithID(String userID, String claimURI, String claimValue, String profileName,
+                                                UserStoreManager userStoreManager) throws UserStoreException {
+
+        // Validate dob value against the regex.
+        validateDateOfBirthClaimValue(claimURI, claimValue, userStoreManager);
+        return true;
+    }
+
+    private void validateDateOfBirthClaimValue(String claimURI, String claimValue, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, claimURI)) {
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+            String dateOfBirthRegex = null;
+            try {
+                List<LocalClaim> localClaims =
+                        SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
+                for (LocalClaim localClaim : localClaims) {
+                    if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, localClaim.getClaimURI())) {
+                        dateOfBirthRegex = localClaim.getClaimProperties().get(PROP_REG_EX);
+                    }
+                }
+            } catch (ClaimMetadataException e) {
+                log.error("Error while retrieving local claim meta data.");
+            }
+            if (StringUtils.isEmpty(dateOfBirthRegex)) {
+                dateOfBirthRegex = DATE_OF_BIRTH_REGEX;
+            }
+
+            if (StringUtils.isNotEmpty(claimValue) && !claimValue.matches(dateOfBirthRegex)) {
+                throw new UserStoreException("Date of Birth doesn't match with the regex: " + dateOfBirthRegex);
+            }
+        }
+    }
+
+    @Override
     public boolean doPreSetUserClaimValuesWithID(String userID, Map<String, String> claims, String profileName,
                                                  UserStoreManager userStoreManager) throws UserStoreException {
         try {
