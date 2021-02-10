@@ -2193,8 +2193,12 @@ public class SCIMUserManager implements UserManager {
     @Override
     public void deleteMe(String userName) throws NotFoundException, CharonException, NotImplementedException {
 
-        String error = "Self delete is not supported";
-        throw new NotImplementedException(error);
+        try {
+            String userId = carbonUM.getUserIDFromUserName(userName);
+            deleteUser(userId);
+        } catch (UserStoreException e) {
+            throw new CharonException("Error occurred while getting id for user : " + userName, e);
+        }
     }
 
     @Override
