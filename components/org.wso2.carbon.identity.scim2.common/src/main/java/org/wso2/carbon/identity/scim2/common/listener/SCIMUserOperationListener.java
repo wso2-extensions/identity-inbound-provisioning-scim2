@@ -204,7 +204,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 }
             }
         } catch (ClaimMetadataException e) {
-            log.error("Error while retrieving local claim meta data.");
+            log.error("Error while retrieving local claim meta data.", e);
         }
         return DateOfBirthClaimProperties;
     }
