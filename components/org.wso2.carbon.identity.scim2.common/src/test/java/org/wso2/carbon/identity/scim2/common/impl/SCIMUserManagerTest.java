@@ -25,7 +25,6 @@ import org.powermock.api.support.membermodification.MemberModifier;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -40,6 +39,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
@@ -51,14 +51,13 @@ import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
-import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -92,6 +91,7 @@ import static org.mockito.Matchers.anyMap;
 
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
+import static org.powermock.api.mockito.PowerMockito.doThrow;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
@@ -152,7 +152,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Mock
     private ApplicationManagementService applicationManagementService;
-
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -796,11 +795,70 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         try {
             scimUserManager.updateUser(newUser, null);
         } catch (BadRequestException e) {
-            if (ResponseCodeConstants.MUTABILITY.equals(e.getScimType())) {
-                hasExpectedBehaviour = true;
-            }
+            assertEquals(ResponseCodeConstants.MUTABILITY, e.getScimType());
+            hasExpectedBehaviour = true;
         }
 
         assertTrue("UserName claim update is not properly handled.", hasExpectedBehaviour);
+    }
+
+    @Test
+    public void testUpdateUserWithIdentityEventExceptionNotIntercepted() throws Exception {
+        User user = new User();
+        user.setUserName("newUser");
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
+
+        mockStatic(ApplicationManagementService.class);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        String tenantDomain = "carbon.super";
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, tenantDomain));
+        doReturn(user).when(scimUserManager).getUser(anyString(), anyMap());
+        Throwable expectedException = new UserStoreException(new IdentityEventException("42", "response to everything"));
+        doThrow(expectedException).when(mockedUserStoreManager).isExistingUser(anyString());
+
+        boolean hasExpectedBehaviour = false;
+        try {
+            scimUserManager.updateUser(user, null);
+        } catch (CharonException e) {
+            assertEquals(expectedException, e.getCause());
+            hasExpectedBehaviour = true;
+        }
+
+        assertTrue("IdentityEventException is not properly handled.", hasExpectedBehaviour);
+    }
+
+    @Test
+    public void testUpdateUserWithIdentityEventExceptionIntercepted() throws Exception {
+        User user = new User();
+        user.setUserName("newUser");
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
+
+        mockStatic(ApplicationManagementService.class);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        String tenantDomain = "carbon.super";
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, tenantDomain));
+        doReturn(user).when(scimUserManager).getUser(anyString(), anyMap());
+        Throwable expectedException = new UserStoreException(new IdentityEventException("22001", "This is a special code"));
+        doThrow(expectedException).when(mockedUserStoreManager).isExistingUser(anyString());
+
+        boolean hasExpectedBehaviour = false;
+        try {
+            scimUserManager.updateUser(user, null);
+        } catch (BadRequestException e) {
+              assertEquals(ResponseCodeConstants.INVALID_VALUE, e.getScimType());
+              hasExpectedBehaviour = true;
+        }
+
+        assertTrue("IdentityEventException is not properly handled.", hasExpectedBehaviour);
     }
 }
