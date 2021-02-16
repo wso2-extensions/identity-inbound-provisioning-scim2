@@ -321,10 +321,26 @@ public class SCIMUserManager implements UserManager {
 
             // Set the schemas of the SCIM user.
             user.setSchemas();
+        } catch (UserStoreClientException e) {
+            String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
+                    e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable ex = ExceptionUtils.getRootCause(e);
+            if (ex instanceof UserStoreClientException) {
+                String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
+                        ex.getMessage());
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage, ex);
+                }
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
             handleErrorsOnUserNameAndPasswordPolicy(e);
-            String errMsg = "Error in adding the user: " + user.getUserName() + " to the user store.";
-            throw resolveError(e, errMsg);
         }
         return user;
     }
@@ -548,6 +564,7 @@ public class SCIMUserManager implements UserManager {
      * @param domainName         Name of the user store
      * @return User list with detailed attributes
      * @throws CharonException Error while listing users
+     * @throws BadRequestException
      */
     private List<Object> listUsers(Map<String, Boolean> requiredAttributes, int offset, Integer limit,
                                    String sortBy, String sortOrder, String domainName) throws CharonException,
@@ -657,6 +674,7 @@ public class SCIMUserManager implements UserManager {
      * @param domainName Name of the user store
      * @return Paginated usernames list
      * @throws CharonException Error while listing usernames
+     * @throws BadRequestException
      */
     private Set<org.wso2.carbon.user.core.common.User> listUsernames(int offset, int limit, String sortBy,
                                                                      String sortOrder, String domainName)
@@ -686,6 +704,7 @@ public class SCIMUserManager implements UserManager {
      * @param domainName Name of the user store
      * @return Usernames list
      * @throws CharonException Error while listing usernames
+     * @throws BadRequestException
      */
     private Set<org.wso2.carbon.user.core.common.User> listUsernamesUsingLegacyAPIs(String domainName)
             throws CharonException, BadRequestException {
@@ -724,7 +743,7 @@ public class SCIMUserManager implements UserManager {
                 }
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
-            throw resolveError(e, String.format("Error while listing usernames from domain: %s.", domainName));
+            throw new CharonException(String.format("Error while listing usernames from domain: %s.", domainName), e);
         }
     }
 
@@ -737,6 +756,7 @@ public class SCIMUserManager implements UserManager {
      * @param sortOrder Sorting order
      * @return Paginated usernames list
      * @throws CharonException Pagination not support
+     * @throws BadRequestException
      */
     private Set<org.wso2.carbon.user.core.common.User> listUsernamesAcrossAllDomains(int offset, int limit,
                                                                                      String sortBy, String sortOrder)
@@ -997,9 +1017,26 @@ public class SCIMUserManager implements UserManager {
                 log.debug("User: " + user.getUserName() + " updated through SCIM.");
             }
             return getUser(user.getId(), requiredAttributes);
+        } catch (UserStoreClientException e) {
+            String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
             String errMsg = "Error while updating attributes of user: " + user.getUserName();
             log.error(errMsg, e);
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable ex = ExceptionUtils.getRootCause(e);
+            if (ex instanceof UserStoreClientException) {
+                String errorMessage = String.format("Error while updating attributes of user. %s",
+                        ex.getMessage());
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage, ex);
+                }
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
             handleErrorsOnUserNameAndPasswordPolicy(e);
             if (isNotifyUserstoreStatusEnabled()) {
                 throw resolveError(e, errMsg + ". " + e.getMessage());
@@ -1209,6 +1246,7 @@ public class SCIMUserManager implements UserManager {
      * @param domainName         Domain that the filter should perform.
      * @return Detailed user list.
      * @throws CharonException Error filtering the users.
+     * @throws BadRequestException
      */
     private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
                                      String sortBy, String sortOrder, String domainName) throws CharonException,
@@ -1246,6 +1284,7 @@ public class SCIMUserManager implements UserManager {
      * @param domainName         Domain to run the filter
      * @return User list with detailed attributes
      * @throws CharonException Error while filtering
+     * @throws BadRequestException
      */
     private List<Object> filterUsersBySingleAttribute(ExpressionNode node, Map<String, Boolean> requiredAttributes,
                                                       int offset, int limit, String sortBy, String sortOrder,
@@ -1444,6 +1483,7 @@ public class SCIMUserManager implements UserManager {
      * @param domainName Domain to perform the search
      * @return User names of the filtered users
      * @throws CharonException Error while filtering
+     * @throws BadRequestException
      */
     private Set<org.wso2.carbon.user.core.common.User> filterUsers(Node node, int offset, int limit, String sortBy,
                                                                    String sortOrder, String domainName)
@@ -2537,6 +2577,7 @@ public class SCIMUserManager implements UserManager {
      * @param requiredAttributes Required attributes
      * @return
      * @throws CharonException
+     * @throws BadRequestException
      */
     private List<Object> listGroups(int startIndex, Integer count, String sortBy, String sortOrder, String domainName,
                                     Map<String, Boolean> requiredAttributes) throws CharonException,
