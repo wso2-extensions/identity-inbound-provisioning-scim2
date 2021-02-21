@@ -18,11 +18,8 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
-import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
@@ -36,20 +33,11 @@ import javax.ws.rs.core.Response;
 
 @Path("/")
 public class SchemaResource extends AbstractResource {
-    private static Log logger = LogFactory.getLog(SchemaResource.class);
-
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSchemas() {
 
-        JSONEncoder encoder = null;
         try {
-
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
-
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
             // create charon-SCIM schemas endpoint and hand-over the request.
@@ -59,7 +47,7 @@ public class SchemaResource extends AbstractResource {
             return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            return handleCharonException(e,encoder);
+            return handleCharonException(e);
         }
     }
 }
