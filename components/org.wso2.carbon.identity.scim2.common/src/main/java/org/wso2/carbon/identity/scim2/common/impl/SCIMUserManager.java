@@ -281,7 +281,25 @@ public class SCIMUserManager implements UserManager {
 
             // Set the schemas of the SCIM user.
             user.setSchemas();
+        } catch (UserStoreClientException e) {
+            String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
+                    e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable ex = ExceptionUtils.getRootCause(e);
+            if (ex instanceof UserStoreClientException) {
+                String errorMessage = String.format("Error while updating attributes of user. %s",
+                        ex.getMessage());
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage, ex);
+                }
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
             handleErrorsOnUserNameAndPasswordPolicy(e);
             CharonException charonException;
             if (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
@@ -693,6 +711,7 @@ public class SCIMUserManager implements UserManager {
      * @param sortOrder Sorting order
      * @return Paginated usernames list
      * @throws CharonException Pagination not support
+     * @throws BadRequestException
      */
     private Set<org.wso2.carbon.user.core.common.User> listUsernamesAcrossAllDomains(int offset, int limit,
                                                                                      String sortBy, String sortOrder)
@@ -944,7 +963,23 @@ public class SCIMUserManager implements UserManager {
                 log.debug("User: " + user.getUserName() + " updated through SCIM.");
             }
             return getUser(user.getId(), requiredAttributes);
+        } catch (UserStoreClientException e) {
+            String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable ex = ExceptionUtils.getRootCause(e);
+            if (ex instanceof UserStoreClientException) {
+                String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage, e);
+                }
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
             String errMsg = "Error while updating attributes of user: " + user.getUserName();
             log.error(errMsg, e);
             handleErrorsOnUserNameAndPasswordPolicy(e);
@@ -1101,7 +1136,25 @@ public class SCIMUserManager implements UserManager {
                 log.debug("User: " + user.getUserName() + " updated through SCIM.");
             }
             return getUser(user.getId(), requiredAttributes);
+        } catch (UserStoreClientException e) {
+            String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
+                    e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable ex = ExceptionUtils.getRootCause(e);
+            if (ex instanceof UserStoreClientException) {
+                String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
+                        ex.getMessage());
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage, ex);
+                }
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw new CharonException("Error while updating attributes of user: " + user.getUserName(), e);
         } catch (BadRequestException e) {
@@ -1567,8 +1620,8 @@ public class SCIMUserManager implements UserManager {
             // Therefore checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
             if (ex instanceof UserStoreClientException) {
-                String errorMessage = String.format("Error in obtaining role names from user store. %s",
-                        ex.getMessage());
+                String errorMessage = String.format("Error while retrieving users for the domain: %s with limit: %d " +
+                        "and offset: %d. %s", domainName, limit, offset, ex.getMessage());
                 if (log.isDebugEnabled()) {
                     log.debug(errorMessage, ex);
                 }
