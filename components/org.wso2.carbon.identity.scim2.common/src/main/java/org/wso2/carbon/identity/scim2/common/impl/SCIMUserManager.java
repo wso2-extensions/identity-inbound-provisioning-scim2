@@ -2514,9 +2514,9 @@ public class SCIMUserManager implements UserManager {
 
         SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         if (StringUtils.isEmpty(domainName)) {
-            Set<String> roleNames = groupHandler.listSCIMRoles();
-            Set<String> hybridRoles = new HashSet<>(Arrays.asList(carbonUM.getHybridRoles()));
-            List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(hybridRoles, roleNames);
+            Set<String> roleNames = new HashSet<>(Arrays.asList(carbonUM.getRoleNames()));
+            Set<String> scimRoles = groupHandler.listSCIMRoles();
+            List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(roleNames, scimRoles);
             if (!scimDisabledHybridRoles.isEmpty()) {
                 createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
                 roleNames.addAll(scimDisabledHybridRoles);
@@ -2559,9 +2559,8 @@ public class SCIMUserManager implements UserManager {
     private Set<String> getGroupNamesForGroupsEndpoint(String domainName)
             throws UserStoreException, IdentitySCIMException {
 
-        SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         if (StringUtils.isEmpty(domainName)) {
-            Set<String> groupsList = groupHandler.listSCIMRoles();
+            Set<String> groupsList = new HashSet<>(Arrays.asList(carbonUM.getRoleNames()));
             // Remove roles.
             groupsList.removeIf(SCIMCommonUtils::isHybridRole);
             return groupsList;
