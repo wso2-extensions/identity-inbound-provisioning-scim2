@@ -3517,7 +3517,13 @@ public class SCIMUserManager implements UserManager {
             }
 
             // Skip simple type addresses claim because it is complex with sub types in the schema.
-            attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
+            filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ADDRESSES_URI));
+
+            // Skip groups and roles claims because they are handled separately.
+            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ROLES_URI, SCIMConstants.
+                        UserSchemaConstants.GROUP_URI));
+            }
 
             //If primary login identifire is enabled, set the username value of scim response to that value.
             if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
@@ -3684,7 +3690,12 @@ public class SCIMUserManager implements UserManager {
                     }
                     //skip simple type addresses claim because it is complex with sub types in the schema
                     if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
-                        attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
+                        filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ADDRESSES_URI));
+                    }
+
+                    if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                        filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ROLES_URI,
+                                SCIMConstants.UserSchemaConstants.GROUP_URI));
                     }
 
                     // Location URI is not available for users who created from the mgt console also location URI is not
@@ -5437,5 +5448,15 @@ public class SCIMUserManager implements UserManager {
             }
             return user.equalsIgnoreCase(username);
         }
+    }
+
+    private void filterAttributes(Map<String, String> attributes, List<String> claimsToRemove) {
+
+        attributes.entrySet().removeIf(attribute -> isAClaimToBeRemoved(attribute.getKey(), claimsToRemove));
+    }
+
+    private boolean isAClaimToBeRemoved(String claim, List<String> claimsToRemove) {
+
+        return claimsToRemove.stream().anyMatch(claim::startsWith);
     }
 }
