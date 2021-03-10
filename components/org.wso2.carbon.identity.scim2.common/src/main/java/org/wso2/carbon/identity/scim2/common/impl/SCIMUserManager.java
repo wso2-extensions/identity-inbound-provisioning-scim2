@@ -1933,6 +1933,10 @@ public class SCIMUserManager implements UserManager {
                 conditionOperation = ExpressionOperation.EW.toString();
             } else if (SCIMCommonConstants.CO.equals(operation)) {
                 conditionOperation = ExpressionOperation.CO.toString();
+            } else if (SCIMCommonConstants.GE.equals(operation)) {
+                conditionOperation = ExpressionOperation.GE.toString();
+            } else if (SCIMCommonConstants.LE.equals(operation)) {
+                conditionOperation = ExpressionOperation.LE.toString();
             } else {
                 conditionOperation = operation;
             }
@@ -4185,7 +4189,9 @@ public class SCIMUserManager implements UserManager {
 
         return !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ) && !filterOperation
                 .equalsIgnoreCase(SCIMCommonConstants.CO) && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)
-                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW);
+                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)
+                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.GE)
+                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.LE);
     }
 
     private Set<org.wso2.carbon.user.core.common.User> getUserListOfRoles(List<String> roleNames)
