@@ -3528,7 +3528,7 @@ public class SCIMUserManager implements UserManager {
 
             List<String> groupsList = null;
             List<String> rolesList = null;
-            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+            if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
                 // Get user groups from attributes.
                 groupsList = getMultiValuedAttributeList(userStoreDomainName, attributes,
                         SCIMConstants.UserSchemaConstants.GROUP_URI);
@@ -3670,7 +3670,7 @@ public class SCIMUserManager implements UserManager {
                     .map(org.wso2.carbon.user.core.common.User::getUserID)
                     .collect(Collectors.toList()), claimURIList, null);
             if (isGroupsAttributeRequired(requiredAttributes)) {
-                if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
                     usersRoles = searchEntries.stream().map(userClaimSearchEntry -> {
                         String userID = userClaimSearchEntry.getUser().getUserID();
                         List<String> groupsList = getGroups(userClaimSearchEntry);
@@ -3727,7 +3727,7 @@ public class SCIMUserManager implements UserManager {
                         filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ADDRESSES_URI));
                     }
 
-                    if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                    if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
                         filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ROLES_URI,
                                 SCIMConstants.UserSchemaConstants.GROUP_URI));
                     }
@@ -3779,7 +3779,7 @@ public class SCIMUserManager implements UserManager {
                             }
                         }
 
-                        if (!carbonUM.isRoleAndGroupSeparationEnabled()) {
+                        if (!IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
                             checkForSCIMDisabledHybridRoles(groupsList);
                         }
 
@@ -3809,7 +3809,7 @@ public class SCIMUserManager implements UserManager {
                     }
 
                     // Set the roles attribute if the the role and group separation feature is enabled.
-                    if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                    if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
                         List<String> rolesList = getRoles(searchEntries, user);
                         setRolesOfUser(rolesList, groupMetaAttributesCache, user, scimUser);
                     }
