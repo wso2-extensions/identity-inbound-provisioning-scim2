@@ -3168,7 +3168,7 @@ public class SCIMUserManager implements UserManager {
         oldGroupName = SCIMCommonUtils.getGroupNameWithDomain(oldGroupName);
         newGroupName = SCIMCommonUtils.getGroupNameWithDomain(newGroupName);
 
-        if (!StringUtils.equalsIgnoreCase(oldGroupName, newGroupName)) {
+        if (!StringUtils.equals(oldGroupName, newGroupName)) {
             // Update group name in carbon UM.
             carbonUM.updateRoleName(oldGroupName, newGroupName);
         }
