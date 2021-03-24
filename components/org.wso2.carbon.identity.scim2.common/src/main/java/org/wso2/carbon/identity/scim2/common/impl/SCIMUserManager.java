@@ -3369,7 +3369,7 @@ public class SCIMUserManager implements UserManager {
 
     private boolean isGroupDisplayNameChanged(String oldGroupDisplayName, String newGroupDisplayName) {
 
-        return !oldGroupDisplayName.equalsIgnoreCase(newGroupDisplayName);
+        return !oldGroupDisplayName.equals(newGroupDisplayName);
     }
 
     private org.wso2.carbon.user.core.common.User getUserFromUsername(String username)
