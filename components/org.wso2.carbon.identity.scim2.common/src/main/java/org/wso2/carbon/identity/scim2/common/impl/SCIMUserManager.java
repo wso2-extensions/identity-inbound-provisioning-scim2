@@ -3544,11 +3544,11 @@ public class SCIMUserManager implements UserManager {
                                 user.getDomainQualifiedUsername());
                     }
 
-                    //construct the SCIM Object from the attributes
+                    // Construct the SCIM Object from the attributes
                     scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
 
                     if (isGroupsAttributeRequired(requiredAttributes)) {
-                        //get groups of user and add it as groups attribute
+                        // Get groups of user and add it as groups attribute
                         List<String> roleList = usersRoles.get(user.getUserID());
                         List<String> groupsList = new ArrayList<>();
                         if (isNotEmpty(roleList)) {
@@ -3567,7 +3567,7 @@ public class SCIMUserManager implements UserManager {
                             checkForSCIMDisabledHybridRoles(groupsList);
                         }
 
-                        //add groups of user
+                        // Add groups of user
                         for (String group : groupsList) {
                             if (UserCoreUtil.isEveryoneRole(group, carbonUM.getRealmConfiguration())
                                     || CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(group)) {
@@ -3751,8 +3751,8 @@ public class SCIMUserManager implements UserManager {
         if (!excludeMembers) {
             List<org.wso2.carbon.user.core.common.User> coreUsers = carbonUM.getUserListOfRoleWithID(groupName);
 
-            //get the ids of the users and set them in the group with id + display name
-            if (coreUsers != null && coreUsers.size() != 0) {
+            // Get the ids of the users and set them in the group with id + display name
+            if (CollectionUtils.isNotEmpty(coreUsers)) {
                 for (org.wso2.carbon.user.core.common.User coreUser : coreUsers) {
                     String userId = coreUser.getUserID();
                     String userName = coreUser.getDomainQualifiedUsername();
