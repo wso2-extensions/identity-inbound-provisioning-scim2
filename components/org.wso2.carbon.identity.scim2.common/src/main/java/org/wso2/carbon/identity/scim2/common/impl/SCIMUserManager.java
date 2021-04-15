@@ -99,6 +99,7 @@ import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.time.Instant;
+import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -117,6 +118,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
         .isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilteringEnhancementsEnabled;
@@ -125,6 +127,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandat
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
         .mandateDomainForUsernamesAndGroupNamesInResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
+import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_ROLES_CLAIM;
 
 public class SCIMUserManager implements UserManager {
 
@@ -3523,10 +3526,25 @@ public class SCIMUserManager implements UserManager {
             // Skip simple type addresses claim because it is complex with sub types in the schema.
             filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ADDRESSES_URI));
 
-            // Skip groups and roles claims because they are handled separately.
-            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+            List<String> groupsList = null;
+            List<String> rolesList = null;
+            if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
+                // Get user groups from attributes.
+                groupsList = getMultiValuedAttributeList(userStoreDomainName, attributes,
+                        SCIMConstants.UserSchemaConstants.GROUP_URI);
+
+                // Get user roles from attributes.
+                rolesList = getMultiValuedAttributeList(userStoreDomainName, attributes,
+                        SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT);
+                checkForSCIMDisabledHybridRoles(rolesList);
+
+                // Skip groups and roles claims because they are handled separately.
                 filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ROLES_URI, SCIMConstants.
                         UserSchemaConstants.GROUP_URI));
+            } else {
+                // Set groups.
+                groupsList = new ArrayList<>(carbonUM.getRoleListOfUserWithID(coreUser.getUserID()));
+                checkForSCIMDisabledHybridRoles(groupsList);
             }
 
             //If primary login identifire is enabled, set the username value of scim response to that value.
@@ -3549,15 +3567,6 @@ public class SCIMUserManager implements UserManager {
             }
 
             Map<String, Group> groupMetaAttributesCache = new HashMap<>();
-            // Get groups of user and add it as groups attribute.
-            List<String> groupsList = new ArrayList<>(carbonUM.getRoleListOfUserWithID(coreUser.getUserID()));
-
-            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-                // Remove roles, if the role and group separation feature is enabled.
-                groupsList.removeIf(SCIMCommonUtils::isHybridRole);
-            } else {
-                checkForSCIMDisabledHybridRoles(groupsList);
-            }
 
             // Construct the SCIM Object from the attributes.
             scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
@@ -3607,7 +3616,7 @@ public class SCIMUserManager implements UserManager {
 
             // Set the roles attribute if the the role and group separation feature is enabled.
             if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-                setRolesOfUser(groupMetaAttributesCache, coreUser, scimUser);
+                setRolesOfUser(rolesList, groupMetaAttributesCache, coreUser, scimUser);
             }
 
         } catch (UserStoreException e) {
@@ -3620,6 +3629,19 @@ public class SCIMUserManager implements UserManager {
         }
 
         return scimUser;
+    }
+
+    private List<String> getMultiValuedAttributeList(String userStoreDomainName, Map<String, String> attributes,
+                                                     String claimURI) {
+
+        String multiValuedAttribute = attributes.get(claimURI);
+
+        List<String> multiValuedAttributeList = new ArrayList<>();
+        if (StringUtils.isNotBlank(multiValuedAttribute)) {
+            String multiValuedAttributeSeparator = getMultivaluedAttributeSeparator(userStoreDomainName);
+            multiValuedAttributeList = Arrays.asList(multiValuedAttribute.split(multiValuedAttributeSeparator));
+        }
+        return multiValuedAttributeList;
     }
 
     /**
@@ -3648,10 +3670,18 @@ public class SCIMUserManager implements UserManager {
                     .map(org.wso2.carbon.user.core.common.User::getUserID)
                     .collect(Collectors.toList()), claimURIList, null);
             if (isGroupsAttributeRequired(requiredAttributes)) {
-                usersRoles = carbonUM.getRoleListOfUsersWithID(users
-                        .stream()
-                        .map(org.wso2.carbon.user.core.common.User::getUserID)
-                        .collect(Collectors.toList()));
+                if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
+                    usersRoles = searchEntries.stream().map(userClaimSearchEntry -> {
+                        String userID = userClaimSearchEntry.getUser().getUserID();
+                        List<String> groupsList = getGroups(userClaimSearchEntry);
+                        return new AbstractMap.SimpleEntry<>(userID, groupsList);
+                    }).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
+                } else {
+                    usersRoles = carbonUM.getRoleListOfUsersWithID(users
+                            .stream()
+                            .map(org.wso2.carbon.user.core.common.User::getUserID)
+                            .collect(Collectors.toList()));
+                }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             String errorMsg = "Error occurred while retrieving SCIM user information";
@@ -3697,7 +3727,7 @@ public class SCIMUserManager implements UserManager {
                         filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ADDRESSES_URI));
                     }
 
-                    if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                    if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
                         filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ROLES_URI,
                                 SCIMConstants.UserSchemaConstants.GROUP_URI));
                     }
@@ -3749,10 +3779,7 @@ public class SCIMUserManager implements UserManager {
                             }
                         }
 
-                        if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-                            // Remove roles, if the role and group separation feature is enabled.
-                            groupsList.removeIf(SCIMCommonUtils::isHybridRole);
-                        } else {
+                        if (!IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
                             checkForSCIMDisabledHybridRoles(groupsList);
                         }
 
@@ -3782,8 +3809,9 @@ public class SCIMUserManager implements UserManager {
                     }
 
                     // Set the roles attribute if the the role and group separation feature is enabled.
-                    if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-                        setRolesOfUser(groupMetaAttributesCache, user, scimUser);
+                    if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
+                        List<String> rolesList = getRoles(searchEntries, user);
+                        setRolesOfUser(rolesList, groupMetaAttributesCache, user, scimUser);
                     }
 
                 } catch (UserStoreException e) {
@@ -3813,12 +3841,10 @@ public class SCIMUserManager implements UserManager {
         return scimUserSet;
     }
 
-    private void setRolesOfUser(Map<String, Group> groupMetaAttributesCache, org.wso2.carbon.user.core.common.User user,
+    private void setRolesOfUser(List<String> rolesOfUser, Map<String, Group> groupMetaAttributesCache,
+                                 org.wso2.carbon.user.core.common.User user,
                                 User scimUser) throws org.wso2.carbon.user.core.UserStoreException, CharonException,
             IdentitySCIMException, BadRequestException {
-
-        List<String> rolesOfUser = carbonUM.getHybridRoleListOfUser(user.getUsername(), user.getUserStoreDomain());
-        checkForSCIMDisabledHybridRoles(rolesOfUser);
 
         // Add roles of user.
         for (String roleName : rolesOfUser) {
@@ -5465,5 +5491,46 @@ public class SCIMUserManager implements UserManager {
     private boolean isAClaimToBeRemoved(String claim, List<String> claimsToRemove) {
 
         return claimsToRemove.stream().anyMatch(claim::startsWith);
+    }
+
+    private String getMultivaluedAttributeSeparator(String userStoreDomainName) {
+
+        String multiValuedAttributeSeparator = ",";
+        String claimSeparator = carbonUM.getSecondaryUserStoreManager(userStoreDomainName)
+                .getRealmConfiguration().getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
+        if (StringUtils.isNotBlank(claimSeparator)) {
+            multiValuedAttributeSeparator = claimSeparator;
+        }
+        return multiValuedAttributeSeparator;
+    }
+
+    private List<String> getGroups(UniqueIDUserClaimSearchEntry userClaimSearchEntry) {
+
+        String groups = userClaimSearchEntry.getClaims().get(UserCoreConstants.USER_STORE_GROUPS_CLAIM);
+        List<String> groupsList = new ArrayList<>();
+        if (StringUtils.isNotBlank(groups)) {
+            String multiValuedAttributeSeparator = getMultivaluedAttributeSeparator(userClaimSearchEntry.getUser()
+                    .getUserStoreDomain());
+            groupsList = Arrays.asList(groups.split(multiValuedAttributeSeparator));
+        }
+        return groupsList;
+    }
+
+    private List<String> getRoles(List<UniqueIDUserClaimSearchEntry> searchEntries,
+                                  org.wso2.carbon.user.core.common.User user) throws CharonException {
+
+        // Because user ID is a UUID there is only one match in the search entries, thus safe to use
+        // the `findAny` method with the advantage of a faster search time.
+        UniqueIDUserClaimSearchEntry searchEntry = searchEntries.stream().filter(
+                entry -> entry.getUser().getUserID().equals(user.getUserID())).findAny().get();
+        String roles = searchEntry.getClaims().get(INTERNAL_ROLES_CLAIM);
+        List<String> rolesList = new ArrayList<>();
+        if (StringUtils.isNotBlank(roles)) {
+            String multivaluedAttributeSeparator = getMultivaluedAttributeSeparator(
+                    user.getUserStoreDomain());
+            rolesList = Arrays.asList(roles.split(multivaluedAttributeSeparator));
+            checkForSCIMDisabledHybridRoles(rolesList);
+        }
+        return rolesList;
     }
 }
