@@ -3544,7 +3544,16 @@ public class SCIMUserManager implements UserManager {
             } else {
                 // Set groups.
                 groupsList = new ArrayList<>(carbonUM.getRoleListOfUserWithID(coreUser.getUserID()));
-                checkForSCIMDisabledHybridRoles(groupsList);
+                if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                    // Remove roles, if the role and group separation feature is enabled.
+                    groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+
+                    // Set roles.
+                    rolesList = carbonUM.getHybridRoleListOfUser(coreUser.getUsername(), coreUser.getUserStoreDomain());
+                    checkForSCIMDisabledHybridRoles(rolesList);
+                } else {
+                    checkForSCIMDisabledHybridRoles(groupsList);
+                }
             }
 
             //If primary login identifire is enabled, set the username value of scim response to that value.
@@ -3780,7 +3789,12 @@ public class SCIMUserManager implements UserManager {
                         }
 
                         if (!IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
-                            checkForSCIMDisabledHybridRoles(groupsList);
+                            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                                // Remove roles, if the role and group separation feature is enabled.
+                                groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+                            } else {
+                                checkForSCIMDisabledHybridRoles(groupsList);
+                            }
                         }
 
                         for (String group : groupsList) {
@@ -3811,6 +3825,11 @@ public class SCIMUserManager implements UserManager {
                     // Set the roles attribute if the the role and group separation feature is enabled.
                     if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
                         List<String> rolesList = getRoles(searchEntries, user);
+                        setRolesOfUser(rolesList, groupMetaAttributesCache, user, scimUser);
+                    } else if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                        List<String> rolesList = carbonUM.getHybridRoleListOfUser(user.getUsername(),
+                                user.getUserStoreDomain());
+                        checkForSCIMDisabledHybridRoles(rolesList);
                         setRolesOfUser(rolesList, groupMetaAttributesCache, user, scimUser);
                     }
 
