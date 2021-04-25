@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
@@ -63,12 +64,15 @@ public class SCIMRoleManager implements RoleManager {
     private static final Log log = LogFactory.getLog(SCIMRoleManager.class);
     private RoleManagementService roleManagementService;
     private String tenantDomain;
+    private Set<String> systemRoles;
     private static final String FILTERING_DELIMITER = "*";
 
     public SCIMRoleManager(RoleManagementService roleManagementService, String tenantDomain) {
 
         this.roleManagementService = roleManagementService;
         this.tenantDomain = tenantDomain;
+        // Get the read only system roles set.
+        this.systemRoles = roleManagementService.getSystemRoles();
     }
 
     @Override
@@ -120,6 +124,9 @@ public class SCIMRoleManager implements RoleManager {
             scimRole.setLocation(locationURI);
             scimRole.setPermissions(role.getPermissions());
             scimRole.setSchemas();
+            if (systemRoles.contains(role.getName())) {
+                scimRole.setSystemRole(true);
+            }
 
             if (CollectionUtils.isNotEmpty(role.getUsers())) {
                 for (UserBasicInfo userInfo : role.getUsers()) {
@@ -152,13 +159,15 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     @Override
-    public void deleteRole(String roleID) throws CharonException, NotFoundException {
+    public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
 
         try {
             roleManagementService.deleteRole(roleID, tenantDomain);
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
                 throw new NotFoundException(e.getMessage());
+            } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
+                throw new BadRequestException(e.getMessage());
             }
             throw new CharonException(String.format("Error occurred while deleting the role: %s", roleID), e);
         }
@@ -332,6 +341,9 @@ public class SCIMRoleManager implements RoleManager {
             scimRole.setDisplayName(roleBasicInfo.getName());
             scimRole.setId(roleBasicInfo.getId());
             scimRole.setLocation(SCIMCommonUtils.getSCIMRoleURL(roleBasicInfo.getId()));
+            if (systemRoles.contains(roleBasicInfo.getName())) {
+                scimRole.setSystemRole(true);
+            }
             scimRoles.add(scimRole);
         }
         return scimRoles;
@@ -355,7 +367,7 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     private void doUpdateRoleName(Role oldRole, Role newRole)
-            throws CharonException, ConflictException, NotFoundException {
+            throws CharonException, ConflictException, NotFoundException, BadRequestException {
 
         if (log.isDebugEnabled()) {
             log.debug(String.format("Updating name of role %s to %s.", oldRole.getDisplayName(),
@@ -375,6 +387,8 @@ public class SCIMRoleManager implements RoleManager {
                     throw new NotFoundException(e.getMessage());
                 } else if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
                     throw new ConflictException(e.getMessage());
+                } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
                         String.format("Error occurred while updating role name from: %s to %s", oldRoleDisplayName,
@@ -463,6 +477,8 @@ public class SCIMRoleManager implements RoleManager {
                 roleManagementService.setPermissionsForRole(oldRole.getId(), newRolePermissions, tenantDomain);
             } catch (IdentityRoleManagementException e) {
                 if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage());
+                } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
