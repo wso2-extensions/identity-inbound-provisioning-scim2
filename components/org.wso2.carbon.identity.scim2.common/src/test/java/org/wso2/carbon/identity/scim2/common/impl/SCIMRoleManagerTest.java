@@ -56,6 +56,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     private final List<String> invalidTenantDomainNames = Arrays.asList("invalidTenantDomain1", "invalidTenantDomain2");
     private final List<String> existingRoleNames = Arrays.asList("newRoleName1", "newRoleName2");
     private final List<String> nonExistingRoles = Arrays.asList("roleId1", "roleId2");
+    private final Set<String> systemRoles = new HashSet<>(Arrays.asList("roleDisplayName1", "roleDisplayName2"));
 
     @Mock
     RoleManagementService mockRoleManagementService;
@@ -63,11 +64,13 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     @BeforeClass
     public void setUpClass() {
         initMocks(this);
+
     }
     @BeforeMethod
     public void setUpMethod() {
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMRoleURL(anyString())).thenReturn("url");
+        when(mockRoleManagementService.getSystemRoles()).thenReturn(systemRoles);
     }
 
     @DataProvider(name="dpCreateRoleExistingRole")
@@ -396,7 +399,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     }
     @Test(dataProvider = "dpDeleteRoleNonExistingRoleId")
     public void testDeleteRoleNonExistingRoleId(String roleId, String tenantDomain, String expected)
-            throws IdentityRoleManagementException, CharonException {
+            throws IdentityRoleManagementException, CharonException, BadRequestException {
         doAnswer(invocationOnMock -> {
             String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
             String tenantDomainArg = invocationOnMock.getArgumentAt(1, String.class);
@@ -428,7 +431,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     }
     @Test(dataProvider = "dpDeleteRoleUnDeletableRole")
     public void testDeleteRoleUnDeletableRole(String roleId, String tenantDomain, String expected)
-            throws IdentityRoleManagementException, NotFoundException {
+            throws IdentityRoleManagementException, NotFoundException, CharonException {
         doAnswer(invocationOnMock -> {
             String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
             if(roleIdArg.equals("adminId")){
@@ -443,7 +446,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             roleManager.deleteRole(roleId);
             verify(mockRoleManagementService,times(1)).deleteRole(roleId, tenantDomain);
             result = "success";
-        }catch (CharonException e) {
+        }catch (BadRequestException e) {
             result = "fail";
         }
         assertEquals(expected, result);
@@ -460,7 +463,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     }
     @Test(dataProvider = "dpDeleteRoleUnExpectedError")
     public void testDeleteRoleUnExpectedError(String roleId, String tenantDomain, String sError,String expected)
-            throws IdentityRoleManagementException, NotFoundException {
+            throws IdentityRoleManagementException, NotFoundException, BadRequestException {
         doAnswer(invocationOnMock -> {
             String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
             String tenantDomainArg = invocationOnMock.getArgumentAt(1, String.class);
@@ -603,7 +606,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         List<Object> roles;
         try {
             roles = roleManager.listRolesWithGET(rootNode, startIndex, count, sortBy, sortOrder);
-            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleName1");
+            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleDisplayName1");
             assertEquals(((Role)roles.get(1)).getId(),"role1");
             result = "success";
         } catch (CharonException notImplementedException) {
@@ -662,7 +665,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         List<Object> roles;
         try {
             roles = roleManager.listRolesWithGET(rootNode, startIndex, count, sortBy, sortOrder);
-            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleName1");
+            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleDisplayName1");
             assertEquals(((Role)roles.get(1)).getId(),"role1");
             result = "success";
         } catch (CharonException charonException) {
@@ -711,7 +714,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         List<Object> roles;
         try {
             roles = roleManager.listRolesWithGET(rootNode, startIndex, count, sortBy, sortOrder);
-            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleName1");
+            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleDisplayName1");
             assertEquals(((Role)roles.get(1)).getId(),"role1");
             result = "success";
         } catch (CharonException charonException) {
@@ -806,71 +809,47 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpUpdateRoleNonExistingRoleId")
-    public Object[][] dpUpdateRoleNonExistingRoleId() {
+    @DataProvider(name = "dpUpdateRoleUpdateRoleName")
+    public Object[][] dpUpdateRoleUpdateRoleName() {
         return new Object[][]{
-                {"roleId2","oldRoleName1", "newRoleName1","carbon.super","fail"},
-                {"roleId3","oldRoleName1", "newRoleName1","carbon.super","success"}
+                {"roleId3","oldRoleName1", "newRoleName1","carbon.super",null,"conflict"},
+                {"roleId3","oldRoleName4", "newRoleName3","carbon.super",null,"success"},
+                {"roleId1","oldRoleName2", "newRoleName3","carbon.super",null,"notFound"},
+                {"roleId3","roleDisplayName1", "newRoleName3","carbon.super",null,"badRequest"},
+                {"roleId3","oldRoleName4", "newRoleName3","invalidTenantDomain1",null,"unExpectedError"},
+                {"roleId3","oldRoleName4", "newRoleName3","carbon.super","sql error","unExpectedError"}
         };
     }
-        @Test(dataProvider = "dpUpdateRoleNonExistingRoleId")
-    public void testUpdateRoleNonExistingRoleId(String roleId,String oldRoleName, String newRoleName,
-                                                String tenantDomain, String expect)
-                throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException {
-        RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
-        Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName);
-        //create users
-        when(mockRoleManagementService.updateRoleName(anyString(), anyString(), anyString())).
-                thenAnswer(invocationOnMock -> {
-                    String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
-                    if (nonExistingRoleIds.contains(roleIdArg)) {
-                        throw new IdentityRoleManagementClientException(ROLE_NOT_FOUND.getCode(),
-                                "Role id: " + roleIdArg + " does not exist in the system.");
-                    }
-                    return roleBasicInfo;
-                });
-            when(mockRoleManagementService.updateUserListOfRole(
-                    eq(roleId), anyListOf(String.class), anyListOf(String.class), anyString())).
-                    thenReturn(roleBasicInfo);
-            when(mockRoleManagementService.updateGroupListOfRole(eq(roleId), anyListOf(String.class),
-                    anyListOf(String.class), anyString())).
-                    thenReturn(roleBasicInfo);
-            when(mockRoleManagementService.setPermissionsForRole(eq(roleId), anyListOf(String.class), anyString())).
-                    thenReturn(roleBasicInfo);
-            SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
-
-            String result;
-            try {
-                scimRoleManager.updateRole(oldAndNewRoles[0], oldAndNewRoles[1]);
-                result = "success";
-            } catch (NotFoundException e) {
-            result = "fail";
-        }
-        assertEquals(expect, result);
-    }
-
-    @DataProvider(name = "dpUpdateRoleExistingNewRoleName")
-    public Object[][] dpUpdateRoleExistingNewRoleName() {
-        return new Object[][]{
-                {"roleId1","oldRoleName1", "newRoleName1","carbon.super","fail"},
-                {"roleId3","oldRoleName4", "newRoleName3","carbon.super","success"}
-        };
-    }
-    @Test(dataProvider = "dpUpdateRoleExistingNewRoleName")
-    public void testUpdateRoleExistingNewRoleName(String roleId,String oldRoleName,
-                                                  String newRoleName,String tenantDomain, String expect)
-            throws IdentityRoleManagementException, BadRequestException, CharonException, NotFoundException {
+    @Test(dataProvider = "dpUpdateRoleUpdateRoleName")
+    public void testUpdateRoleUpdateRoleName(String roleId,String oldRoleName,
+                                                  String newRoleName,String tenantDomain, String sError, String expect)
+            throws IdentityRoleManagementException, BadRequestException, CharonException {
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName);
         //create users
         when(mockRoleManagementService.updateRoleName(anyString(), anyString(), anyString())).
                 thenAnswer(invocationOnMock -> {
                     String newRoleNameArg = invocationOnMock.getArgumentAt(1, String.class);
+                    String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
+                    String tenantDomainArg = invocationOnMock.getArgumentAt(2, String.class);
                     if (existingRoleNames.contains(newRoleNameArg)) {
                         throw new IdentityRoleManagementClientException(ROLE_ALREADY_EXISTS.getCode(),
                                 "Role name: " + newRoleNameArg +
                                         " is already there in the system. Please pick another role name.");
                     }
+                    if (nonExistingRoleIds.contains(roleIdArg)) {
+                        throw new IdentityRoleManagementClientException(ROLE_NOT_FOUND.getCode(),
+                                "Role id: " + roleIdArg + " does not exist in the system.");
+                    }
+                    if(systemRoles.contains(oldRoleName)){
+                        throw new IdentityRoleManagementClientException(RoleConstants.Error.OPERATION_FORBIDDEN.
+                                getCode(),
+                                "Invalid operation. Role: " + oldRoleName +
+                                        " Cannot be renamed since it's a read only system role.");
+                    }
+                    unExpectedErrorThrower(tenantDomainArg, sError,
+                            "Error while updating users to the role: %s in the tenantDomain: %s",
+                            roleIdArg);
                     return roleBasicInfo;
                 });
         when(mockRoleManagementService.updateUserListOfRole(
@@ -889,7 +868,15 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             scimRoleManager.updateRole(oldAndNewRoles[0], oldAndNewRoles[1]);
             result = "success";
         }catch (ConflictException e){
-            result = "fail";
+            result = "conflict";
+        }
+        catch (NotFoundException e){
+            result = "notFound";
+        }catch (BadRequestException e){
+            result = "badRequest";
+        }
+        catch (CharonException e){
+            result = "unExpectedError";
         }
         assertEquals(expect, result);
     }
@@ -937,7 +924,6 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         String result;
         try {
-
             scimRoleManager.updateRole(oldAndNewRoles[0], oldAndNewRoles[1]);
             result = "success";
         }catch (BadRequestException e){
@@ -1006,6 +992,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     public Object[][] dpUpdateRoleUpdatePermissionListOfRole() {
         return new Object[][]{
                 {"roleId1","oldRoleName1", "newRoleName1","carbon.super","",null,"badRequest"},
+                {"roleId2","roleDisplayName1", "newRoleName1","carbon.super","",null,"badRequest"},
                 {"roleId2","oldRoleName4", "newRoleName3","invalidTenantDomain1","nullNew",null,"success"},
                 {"roleId2","oldRoleName4", "newRoleName3","invalidTenantDomain1","",null,"unexpectedError"},
                 {"roleId4","oldRoleName3", "newRoleName2","carbon.super","nullOld",null,"success"},
@@ -1034,6 +1021,11 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                                 "Invalid scenario. Multiple roles found for the given role name: " + roleIdArg
                                         + " and tenantDomain: " + tenantDomain;
                         throw new IdentityRoleManagementClientException(INVALID_REQUEST.getCode(), errorMessage);
+                    }
+                    if(systemRoles.contains(oldRoleName)) {
+                        throw new IdentityRoleManagementClientException(RoleConstants.Error.OPERATION_FORBIDDEN.
+                                getCode(), "Invalid operation. Permissions cannot be modified in the role: "
+                                + oldRoleName + " since it's a read only system role.");
                     }
                     unExpectedErrorThrower(tenantDomainArg, sError,
                             "Error while updating users to the role: %s in the tenantDomain: %s", roleIdArg);
@@ -1160,7 +1152,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         try {
             roles = roleManager.listRolesWithPost(getDummySearchRequest(rootNode, startIndex, count, sortBy,
                     sortOrder));
-            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleName1");
+            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleDisplayName1");
             assertEquals(((Role)roles.get(1)).getId(),"role1");
             result = "success";
         } catch (CharonException notImplementedException) {
@@ -1216,7 +1208,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         try {
             roles = roleManager.listRolesWithPost(getDummySearchRequest(rootNode, startIndex, count, sortBy,
                     sortOrder));
-            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleName1");
+            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleDisplayName1");
             assertEquals(((Role)roles.get(1)).getId(),"role1");
             result = "success";
         } catch (CharonException charonException) {
@@ -1266,7 +1258,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         try {
             roles = roleManager.listRolesWithPost(getDummySearchRequest(rootNode, startIndex, count, sortBy,
                     sortOrder));
-            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleName1");
+            assertEquals(((Role)roles.get(1)).getDisplayName(),"roleDisplayName1");
             assertEquals(((Role)roles.get(1)).getId(),"role1");
             result = "success";
         } catch (CharonException charonException) {
@@ -1489,8 +1481,9 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(scimRole.getLocation(), "url");
     }
     private List<RoleBasicInfo> getDummyRoleBasicInfoList() {
-        return Arrays.asList(new RoleBasicInfo("role1","roleName1"),
-                new RoleBasicInfo("role2", "roleName2"));
+        return Arrays.asList(new RoleBasicInfo("role1","roleDisplayName1"),
+                new RoleBasicInfo("role2", "roleDisplayName2"),
+                new RoleBasicInfo("role3", "roleDisplayName3"));
     }
     private Node generateNodeBasedOnNodeType(String nodeType, String attributes) {
         return generateNodeBasedOnNodeType(nodeType, attributes,SCIMCommonConstants.EQ);
