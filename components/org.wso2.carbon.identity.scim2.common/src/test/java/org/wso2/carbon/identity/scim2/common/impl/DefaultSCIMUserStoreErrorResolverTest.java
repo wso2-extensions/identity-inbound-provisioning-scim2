@@ -37,81 +37,25 @@ public class DefaultSCIMUserStoreErrorResolverTest extends PowerMockTestCase {
         assertEquals(defaultSCIMUserStoreErrorResolver.getOrder(), 0);
     }
 
-    @DataProvider(name = "dpResolveUserNotFound")
-    public Object[][] dpResolveUserNotFound() {
+    @DataProvider(name = "dataProviderForResolveUserNameMandatory")
+    public Object[][] dataProviderForResolveUserNameMandatory() {
 
         return new Object[][]{
-                {"error: 30007", "30007", HttpStatus.SC_NOT_FOUND},
+                {"error: 30007", "", HttpStatus.SC_NOT_FOUND, "", false},
+                {"error", "32102", HttpStatus.SC_BAD_REQUEST, "coreUserStoreException", false},
+                {"error", "32103", HttpStatus.SC_BAD_REQUEST, "coreUserStoreClientException", false},
+                {"error: 30008", "", HttpStatus.SC_NOT_FOUND, "", true},
+                {"error", "32103", HttpStatus.SC_BAD_REQUEST, "coreUserStoreException", true},
+                {"error", "32104", HttpStatus.SC_BAD_REQUEST, "coreUserStoreClientException", true},
         };
     }
 
-    @Test(dataProvider = "dpResolveUserNotFound")
-    public void testResolveUserNotFound(String message, String checkMessage, int checkCode) {
-
-        UserStoreException userStoreException = new UserStoreException(message);
-        DefaultSCIMUserStoreErrorResolver defaultSCIMUserStoreErrorResolver = new DefaultSCIMUserStoreErrorResolver();
-        SCIMUserStoreException scimUserStoreException = defaultSCIMUserStoreErrorResolver.resolve(userStoreException);
-
-        assertEquals(checkCode, scimUserStoreException.getHttpStatusCode());
-        assertEquals(checkMessage, scimUserStoreException.getMessage());
-    }
-
-    @DataProvider(name = "dpResolveUserNameMandatory")
-    public Object[][] dpResolveUserNameMandatory() {
-
-        return new Object[][]{
-                {"error", "32102", "Unable to create the user. Username is a mandatory field.", HttpStatus.SC_BAD_REQUEST},
-
-        };
-    }
-
-    @Test(dataProvider = "dpResolveUserNameMandatory")
-    public void testResolveUserNameMandatory(String message, String errorCode, String checkMessage, int checkCode) {
-
-        UserStoreException userStoreException = new org.wso2.carbon.user.core.UserStoreException(message, errorCode);
-        DefaultSCIMUserStoreErrorResolver defaultSCIMUserStoreErrorResolver = new DefaultSCIMUserStoreErrorResolver();
-        SCIMUserStoreException scimUserStoreException = defaultSCIMUserStoreErrorResolver.resolve(userStoreException);
-
-        assertEquals(checkCode, scimUserStoreException.getHttpStatusCode());
-        assertEquals(checkMessage, scimUserStoreException.getMessage());
-
-    }
-
-    @DataProvider(name = "dpResolveInvalidDomainName")
-    public Object[][] dpResolveInvalidDomainName() {
-
-        return new Object[][]{
-                {"error", "32103", "Unable to proceed. Invalid domain name.", HttpStatus.SC_BAD_REQUEST},
-        };
-    }
-
-    @Test(dataProvider = "dpResolveInvalidDomainName")
-    public void testResolveInvalidDomainName(String message, String errorCode, String checkMessage, int checkCode) {
-
-        UserStoreException userStoreException = new org.wso2.carbon.user.core.UserStoreClientException(message, errorCode);
-        DefaultSCIMUserStoreErrorResolver defaultSCIMUserStoreErrorResolver = new DefaultSCIMUserStoreErrorResolver();
-        SCIMUserStoreException scimUserStoreException = defaultSCIMUserStoreErrorResolver.resolve(userStoreException);
-
-        assertEquals(checkCode, scimUserStoreException.getHttpStatusCode());
-        assertEquals(checkMessage, scimUserStoreException.getMessage());
-
-    }
-
-    @DataProvider(name = "dpResolveNullCheck")
-    public Object[][] dpResolveNullCheck() {
-
-        return new Object[][]{
-                {"", "error: 30008", "30008"},
-                {"coreUserStoreException", "error", "32103"},
-                {"coreUserStoreClientException", "error", "32104"},
-        };
-    }
-
-    @Test(dataProvider = "dpResolveNullCheck")
-    public void testResolveNullCheck(String type, String message, String errorCode) {
+    @Test(dataProvider = "dataProviderForResolveUserNameMandatory")
+    public void testResolveUserNameMandatory(String message, String errorCode, int checkCode, String errorType,
+                                             boolean isNullExcepted) {
 
         UserStoreException userStoreException;
-        switch (type) {
+        switch (errorType) {
             case "coreUserStoreException":
                 userStoreException = new org.wso2.carbon.user.core.UserStoreException(message, errorCode);
                 break;
@@ -120,12 +64,14 @@ public class DefaultSCIMUserStoreErrorResolverTest extends PowerMockTestCase {
                 break;
             default:
                 userStoreException = new UserStoreException(message);
-                break;
         }
+
         DefaultSCIMUserStoreErrorResolver defaultSCIMUserStoreErrorResolver = new DefaultSCIMUserStoreErrorResolver();
         SCIMUserStoreException scimUserStoreException = defaultSCIMUserStoreErrorResolver.resolve(userStoreException);
-
-        assertNull(scimUserStoreException);
-
+        if (isNullExcepted) {
+            assertNull(scimUserStoreException);
+        } else {
+            assertEquals(checkCode, scimUserStoreException.getHttpStatusCode());
+        }
     }
 }

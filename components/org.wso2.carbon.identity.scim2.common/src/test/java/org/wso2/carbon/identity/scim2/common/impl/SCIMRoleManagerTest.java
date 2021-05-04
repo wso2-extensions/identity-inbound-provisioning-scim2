@@ -136,16 +136,16 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         when(mockRoleManagementService.getSystemRoles()).thenReturn(SYSTEM_ROLES);
     }
 
-    @DataProvider(name = "dpCreateRoleExistingRole")
-    public Object[][] dpCreateRoleExistingRole() {
+    @DataProvider(name = "dataProviderForCreateRoleExistingRole")
+    public Object[][] dataProviderForCreateRoleExistingRole() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_EXISTING_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_TENANT_DOMAIN, FAIL},
                 {SAMPLE_EXISTING_ROLE_ID2, "", SAMPLE_TENANT_DOMAIN2, FAIL}
         };
     }
 
-    @Test(dataProvider = "dpCreateRoleExistingRole")
+    @Test(dataProvider = "dataProviderForCreateRoleExistingRole")
     public void testCreateRoleExistingRole(String roleId, String roleDisplayName, String tenantDomain, String expect)
             throws IdentityRoleManagementException, BadRequestException, CharonException {
 
@@ -168,18 +168,18 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expect, result);
     }
 
-    @DataProvider(name = "dpCreateRoleAddRoleExistingRoleName")
-    public Object[][] dpCreateRoleAddRoleExistingRoleName() {
+    @DataProvider(name = "dataProviderForCreateRoleAddRoleExistingRoleName")
+    public Object[][] dataProviderForCreateRoleAddRoleExistingRoleName() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID2, SAMPLE_EXISTING_ROLE_NAME, SAMPLE_TENANT_DOMAIN, FAIL},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_TENANT_DOMAIN, SUCCESS}
         };
     }
 
-    @Test(dataProvider = "dpCreateRoleAddRoleExistingRoleName")
+    @Test(dataProvider = "dataProviderForCreateRoleAddRoleExistingRoleName")
     public void testCreateRoleAddRoleExistingRoleName(String roleId, String roleDisplayName, String tenantDomain,
-                                                    String expect)
+                                                      String expect)
             throws BadRequestException, CharonException, IdentityRoleManagementException {
 
         Role role = getDummyRole(roleId, roleDisplayName);
@@ -209,16 +209,16 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expect, result);
     }
 
-    @DataProvider(name = "dpCreateRoleAddRoleInvalidRoleName")
-    public Object[][] dpCreateRoleAddRoleInvalidRoleName() {
+    @DataProvider(name = "dataProviderForCreateRoleAddRoleInvalidRoleName")
+    public Object[][] dataProviderForCreateRoleAddRoleInvalidRoleName() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_INVALID_ROLE_NAME, SAMPLE_TENANT_DOMAIN, FAIL},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN2, SUCCESS}
         };
     }
 
-    @Test(dataProvider = "dpCreateRoleAddRoleInvalidRoleName")
+    @Test(dataProvider = "dataProviderForCreateRoleAddRoleInvalidRoleName")
     public void testCreateRoleAddRoleInvalidRoleName(String roleId, String roleDisplayName, String tenantDomain,
                                                      String expect)
             throws BadRequestException, CharonException, ConflictException, IdentityRoleManagementException {
@@ -252,17 +252,17 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expect, result);
     }
 
-    @DataProvider(name = "dpCreateRoleUnexpectedServerError")
-    public Object[][] dpCreateRoleUnexpectedServerError() {
+    @DataProvider(name = "dataProviderForCreateRoleUnexpectedServerError")
+    public Object[][] dataProviderForCreateRoleUnexpectedServerError() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN, "sql error", FAIL},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_TENANT_DOMAIN2, null, SUCCESS},
                 {SAMPLE_VALID_ROLE_ID2, "", SAMPLE_INVALID_TENANT_DOMAIN, null, FAIL}
         };
     }
 
-    @Test(dataProvider = "dpCreateRoleUnexpectedServerError")
+    @Test(dataProvider = "dataProviderForCreateRoleUnexpectedServerError")
     public void testCreateRoleUnexpectedServerError(String roleId, String roleDisplayName, String tenantDomain,
                                                     String sError, String expect)
             throws BadRequestException, CharonException, ConflictException, IdentityRoleManagementException {
@@ -287,16 +287,16 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             assertEquals(scimRole.getId(), roleId);
             assertEquals(scimRole.getLocation(), DUMMY_SCIM_URL);
             result = SUCCESS;
-        } catch (CharonException  e) {
+        } catch (CharonException e) {
             result = FAIL;
         }
         assertEquals(expect, result);
     }
 
-    @DataProvider(name= "dpCreateRolePositive")
-    public Object[][] dpCreateRolePositive() {
+    @DataProvider(name = "dataProviderForCreateRolePositive")
+    public Object[][] dataProviderForCreateRolePositive() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_TENANT_DOMAIN, SUCCESS},
                 {SAMPLE_VALID_ROLE_ID2, "", SAMPLE_TENANT_DOMAIN, SUCCESS},
                 {SAMPLE_VALID_ROLE_ID, null, SAMPLE_TENANT_DOMAIN, SUCCESS},
@@ -307,7 +307,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpCreateRolePositive")
+    @Test(dataProvider = "dataProviderForCreateRolePositive")
     public void testCreateRolePositive(String roleId, String roleDisplayName, String tenantDomain, String expect)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException {
 
@@ -325,10 +325,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expect, SUCCESS);
     }
 
-    @DataProvider(name = "dpGetRoleNotFound")
-    public Object[][] dpGetRoleNotFound() {
+    @DataProvider(name = "dataProviderForGetRoleNotFound")
+    public Object[][] dataProviderForGetRoleNotFound() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_NON_EXISTING_ROLE_ID, SAMPLE_VALID_ROLE_NAME, "roleDomain1", SAMPLE_TENANT_DOMAIN,
                         "urn:ietf:params:scim:schemas:extension:2.0:Role:groups.value", true, FAIL},
                 {SAMPLE_NON_EXISTING_ROLE_ID2, SAMPLE_VALID_ROLE_NAME2, "roleDomainX", SAMPLE_INVALID_TENANT_DOMAIN,
@@ -336,7 +336,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpGetRoleNotFound")
+    @Test(dataProvider = "dataProviderForGetRoleNotFound")
     public void testGetRoleNotFound(String roleId, String roleName, String domain, String tenantDomain,
                                     String attributeKey, boolean attributeValue, String expected)
             throws IdentityRoleManagementException, BadRequestException, CharonException {
@@ -372,10 +372,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpGetRoleUnexpectedServerError")
-    public Object[][] dpGetRoleUnexpectedServerError() {
+    @DataProvider(name = "dataProviderForGetRoleUnexpectedServerError")
+    public Object[][] dataProviderForGetRoleUnexpectedServerError() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, "roleDomain1", SAMPLE_TENANT_DOMAIN,
                         "urn:ietf:params:scim:schemas:extension:2.0:Role:groups.value", true, null, SUCCESS},
                 {SAMPLE_VALID_ROLE_ID2, SAMPLE_VALID_ROLE_NAME2, null, SAMPLE_TENANT_DOMAIN2,
@@ -386,7 +386,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpGetRoleUnexpectedServerError")
+    @Test(dataProvider = "dataProviderForGetRoleUnexpectedServerError")
     public void testGetRoleUnexpectedServerError(String roleId, String roleName, String domain, String tenantDomain,
                                                  String attributeKey, Boolean attributeValue, String sError,
                                                  String expected)
@@ -424,10 +424,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpGetRolePositive")
-    public Object[][] dpGetRolePositive() {
+    @DataProvider(name = "dataProviderForGetRolePositive")
+    public Object[][] dataProviderForGetRolePositive() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, "roleDomain1", SAMPLE_TENANT_DOMAIN,
                         "urn:ietf:params:scim:schemas:extension:2.0:Role:groups.value", true, false, SUCCESS},
                 {SAMPLE_VALID_ROLE_ID2, SAMPLE_VALID_ROLE_NAME2, null, SAMPLE_TENANT_DOMAIN,
@@ -441,7 +441,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpGetRolePositive")
+    @Test(dataProvider = "dataProviderForGetRolePositive")
     public void testGetRolePositive(String roleId, String roleName, String domain, String tenantDomain,
                                     String attributeKey, Boolean attributeValue, boolean isEmptyLists,
                                     String expected)
@@ -469,18 +469,19 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name= "dpDeleteRoleNonExistingRoleId")
-    public Object[][] dpDeleteRoleNonExistingRoleId() {
+    @DataProvider(name = "dataProviderForDeleteRoleNonExistingRoleId")
+    public Object[][] dataProviderForDeleteRoleNonExistingRoleId() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_NON_EXISTING_ROLE_ID2, SAMPLE_TENANT_DOMAIN, FAIL},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_TENANT_DOMAIN2, SUCCESS}
         };
     }
 
-    @Test(dataProvider = "dpDeleteRoleNonExistingRoleId")
+    @Test(dataProvider = "dataProviderForDeleteRoleNonExistingRoleId")
     public void testDeleteRoleNonExistingRoleId(String roleId, String tenantDomain, String expected)
             throws IdentityRoleManagementException, CharonException, BadRequestException {
+
         doAnswer(invocationOnMock -> {
             String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
             String tenantDomainArg = invocationOnMock.getArgumentAt(1, String.class);
@@ -503,16 +504,16 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name= "dpDeleteRoleUnDeletableRole")
-    public Object[][] dpDeleteRoleUnDeletableRole() {
+    @DataProvider(name = "dataProviderForDeleteRoleUnDeletableRole")
+    public Object[][] dataProviderForDeleteRoleUnDeletableRole() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"adminId", SAMPLE_TENANT_DOMAIN, FAIL},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_TENANT_DOMAIN, SUCCESS}
         };
     }
 
-    @Test(dataProvider = "dpDeleteRoleUnDeletableRole")
+    @Test(dataProvider = "dataProviderForDeleteRoleUnDeletableRole")
     public void testDeleteRoleUnDeletableRole(String roleId, String tenantDomain, String expected)
             throws IdentityRoleManagementException, NotFoundException, CharonException {
 
@@ -537,10 +538,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name= "dpDeleteRoleUnExpectedError")
-    public Object[][] dpDeleteRoleUnExpectedError() {
+    @DataProvider(name = "dataProviderForDeleteRoleUnExpectedError")
+    public Object[][] dataProviderForDeleteRoleUnExpectedError() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_INVALID_TENANT_DOMAIN, "sql error", FAIL},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_TENANT_DOMAIN, null, SUCCESS},
                 {SAMPLE_VALID_ROLE_ID2, SAMPLE_INVALID_TENANT_DOMAIN, null, FAIL},
@@ -548,15 +549,15 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpDeleteRoleUnExpectedError")
-    public void testDeleteRoleUnExpectedError(String roleId, String tenantDomain, String sError,String expected)
+    @Test(dataProvider = "dataProviderForDeleteRoleUnExpectedError")
+    public void testDeleteRoleUnExpectedError(String roleId, String tenantDomain, String sError, String expected)
             throws IdentityRoleManagementException, NotFoundException, BadRequestException {
 
         doAnswer(invocationOnMock -> {
             String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
             String tenantDomainArg = invocationOnMock.getArgumentAt(1, String.class);
-            unExpectedErrorThrower(tenantDomainArg,sError,
-                    "Error while creating the role: %s in the tenantDomain: %s",roleIdArg);
+            unExpectedErrorThrower(tenantDomainArg, sError,
+                    "Error while creating the role: %s in the tenantDomain: %s", roleIdArg);
             return null;
         }).doNothing().when(mockRoleManagementService).deleteRole(roleId, tenantDomain);
 
@@ -572,10 +573,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name= "dpDeleteRolePositive")
-    public Object[][] dpDeleteRolePositive() {
+    @DataProvider(name = "dataProviderForDeleteRolePositive")
+    public Object[][] dataProviderForDeleteRolePositive() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_TENANT_DOMAIN, SUCCESS},
                 {"", SAMPLE_TENANT_DOMAIN2, SUCCESS},
                 {null, SAMPLE_TENANT_DOMAIN, SUCCESS},
@@ -583,7 +584,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpDeleteRolePositive")
+    @Test(dataProvider = "dataProviderForDeleteRolePositive")
     public void testDeleteRolePositive(String roleId, String tenantDomain, String expected)
             throws IdentityRoleManagementException {
 
@@ -601,10 +602,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithGETSortingNotSupport")
-    public Object[][] dpListRolesWithGETSortingNotSupport() {
+    @DataProvider(name = "dataProviderForListRolesWithGETSortingNotSupport")
+    public Object[][] dataProviderForListRolesWithGETSortingNotSupport() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {1, 3, "name", "ascending", SAMPLE_TENANT_DOMAIN, FAIL},
                 {2, 2, null, "ascending", SAMPLE_TENANT_DOMAIN2, FAIL},
                 {2, 5, "", "ascending", SAMPLE_TENANT_DOMAIN, FAIL},
@@ -612,7 +613,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                 {3, 0, "name", "", SAMPLE_TENANT_DOMAIN, FAIL},
         };
     }
-    @Test(dataProvider = "dpListRolesWithGETSortingNotSupport")
+
+    @Test(dataProvider = "dataProviderForListRolesWithGETSortingNotSupport")
     public void testListRolesWithGETSortingNotSupport(Integer startIndex, Integer count, String sortBy,
                                                       String sortOrder, String tenantDomain, String expected)
             throws BadRequestException, CharonException {
@@ -628,16 +630,16 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithGETCountNullZero")
-    public Object[][] dpListRolesWithGETCountNullZero() {
+    @DataProvider(name = "dataProviderForListRolesWithGETCountNullZero")
+    public Object[][] dataProviderForListRolesWithGETCountNullZero() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {1, 0, null, null, SAMPLE_TENANT_DOMAIN2, SUCCESS},
                 {2, 0, null, null, SAMPLE_TENANT_DOMAIN, SUCCESS},
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithGETCountNullZero")
+    @Test(dataProvider = "dataProviderForListRolesWithGETCountNullZero")
     public void testListRolesWithGETCountNullZero(Integer startIndex, Integer count, String sortBy, String sortOrder,
                                                   String tenantDomain, String expected) {
 
@@ -654,10 +656,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithGETInvalidLimit")
-    public Object[][] dpListRolesWithGETInvalidLimit() {
+    @DataProvider(name = "dataProviderForListRolesWithGETInvalidLimit")
+    public Object[][] dataProviderForListRolesWithGETInvalidLimit() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"Expression", 1, -2, null, null, SAMPLE_TENANT_DOMAIN2, "value", FAIL},
                 {null, 2, -5, null, null, SAMPLE_TENANT_DOMAIN, "attributes", FAIL},
                 {null, 2, 6, null, null, SAMPLE_TENANT_DOMAIN2, null, SUCCESS},
@@ -666,9 +668,9 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithGETInvalidLimit")
+    @Test(dataProvider = "dataProviderForListRolesWithGETInvalidLimit")
     public void testListRolesWithGETInvalidLimit(String nodeType, Integer startIndex, Integer count, String sortBy,
-                                                 String sortOrder,String tenantDomain, String attributes,
+                                                 String sortOrder, String tenantDomain, String attributes,
                                                  String expected)
             throws BadRequestException, IdentityRoleManagementException, NotImplementedException {
 
@@ -688,7 +690,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return roleList;
                 });
-        when(mockRoleManagementService.getRoles(searchFilter,count, startIndex, sortBy, sortOrder, tenantDomain)).
+        when(mockRoleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> {
                     Integer countArg = invocationOnMock.getArgumentAt(1, Integer.class);
                     if (countArg != null && countArg < 0) {
@@ -714,10 +716,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithGETInvalidOffset")
-    public Object[][] dpListRolesWithGETInvalidOffset() {
+    @DataProvider(name = "dataProviderForListRolesWithGETInvalidOffset")
+    public Object[][] dataProviderForListRolesWithGETInvalidOffset() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"Expression", -1, 2, null, null, SAMPLE_TENANT_DOMAIN2, "value", FAIL},
                 {null, -2, 4, null, null, SAMPLE_TENANT_DOMAIN2, "attributes", FAIL},
                 {null, 2, 6, null, null, SAMPLE_TENANT_DOMAIN2, null, SUCCESS},
@@ -726,7 +728,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithGETInvalidOffset")
+    @Test(dataProvider = "dataProviderForListRolesWithGETInvalidOffset")
     public void testListRolesWithGETInvalidOffset(String nodeType, Integer startIndex, Integer count,
                                                   String sortBy, String sortOrder, String tenantDomain,
                                                   String attributes, String expected)
@@ -749,7 +751,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return roleList;
                 });
-        when(mockRoleManagementService.getRoles(searchFilter,count, startIndex, sortBy, sortOrder, tenantDomain)).
+        when(mockRoleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> {
                     Integer startIndexArg = invocationOnMock.getArgumentAt(2, Integer.class);
 
@@ -775,10 +777,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithGETUnExpectedServerError")
-    public Object[][] dpListRolesWithGETUnExpectedServerError() {
+    @DataProvider(name = "dataProviderForListRolesWithGETUnExpectedServerError")
+    public Object[][] dataProviderForListRolesWithGETUnExpectedServerError() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"Expression", 3, 2, null, null, SAMPLE_INVALID_TENANT_DOMAIN, "value", null, FAIL},
                 {null, 2, 6, null, null, SAMPLE_TENANT_DOMAIN, null, null, SUCCESS},
                 {"Expression", 4, 2, null, null, SAMPLE_TENANT_DOMAIN2, "attributes", null, SUCCESS},
@@ -786,10 +788,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithGETUnExpectedServerError")
+    @Test(dataProvider = "dataProviderForListRolesWithGETUnExpectedServerError")
     public void testListRolesWithGETUnExpectedServerError(String nodeType, Integer startIndex, Integer count,
-                                                          String sortBy, String sortOrder,String tenantDomain,
-                                                          String attributes,String sError, String expected)
+                                                          String sortBy, String sortOrder, String tenantDomain,
+                                                          String attributes, String sError, String expected)
             throws BadRequestException, IdentityRoleManagementException, NotImplementedException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, attributes);
@@ -804,7 +806,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                             "Error while listing roles in tenantDomain: ");
                     return roleList;
                 });
-        when(mockRoleManagementService.getRoles(searchFilter,count, startIndex, sortBy, sortOrder, tenantDomain)).
+        when(mockRoleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> {
                     String tenantDomainArg = invocationOnMock.getArgumentAt(5, String.class);
                     unExpectedErrorThrower(tenantDomainArg, sError,
@@ -826,16 +828,16 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithGETOperationNode")
-    public Object[][] dpListRolesWithGETOperationNode() {
+    @DataProvider(name = "dataProviderForListRolesWithGETOperationNode")
+    public Object[][] dataProviderForListRolesWithGETOperationNode() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"Operation", 3, 2, null, null, SAMPLE_TENANT_DOMAIN2, "value", FAIL},
                 {"Operation", 6, 4, null, null, SAMPLE_TENANT_DOMAIN2, null, FAIL},
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithGETOperationNode")
+    @Test(dataProvider = "dataProviderForListRolesWithGETOperationNode")
     public void testListRolesWithGETOperationNode(String nodeType, Integer startIndex, Integer count,
                                                   String sortBy, String sortOrder, String tenantDomain,
                                                   String attributes, String expected)
@@ -853,15 +855,15 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithGETInvalidNode")
-    public Object[][] dpListRolesWithGETInvalidNode() {
+    @DataProvider(name = "dataProviderForListRolesWithGETInvalidNode")
+    public Object[][] dataProviderForListRolesWithGETInvalidNode() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {3, 2, null, null, SAMPLE_TENANT_DOMAIN, FAIL}
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithGETInvalidNode")
+    @Test(dataProvider = "dataProviderForListRolesWithGETInvalidNode")
     public void testListRolesWithGETInvalidNode(Integer startIndex, Integer count, String sortBy, String sortOrder,
                                                 String tenantDomain, String expected)
             throws BadRequestException, NotImplementedException {
@@ -878,10 +880,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithGETPositive")
-    public Object[][] dpListRolesWithGETPositive() {
+    @DataProvider(name = "dataProviderForListRolesWithGETPositive")
+    public Object[][] dataProviderForListRolesWithGETPositive() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {null, 3, 2, null, null, SAMPLE_TENANT_DOMAIN, "value", SCIMCommonConstants.CO, SUCCESS},
                 {"Expression", 6, 4, null, null, SAMPLE_TENANT_DOMAIN, "value", SCIMCommonConstants.EQ, SUCCESS},
                 {"Expression", 9, 2, null, null, SAMPLE_TENANT_DOMAIN, "value", SCIMCommonConstants.SW, SUCCESS},
@@ -891,11 +893,11 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithGETPositive")
+    @Test(dataProvider = "dataProviderForListRolesWithGETPositive")
     public void testListRolesWithGETPositive(String nodeType, Integer startIndex, Integer count, String sortBy,
                                              String sortOrder, String tenantDomain, String attributes, String operation,
                                              String expected)
-            throws  CharonException, IdentityRoleManagementException {
+            throws CharonException, IdentityRoleManagementException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, attributes, operation);
         String searchFilter;
@@ -904,7 +906,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         when(mockRoleManagementService.getRoles(count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> roleList);
-        when(mockRoleManagementService.getRoles(searchFilter,count, startIndex, sortBy, sortOrder, tenantDomain)).
+        when(mockRoleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> roleList);
         String result;
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
@@ -919,10 +921,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpUpdateRoleUpdateRoleName")
-    public Object[][] dpUpdateRoleUpdateRoleName() {
+    @DataProvider(name = "dataProviderForUpdateRoleUpdateRoleName")
+    public Object[][] dataProviderForUpdateRoleUpdateRoleName() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_EXISTING_ROLE_NAME, SAMPLE_TENANT_DOMAIN, null,
                         CONFLICT},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN2, null,
@@ -940,7 +942,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpUpdateRoleUpdateRoleName")
+    @Test(dataProvider = "dataProviderForUpdateRoleUpdateRoleName")
     public void testUpdateRoleUpdateRoleName(String roleId, String oldRoleName, String newRoleName, String tenantDomain,
                                              String sError, String expect)
             throws IdentityRoleManagementException, BadRequestException, CharonException {
@@ -1000,16 +1002,16 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expect, result);
     }
 
-    @DataProvider(name = "dpUpdateRoleUpdateUserListOfRole")
-    public Object[][] dpUpdateRoleUpdateUserListOfRole() {
+    @DataProvider(name = "dataProviderForUpdateRoleUpdateUserListOfRole")
+    public Object[][] dataProviderForUpdateRoleUpdateUserListOfRole() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_INVALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN, "",
                         null, BAD_REQUEST},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_INVALID_TENANT_DOMAIN,
                         "", null, UNEXPECTED_ERROR},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN,
-                        "" ,"sql error", UNEXPECTED_ERROR},
+                        "", "sql error", UNEXPECTED_ERROR},
                 {SAMPLE_VALID_ROLE_ID2, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN,
                         "EMPTY_DELETED", null, SUCCESS},
                 {SAMPLE_VALID_ROLE_ID2, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN,
@@ -1021,14 +1023,14 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpUpdateRoleUpdateUserListOfRole")
-    public void testUpdateRoleUpdateUserListOfRole(String roleId,String oldRoleName, String newRoleName,
+    @Test(dataProvider = "dataProviderForUpdateRoleUpdateUserListOfRole")
+    public void testUpdateRoleUpdateUserListOfRole(String roleId, String oldRoleName, String newRoleName,
                                                    String tenantDomain, String type, String sError, String expect)
             throws IdentityRoleManagementException, BadRequestException, CharonException,
             ConflictException, NotFoundException {
 
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
-        Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName,type);
+        Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
 
         when(mockRoleManagementService.updateRoleName(anyString(), anyString(), anyString())).
                 thenReturn(roleBasicInfo);
@@ -1066,11 +1068,11 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expect, result);
     }
 
-    @DataProvider(name = "dpUpdateRoleUpdateGroupListOfRole")
-    public Object[][] dpUpdateRoleUpdateGroupListOfRole() {
+    @DataProvider(name = "dataProviderForUpdateRoleUpdateGroupListOfRole")
+    public Object[][] dataProviderForUpdateRoleUpdateGroupListOfRole() {
 
-        return new Object[][] {
-                {SAMPLE_INVALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN, "",null,
+        return new Object[][]{
+                {SAMPLE_INVALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN, "", null,
                         BAD_REQUEST},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_INVALID_TENANT_DOMAIN,
                         "", null, UNEXPECTED_ERROR},
@@ -1087,11 +1089,12 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpUpdateRoleUpdateGroupListOfRole")
-    public void testUpdateRoleUpdateGroupListOfRole(String roleId,String oldRoleName, String newRoleName,
+    @Test(dataProvider = "dataProviderForUpdateRoleUpdateGroupListOfRole")
+    public void testUpdateRoleUpdateGroupListOfRole(String roleId, String oldRoleName, String newRoleName,
                                                     String tenantDomain, String type, String sError, String expect)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
             NotFoundException {
+
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
         when(mockRoleManagementService.updateRoleName(anyString(), anyString(), anyString())).
@@ -1131,10 +1134,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expect, result);
     }
 
-    @DataProvider(name = "dpUpdateRoleUpdatePermissionListOfRole")
-    public Object[][] dpUpdateRoleUpdatePermissionListOfRole() {
+    @DataProvider(name = "dataProviderForUpdateRoleUpdatePermissionListOfRole")
+    public Object[][] dataProviderForUpdateRoleUpdatePermissionListOfRole() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {SAMPLE_INVALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN, "",
                         null, BAD_REQUEST},
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_SYSTEM_ROLE_NAME2, SAMPLE_VALID_ROLE_NAME2, SAMPLE_TENANT_DOMAIN, "",
@@ -1158,10 +1161,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpUpdateRoleUpdatePermissionListOfRole")
+    @Test(dataProvider = "dataProviderForUpdateRoleUpdatePermissionListOfRole")
     public void testUpdateRoleUpdatePermissionListOfRole(String roleId, String oldRoleName, String newRoleName,
-                                                       String tenantDomain, String permissionType, String sError,
-                                                       String expect)
+                                                         String tenantDomain, String permissionType, String sError,
+                                                         String expect)
             throws IdentityRoleManagementException, BadRequestException, CharonException,
             ConflictException, NotFoundException {
 
@@ -1209,10 +1212,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expect, result);
     }
 
-    @DataProvider(name = "dpListRolesWithPOSTSortingNotSupport")
-    public Object[][] dpListRolesWithPOSTSortingNotSupport() {
+    @DataProvider(name = "dataProviderForListRolesWithPOSTSortingNotSupport")
+    public Object[][] dataProviderForListRolesWithPOSTSortingNotSupport() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {1, 3, "name", "ascending", SAMPLE_TENANT_DOMAIN, FAIL},
                 {2, 2, null, "ascending", SAMPLE_TENANT_DOMAIN2, FAIL},
                 {2, 5, "", "ascending", SAMPLE_TENANT_DOMAIN2, FAIL},
@@ -1220,10 +1223,11 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithPOSTSortingNotSupport")
+    @Test(dataProvider = "dataProviderForListRolesWithPOSTSortingNotSupport")
     public void testListRolesWithPOSTSortingNotSupport(Integer startIndex, Integer count, String sortBy,
                                                        String sortOrder, String tenantDomain, String expected)
             throws BadRequestException, CharonException {
+
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         String result;
         try {
@@ -1235,15 +1239,15 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithPOSTCountNullZero")
-    public Object[][] dpListRolesWithPOSTCountNullZero() {
+    @DataProvider(name = "dataProviderForListRolesWithPOSTCountNullZero")
+    public Object[][] dataProviderForListRolesWithPOSTCountNullZero() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {1, 0, null, null, SAMPLE_TENANT_DOMAIN2, SUCCESS}
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithPOSTCountNullZero")
+    @Test(dataProvider = "dataProviderForListRolesWithPOSTCountNullZero")
     public void testListRolesWithPOSTCountNullZero(Integer startIndex, Integer count, String sortBy,
                                                    String sortOrder, String tenantDomain, String expected) {
 
@@ -1261,10 +1265,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithPOSTInvalidLimit")
-    public Object[][] dpListRolesWithPOSTInvalidLimit() {
+    @DataProvider(name = "dataProviderForListRolesWithPOSTInvalidLimit")
+    public Object[][] dataProviderForListRolesWithPOSTInvalidLimit() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"Expression", 1, -2, null, null, SAMPLE_TENANT_DOMAIN2, "value", FAIL},
                 {null, 2, -5, null, null, SAMPLE_TENANT_DOMAIN, "attributes", FAIL},
                 {null, 2, 6, null, null, SAMPLE_TENANT_DOMAIN, null, SUCCESS},
@@ -1272,7 +1276,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithPOSTInvalidLimit")
+    @Test(dataProvider = "dataProviderForListRolesWithPOSTInvalidLimit")
     public void testListRolesWithPOSTInvalidLimit(String nodeType, Integer startIndex, Integer count,
                                                   String sortBy, String sortOrder, String tenantDomain,
                                                   String attributes, String expected)
@@ -1295,7 +1299,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return roleList;
                 });
-        when(mockRoleManagementService.getRoles(searchFilter,count, startIndex, sortBy, sortOrder, tenantDomain)).
+        when(mockRoleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> {
                     Integer countArg = invocationOnMock.getArgumentAt(1, Integer.class);
 
@@ -1322,10 +1326,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithPOSTInvalidOffset")
-    public Object[][] dpListRolesWithPOSTInvalidOffset() {
+    @DataProvider(name = "dataProviderForListRolesWithPOSTInvalidOffset")
+    public Object[][] dataProviderForListRolesWithPOSTInvalidOffset() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"Expression", -1, 2, null, null, SAMPLE_TENANT_DOMAIN2, "value", FAIL},
                 {null, -2, 4, null, null, SAMPLE_TENANT_DOMAIN2, "attributes", FAIL},
                 {null, 2, 6, null, null, SAMPLE_TENANT_DOMAIN2, null, SUCCESS},
@@ -1333,7 +1337,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithPOSTInvalidOffset")
+    @Test(dataProvider = "dataProviderForListRolesWithPOSTInvalidOffset")
     public void testListRolesWithPOSTInvalidOffset(String nodeType, Integer startIndex, Integer count,
                                                    String sortBy, String sortOrder, String tenantDomain,
                                                    String attributes, String expected)
@@ -1354,7 +1358,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return roleList;
                 });
-        when(mockRoleManagementService.getRoles(searchFilter,count, startIndex, sortBy, sortOrder, tenantDomain)).
+        when(mockRoleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> {
                     Integer startIndexArg = invocationOnMock.getArgumentAt(2, Integer.class);
                     if (startIndexArg != null && startIndexArg < 0) {
@@ -1380,10 +1384,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithPOSTUnExpectedServerError")
-    public Object[][] dpListRolesWithPOSTUnExpectedServerError() {
+    @DataProvider(name = "dataProviderForListRolesWithPOSTUnExpectedServerError")
+    public Object[][] dataProviderForListRolesWithPOSTUnExpectedServerError() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"Expression", 3, 2, null, null, SAMPLE_INVALID_TENANT_DOMAIN, "value", null, FAIL},
                 {null, 2, 6, null, null, SAMPLE_TENANT_DOMAIN, null, null, SUCCESS},
                 {"Expression", 4, 2, null, null, SAMPLE_TENANT_DOMAIN, "attributes", null, SUCCESS},
@@ -1391,7 +1395,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithPOSTUnExpectedServerError")
+    @Test(dataProvider = "dataProviderForListRolesWithPOSTUnExpectedServerError")
     public void testListRolesWithPOSTUnExpectedServerError(String nodeType, Integer startIndex, Integer count,
                                                            String sortBy, String sortOrder, String tenantDomain,
                                                            String attributes, String sError, String expected)
@@ -1410,7 +1414,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                             "Error while listing roles in tenantDomain: ");
                     return roleList;
                 });
-        when(mockRoleManagementService.getRoles(searchFilter,count, startIndex, sortBy, sortOrder, tenantDomain)).
+        when(mockRoleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> {
                     String tenantDomainArg = invocationOnMock.getArgumentAt(5, String.class);
                     unExpectedErrorThrower(tenantDomainArg, sError,
@@ -1432,19 +1436,19 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithPOSTOperationNode")
-    public Object[][] dpListRolesWithPOSTOperationNode() {
+    @DataProvider(name = "dataProviderForListRolesWithPOSTOperationNode")
+    public Object[][] dataProviderForListRolesWithPOSTOperationNode() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"Operation", 3, 2, null, null, SAMPLE_TENANT_DOMAIN, "value", FAIL},
                 {"Operation", 6, 4, null, null, SAMPLE_TENANT_DOMAIN, null, FAIL},
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithPOSTOperationNode")
+    @Test(dataProvider = "dataProviderForListRolesWithPOSTOperationNode")
     public void testListRolesWithPOSTOperationNode(String nodeType, Integer startIndex, Integer count, String sortBy,
-                                                 String sortOrder, String tenantDomain, String attributes,
-                                                 String expected)
+                                                   String sortOrder, String tenantDomain, String attributes,
+                                                   String expected)
             throws BadRequestException, CharonException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, attributes);
@@ -1459,17 +1463,17 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithPOSTInvalidNode")
-    public Object[][] dpListRolesWithPOSTInvalidNode() {
+    @DataProvider(name = "dataProviderForListRolesWithPOSTInvalidNode")
+    public Object[][] dataProviderForListRolesWithPOSTInvalidNode() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {3, 2, null, null, SAMPLE_TENANT_DOMAIN2, FAIL}
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithPOSTInvalidNode")
+    @Test(dataProvider = "dataProviderForListRolesWithPOSTInvalidNode")
     public void testListRolesWithPOSTInvalidNode(Integer startIndex, Integer count, String sortBy,
-                                               String sortOrder, String tenantDomain, String expected)
+                                                 String sortOrder, String tenantDomain, String expected)
             throws BadRequestException, NotImplementedException {
 
         Node rootNode = new MockNode();
@@ -1484,10 +1488,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         assertEquals(expected, result);
     }
 
-    @DataProvider(name = "dpListRolesWithPOSTPositive")
-    public Object[][] dpListRolesWithPOSTPositive() {
+    @DataProvider(name = "dataProviderForListRolesWithPOSTPositive")
+    public Object[][] dataProviderForListRolesWithPOSTPositive() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {null, 3, 2, null, null, SAMPLE_TENANT_DOMAIN, "value", SCIMCommonConstants.CO, SUCCESS},
                 {"Expression", 6, 4, null, null, SAMPLE_TENANT_DOMAIN, "value", SCIMCommonConstants.EQ, SUCCESS},
                 {"Expression", 9, 2, null, null, SAMPLE_TENANT_DOMAIN2, "value", SCIMCommonConstants.SW, SUCCESS},
@@ -1497,11 +1501,11 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         };
     }
 
-    @Test(dataProvider = "dpListRolesWithPOSTPositive")
+    @Test(dataProvider = "dataProviderForListRolesWithPOSTPositive")
     public void testListRolesWithPOSTPositive(String nodeType, Integer startIndex, Integer count, String sortBy,
-                                            String sortOrder, String tenantDomain, String attributes,
-                                            String operation, String expected)
-            throws  CharonException, IdentityRoleManagementException {
+                                              String sortOrder, String tenantDomain, String attributes,
+                                              String operation, String expected)
+            throws CharonException, IdentityRoleManagementException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, attributes, operation);
         String searchFilter;
@@ -1510,7 +1514,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         when(mockRoleManagementService.getRoles(count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> roleList);
-        when(mockRoleManagementService.getRoles(searchFilter,count, startIndex, sortBy, sortOrder, tenantDomain)).
+        when(mockRoleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain)).
                 thenAnswer(invocationOnMock -> roleList);
         String result;
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
@@ -1706,7 +1710,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     private org.wso2.carbon.identity.role.mgt.core.Role getDummyIdentityRole(String roleId, String roleName,
                                                                              String domain, String tenantDomain,
                                                                              boolean isEmptyLists) {
-        if(isEmptyLists) {
+
+        if (isEmptyLists) {
             org.wso2.carbon.identity.role.mgt.core.Role role = new org.wso2.carbon.identity.role.mgt.core.Role();
             role.setId(roleId);
             role.setPermissions(Arrays.asList("permission", "usermgt"));
@@ -1717,17 +1722,16 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         } else {
             return getDummyIdentityRole(roleId, roleName, domain, tenantDomain);
         }
-
     }
 
     private void assertScimRoleFull(Role scimRole, String roleId) {
 
         assertEquals(scimRole.getId(), roleId);
-        if(!scimRole.getUsers().isEmpty()) {
+        if (!scimRole.getUsers().isEmpty()) {
             assertEquals(scimRole.getUsers().get(0), "7646b885-4207-4ca0-bc65-5df82272b6d1");
         }
         assertEquals(scimRole.getPermissions().get(0), "permission");
-        if(!scimRole.getGroups().isEmpty()) {
+        if (!scimRole.getGroups().isEmpty()) {
             assertEquals(scimRole.getGroups().get(0), "26d3a726-9c00-4f4c-8a4e-f5e310138081");
         }
         assertEquals(scimRole.getLocation(), DUMMY_SCIM_URL);

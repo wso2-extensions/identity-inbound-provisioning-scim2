@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -37,14 +38,13 @@ import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNull;
 
 @PrepareForTest({IdentityTenantUtil.class, ServiceURLBuilder.class})
 public class IdentityResourceURLBuilderTest extends PowerMockTestCase {
 
     private static final Map<String, String> DUMMY_ENDPOINT_URI_MAP = new HashMap<String, String>() {{
-        put("resource", "www.default.url");
-        put("resource2", "www.default2.url");
+        put("Users", "https://localhost:9444/scim2/Users");
+        put("Groups", "https://localhost:9444/scim2/Groups");
     }};
 
     @Mock
@@ -60,88 +60,58 @@ public class IdentityResourceURLBuilderTest extends PowerMockTestCase {
         mockStatic(ServiceURLBuilder.class);
         when(ServiceURLBuilder.create()).thenReturn(mockServiceURLBuilder);
         when(mockServiceURLBuilder.addPath(anyString())).thenReturn(mockServiceURLBuilder);
+        mockStatic(IdentityTenantUtil.class);
     }
 
-    @Test
-    public void testBuildTenantQualifiedUrlsEnabled() throws NotFoundException, URLBuilderException {
+    @DataProvider(name = "dataProviderForBuild")
+    public Object[][] dataProviderForBuild() {
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(true);
-        when(mockServiceURLBuilder.build()).thenReturn(mockServiceUrl);
-        when(mockServiceUrl.getAbsolutePublicURL()).thenReturn("www.public.url");
-        IdentityResourceURLBuilder identityResourceURLBuilder = new IdentityResourceURLBuilder();
-        String buildValue = identityResourceURLBuilder.build("resource");
-        System.out.println(buildValue);
-        assertEquals(buildValue, "www.public.url" + "resource");
+        return new Object[][]{
+                {true, "https://localhost:9444/scim2/", "Users", false, "https://localhost:9444/scim2/Users"},
+                {true, "https://localhost:9444/scim2/", "Groups", true, "https://localhost:9444/scim2/Groups"},
+                {false, "https://localhost:9444/scim2/", "Users", false, "https://localhost:9444/scim2/Users"},
+                {true, "https://localhost:9444/scim2/", "InvalidResource", true, null},
+                {false, "https://localhost:9444/scim2/", "InvalidResource", false, null},
+        };
     }
 
-    @Test
-    public void testBuildTenantQualifiedUrlsEnabledThrowURLBuilderException() throws NotFoundException {
+    @Test(dataProvider = "dataProviderForBuild")
+    public void testBuild(boolean isTenantQualifiedUrlsEnabled, String url, String resource, boolean throwError,
+                          String expected)
+            throws NotFoundException, URLBuilderException {
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(true);
-        try {
-            when(mockServiceURLBuilder.build()).thenThrow(
-                    new URLBuilderException("Protocol of service URL is not available."));
-        } catch (URLBuilderException e) {
-            e.printStackTrace();
-        }
-        IdentityResourceURLBuilder identityResourceURLBuilder = new IdentityResourceURLBuilder();
-        identityResourceURLBuilder.setEndpointURIMap(DUMMY_ENDPOINT_URI_MAP);
-        String buildValue = identityResourceURLBuilder.build("resource");
-        assertEquals(buildValue, "www.default.url");
-        String buildValue2 = identityResourceURLBuilder.build("resource2");
-        assertEquals(buildValue2, "www.default2.url");
-    }
-
-    @Test
-    public void testBuildTenantQualifiedUrlsEnabledThrowURLBuilderExceptionThrowNotFoundException() {
-
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(true);
-        try {
-            when(mockServiceURLBuilder.build()).thenThrow(
-                    new URLBuilderException("Protocol of service URL is not available."));
-        } catch (URLBuilderException e) {
-            e.printStackTrace();
-        }
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedUrlsEnabled);
+        when(mockServiceURLBuilder.build()).thenAnswer(invocationOnMock -> {
+            if (throwError) {
+                throw new URLBuilderException("Protocol of service URL is not available.");
+            }
+            return mockServiceUrl;
+        });
+        when(mockServiceUrl.getAbsolutePublicURL()).thenReturn(url);
         IdentityResourceURLBuilder identityResourceURLBuilder = new IdentityResourceURLBuilder();
         identityResourceURLBuilder.setEndpointURIMap(DUMMY_ENDPOINT_URI_MAP);
-        String buildValue = null;
-        try {
-            buildValue = identityResourceURLBuilder.build("resource3");
-        } catch (NotFoundException e) {
-            e.printStackTrace();
-        }
-        assertNull(buildValue);
+        String buildValue = identityResourceURLBuilder.build(resource);
+        assertEquals(buildValue, expected);
     }
 
-    @Test
-    public void testBuildTenantQualifiedUrlsNotEnabled() throws NotFoundException {
+    @DataProvider(name = "dataProviderForBuildThrowingNotFoundException")
+    public Object[][] dataProviderForBuildThrowingNotFoundException() {
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(false);
-
-        IdentityResourceURLBuilder identityResourceURLBuilder = new IdentityResourceURLBuilder();
-        identityResourceURLBuilder.setEndpointURIMap(DUMMY_ENDPOINT_URI_MAP);
-        String buildValue = identityResourceURLBuilder.build("resource");
-        assertEquals(buildValue, "www.default.url");
+        return new Object[][]{
+                {true, "InvalidResource"},
+                {false, "InvalidResource"},
+        };
     }
 
-    @Test
-    public void testBuildTenantQualifiedUrlsNotEnabledThrowNotFoundException() {
+    @Test(expectedExceptions = NotFoundException.class, dataProvider = "dataProviderForBuildThrowingNotFoundException")
+    public void testBuildThrowingNotFoundException(boolean isTenantQualifiedUrlsEnabled, String resource)
+            throws URLBuilderException, NotFoundException {
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(false);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedUrlsEnabled);
+        when(mockServiceURLBuilder.build()).thenThrow(
+                new URLBuilderException("Protocol of service URL is not available."));
 
         IdentityResourceURLBuilder identityResourceURLBuilder = new IdentityResourceURLBuilder();
-        identityResourceURLBuilder.setEndpointURIMap(DUMMY_ENDPOINT_URI_MAP);
-        String buildValue = null;
-        try {
-            buildValue = identityResourceURLBuilder.build("resource3");
-        } catch (NotFoundException e) {
-            e.printStackTrace();
-        }
-        assertNull(buildValue);
+        identityResourceURLBuilder.build(resource);
     }
 }
