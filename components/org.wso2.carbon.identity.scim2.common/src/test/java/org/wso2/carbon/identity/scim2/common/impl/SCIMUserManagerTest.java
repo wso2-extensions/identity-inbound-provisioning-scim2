@@ -815,8 +815,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Test
     public void testGetUserSchema() throws CharonException, ClaimMetadataException {
+
         String tenantDomain = "carbon.super";
-        String externalClaimURI = "urn:ietf:params:scim:schemas:core:2.0:User";
+        String externalClaimURI = SCIMConstants.USER_CORE_SCHEMA_URI;
 
         Map<String, String> properties = new HashMap<String, String>() {{
             put("ReadOnly", "true");
@@ -856,7 +857,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "groupPermission")
-    public void TestGetGroupPermissions(String roleName, String[] permission, Object expected) throws UserStoreException, RolePermissionException {
+    public void TestGetGroupPermissions(String roleName, String[] permission, Object expected) throws
+            UserStoreException, RolePermissionException {
+
         String tenantDomain = "carbon.super";
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, tenantDomain);
@@ -865,7 +868,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonComponentHolder.getRolePermissionManagementService()).thenReturn(rolePermissionManagementService);
         when(rolePermissionManagementService.getRolePermissions(anyString(), anyInt())).thenReturn(permission);
         String[] actual = scimUserManager.getGroupPermissions(roleName);
-        System.out.println(actual);
         assertEquals(expected, actual);
     }
 
@@ -896,12 +898,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     @Test(dataProvider = "getUserConfigurations")
     public void testGetUser(Boolean isSCIMEnabled, Boolean mandateDomainForUsernamesAndGroupNamesInResponse,
                             String enableLoginIdentifiers, String expectedUserName) throws Exception {
+
         String userId = "b53fe2f0-054d-43b5-a8f7-50043adb2198";
         String userName = "admin";
         String tenantDomain = "carbon.super";
         String userStoreDomainName = "PRIMARY";
         Boolean isGroupsVsRolesSeparationImprovementsEnabled = true;
-//
         Map<String, Boolean> requiredAttributes = new HashMap<>();
         Map<String, String> scimToLocalClaimMap = new HashMap<>();
         scimToLocalClaimMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
@@ -915,12 +917,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         userClaimValues.put("http://wso2.org/claims/groups" , "admin");
 
         Map<String, String> attributes = new HashMap<>();
-        attributes.put("urn:ietf:params:scim:schemas:core:2.0:id", userId);
-        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:groups", "admin");
-        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:emails", "admin@wso2.com");
-        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", "admin");
-        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:name.familyName", "Administrator");
-        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:roles.default" , "Internal/admin,Internal/everyone");
+        attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, userId);
+        attributes.put(SCIMConstants.UserSchemaConstants.GROUP_URI, "admin");
+        attributes.put(SCIMConstants.UserSchemaConstants.EMAILS_URI, "admin@wso2.com");
+        attributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, "admin");
+        attributes.put(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI, "Administrator");
+        attributes.put(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT,
+                "Internal/admin,Internal/everyone");
 
         String claimSeparator = ",";
         Set<String> scimRoles = new HashSet<>();
