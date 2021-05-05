@@ -41,37 +41,37 @@ public class DefaultSCIMUserStoreErrorResolverTest extends PowerMockTestCase {
     public Object[][] dataProviderForResolveUserNameMandatory() {
 
         return new Object[][]{
-                {"error: 30007", "", HttpStatus.SC_NOT_FOUND, "", false},
-                {"error", "32102", HttpStatus.SC_BAD_REQUEST, "coreUserStoreException", false},
-                {"error", "32103", HttpStatus.SC_BAD_REQUEST, "coreUserStoreClientException", false},
-                {"error: 30008", "", HttpStatus.SC_NOT_FOUND, "", true},
-                {"error", "32103", HttpStatus.SC_BAD_REQUEST, "coreUserStoreException", true},
-                {"error", "32104", HttpStatus.SC_BAD_REQUEST, "coreUserStoreClientException", true},
+                {new UserStoreException("error: 30007"), HttpStatus.SC_NOT_FOUND},
+                {new org.wso2.carbon.user.core.UserStoreException("error", "32102"), HttpStatus.SC_BAD_REQUEST},
+                {new org.wso2.carbon.user.core.UserStoreClientException("error", "32103"), HttpStatus.SC_BAD_REQUEST}
         };
     }
 
     @Test(dataProvider = "dataProviderForResolveUserNameMandatory")
-    public void testResolveUserNameMandatory(String message, String errorCode, int checkCode, String errorType,
-                                             boolean isNullExcepted) {
-
-        UserStoreException userStoreException;
-        switch (errorType) {
-            case "coreUserStoreException":
-                userStoreException = new org.wso2.carbon.user.core.UserStoreException(message, errorCode);
-                break;
-            case "coreUserStoreClientException":
-                userStoreException = new org.wso2.carbon.user.core.UserStoreClientException(message, errorCode);
-                break;
-            default:
-                userStoreException = new UserStoreException(message);
-        }
+    public void testResolveHappyPath(Object userStoreException, int expected) {
 
         DefaultSCIMUserStoreErrorResolver defaultSCIMUserStoreErrorResolver = new DefaultSCIMUserStoreErrorResolver();
-        SCIMUserStoreException scimUserStoreException = defaultSCIMUserStoreErrorResolver.resolve(userStoreException);
-        if (isNullExcepted) {
-            assertNull(scimUserStoreException);
-        } else {
-            assertEquals(checkCode, scimUserStoreException.getHttpStatusCode());
-        }
+        SCIMUserStoreException scimUserStoreException = defaultSCIMUserStoreErrorResolver.
+                resolve((UserStoreException) userStoreException);
+        assertEquals(scimUserStoreException.getHttpStatusCode(), expected);
+    }
+
+    @DataProvider(name = "dataProviderForResolveUnHappyPath")
+    public Object[][] dataProviderForResolveUnHappyPath() {
+
+        return new Object[][]{
+                {new UserStoreException("error: 30008")},
+                {new org.wso2.carbon.user.core.UserStoreException("error", "32103")},
+                {new org.wso2.carbon.user.core.UserStoreClientException("error", "32104")},
+        };
+    }
+
+    @Test(dataProvider = "dataProviderForResolveUnHappyPath")
+    public void testResolveUnHappyPath(Object userStoreException) {
+
+        DefaultSCIMUserStoreErrorResolver defaultSCIMUserStoreErrorResolver = new DefaultSCIMUserStoreErrorResolver();
+        SCIMUserStoreException scimUserStoreException = defaultSCIMUserStoreErrorResolver.
+                resolve((UserStoreException) userStoreException);
+        assertNull(scimUserStoreException);
     }
 }
