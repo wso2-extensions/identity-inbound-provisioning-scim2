@@ -24,6 +24,7 @@ import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -98,6 +99,15 @@ public class SCIMCommonComponentTest extends PowerMockTestCase {
         when(mockBundleContext.registerService(any(Class.class), anyObject(), any())).
                 thenReturn(mockServiceRegistration);
         when(mockBundleContext.registerService(anyString(), anyObject(), any())).thenReturn(mockServiceRegistration);
+    }
+
+    @AfterClass
+    public void tearUp() {
+
+        SCIMCommonComponentHolder.setRoleManagementService(null);
+        SCIMCommonComponentHolder.setClaimManagementService(null);
+        SCIMCommonComponentHolder.setRealmService(null);
+        SCIMCommonComponentHolder.setRolePermissionManagementService(null);
     }
 
     @DataProvider(name = "dataProviderForActivateCharonException")
