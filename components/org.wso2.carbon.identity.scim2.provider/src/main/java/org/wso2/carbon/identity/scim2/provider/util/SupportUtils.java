@@ -20,7 +20,15 @@ package org.wso2.carbon.identity.scim2.provider.util;
 
 import org.apache.axiom.om.util.Base64;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomSchemaCache;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomSchemaCacheEntry;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 
 import javax.ws.rs.core.Response;
@@ -78,5 +86,37 @@ public class SupportUtils {
     public static String getAuthenticatedUsername() {
         // Get authenticated username from the thread local.
         return PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+    }
+
+    public static void buildCustomSchema(int tenantId) throws CharonException {
+
+        try {
+            SCIMCustomSchemaCacheEntry customSchemaCacheEntry =
+                    SCIMCustomSchemaCache.getInstance().getCustomAttributesFromCacheByTenantId(tenantId);
+            if (customSchemaCacheEntry != null) {
+                SCIMCustomSchemaExtensionBuilder.getInstance().buildUserCustomSchemaExtension(
+                        customSchemaCacheEntry.getSCIMCustomSchemaAttributes());
+            }
+        } catch (InternalErrorException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static int getTenantId() {
+
+        String tenantDomain = getTenantDomain();
+        if (StringUtils.isNotBlank(tenantDomain)) {
+            return IdentityTenantUtil.getTenantId(tenantDomain);
+        } else {
+            return MultitenantConstants.SUPER_TENANT_ID;
+        }
+    }
+
+    public static String getTenantDomain() {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            return IdentityTenantUtil.getTenantDomainFromContext();
+        }
+        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
     }
 }

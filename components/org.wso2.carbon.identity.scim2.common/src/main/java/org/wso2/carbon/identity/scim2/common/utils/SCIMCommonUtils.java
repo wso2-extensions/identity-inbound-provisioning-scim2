@@ -27,23 +27,31 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.ThreadLocalProvisioningServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * This class is to be used as a Util class for SCIM common things.
@@ -336,6 +344,11 @@ public class SCIMCommonUtils {
                                 .getExtensionSchema().getURI(), null, spTenantDomain, false);
                 scimToLocalClaimMap.putAll(extensionClaims);
             }
+
+            Map<String, String> customExtensionClaims = ClaimMetadataHandler.getInstance()
+                    .getMappingsMapFromOtherDialectToCarbon(SCIMCustomSchemaExtensionBuilder.getInstance().getURI(), null, spTenantDomain, false);
+            scimToLocalClaimMap.putAll(customExtensionClaims);
+
             return scimToLocalClaimMap;
         } catch (ClaimMetadataException e) {
             throw new UserStoreException("Error occurred while retrieving SCIM to Local claim mappings for tenant " +
@@ -479,4 +492,49 @@ public class SCIMCommonUtils {
         return Boolean.parseBoolean(IdentityUtil.getProperty(SCIMCommonConstants.SCIM_NOTIFY_USERSTORE_STATUS));
     }
 
+    public static Map<ExternalClaim, LocalClaim> getMappedLocalClaimsForDialect(String externalClaimDialect,
+                                                                                String tenantDomain) throws
+            CharonException {
+
+        try {
+            ClaimMetadataManagementService claimMetadataManagementService =
+                    SCIMCommonComponentHolder.getClaimManagementService();
+            List<ExternalClaim> externalClaimList =
+                    claimMetadataManagementService.getExternalClaims(externalClaimDialect, tenantDomain);
+            List<LocalClaim> localClaimList = claimMetadataManagementService.getLocalClaims(tenantDomain);
+
+            Map<ExternalClaim, LocalClaim> externalClaimLocalClaimMap = new HashMap<>();
+
+            if (externalClaimList != null && localClaimList != null) {
+
+                externalClaimList.forEach(externalClaim ->
+                        getMappedLocalClaim(externalClaim, localClaimList)
+                                .ifPresent(mappedLocalClaim -> externalClaimLocalClaimMap.put(externalClaim,
+                                        mappedLocalClaim)));
+            }
+            return externalClaimLocalClaimMap;
+
+        } catch (ClaimMetadataException e) {
+            throw new CharonException("Error while retrieving schema attribute details.", e);
+        }
+    }
+
+    /**
+     * Get mapped local claim for specified external claim.
+     *
+     * @param externalClaim
+     * @param localClaimList
+     * @return
+     */
+    private static Optional<LocalClaim> getMappedLocalClaim(ExternalClaim externalClaim,
+                                                            List<LocalClaim> localClaimList) {
+
+        if (localClaimList == null) {
+            return Optional.empty();
+        }
+
+        return localClaimList.stream()
+                .filter(localClaim -> localClaim.getClaimURI().equals(externalClaim.getMappedLocalClaim()))
+                .findAny();
+    }
 }

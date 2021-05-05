@@ -31,8 +31,10 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
+import org.wso2.carbon.identity.scim2.common.handlers.SCIMClaimOperationEventHandler;
 import org.wso2.carbon.identity.scim2.common.impl.DefaultSCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMTenantMgtListener;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListener;
@@ -46,6 +48,7 @@ import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
+import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
@@ -94,6 +97,13 @@ public class SCIMCommonComponent {
             SCIMTenantMgtListener scimTenantMgtListener = new SCIMTenantMgtListener();
             tenantMgtListenerServiceReg = ctx.getBundleContext().registerService(TenantMgtListener.class,
                     scimTenantMgtListener, null);
+
+            // Register claim operation event handler implementation.
+            ctx.getBundleContext().registerService(AbstractEventHandler.class.getName(),
+                    new SCIMClaimOperationEventHandler(), null);
+            if (logger.isDebugEnabled()) {
+                logger.debug("SCIMClaimOperationEventHandler is successfully registered.");
+            }
 
             // Register default implementation of SCIMUserStoreErrorResolver
             ctx.getBundleContext().registerService(SCIMUserStoreErrorResolver.class.getName(),
