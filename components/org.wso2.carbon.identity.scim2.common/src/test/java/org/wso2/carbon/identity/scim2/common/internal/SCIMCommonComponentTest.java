@@ -132,10 +132,10 @@ public class SCIMCommonComponentTest extends PowerMockTestCase {
 
         mockStatic(IdentityUtil.class);
         mockStatic(CarbonUtils.class);
-        when(IdentityUtil.getIdentityConfigDirPath()).thenReturn(Paths
-                .get(System.getProperty("user.dir"), "src", "test", pathIdentity).toString());
-        when(CarbonUtils.getCarbonConfigDirPath()).thenReturn(Paths
-                .get(System.getProperty("user.dir"), "src", "test", pathCarbon).toString());
+        when(IdentityUtil.getIdentityConfigDirPath()).
+                thenReturn(Paths.get(System.getProperty("user.dir"), "src", "test", pathIdentity).toString());
+        when(CarbonUtils.getCarbonConfigDirPath()).
+                thenReturn(Paths.get(System.getProperty("user.dir"), "src", "test", pathCarbon).toString());
 
         scimCommonComponent.activate(mockComponentContext);
         assertTrue(true, "asserted charonException");
@@ -157,11 +157,10 @@ public class SCIMCommonComponentTest extends PowerMockTestCase {
         mockStatic(IdentityUtil.class);
         mockStatic(CarbonUtils.class);
         mockStatic(IdentityTenantUtil.class);
-        when(IdentityUtil.getIdentityConfigDirPath()).thenReturn(Paths
-                .get(System.getProperty("user.dir"), "src", "test", path).toString());
-
-        when(CarbonUtils.getCarbonConfigDirPath()).thenReturn(Paths
-                .get(System.getProperty("user.dir"), "src", "test", "resources").toString());
+        when(IdentityUtil.getIdentityConfigDirPath()).
+                thenReturn(Paths.get(System.getProperty("user.dir"), "src", "test", path).toString());
+        when(CarbonUtils.getCarbonConfigDirPath()).
+                thenReturn(Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
         scimCommonComponent.activate(mockComponentContext);
         scimCommonComponent.deactivate(mockComponentContext);
         SCIMCommonComponent scimCommonComponent2 = new SCIMCommonComponent();

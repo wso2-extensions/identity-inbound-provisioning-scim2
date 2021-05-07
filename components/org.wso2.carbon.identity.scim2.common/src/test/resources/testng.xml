@@ -28,12 +28,10 @@
             <class name="org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManagerTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtilTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.impl.SCIMUserManagerTest"/>
-            <class name="org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentTest"/>
-
             <class name="org.wso2.carbon.identity.scim2.common.impl.SCIMRoleManagerTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.impl.IdentityResourceURLBuilderTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.impl.DefaultSCIMUserStoreErrorResolverTest"/>
+            <class name="org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentTest"/>
         </classes>
     </test>
-
 </suite>
