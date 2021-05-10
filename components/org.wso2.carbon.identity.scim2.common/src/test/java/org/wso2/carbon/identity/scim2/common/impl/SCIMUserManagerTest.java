@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
+import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
@@ -52,6 +53,7 @@ import org.wso2.carbon.identity.testutil.Whitebox;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
@@ -62,6 +64,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.AbstractCharonException;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
@@ -1033,5 +1036,62 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         assertEquals(expectedUserName, scimUser.getUserName());
         assertEquals(expectedNoOfGroups, scimUser.getGroups().size());
         assertEquals(expectedNoOfRoles, scimUser.getRoles().size());
+    }
+
+    @DataProvider(name = "exceptionHandlingConfigurations")
+    public Object[][] exceptionHandlingConfigurations() {
+
+        return new Object[][]{
+                {true},
+                {false}
+        };
+    }
+
+    @Test(expectedExceptions = AbstractCharonException.class, dataProvider = "exceptionHandlingConfigurations")
+    public void testGetUserWithInvalidUserID(Boolean isNotifyUserstoreStatusEnabled) throws Exception {
+        String tenantDomain = "carbon.super";
+        String userId = "12345";
+        Map<String, Boolean> requiredAttributes = new HashMap<>();
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
+
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        when(SCIMCommonUtils.isNotifyUserstoreStatusEnabled()).thenReturn(isNotifyUserstoreStatusEnabled);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, tenantDomain);
+        UserStoreException e = new org.wso2.carbon.user.core.UserStoreException
+                ("30007 - UserNotFound: User 12345 does not exist in: PRIMARY");
+        when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenThrow(e);
+        List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
+        SCIMUserStoreErrorResolver scimUserStoreErrorResolver = new DefaultSCIMUserStoreErrorResolver();
+        scimUserStoreErrorResolvers.add(scimUserStoreErrorResolver);
+        mockStatic(SCIMCommonComponentHolder.class);
+        when(SCIMCommonComponentHolder.getScimUserStoreErrorResolverList()).thenReturn(scimUserStoreErrorResolvers);
+        User scimUser = scimUserManager.getUser(userId, requiredAttributes);
+        //this method is for testing of throwing CharonException, hence no assertion
+    }
+
+    @Test(expectedExceptions = CharonException.class)
+    public void testGetUserWhenSCHIMisDisabled() throws Exception {
+        String tenantDomain = "carbon.super";
+        String userId = "12345";
+        String userStoreDomainName = "PRIMARY";
+        Map<String, Boolean> requiredAttributes = new HashMap<>();
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
+
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, tenantDomain);
+        org.wso2.carbon.user.core.common.User user = mock(org.wso2.carbon.user.core.common.User.class);
+        when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(user);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(false);
+        when(user.getUserStoreDomain()).thenReturn(userStoreDomainName);
+        User scimUser = scimUserManager.getUser(userId, requiredAttributes);
+        //this method is for testing of throwing CharonException, hence no assertion
     }
 }
