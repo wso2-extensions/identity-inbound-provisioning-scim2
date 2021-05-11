@@ -25,7 +25,6 @@ import org.powermock.api.support.membermodification.MemberModifier;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -54,14 +53,13 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
-import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
@@ -74,6 +72,7 @@ import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.FilterTreeManager;
 import org.wso2.charon3.core.utils.codeutils.Node;
+import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -802,5 +801,21 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         }
 
         assertTrue("UserName claim update is not properly handled.", hasExpectedBehaviour);
+    }
+
+    @Test
+    public void testListUsersWithPost() throws Exception {
+
+        String tenantDomain = "carbon.super";
+        SearchRequest searchRequest = new SearchRequest();
+        List<Object> listOfUsers = new ArrayList<>();
+
+        Map<String, Boolean> requiredAttributes = new HashMap<>();
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, tenantDomain));
+        doReturn(listOfUsers).when(scimUserManager).listUsersWithGET(any(), any(), any(), anyString(),
+                anyString(), anyString(), anyMap());
+        List<Object> users = scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
+        assertEquals(listOfUsers, users);
     }
 }
