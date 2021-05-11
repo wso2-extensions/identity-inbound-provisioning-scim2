@@ -871,8 +871,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     @DataProvider(name = "groupPermission")
     public Object[][] groupPermission() throws Exception {
 
-        Group group = new Group();
-        group.setDisplayName("roleName");
         String[] permission1 = new String[]{};
         String[] permission2 = new String[]{"/permission/admin/login"};
         return new Object[][]{
@@ -886,19 +884,31 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         String username = "user";
         String domainQualifiedUserName = "domainQualifiedUserName";
+        String userId = "b53fe2f0-054d-43b5-a8f7-50043adb2198";
+        String roles = "Internal/admin,Internal/everyone";
+        String emailAddress = "admin@wso2.com";
+        String lastName = "Administrator";
+        String groups = "admin";
+        String userNameLocalClaim = "http://wso2.org/claims/username";
+        String userIdLocalClaim = "http://wso2.org/claims/userid";
+        String rolesLocalClaim = "http://wso2.org/claims/roles";
+        String emailAddressLocalClaim = "http://wso2.org/claims/emailaddress";
+        String lastNameLocalClaim = "http://wso2.org/claims/lastname";
+        String groupsLocalClaim = "http://wso2.org/claims/groups";
+
         Map<String, String> userClaimValues1 = new HashMap<>();
-        userClaimValues1.put("http://wso2.org/claims/username" , username);
-        userClaimValues1.put("http://wso2.org/claims/userid" , "b53fe2f0-054d-43b5-a8f7-50043adb2198");
-        userClaimValues1.put("http://wso2.org/claims/roles" , "Internal/admin,Internal/everyone");
-        userClaimValues1.put("http://wso2.org/claims/emailaddress" , "admin@wso2.com");
-        userClaimValues1.put("http://wso2.org/claims/lastname" , "Administrator");
-        userClaimValues1.put("http://wso2.org/claims/groups" , "admin");
+        userClaimValues1.put(userNameLocalClaim , username);
+        userClaimValues1.put(userIdLocalClaim, userId);
+        userClaimValues1.put(emailAddressLocalClaim , emailAddress);
+        userClaimValues1.put(lastNameLocalClaim , lastName);
+        userClaimValues1.put(rolesLocalClaim , roles);
+        userClaimValues1.put(groupsLocalClaim , groups);
 
         Map<String, String> userClaimValues2 = new HashMap<>();
-        userClaimValues2.put("http://wso2.org/claims/username" , username);
-        userClaimValues2.put("http://wso2.org/claims/userid" , "b53fe2f0-054d-43b5-a8f7-50043adb2198");
-        userClaimValues2.put("http://wso2.org/claims/emailaddress" , "admin@wso2.com");
-        userClaimValues2.put("http://wso2.org/claims/lastname" , "Administrator");
+        userClaimValues2.put(userNameLocalClaim , username);
+        userClaimValues2.put(userIdLocalClaim, userId);
+        userClaimValues2.put(emailAddressLocalClaim , emailAddress);
+        userClaimValues2.put(lastNameLocalClaim , lastName);
 
         return new Object[][]{
                 {true, userClaimValues1, true, true, "true", 7, 2, 1, "PRIMARY/" + username},
