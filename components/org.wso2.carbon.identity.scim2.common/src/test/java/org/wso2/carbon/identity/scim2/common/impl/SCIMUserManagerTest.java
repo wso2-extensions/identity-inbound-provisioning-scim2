@@ -112,6 +112,13 @@ import static org.testng.AssertJUnit.assertTrue;
 @PowerMockIgnore("java.sql.*")
 public class SCIMUserManagerTest extends PowerMockTestCase {
 
+    final static public String USERNAME_LOCAL_CLAIM = "http://wso2.org/claims/username";
+    final static public String USERID_LOCAL_CLAIM = "http://wso2.org/claims/userid";
+    final static public String ROLES_LOCAL_CLAIM = "http://wso2.org/claims/roles";
+    final static public String EMAILADDRESS_LOCAL_CLAIM = "http://wso2.org/claims/emailaddress";
+    final static public String LASTNAME_LOCAL_CLAIM = "http://wso2.org/claims/lastname";
+    final static public String GROUPS_LOCAL_CLAIM = "http://wso2.org/claims/groups";
+
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
 
@@ -889,26 +896,20 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         String emailAddress = "admin@wso2.com";
         String lastName = "Administrator";
         String groups = "admin";
-        String userNameLocalClaim = "http://wso2.org/claims/username";
-        String userIdLocalClaim = "http://wso2.org/claims/userid";
-        String rolesLocalClaim = "http://wso2.org/claims/roles";
-        String emailAddressLocalClaim = "http://wso2.org/claims/emailaddress";
-        String lastNameLocalClaim = "http://wso2.org/claims/lastname";
-        String groupsLocalClaim = "http://wso2.org/claims/groups";
 
         Map<String, String> userClaimValues1 = new HashMap<>();
-        userClaimValues1.put(userNameLocalClaim , username);
-        userClaimValues1.put(userIdLocalClaim, userId);
-        userClaimValues1.put(emailAddressLocalClaim , emailAddress);
-        userClaimValues1.put(lastNameLocalClaim , lastName);
-        userClaimValues1.put(rolesLocalClaim , roles);
-        userClaimValues1.put(groupsLocalClaim , groups);
+        userClaimValues1.put(USERNAME_LOCAL_CLAIM , username);
+        userClaimValues1.put(USERID_LOCAL_CLAIM, userId);
+        userClaimValues1.put(EMAILADDRESS_LOCAL_CLAIM , emailAddress);
+        userClaimValues1.put(LASTNAME_LOCAL_CLAIM , lastName);
+        userClaimValues1.put(ROLES_LOCAL_CLAIM , roles);
+        userClaimValues1.put(GROUPS_LOCAL_CLAIM , groups);
 
         Map<String, String> userClaimValues2 = new HashMap<>();
-        userClaimValues2.put(userNameLocalClaim , username);
-        userClaimValues2.put(userIdLocalClaim, userId);
-        userClaimValues2.put(emailAddressLocalClaim , emailAddress);
-        userClaimValues2.put(lastNameLocalClaim , lastName);
+        userClaimValues2.put(USERNAME_LOCAL_CLAIM , username);
+        userClaimValues2.put(USERID_LOCAL_CLAIM, userId);
+        userClaimValues2.put(EMAILADDRESS_LOCAL_CLAIM , emailAddress);
+        userClaimValues2.put(LASTNAME_LOCAL_CLAIM , lastName);
 
         return new Object[][]{
                 {true, userClaimValues1, true, true, "true", 7, 2, 1, "PRIMARY/" + username},
@@ -944,13 +945,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         requiredAttributes.put(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT, true);
 
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
-        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
-        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.GROUP_URI, "http://wso2.org/claims/groups");
-        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.EMAILS_URI, "http://wso2.org/claims/emailaddress");
-        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, "http://wso2.org/claims/username");
-        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI, "http://wso2.org/claims/lastname");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.GROUP_URI, GROUPS_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.EMAILS_URI, EMAILADDRESS_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, USERNAME_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI, LASTNAME_LOCAL_CLAIM);
         scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT,
-                "http://wso2.org/claims/roles");
+                ROLES_LOCAL_CLAIM);
 
         HashSet<String> scimRoles = new HashSet<>();
         scimRoles.add("role1");
@@ -1026,7 +1027,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled())
                 .thenReturn(isGroupsVsRolesSeparationImprovementsEnabled);
         when(IdentityUtil.getProperty(SCIMCommonConstants.PRIMARY_LOGIN_IDENTIFIER_CLAIM))
-                .thenReturn("http://wso2.org/claims/username");
+                .thenReturn(USERNAME_LOCAL_CLAIM);
         when(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS)).thenReturn(enableLoginIdentifiers);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn("Internal");
 
@@ -1059,11 +1060,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Test(expectedExceptions = AbstractCharonException.class, dataProvider = "exceptionHandlingConfigurations")
     public void testGetUserWithInvalidUserID(Boolean isNotifyUserstoreStatusEnabled) throws Exception {
+
         String tenantDomain = "carbon.super";
         String userId = "12345";
         Map<String, Boolean> requiredAttributes = new HashMap<>();
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
-        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
 
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
@@ -1084,12 +1086,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Test(expectedExceptions = CharonException.class)
     public void testGetUserWhenSCHIMisDisabled() throws Exception {
+
         String tenantDomain = "carbon.super";
         String userId = "12345";
         String userStoreDomainName = "PRIMARY";
         Map<String, Boolean> requiredAttributes = new HashMap<>();
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
-        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
 
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
