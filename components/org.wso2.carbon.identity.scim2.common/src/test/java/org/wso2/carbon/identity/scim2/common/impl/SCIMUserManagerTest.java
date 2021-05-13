@@ -118,15 +118,15 @@ import static org.testng.AssertJUnit.assertTrue;
 @PowerMockIgnore("java.sql.*")
 public class SCIMUserManagerTest extends PowerMockTestCase {
 
-    final static public String USERNAME_LOCAL_CLAIM = "http://wso2.org/claims/username";
-    final static public String USERID_LOCAL_CLAIM = "http://wso2.org/claims/userid";
-    final static public String ROLES_LOCAL_CLAIM = "http://wso2.org/claims/roles";
-    final static public String EMAIL_ADDRESS_LOCAL_CLAIM = "http://wso2.org/claims/emailaddress";
-    final static public String LASTNAME_LOCAL_CLAIM = "http://wso2.org/claims/lastname";
-    final static public String GIVEN_NAME_LOCAL_CLAIM = "http://wso2.org/claims/givenname";
-    final static public String NICK_AME_LOCAL_CLAIM = "http://wso2.org/claims/nickname";
-    final static public String GROUPS_LOCAL_CLAIM = "http://wso2.org/claims/groups";
-    final static public String TENANT_DOMAIN = "carbon.super";
+    public static final String USERNAME_LOCAL_CLAIM = "http://wso2.org/claims/username";
+    public static final String USERID_LOCAL_CLAIM = "http://wso2.org/claims/userid";
+    public static final String ROLES_LOCAL_CLAIM = "http://wso2.org/claims/roles";
+    public static final String EMAIL_ADDRESS_LOCAL_CLAIM = "http://wso2.org/claims/emailaddress";
+    public static final String LASTNAME_LOCAL_CLAIM = "http://wso2.org/claims/lastname";
+    public static final String GIVEN_NAME_LOCAL_CLAIM = "http://wso2.org/claims/givenname";
+    public static final String NICK_AME_LOCAL_CLAIM = "http://wso2.org/claims/nickname";
+    public static final String GROUPS_LOCAL_CLAIM = "http://wso2.org/claims/groups";
+    public static final String TENANT_DOMAIN = "carbon.super";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
