@@ -18,6 +18,7 @@
 
 <provisioning-config>
     <Property name="user-schema-extension-enabled">true</Property>
+    <Property name="custom-user-schema-enabled">true</Property>
     <Property name="patch-supported">true</Property>
     <Property name="documentationUri">http://example.com/help/scim.html</Property>
     <Property name="bulk-supported">true</Property>

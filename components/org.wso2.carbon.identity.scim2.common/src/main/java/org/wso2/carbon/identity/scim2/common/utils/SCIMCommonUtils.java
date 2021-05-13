@@ -537,4 +537,15 @@ public class SCIMCommonUtils {
                 .filter(localClaim -> localClaim.getClaimURI().equals(externalClaim.getMappedLocalClaim()))
                 .findAny();
     }
+
+    /**
+     * Check if SCIM custom user schema has been enabled.
+     *
+     * @return True if SCIM custom user schema.
+     */
+    public static boolean isCustomSchemaEnabled() {
+
+        return Boolean.parseBoolean(SCIMConfigProcessor.getInstance().getProperty
+                (SCIMCommonConstants.CUSTOM_USER_SCHEMA_ENABLED));
+    }
 }

@@ -24,17 +24,19 @@ import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCustomSchemaProcessor;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
-import org.wso2.charon3.core.config.SCIMCustomAttribute;
+import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
 
 import java.util.List;
 
 import static org.wso2.charon3.core.schema.SCIMConstants.CUSTOM_USER_SCHEMA_URI;
 
+/**
+ * This stores custom schema against tenants. THis is a DB-backed cache.
+ */
 public class SCIMCustomSchemaCache extends BaseCache<SCIMCustomSchemaCacheKey, SCIMCustomSchemaCacheEntry> {
 
     private static final String SCIM_CUSTOM_SCHEMA_CACHE = "SCIMCustomSchemaCache";
     private static final Log log = LogFactory.getLog(SCIMCustomSchemaCache.class);
-
 
     private static volatile SCIMCustomSchemaCache instance;
 
@@ -56,7 +58,7 @@ public class SCIMCustomSchemaCache extends BaseCache<SCIMCustomSchemaCacheKey, S
     }
 
 
-    public SCIMCustomSchemaCacheEntry getCustomAttributesFromCacheByTenantId(int tenantId) {
+    public SCIMCustomSchemaCacheEntry getCustomAttributesFromCacheByTenantId(int tenantId) throws IdentitySCIMException {
 
         SCIMCustomSchemaCacheKey cacheKey = new SCIMCustomSchemaCacheKey(tenantId);
         SCIMCustomSchemaCacheEntry cacheEntry = super.getValueFromCache(cacheKey);
@@ -66,11 +68,8 @@ public class SCIMCustomSchemaCache extends BaseCache<SCIMCustomSchemaCacheKey, S
             }
             List<SCIMCustomAttribute> schemaConfigurations = null;
             String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
-            try {
-                schemaConfigurations = new SCIMCustomSchemaProcessor().getCustomAttributes(tenantDomain, CUSTOM_USER_SCHEMA_URI);
-            } catch (IdentitySCIMException e) {
-                e.printStackTrace();
-            }
+            schemaConfigurations = new SCIMCustomSchemaProcessor().getCustomAttributes(tenantDomain,
+                    CUSTOM_USER_SCHEMA_URI);
             cacheEntry = new SCIMCustomSchemaCacheEntry(schemaConfigurations);
             super.addToCache(cacheKey, cacheEntry);
         }

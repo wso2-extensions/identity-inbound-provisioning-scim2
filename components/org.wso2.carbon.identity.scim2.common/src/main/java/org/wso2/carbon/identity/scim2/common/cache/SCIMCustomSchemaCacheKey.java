@@ -20,6 +20,9 @@ package org.wso2.carbon.identity.scim2.common.cache;
 
 import java.io.Serializable;
 
+/**
+ * SCIM Custom Schema Cache key. This contains tenant Id as the key.
+ */
 public class SCIMCustomSchemaCacheKey implements Serializable {
 
     private static final long serialVersionUID = -1332814776225574523L;

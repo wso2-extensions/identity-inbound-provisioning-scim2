@@ -324,7 +324,7 @@ public class SCIMUserManager implements UserManager {
             user = this.getSCIMUser(coreUser, requiredClaimsInLocalDialect, scimToLocalClaimsMap, claimsInLocalDialect);
 
             // Set the schemas of the SCIM user.
-            user.setSchemas();
+            user.setSchemas(this);
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
                     e.getMessage());
@@ -345,6 +345,8 @@ public class SCIMUserManager implements UserManager {
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
             handleErrorsOnUserNameAndPasswordPolicy(e);
+        } catch (BadRequestException | NotImplementedException e) {
+            throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return user;
     }
@@ -426,7 +428,7 @@ public class SCIMUserManager implements UserManager {
                 //we assume (since id is unique per user) only one user exists for a given id
                 scimUser = this.getSCIMUser(coreUser, requiredClaimsInLocalDialect, scimToLocalClaimsMap, null);
                 //set the schemas of the scim user
-                scimUser.setSchemas();
+                scimUser.setSchemas(this);
                 if (log.isDebugEnabled()) {
                     log.debug("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
                 }
@@ -438,6 +440,8 @@ public class SCIMUserManager implements UserManager {
             } else {
                 throw resolveError(e, errMsg);
             }
+        } catch (BadRequestException | NotImplementedException e) {
+           throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return scimUser;
     }
@@ -1979,6 +1983,7 @@ public class SCIMUserManager implements UserManager {
     private Map<String, String> getAllAttributes(String domainName) throws CharonException {
 
         Map<String, String> attributes = new HashMap<>();
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
 
         if (claimMetadataManagementService != null) {
             attributes.putAll(getMappedAttributes(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT, domainName));
@@ -1988,8 +1993,8 @@ public class SCIMUserManager implements UserManager {
                 String extensionURI = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI();
                 attributes.putAll(getMappedAttributes(extensionURI, domainName));
             }
-            if (SCIMCustomSchemaExtensionBuilder.getInstance().getCustomSchema() != null) {
-                String customSchemaURI = SCIMCustomSchemaExtensionBuilder.getInstance().getCustomSchema().getURI();
+            if (SCIMCustomSchemaExtensionBuilder.getInstance().getExtensionSchema(tenantId) != null) {
+                String customSchemaURI = SCIMCustomSchemaExtensionBuilder.getInstance().getExtensionSchema(tenantId).getURI();
                 attributes.putAll(getMappedAttributes(customSchemaURI, domainName));
             }
         } else {
@@ -2006,9 +2011,9 @@ public class SCIMUserManager implements UserManager {
                             SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
                 }
 
-                if (SCIMCustomSchemaExtensionBuilder.getInstance().getCustomSchema() != null) {
+                if (SCIMCustomSchemaExtensionBuilder.getInstance().getExtensionSchema(tenantId) != null) {
                     customClaims = carbonClaimManager.getAllClaimMappings(
-                            SCIMCustomSchemaExtensionBuilder.getInstance().getCustomSchema().getURI());
+                            SCIMCustomSchemaExtensionBuilder.getInstance().getExtensionSchema(tenantId).getURI());
                 }
                 for (ClaimMapping claim : coreClaims) {
                     attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
@@ -2235,7 +2240,7 @@ public class SCIMUserManager implements UserManager {
                 throw new NotFoundException("No such user exist");
             } else {
                 // Set the schemas of the scim user.
-                scimUser.setSchemas();
+                scimUser.setSchemas(this);
                 if (log.isDebugEnabled()) {
                     log.debug("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
                 }
@@ -2243,6 +2248,8 @@ public class SCIMUserManager implements UserManager {
             }
         } catch (UserStoreException e) {
             throw resolveError(e, "Error from getting the authenticated user");
+        } catch (BadRequestException | NotImplementedException e) {
+            throw new CharonException("Error from getting the authenticated user");
         }
     }
 
@@ -3585,7 +3592,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Group> groupMetaAttributesCache = new HashMap<>();
 
             // Construct the SCIM Object from the attributes.
-            scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
+            scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(this, attributes, 1);
 
             // Add username with domain name.
             if (mandateDomainForUsernamesAndGroupNamesInResponse()) {
@@ -3779,7 +3786,7 @@ public class SCIMUserManager implements UserManager {
                     }
 
                     //construct the SCIM Object from the attributes
-                    scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1);
+                    scimUser = (User) AttributeMapper.constructSCIMObjectFromAttributes(this, attributes, 1);
 
                     if (isGroupsAttributeRequired(requiredAttributes)) {
 
@@ -5561,6 +5568,9 @@ public class SCIMUserManager implements UserManager {
     @Override
     public List<Attribute> getCustomUserSchema() throws CharonException {
 
+        if (!SCIMCommonUtils.isCustomSchemaEnabled()) {
+            throw new CharonException("Custom schema is not enabled");
+        }
         List<Attribute> customUserSchemaAttributesList = null;
 
         Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
@@ -5578,4 +5588,13 @@ public class SCIMUserManager implements UserManager {
         return customUserSchemaAttributesList;
     }
 
+    @Override
+    public AttributeSchema getCustomUserSchemaExtension() throws CharonException {
+
+        if (tenantDomain != null) {
+            return SCIMCustomSchemaExtensionBuilder.getInstance().getExtensionSchema(
+                    IdentityTenantUtil.getTenantId(tenantDomain));
+        }
+        return null;
+    }
 }
