@@ -71,6 +71,8 @@ public class SCIMCommonConstants {
     public static final String FILTER_MAX_RESULTS = "filter-maxResults";
     public static final String ENTERPRISE_USER_EXTENSION_ENABLED = "user-schema-extension-enabled";
     public static final String PAGINATION_DEFAULT_COUNT = "pagination-default-count";
+    public static final String CUSTOM_USER_SCHEMA_ENABLED = "custom-user-schema-enabled";
+    public static final String CUSTOM_USER_SCHEMA_URI = "custom-user-schema-uri";
 
     public static final java.lang.String ASK_PASSWORD_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:askPassword";
     public static final java.lang.String VERIFY_EMAIL_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:verifyEmail";

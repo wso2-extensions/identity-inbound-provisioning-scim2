@@ -54,7 +54,7 @@ public class MeResource extends AbstractResource {
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
             // Build Custom schema
-            buildCustomSchema(getTenantId());
+            buildCustomSchema(userManager, getTenantId());
             // create charon-SCIM me endpoint and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
 
@@ -68,7 +68,6 @@ public class MeResource extends AbstractResource {
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }
-
     }
 
     @POST
@@ -96,13 +95,14 @@ public class MeResource extends AbstractResource {
                 throw  new FormatNotSupportedException(error);
             }
 
-            // Build Custom schema
-            buildCustomSchema(getTenantId());
             // create charon-SCIM user endpoint and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             SCIMResponse response = meResourceManager.create(resourceString, userManager,
                     attribute, excludedAttributes);
@@ -176,10 +176,11 @@ public class MeResource extends AbstractResource {
                 throw  new FormatNotSupportedException(error);
             }
 
-            // Build Custom schema
-            buildCustomSchema(getTenantId());
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             // create charon-SCIM me resource manager and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
@@ -222,10 +223,11 @@ public class MeResource extends AbstractResource {
                 throw  new FormatNotSupportedException(error);
             }
 
-            // Build Custom schema
-            buildCustomSchema(getTenantId());
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             // create charon-SCIM me resource manager and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();

@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.scim2.common.listener.SCIMTenantMgtListener;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListener;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
@@ -86,6 +87,10 @@ public class SCIMCommonComponent {
                         CarbonUtils.getCarbonConfigDirPath() + File.separator +
                                 SCIMConfigConstants.SCIM_SCHEMA_EXTENSION_CONFIG;
                 SCIMUserSchemaExtensionBuilder.getInstance().buildUserSchemaExtension(schemaFilePath);
+            }
+            // If custom schema is enabled, read it root attribute URI from the file config if it is configured.
+            if (SCIMCommonUtils.isCustomSchemaEnabled()) {
+                SCIMCustomSchemaExtensionBuilder.getInstance().setURI(SCIMCommonUtils.getCustomSchemaURI());
             }
 
             //register UserOperationEventListener implementation

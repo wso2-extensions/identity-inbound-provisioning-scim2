@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
+import org.wso2.carbon.identity.scim2.common.impl.IdentityResourceTypeResourceManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.charon3.core.protocol.SCIMResponse;
@@ -35,7 +36,7 @@ public class ResourceTypesResource extends AbstractResource {
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getUser() {
         // create charon-SCIM service provider config endpoint and hand-over the request.
-        ResourceTypeResourceManager resourceTypeResourceManager = new ResourceTypeResourceManager();
+        IdentityResourceTypeResourceManager resourceTypeResourceManager = new IdentityResourceTypeResourceManager();
 
         SCIMResponse scimResponse = resourceTypeResourceManager.get(null, null, null, null);
         // needs to check the code of the response and return 200 0k or other error codes

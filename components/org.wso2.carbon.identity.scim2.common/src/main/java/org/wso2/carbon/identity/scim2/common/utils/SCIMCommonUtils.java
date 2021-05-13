@@ -53,6 +53,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.wso2.charon3.core.schema.SCIMConstants.CUSTOM_USER_SCHEMA_URI;
+
 /**
  * This class is to be used as a Util class for SCIM common things.
  * TODO:rename class name.
@@ -346,7 +348,7 @@ public class SCIMCommonUtils {
             }
 
             Map<String, String> customExtensionClaims = ClaimMetadataHandler.getInstance()
-                    .getMappingsMapFromOtherDialectToCarbon(SCIMCustomSchemaExtensionBuilder.getInstance().getURI(), null, spTenantDomain, false);
+                    .getMappingsMapFromOtherDialectToCarbon(getCustomSchemaURI(), null, spTenantDomain, false);
             scimToLocalClaimMap.putAll(customExtensionClaims);
 
             return scimToLocalClaimMap;
@@ -502,18 +504,14 @@ public class SCIMCommonUtils {
             List<ExternalClaim> externalClaimList =
                     claimMetadataManagementService.getExternalClaims(externalClaimDialect, tenantDomain);
             List<LocalClaim> localClaimList = claimMetadataManagementService.getLocalClaims(tenantDomain);
-
             Map<ExternalClaim, LocalClaim> externalClaimLocalClaimMap = new HashMap<>();
-
             if (externalClaimList != null && localClaimList != null) {
-
                 externalClaimList.forEach(externalClaim ->
                         getMappedLocalClaim(externalClaim, localClaimList)
                                 .ifPresent(mappedLocalClaim -> externalClaimLocalClaimMap.put(externalClaim,
                                         mappedLocalClaim)));
             }
             return externalClaimLocalClaimMap;
-
         } catch (ClaimMetadataException e) {
             throw new CharonException("Error while retrieving schema attribute details.", e);
         }
@@ -532,9 +530,38 @@ public class SCIMCommonUtils {
         if (localClaimList == null) {
             return Optional.empty();
         }
-
         return localClaimList.stream()
                 .filter(localClaim -> localClaim.getClaimURI().equals(externalClaim.getMappedLocalClaim()))
                 .findAny();
+    }
+
+    /**
+     * Check if SCIM custom user schema has been enabled or not. By default, it is enabled.
+     *
+     * @return True if SCIM custom user schema is enabled.
+     */
+    public static boolean isCustomSchemaEnabled() {
+
+        String isCustomSchemaEnabled =
+                SCIMConfigProcessor.getInstance().getProperty(SCIMCommonConstants.CUSTOM_USER_SCHEMA_ENABLED);
+        if (StringUtils.isNotBlank(isCustomSchemaEnabled)) {
+            return Boolean.parseBoolean(isCustomSchemaEnabled);
+        }
+        return true;
+    }
+
+    /**
+     * Return custom schema URI.
+     *
+     * @return custom schema URI.
+     */
+    public static String getCustomSchemaURI() {
+
+        String customSchemaURI =
+                SCIMConfigProcessor.getInstance().getProperty(SCIMCommonConstants.CUSTOM_USER_SCHEMA_URI);
+        if (StringUtils.isNotBlank(customSchemaURI)) {
+            return customSchemaURI;
+        }
+        return CUSTOM_USER_SCHEMA_URI;
     }
 }

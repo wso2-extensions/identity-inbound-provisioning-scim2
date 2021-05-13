@@ -58,6 +58,7 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -266,7 +267,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getRoleListOfUser(anyString())).thenReturn(userRoles);
         mockStatic(AttributeMapper.class);
-        when(AttributeMapper.constructSCIMObjectFromAttributes(anyMap(), anyInt())).thenReturn(mockedUser);
+        when(AttributeMapper.constructSCIMObjectFromAttributes(any(), anyMap(), anyInt())).thenReturn(mockedUser);
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
         when(mockedRealmConfig.getEveryOneRoleName()).thenReturn("roleName");
         when(mockedUserStoreManager.getTenantId()).thenReturn(1234567);
@@ -1035,6 +1036,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
             }
         });
 
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId("carbon.super")).thenReturn(-1234);
         User scimUser = scimUserManager.getUser(userId, requiredAttributes);
         assertEquals(expectedNoOfAttributes, scimUser.getAttributeList().size());
         assertEquals(expectedUserName, scimUser.getUserName());

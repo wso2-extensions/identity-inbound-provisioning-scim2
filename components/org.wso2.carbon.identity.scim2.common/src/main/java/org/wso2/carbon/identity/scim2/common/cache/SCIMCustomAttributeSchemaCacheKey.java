@@ -20,13 +20,16 @@ package org.wso2.carbon.identity.scim2.common.cache;
 
 import java.io.Serializable;
 
-public class SCIMCustomSchemaCacheKey implements Serializable {
+/**
+ * SCIM Custom Schema Cache key. This contains tenant Id as the key.
+ */
+public class SCIMCustomAttributeSchemaCacheKey implements Serializable {
 
     private static final long serialVersionUID = -1332814776225574523L;
 
     private final int tenantId;
 
-    public SCIMCustomSchemaCacheKey(int tenantId) {
+    public SCIMCustomAttributeSchemaCacheKey(int tenantId) {
 
         this.tenantId = tenantId;
     }
@@ -43,11 +46,11 @@ public class SCIMCustomSchemaCacheKey implements Serializable {
             return true;
         }
 
-        if (!(o instanceof SCIMCustomSchemaCacheKey)) {
+        if (!(o instanceof SCIMCustomAttributeSchemaCacheKey)) {
             return false;
         }
 
-        SCIMCustomSchemaCacheKey that = (SCIMCustomSchemaCacheKey) o;
+        SCIMCustomAttributeSchemaCacheKey that = (SCIMCustomAttributeSchemaCacheKey) o;
         return tenantId == that.tenantId;
     }
 
