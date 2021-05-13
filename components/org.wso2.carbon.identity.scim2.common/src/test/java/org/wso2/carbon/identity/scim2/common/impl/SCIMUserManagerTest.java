@@ -60,6 +60,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.AbstractCharonException;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
@@ -110,6 +111,8 @@ import static org.testng.AssertJUnit.assertTrue;
         ApplicationManagementService.class})
 @PowerMockIgnore("java.sql.*")
 public class SCIMUserManagerTest extends PowerMockTestCase {
+
+    public static final String TENANT_DOMAIN = "carbon.super";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -802,5 +805,28 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         }
 
         assertTrue("UserName claim update is not properly handled.", hasExpectedBehaviour);
+    }
+
+    @Test(expectedExceptions = AbstractCharonException.class)
+    public void testCreateUserWhenSCIMisDisabled() throws Exception {
+
+        User user = new User();
+        user.setUserName("testUser");
+        String userStoreDomainName = "PRIMARY";
+
+        mockStatic(ApplicationManagementService.class);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.extractDomainFromName(user.getUserName())).thenReturn(userStoreDomainName);
+
+        mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(userStoreDomainName))
+                .thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(false);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+        SCIMUserManager scimUserManager =
+                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService, TENANT_DOMAIN);
+        scimUserManager.createUser(user, null);
     }
 }
