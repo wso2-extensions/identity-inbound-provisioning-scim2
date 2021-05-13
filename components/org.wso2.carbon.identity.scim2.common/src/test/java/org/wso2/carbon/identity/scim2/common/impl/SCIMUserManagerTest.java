@@ -20,12 +20,13 @@ package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.api.support.membermodification.MemberModifier;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -41,7 +42,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
+import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -50,16 +53,18 @@ import org.wso2.carbon.identity.testutil.Whitebox;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.AbstractCharonException;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
@@ -69,8 +74,8 @@ import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMAttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.schema.SCIMDefinitions;
-import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
+import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.FilterTreeManager;
 import org.wso2.charon3.core.utils.codeutils.Node;
@@ -91,6 +96,7 @@ import static org.mockito.Matchers.anySet;
 import static org.mockito.Matchers.anyMap;
 
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -107,9 +113,20 @@ import static org.testng.AssertJUnit.assertTrue;
 @PrepareForTest({SCIMGroupHandler.class, IdentityUtil.class, SCIMUserSchemaExtensionBuilder.class,
         SCIMAttributeSchema.class, AttributeMapper.class, ClaimMetadataHandler.class, SCIMCommonUtils.class,
         IdentityTenantUtil.class, AbstractUserStoreManager.class, Group.class, UserCoreUtil.class,
-        ApplicationManagementService.class})
+        ApplicationManagementService.class, RolePermissionManagementService.class, SCIMCommonComponentHolder.class,
+        SCIMUserManager.class})
 @PowerMockIgnore("java.sql.*")
 public class SCIMUserManagerTest extends PowerMockTestCase {
+
+    public static final String USERNAME_LOCAL_CLAIM = "http://wso2.org/claims/username";
+    public static final String USERID_LOCAL_CLAIM = "http://wso2.org/claims/userid";
+    public static final String ROLES_LOCAL_CLAIM = "http://wso2.org/claims/roles";
+    public static final String EMAIL_ADDRESS_LOCAL_CLAIM = "http://wso2.org/claims/emailaddress";
+    public static final String LASTNAME_LOCAL_CLAIM = "http://wso2.org/claims/lastname";
+    public static final String GIVEN_NAME_LOCAL_CLAIM = "http://wso2.org/claims/givenname";
+    public static final String NICK_AME_LOCAL_CLAIM = "http://wso2.org/claims/nickname";
+    public static final String GROUPS_LOCAL_CLAIM = "http://wso2.org/claims/groups";
+    public static final String TENANT_DOMAIN = "carbon.super";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -152,6 +169,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Mock
     private ApplicationManagementService applicationManagementService;
+
+    @Mock
+    private SCIMGroupHandler mockedSCIMGroupHandler;
+
+    @Mock
+    private RolePermissionManagementService mockedRolePermissionManagementService;
 
 
     @BeforeMethod
@@ -626,7 +649,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
         List<Object> roleList = scimUserManager
                 .listGroupsWithGET(null, 1, null, null, null, "Application", requiredAttributes);
-        roleList.remove(0);//The first entry is the count of roles.
+        roleList.remove(0); //The first entry is the count of roles.
         assertEquals("Application/Apple", ((Group) roleList.get(0)).getDisplayName());
         assertEquals("Application/MyApp", ((Group) roleList.get(1)).getDisplayName());
         assertEquals(roleList.size(), 2);
@@ -679,7 +702,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
         List<Object> roleList = scimUserManager
                 .listGroupsWithGET(node, 1, null, null, null, "Application", requiredAttributes);
-        roleList.remove(0);//The first entry is the count of roles.
+        roleList.remove(0); //The first entry is the count of roles.
         assertEquals("Application/MyApp", ((Group) roleList.get(0)).getDisplayName());
         assertEquals(roleList.size(), 1);
     }
@@ -708,7 +731,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     @Test
     public void testGetEnterpriseUserSchemaWhenEnabled() throws Exception {
 
-        String tenantDomain = "carbon.super";
         String externalClaimURI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
 
         Map<String, String> properties = new HashMap<String, String>() {{
@@ -740,8 +762,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         }};
 
         when(mockClaimMetadataManagementService.getExternalClaims(SCIMCommonConstants.
-                SCIM_ENTERPRISE_USER_CLAIM_DIALECT, tenantDomain)).thenReturn(externalClaimMap);
-        when(mockClaimMetadataManagementService.getLocalClaims(tenantDomain)).thenReturn(localClaimMap);
+                SCIM_ENTERPRISE_USER_CLAIM_DIALECT, TENANT_DOMAIN)).thenReturn(externalClaimMap);
+        when(mockClaimMetadataManagementService.getLocalClaims(TENANT_DOMAIN)).thenReturn(localClaimMap);
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(true);
 
@@ -753,19 +775,17 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedAttributeSchema.getType()).thenReturn(SCIMDefinitions.DataType.STRING);
 
         SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                tenantDomain);
+                TENANT_DOMAIN);
         assertEquals(userManager.getEnterpriseUserSchema().size(), 2);
     }
 
     @Test
     public void testGetEnterpriseUserSchemaWhenDisabled() throws Exception {
 
-        String tenantDomain = "carbon.super";
-
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(false);
         SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                tenantDomain);
+                TENANT_DOMAIN);
         assertEquals(userManager.getEnterpriseUserSchema(), null);
     }
 
@@ -785,9 +805,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
 
-        String tenantDomain = "carbon.super";
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
-                mockClaimMetadataManagementService, tenantDomain));
+                mockClaimMetadataManagementService, TENANT_DOMAIN));
         doReturn(oldUser).when(scimUserManager).getUser(anyString(), anyMap());
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
@@ -802,5 +821,281 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         }
 
         assertTrue("UserName claim update is not properly handled.", hasExpectedBehaviour);
+    }
+
+    @Test
+    public void testGetUserSchema() throws Exception {
+
+        String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
+
+        Map<String, String> supportedByDefaultProperties = new HashMap<String, String>() {{
+            put("SupportedByDefault", "true");
+            put("ReadOnly", "true");
+        }};
+
+        List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim(USERNAME_LOCAL_CLAIM, null, null));
+            add(new LocalClaim(GIVEN_NAME_LOCAL_CLAIM, null, supportedByDefaultProperties));
+            add(new LocalClaim(EMAIL_ADDRESS_LOCAL_CLAIM, null, supportedByDefaultProperties));
+            add(new LocalClaim(NICK_AME_LOCAL_CLAIM, null, null));
+        }};
+
+        List<ExternalClaim> externalClaimList = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":userName", USERNAME_LOCAL_CLAIM));
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":name.givenName", GIVEN_NAME_LOCAL_CLAIM));
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":emails", EMAIL_ADDRESS_LOCAL_CLAIM));
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":nickName", NICK_AME_LOCAL_CLAIM));
+        }};
+
+        when(mockClaimMetadataManagementService.getExternalClaims(SCIMCommonConstants.
+                SCIM_USER_CLAIM_DIALECT, TENANT_DOMAIN)).thenReturn(externalClaimList);
+        when(mockClaimMetadataManagementService.getLocalClaims(TENANT_DOMAIN)).thenReturn(localClaimList);
+        SCIMUserManager scimUserManager =
+                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService, TENANT_DOMAIN);
+        List<Attribute> list = scimUserManager.getUserSchema();
+        assertEquals(3, list.size());
+    }
+
+    @Test(dataProvider = "groupPermission")
+    public void testGetGroupPermissions(String roleName, String[] permission, Object expected) throws Exception {
+
+        SCIMUserManager scimUserManager =
+                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService, TENANT_DOMAIN);
+        mockStatic(SCIMCommonComponentHolder.class);
+        when(SCIMCommonComponentHolder.getRolePermissionManagementService())
+                .thenReturn(mockedRolePermissionManagementService);
+        when(mockedRolePermissionManagementService.getRolePermissions(anyString(), anyInt())).thenReturn(permission);
+        String[] actual = scimUserManager.getGroupPermissions(roleName);
+        assertEquals(expected, actual);
+    }
+
+    @DataProvider(name = "groupPermission")
+    public Object[][] groupPermission() throws Exception {
+
+        String[] permission1 = new String[]{};
+        String[] permission2 = new String[]{"/permission/admin/login"};
+        return new Object[][]{
+                {null, permission1, permission1},
+                {"roleName", permission2, permission2}
+        };
+    }
+
+    @DataProvider(name = "getUserConfigurations")
+    public Object[][] getUserConfigurations() {
+
+        String username = "user";
+        String domainQualifiedUserName = "domainQualifiedUserName";
+        String userId = "b53fe2f0-054d-43b5-a8f7-50043adb2198";
+        String roles = "Internal/admin,Internal/everyone";
+        String emailAddress = "admin@wso2.com";
+        String lastName = "Administrator";
+        String groups = "admin";
+
+        Map<String, String> userClaimValues1 = new HashMap<>();
+        userClaimValues1.put(USERNAME_LOCAL_CLAIM , username);
+        userClaimValues1.put(USERID_LOCAL_CLAIM, userId);
+        userClaimValues1.put(EMAIL_ADDRESS_LOCAL_CLAIM , emailAddress);
+        userClaimValues1.put(LASTNAME_LOCAL_CLAIM , lastName);
+        userClaimValues1.put(ROLES_LOCAL_CLAIM , roles);
+        userClaimValues1.put(GROUPS_LOCAL_CLAIM , groups);
+
+        Map<String, String> userClaimValues2 = new HashMap<>();
+        userClaimValues2.put(USERNAME_LOCAL_CLAIM , username);
+        userClaimValues2.put(USERID_LOCAL_CLAIM, userId);
+        userClaimValues2.put(EMAIL_ADDRESS_LOCAL_CLAIM , emailAddress);
+        userClaimValues2.put(LASTNAME_LOCAL_CLAIM , lastName);
+
+        return new Object[][]{
+                {true, userClaimValues1, true, true, "true", 7, 2, 1, "PRIMARY/" + username},
+                {true, userClaimValues1, true, true, "false", 7, 2, 1, "PRIMARY/" + domainQualifiedUserName},
+                {true, userClaimValues1, true, false, "true", 7, 2, 1, username},
+                {true, userClaimValues1, true, false, "false", 7, 2, 1, domainQualifiedUserName},
+                {false, userClaimValues2, true, true, "false", 7, 2, 1, "PRIMARY/" + domainQualifiedUserName},
+                {false, userClaimValues2, true, false, "false", 7, 2, 1, domainQualifiedUserName},
+                {false, userClaimValues2, false, true, "false", 6, 0, 2, "PRIMARY/" + domainQualifiedUserName},
+                {false, userClaimValues2, false, false, "false", 6, 0, 2, domainQualifiedUserName},
+        };
+    }
+
+    @Test(dataProvider = "getUserConfigurations")
+    public void testGetUser(Boolean isGroupsVsRolesSeparationImprovementsEnabled, Map<String, String> userClaimValues,
+                            Boolean isRoleAndGroupSeparationEnabled,
+                            Boolean mandateDomainForUsernamesAndGroupNamesInResponse, String enableLoginIdentifiers,
+                            int expectedNoOfAttributes, int expectedNoOfRoles, int expectedNoOfGroups,
+                            String expectedUserName) throws Exception {
+
+        String userId = "b53fe2f0-054d-43b5-a8f7-50043adb2198";
+        String username = "user";
+        String domainQualifiedUserName = "domainQualifiedUserName";
+        String claimSeparator = ",";
+        String userStoreDomainName = "PRIMARY";
+        Map<String, Boolean> requiredAttributes = new HashMap<>();
+        requiredAttributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, true);
+        requiredAttributes.put(SCIMConstants.UserSchemaConstants.GROUP_URI, true);
+        requiredAttributes.put(SCIMConstants.UserSchemaConstants.EMAILS_URI, true);
+        requiredAttributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, true);
+        requiredAttributes.put(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI, true);
+        requiredAttributes.put(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT, true);
+
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.GROUP_URI, GROUPS_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.EMAILS_URI, EMAIL_ADDRESS_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, USERNAME_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI, LASTNAME_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put
+                (SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT, ROLES_LOCAL_CLAIM);
+
+        HashSet<String> scimRoles = new HashSet<>();
+        scimRoles.add("role1");
+        scimRoles.add("role2");
+
+        ArrayList<String> groupsList = new ArrayList<>();
+        groupsList.add("Internal/admin");
+        groupsList.add("Internal/everyone");
+        groupsList.add("admin");
+
+        ArrayList<String> rolesList = new ArrayList<>();
+        rolesList.add("Internal/admin");
+        rolesList.add("Internal/everyone");
+
+        Group group1 = new Group();
+        group1.setDisplayName("admin");
+        group1.setId("Group 1");
+
+        Group group2 = new Group();
+        group2.setDisplayName("PRIMARY/admin");
+        group2.setId("Group 2");
+
+        Group group3 = new Group();
+        group3.setDisplayName("Internal/admin");
+        group3.setId("Role 1");
+
+        Group group4 = new Group();
+        group4.setDisplayName("Internal/everyone");
+        group4.setId("Role 2");
+
+        Map<String, Group> groupsMap = new HashMap<>();
+        groupsMap.put("admin", group1);
+        groupsMap.put("PRIMARY/admin", group2);
+        groupsMap.put("Internal/admin", group3);
+        groupsMap.put("Internal/everyone", group4);
+
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        when(SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap())).thenCallRealMethod();
+        when(SCIMCommonUtils.mandateDomainForUsernamesAndGroupNamesInResponse()).
+                thenReturn(mandateDomainForUsernamesAndGroupNamesInResponse);
+        when(SCIMCommonUtils.prependDomain(anyString())).thenCallRealMethod();
+        when(SCIMCommonUtils.isHybridRole(anyString())).thenCallRealMethod();
+
+        org.wso2.carbon.user.core.common.User user = mock(org.wso2.carbon.user.core.common.User.class);
+        when(user.getUserStoreDomain()).thenReturn(userStoreDomainName);
+        when(user.getUsername()).thenReturn((username));
+        when(user.getDomainQualifiedUsername()).thenReturn(domainQualifiedUserName);
+
+        mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(user);
+        when(mockedUserStoreManager.getTenantId()).thenReturn(1234567);
+        when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(), anyString()))
+                .thenReturn(userClaimValues);
+        when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(isRoleAndGroupSeparationEnabled);
+        when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(groupsList);
+        when(mockedUserStoreManager.getHybridRoleListOfUser(anyString(), anyString())).thenReturn(rolesList);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        when(secondaryUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
+        when(mockedRealmConfig.getUserStoreProperty(anyString())).thenReturn(claimSeparator);
+        when(mockedRealmConfig.isPrimary()).thenReturn(true);
+        when(mockedRealmConfig.getEveryOneRoleName()).thenReturn("Internal/everyone");
+
+        PowerMockito.whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
+        doNothing().when(mockedGroupDAO).addSCIMGroupAttributesToSCIMDisabledHybridRoles(anyInt(), any());
+
+        SCIMUserManager scimUserManager =
+                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService, TENANT_DOMAIN);
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled())
+                .thenReturn(isGroupsVsRolesSeparationImprovementsEnabled);
+        when(IdentityUtil.getProperty(SCIMCommonConstants.PRIMARY_LOGIN_IDENTIFIER_CLAIM))
+                .thenReturn(USERNAME_LOCAL_CLAIM);
+        when(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS)).thenReturn(enableLoginIdentifiers);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenReturn("Internal");
+
+        PowerMockito.whenNew(SCIMGroupHandler.class).withArguments(anyInt()).thenReturn(mockedSCIMGroupHandler);
+        when(mockedSCIMGroupHandler.listSCIMRoles()).thenReturn(scimRoles);
+        when(mockedSCIMGroupHandler.getGroupWithAttributes(any(Group.class), anyString()))
+                .thenAnswer(new Answer<Group>() {
+            public Group answer(InvocationOnMock invocation) throws Throwable {
+                Object[] args = invocation.getArguments();
+                String groupName = (String) args[1];
+                return groupsMap.get(groupName);
+            }
+        });
+
+        User scimUser = scimUserManager.getUser(userId, requiredAttributes);
+        assertEquals(expectedNoOfAttributes, scimUser.getAttributeList().size());
+        assertEquals(expectedUserName, scimUser.getUserName());
+        assertEquals(expectedNoOfGroups, scimUser.getGroups().size());
+        assertEquals(expectedNoOfRoles, scimUser.getRoles().size());
+    }
+
+    @DataProvider(name = "exceptionHandlingConfigurations")
+    public Object[][] exceptionHandlingConfigurations() {
+
+        return new Object[][]{
+                {true},
+                {false}
+        };
+    }
+
+    @Test(expectedExceptions = AbstractCharonException.class, dataProvider = "exceptionHandlingConfigurations")
+    public void testGetUserWithInvalidUserID(Boolean isNotifyUserstoreStatusEnabled) throws Exception {
+
+        String userId = "12345";
+        Map<String, Boolean> requiredAttributes = new HashMap<>();
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
+
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        when(SCIMCommonUtils.isNotifyUserstoreStatusEnabled()).thenReturn(isNotifyUserstoreStatusEnabled);
+        SCIMUserManager scimUserManager =
+                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService, TENANT_DOMAIN);
+        UserStoreException e = new org.wso2.carbon.user.core.UserStoreException
+                ("30007 - UserNotFound: User 12345 does not exist in: PRIMARY");
+        when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenThrow(e);
+        List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
+        SCIMUserStoreErrorResolver scimUserStoreErrorResolver = new DefaultSCIMUserStoreErrorResolver();
+        scimUserStoreErrorResolvers.add(scimUserStoreErrorResolver);
+        mockStatic(SCIMCommonComponentHolder.class);
+        when(SCIMCommonComponentHolder.getScimUserStoreErrorResolverList()).thenReturn(scimUserStoreErrorResolvers);
+        User scimUser = scimUserManager.getUser(userId, requiredAttributes);
+        // This method is for testing of throwing CharonException, hence no assertion.
+    }
+
+    @Test(expectedExceptions = CharonException.class)
+    public void testGetUserWhenSCIMisDisabled() throws Exception {
+
+        String userId = "12345";
+        String userStoreDomainName = "PRIMARY";
+        Map<String, Boolean> requiredAttributes = new HashMap<>();
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
+
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
+        SCIMUserManager scimUserManager =
+                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService, TENANT_DOMAIN);
+        org.wso2.carbon.user.core.common.User user = mock(org.wso2.carbon.user.core.common.User.class);
+        when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(user);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(false);
+        when(user.getUserStoreDomain()).thenReturn(userStoreDomainName);
+        User scimUser = scimUserManager.getUser(userId, requiredAttributes);
+        // This method is for testing of throwing CharonException, hence no assertion.
     }
 }
