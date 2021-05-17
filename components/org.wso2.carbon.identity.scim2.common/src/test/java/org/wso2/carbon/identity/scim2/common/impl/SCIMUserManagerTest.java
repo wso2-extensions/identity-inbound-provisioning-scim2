@@ -1079,7 +1079,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         scimUserStoreErrorResolvers.add(scimUserStoreErrorResolver);
         mockStatic(SCIMCommonComponentHolder.class);
         when(SCIMCommonComponentHolder.getScimUserStoreErrorResolverList()).thenReturn(scimUserStoreErrorResolvers);
-        User scimUser = scimUserManager.getUser(userId, requiredAttributes);
+        scimUserManager.getUser(userId, requiredAttributes);
         // This method is for testing of throwing CharonException, hence no assertion.
     }
 
@@ -1102,7 +1102,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(false);
         when(user.getUserStoreDomain()).thenReturn(userStoreDomainName);
-        User scimUser = scimUserManager.getUser(userId, requiredAttributes);
+        scimUserManager.getUser(userId, requiredAttributes);
         // This method is for testing of throwing CharonException, hence no assertion.
     }
 
@@ -1227,8 +1227,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(ApplicationManagementService.class);
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(serviceProvider);
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService, TENANT_DOMAIN);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         scimUserManager.createUser(user, null);
         // This method is for testing of throwing CharonException, hence no assertion.
     }
@@ -1268,8 +1268,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
                 .thenReturn(secondaryUserStoreManager);
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService, TENANT_DOMAIN);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         scimUserManager.createUser(user, null);
         // This method is for testing of throwing ConflictException, hence no assertion.
     }
@@ -1303,8 +1303,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
                 .thenReturn(secondaryUserStoreManager);
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService, TENANT_DOMAIN);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         scimUserManager.createUser(user, null);
         // This method is for testing of throwing BadRequestException, hence no assertion.
     }
