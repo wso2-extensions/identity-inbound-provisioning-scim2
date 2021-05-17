@@ -766,10 +766,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockClaimMetadataManagementService
                 .getExternalClaims(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
-                .thenReturn(externalClaimMap);
-        when(mockClaimMetadataManagementService
-                .getLocalClaims(org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimMap);
+        when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(localClaimMap);
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(true);
@@ -782,7 +780,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedAttributeSchema.getType()).thenReturn(SCIMDefinitions.DataType.STRING);
 
         SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         assertEquals(userManager.getEnterpriseUserSchema().size(), 2);
     }
 
@@ -792,7 +790,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(false);
         SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         assertEquals(userManager.getEnterpriseUserSchema(), null);
     }
 
@@ -812,9 +810,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
 
-        SCIMUserManager scimUserManager =
-                spy(new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
         doReturn(oldUser).when(scimUserManager).getUser(anyString(), anyMap());
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
@@ -856,14 +853,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         }};
 
         when(mockClaimMetadataManagementService.getExternalClaims(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT,
-                org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
-                .thenReturn(externalClaimList);
-        when(mockClaimMetadataManagementService
-                .getLocalClaims(org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimList);
+        when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(localClaimList);
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         List<Attribute> list = scimUserManager.getUserSchema();
         assertEquals(3, list.size());
     }
@@ -871,9 +865,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     @Test(dataProvider = "groupPermission")
     public void testGetGroupPermissions(String roleName, String[] permission, Object expected) throws Exception {
 
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         mockStatic(SCIMCommonComponentHolder.class);
         when(SCIMCommonComponentHolder.getRolePermissionManagementService())
                 .thenReturn(mockedRolePermissionManagementService);
@@ -1026,9 +1019,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         PowerMockito.whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         doNothing().when(mockedGroupDAO).addSCIMGroupAttributesToSCIMDisabledHybridRoles(anyInt(), any());
 
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled())
@@ -1076,9 +1068,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         when(SCIMCommonUtils.isNotifyUserstoreStatusEnabled()).thenReturn(isNotifyUserstoreStatusEnabled);
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         UserStoreException e = new UserStoreException("30007 - UserNotFound: User 12345 does not exist in: PRIMARY");
         when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenThrow(e);
         List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
@@ -1102,9 +1093,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         org.wso2.carbon.user.core.common.User user = mock(org.wso2.carbon.user.core.common.User.class);
         when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(user);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
@@ -1121,9 +1111,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         List<Object> listOfUsers = new ArrayList<>();
 
         Map<String, Boolean> requiredAttributes = new HashMap<>();
-        SCIMUserManager scimUserManager =
-                spy(new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
         doReturn(listOfUsers).when(scimUserManager)
                 .listUsersWithGET(any(), any(), any(), anyString(), anyString(), anyString(), anyMap());
         List<Object> users = scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
@@ -1133,7 +1122,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     @Test(expectedExceptions = NotFoundException.class)
     public void testDeleteUserWithInvalidUserId() throws Exception {
 
-        String userId  = "12345";
+        String userId = "12345";
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "userIdURI");
         List<org.wso2.carbon.user.core.common.User> coreUsers = new ArrayList<>();
@@ -1142,9 +1131,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         AbstractUserStoreManager mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(coreUsers);
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         mockStatic(ApplicationManagementService.class);
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
@@ -1169,9 +1157,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         AbstractUserStoreManager mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(coreUsers);
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         mockStatic(ApplicationManagementService.class);
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
@@ -1196,9 +1183,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         AbstractUserStoreManager mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(coreUsers);
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         InboundProvisioningConfig inboundProvisioningConfig = new InboundProvisioningConfig();
         inboundProvisioningConfig.setProvisioningUserStore("SECONDARY");
         ServiceProvider serviceProvider = new ServiceProvider();
@@ -1214,9 +1200,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     public void testDeleteMeWithException() throws Exception {
 
         String userName = "testUser";
-        SCIMUserManager scimUserManager =
-                new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
-                        org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(mockedUserStoreManager.getUserIDFromUserName(userName)).thenThrow(new UserStoreException());
         scimUserManager.deleteMe(userName);
         // This method is for testing of throwing CharonException, hence no assertion.
