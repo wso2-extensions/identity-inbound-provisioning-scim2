@@ -69,6 +69,7 @@ import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.AbstractCharonException;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.ConflictException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.User;
@@ -130,6 +131,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     private static final String GIVEN_NAME_LOCAL_CLAIM = "http://wso2.org/claims/givenname";
     private static final String NICK_AME_LOCAL_CLAIM = "http://wso2.org/claims/nickname";
     private static final String GROUPS_LOCAL_CLAIM = "http://wso2.org/claims/groups";
+    private static final String DISPLAY_NAME_LOCAL_CLAIM = "http://wso2.org/claims/displayName";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -1077,7 +1079,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         scimUserStoreErrorResolvers.add(scimUserStoreErrorResolver);
         mockStatic(SCIMCommonComponentHolder.class);
         when(SCIMCommonComponentHolder.getScimUserStoreErrorResolverList()).thenReturn(scimUserStoreErrorResolvers);
-        User scimUser = scimUserManager.getUser(userId, requiredAttributes);
+        scimUserManager.getUser(userId, requiredAttributes);
         // This method is for testing of throwing CharonException, hence no assertion.
     }
 
@@ -1100,7 +1102,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(false);
         when(user.getUserStoreDomain()).thenReturn(userStoreDomainName);
-        User scimUser = scimUserManager.getUser(userId, requiredAttributes);
+        scimUserManager.getUser(userId, requiredAttributes);
         // This method is for testing of throwing CharonException, hence no assertion.
     }
 
@@ -1205,5 +1207,105 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getUserIDFromUserName(userName)).thenThrow(new UserStoreException());
         scimUserManager.deleteMe(userName);
         // This method is for testing of throwing CharonException, hence no assertion.
+    }
+
+    @Test(expectedExceptions = AbstractCharonException.class)
+    public void testCreateUserWhenSCIMisDisabled() throws Exception {
+
+        User user = new User();
+        user.setUserName("testUser");
+
+        mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
+                .thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(false);
+
+        InboundProvisioningConfig inboundProvisioningConfig = new InboundProvisioningConfig();
+        inboundProvisioningConfig.setProvisioningUserStore("DomainName");
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setInboundProvisioningConfig(inboundProvisioningConfig);
+        mockStatic(ApplicationManagementService.class);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(serviceProvider);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        scimUserManager.createUser(user, null);
+        // This method is for testing of throwing CharonException, hence no assertion.
+    }
+
+    @DataProvider(name = "createUserConfigurations")
+    public Object[][] createUserConfigurations() {
+
+        return new Object[][]{
+                {"false"},
+                {"true"}
+        };
+    }
+
+    @Test(expectedExceptions = ConflictException.class, dataProvider = "createUserConfigurations")
+    public void testCreateUserWithExistingUserName(String isLoginIdentifiersEnabled) throws Exception {
+
+        User user = new User();
+        user.setId("12345");
+        user.setUserName("DomainName/testUser1");
+        String[] existingUserList = {"user1", "user2"};
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(SCIMCommonConstants.PRIMARY_LOGIN_IDENTIFIER_CLAIM))
+                .thenReturn("primaryLoginIdentifierClaim");
+        when(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS))
+                .thenReturn(isLoginIdentifiersEnabled);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+
+        mockStatic(ApplicationManagementService.class);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.isExistingUserWithID(anyString())).thenReturn(true);
+        when(mockedUserStoreManager.isExistingUser(anyString())).thenReturn(true);
+        when(mockedUserStoreManager.getUserList(anyString(), anyString(), anyString())).thenReturn(existingUserList);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
+                .thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        scimUserManager.createUser(user, null);
+        // This method is for testing of throwing ConflictException, hence no assertion.
+    }
+
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testCreateUserWithConflictingLoginIdentifier() throws Exception {
+
+        User user = new User();
+        user.setId("12345");
+        user.replaceDisplayName("displayName");
+        user.setUserName("DomainName/testUser");
+        Map<String, String> scimToLocalClaimMappings = new HashMap<>();
+        scimToLocalClaimMappings.put(SCIMConstants.UserSchemaConstants.DISPLAY_NAME_URI, DISPLAY_NAME_LOCAL_CLAIM);
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(SCIMCommonConstants.PRIMARY_LOGIN_IDENTIFIER_CLAIM))
+                .thenReturn(DISPLAY_NAME_LOCAL_CLAIM);
+        when(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS)).thenReturn("true");
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+
+        mockStatic(ApplicationManagementService.class);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.convertSCIMtoLocalDialect(anyMap())).thenCallRealMethod();
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimMappings);
+
+        mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.getUserList(anyString(), anyString(), anyString())).thenReturn(null);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
+                .thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        scimUserManager.createUser(user, null);
+        // This method is for testing of throwing BadRequestException, hence no assertion.
     }
 }
