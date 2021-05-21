@@ -31,13 +31,16 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
+import org.wso2.carbon.identity.scim2.common.handlers.SCIMClaimOperationEventHandler;
 import org.wso2.carbon.identity.scim2.common.impl.DefaultSCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMTenantMgtListener;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListener;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
@@ -46,6 +49,7 @@ import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
+import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
@@ -84,6 +88,10 @@ public class SCIMCommonComponent {
                                 SCIMConfigConstants.SCIM_SCHEMA_EXTENSION_CONFIG;
                 SCIMUserSchemaExtensionBuilder.getInstance().buildUserSchemaExtension(schemaFilePath);
             }
+            // If custom schema is enabled, read it root attribute URI from the file config if it is configured.
+            if (SCIMCommonUtils.isCustomSchemaEnabled()) {
+                SCIMCustomSchemaExtensionBuilder.getInstance().setURI(SCIMCommonUtils.getCustomSchemaURI());
+            }
 
             //register UserOperationEventListener implementation
             SCIMUserOperationListener scimUserOperationListener = new SCIMUserOperationListener();
@@ -94,6 +102,13 @@ public class SCIMCommonComponent {
             SCIMTenantMgtListener scimTenantMgtListener = new SCIMTenantMgtListener();
             tenantMgtListenerServiceReg = ctx.getBundleContext().registerService(TenantMgtListener.class,
                     scimTenantMgtListener, null);
+
+            // Register claim operation event handler implementation.
+            ctx.getBundleContext().registerService(AbstractEventHandler.class.getName(),
+                    new SCIMClaimOperationEventHandler(), null);
+            if (logger.isDebugEnabled()) {
+                logger.debug("SCIMClaimOperationEventHandler is successfully registered.");
+            }
 
             // Register default implementation of SCIMUserStoreErrorResolver
             ctx.getBundleContext().registerService(SCIMUserStoreErrorResolver.class.getName(),

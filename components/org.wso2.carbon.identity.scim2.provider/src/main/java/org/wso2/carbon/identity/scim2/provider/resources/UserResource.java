@@ -33,6 +33,9 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.buildCustomSchema;
+import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.getTenantId;
+
 @Path("/")
 public class UserResource extends AbstractResource {
 
@@ -56,6 +59,9 @@ public class UserResource extends AbstractResource {
 
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             SCIMResponse scimResponse = userResourceManager.get(id, userManager,attribute, excludedAttributes);
             // needs to check the code of the response and return 200 0k or other error codes
@@ -98,6 +104,9 @@ public class UserResource extends AbstractResource {
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
+
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
 
@@ -128,7 +137,6 @@ public class UserResource extends AbstractResource {
                 String error = format + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
@@ -173,6 +181,9 @@ public class UserResource extends AbstractResource {
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
+
             // create charon-SCIM user resource manager and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
 
@@ -180,7 +191,6 @@ public class UserResource extends AbstractResource {
 
             scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
                     sortBy, sortOrder, domainName, attribute, excludedAttributes);
-
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
             return handleCharonException(e);
@@ -217,6 +227,9 @@ public class UserResource extends AbstractResource {
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             // create charon-SCIM user resource manager and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
@@ -265,6 +278,9 @@ public class UserResource extends AbstractResource {
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
+
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceEndpoint = new UserResourceManager();
 
@@ -308,9 +324,11 @@ public class UserResource extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceEndpoint = new UserResourceManager();
@@ -326,5 +344,4 @@ public class UserResource extends AbstractResource {
             return handleFormatNotSupportedException(e);
         }
     }
-
 }
