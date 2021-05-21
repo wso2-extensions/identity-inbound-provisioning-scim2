@@ -346,7 +346,7 @@ public class SCIMUserManager implements UserManager {
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
             handleErrorsOnUserNameAndPasswordPolicy(e);
-        } catch (BadRequestException | NotImplementedException e) {
+        } catch (NotImplementedException e) {
             throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return user;
