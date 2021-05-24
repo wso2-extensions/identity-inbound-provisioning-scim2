@@ -35,13 +35,11 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
-import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -347,8 +345,10 @@ public class SCIMCommonUtils {
                 scimToLocalClaimMap.putAll(extensionClaims);
             }
 
-            Map<String, String> customExtensionClaims = ClaimMetadataHandler.getInstance()
-                    .getMappingsMapFromOtherDialectToCarbon(getCustomSchemaURI(), null, spTenantDomain, false);
+            String userTenantDomain = getTenantDomainFromContext();
+            Map<String, String> customExtensionClaims =
+                    ClaimMetadataHandler.getInstance().getMappingsMapFromOtherDialectToCarbon(getCustomSchemaURI(),
+                            null, userTenantDomain, false);
             scimToLocalClaimMap.putAll(customExtensionClaims);
 
             return scimToLocalClaimMap;
