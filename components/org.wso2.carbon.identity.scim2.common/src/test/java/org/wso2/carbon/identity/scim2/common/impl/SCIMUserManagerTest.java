@@ -66,6 +66,7 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.charon3.core.attributes.Attribute;
+import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.AbstractCharonException;
 import org.wso2.charon3.core.exceptions.BadRequestException;
@@ -133,6 +134,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     private static final String NICK_AME_LOCAL_CLAIM = "http://wso2.org/claims/nickname";
     private static final String GROUPS_LOCAL_CLAIM = "http://wso2.org/claims/groups";
     private static final String DISPLAY_NAME_LOCAL_CLAIM = "http://wso2.org/claims/displayName";
+    private static final String ADDRESS_LOCALITY_LOCAL_CLAIM = "http://wso2.org/claims/addresses.locality";
+    private static final String ADDRESS_REGION_LOCAL_CLAIM = "http://wso2.org/claims/region";
+    private static final String ADDRESS_LOCAL_CLAIM = "http://wso2.org/claims/addresses";
+    private static final String USER_SCHEMA_ADDRESS_HOME = "urn:ietf:params:scim:schemas:core:2.0:User:addresses.home";
+    private static final String USER_SCHEMA_ADDRESS_WORK= "urn:ietf:params:scim:schemas:core:2.0:User:addresses.work";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -899,6 +905,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         String emailAddress = "admin@wso2.com";
         String lastName = "Administrator";
         String groups = "admin";
+        String addressHome = "No:10, Temple Road, Colombo 04, Sri Lanka";
+        String addressWork = "20, Palm Grove, Colombo 3, Sri Lanka";
+        String address = "20, Palm Grove, Colombo 3, Sri Lanka";
 
         Map<String, String> userClaimValues1 = new HashMap<>();
         userClaimValues1.put(USERNAME_LOCAL_CLAIM , username);
@@ -907,22 +916,27 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         userClaimValues1.put(LASTNAME_LOCAL_CLAIM , lastName);
         userClaimValues1.put(ROLES_LOCAL_CLAIM , roles);
         userClaimValues1.put(GROUPS_LOCAL_CLAIM , groups);
+        userClaimValues1.put(ADDRESS_LOCALITY_LOCAL_CLAIM , addressHome);
+        userClaimValues1.put(ADDRESS_REGION_LOCAL_CLAIM , addressWork);
 
         Map<String, String> userClaimValues2 = new HashMap<>();
         userClaimValues2.put(USERNAME_LOCAL_CLAIM , username);
         userClaimValues2.put(USERID_LOCAL_CLAIM, userId);
         userClaimValues2.put(EMAIL_ADDRESS_LOCAL_CLAIM , emailAddress);
         userClaimValues2.put(LASTNAME_LOCAL_CLAIM , lastName);
+        userClaimValues2.put(ADDRESS_LOCALITY_LOCAL_CLAIM , addressHome);
+        userClaimValues2.put(ADDRESS_REGION_LOCAL_CLAIM , addressWork);
+        userClaimValues2.put(ADDRESS_LOCAL_CLAIM , address);
 
         return new Object[][]{
-                {true, userClaimValues1, true, true, "true", 7, 2, 1, "PRIMARY/" + username},
-                {true, userClaimValues1, true, true, "false", 7, 2, 1, "PRIMARY/" + domainQualifiedUserName},
-                {true, userClaimValues1, true, false, "true", 7, 2, 1, username},
-                {true, userClaimValues1, true, false, "false", 7, 2, 1, domainQualifiedUserName},
-                {false, userClaimValues2, true, true, "false", 7, 2, 1, "PRIMARY/" + domainQualifiedUserName},
-                {false, userClaimValues2, true, false, "false", 7, 2, 1, domainQualifiedUserName},
-                {false, userClaimValues2, false, true, "false", 6, 0, 2, "PRIMARY/" + domainQualifiedUserName},
-                {false, userClaimValues2, false, false, "false", 6, 0, 2, domainQualifiedUserName},
+                {true, userClaimValues1, true, true, "true", 8, 2, 1, "PRIMARY/" + username},
+                {true, userClaimValues1, true, true, "false", 8, 2, 1, "PRIMARY/" + domainQualifiedUserName},
+                {true, userClaimValues1, true, false, "true", 8, 2, 1, username},
+                {true, userClaimValues1, true, false, "false", 8, 2, 1, domainQualifiedUserName},
+                {false, userClaimValues2, true, true, "false", 8, 2, 1, "PRIMARY/" + domainQualifiedUserName},
+                {false, userClaimValues2, true, false, "false", 8, 2, 1, domainQualifiedUserName},
+                {false, userClaimValues2, false, true, "false", 7, 0, 2, "PRIMARY/" + domainQualifiedUserName},
+                {false, userClaimValues2, false, false, "false", 7, 0, 2, domainQualifiedUserName},
         };
     }
 
@@ -945,6 +959,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         requiredAttributes.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, true);
         requiredAttributes.put(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI, true);
         requiredAttributes.put(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT, true);
+        requiredAttributes.put(SCIMConstants.UserSchemaConstants.LOCALITY_URI, true);
+        requiredAttributes.put(SCIMConstants.UserSchemaConstants.REGION_URI, true);
+        requiredAttributes.put(SCIMConstants.UserSchemaConstants.ADDRESSES_URI, true);
 
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
@@ -952,8 +969,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.EMAILS_URI, EMAIL_ADDRESS_LOCAL_CLAIM);
         scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, USERNAME_LOCAL_CLAIM);
         scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI, LASTNAME_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.ADDRESSES_URI, ADDRESS_LOCAL_CLAIM);
         scimToLocalClaimsMap.put
                 (SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT, ROLES_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(USER_SCHEMA_ADDRESS_HOME, ADDRESS_LOCALITY_LOCAL_CLAIM);
+        scimToLocalClaimsMap.put(USER_SCHEMA_ADDRESS_WORK, ADDRESS_REGION_LOCAL_CLAIM);
 
         HashSet<String> scimRoles = new HashSet<>();
         scimRoles.add("role1");
@@ -1048,6 +1068,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(IdentityTenantUtil.getTenantId("carbon.super")).thenReturn(-1234);
         User scimUser = scimUserManager.getUser(userId, requiredAttributes);
         assertEquals(expectedNoOfAttributes, scimUser.getAttributeList().size());
+        // Check whether the added multi valued attributes for the addresses attribute are contained.
+        assertEquals(2,
+                ((MultiValuedAttribute) scimUser.getAttribute("addresses")).getAttributeValues().size());
         assertEquals(expectedUserName, scimUser.getUserName());
         assertEquals(expectedNoOfGroups, scimUser.getGroups().size());
         assertEquals(expectedNoOfRoles, scimUser.getRoles().size());
