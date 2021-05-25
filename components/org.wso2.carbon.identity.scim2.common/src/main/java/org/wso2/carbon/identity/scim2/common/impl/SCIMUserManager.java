@@ -3752,7 +3752,7 @@ public class SCIMUserManager implements UserManager {
                     }
                     //skip simple type addresses claim because it is complex with sub types in the schema
                     if (attributes.containsKey(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
-                        filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ADDRESSES_URI));
+                        attributes.remove(SCIMConstants.UserSchemaConstants.ADDRESSES_URI);
                     }
 
                     if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {

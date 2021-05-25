@@ -93,4 +93,30 @@ public class AttributeMapperTest {
 
     }
 
+    @Test
+    public void testAddressesAttribute() throws Exception {
+
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:emails.home", "paul@abc.com");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.resourceType", "User");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.created", "2021-05-25T11:39:43Z");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.location",
+                "https://localhost:9443/scim2/Users/4f6b38a0-0fd6-4852-8f87-5e9db6991357");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:emails.work", "paulSmith@abc.com");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:name.familyName", "Smith");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.lastModified", "2021-05-25T21:39:43Z");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:id", "4f6b38a0-0fd6-4852-8f87-5e9db6991357");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:userType", "User");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", "Paul");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:name.givenName", "Paul");
+        attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:addresses.home",
+                "100 Universal City Plaza Hollywood, CA 91608 USA");
+
+        assertEquals(((User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1)).getAddresses().get(0)
+                .getType(), "home");
+        assertEquals(((User) AttributeMapper.constructSCIMObjectFromAttributes(attributes, 1)).getAddresses().get(0)
+                .getFormatted(), "100 Universal City Plaza Hollywood, CA 91608 USA");
+
+    }
+
 }

@@ -536,7 +536,7 @@ public class AttributeMapper {
                 typeAttributeURI = typeAttributeURI + ".type";
                 AttributeSchema typeAttributeSchema = getAttributeSchema(userManager, typeAttributeURI, scimObjectType);
                 DefaultAttributeFactory.createAttribute(typeAttributeSchema, typeSimpleAttribute);
-                SimpleAttribute valueSimpleAttribute = new SimpleAttribute(SCIMConstants.CommonSchemaConstants.VALUE,
+                SimpleAttribute valueSimpleAttribute = new SimpleAttribute(valueSubAttributeSchema.getName(),
                         AttributeUtil.getAttributeValueFromString(attributeEntry.getValue(),
                                 valueSubAttributeSchema.getType()));
                 DefaultAttributeFactory.createAttribute(valueSubAttributeSchema, valueSimpleAttribute);
