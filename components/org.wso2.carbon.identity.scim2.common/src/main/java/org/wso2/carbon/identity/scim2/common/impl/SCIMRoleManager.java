@@ -62,6 +62,7 @@ import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.ROLE_NO
 public class SCIMRoleManager implements RoleManager {
 
     private static final Log log = LogFactory.getLog(SCIMRoleManager.class);
+    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private RoleManagementService roleManagementService;
     private String tenantDomain;
     private Set<String> systemRoles;
@@ -81,11 +82,13 @@ public class SCIMRoleManager implements RoleManager {
         if (log.isDebugEnabled()) {
             log.debug("Creating role: " + role.getDisplayName());
         }
+        diagnosticLog.info("Creating role with name: " + role.getDisplayName() + " via SCIM 2.0");
         try {
             // Check if the role already exists.
             if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
                 String error = "Role with name: " + role.getDisplayName() + " already exists in the tenantDomain: "
                         + tenantDomain;
+                diagnosticLog.error(error);
                 throw new ConflictException(error);
             }
             RoleBasicInfo roleBasicInfo = roleManagementService
@@ -101,6 +104,8 @@ public class SCIMRoleManager implements RoleManager {
 
             return createdRole;
         } catch (IdentityRoleManagementException e) {
+            diagnosticLog.error("Error occurred while adding role: " + role.getDisplayName() + ". Error message: " +
+                    e.getMessage());
             if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
                 throw new ConflictException(e.getMessage());
             } else if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
@@ -115,6 +120,7 @@ public class SCIMRoleManager implements RoleManager {
     public Role getRole(String roleID, Map<String, Boolean> requiredAttributes)
             throws BadRequestException, CharonException, NotFoundException {
 
+        diagnosticLog.info("Retrieving role with ID: " + roleID + " via SCIM 2.0");
         try {
             org.wso2.carbon.identity.role.mgt.core.Role role = roleManagementService.getRole(roleID, tenantDomain);
             Role scimRole = new Role();
@@ -151,6 +157,8 @@ public class SCIMRoleManager implements RoleManager {
             return scimRole;
 
         } catch (IdentityRoleManagementException e) {
+            diagnosticLog.error(String.format("Error occurred while getting the role: %s", roleID) +
+                    ". Error message: " + e.getMessage());
             if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
                 throw new NotFoundException(e.getMessage());
             }
@@ -161,9 +169,12 @@ public class SCIMRoleManager implements RoleManager {
     @Override
     public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
 
+        diagnosticLog.info("Deleting role with ID: " + roleID + " via SCIM 2.0");
         try {
             roleManagementService.deleteRole(roleID, tenantDomain);
         } catch (IdentityRoleManagementException e) {
+            diagnosticLog.error(String.format("Error occurred while deleting the role: %s", roleID) + ". Error " +
+                    "message: " + e.getMessage());
             if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
                 throw new NotFoundException(e.getMessage());
             } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
@@ -235,6 +246,8 @@ public class SCIMRoleManager implements RoleManager {
             log.debug(
                     "Filtering roles with filter: " + attributeName + " + " + filterOperation + " + " + attributeValue);
         }
+        diagnosticLog.info("Filtering roles with filter: " + attributeName + " + " + filterOperation + " + " +
+                attributeValue);
         // Check whether the filter operation is supported for filtering in roles.
         if (isFilteringNotSupported(filterOperation)) {
             String errorMessage = "Filter operation: " + filterOperation + " is not supported for role filtering.";
@@ -248,10 +261,13 @@ public class SCIMRoleManager implements RoleManager {
         if (log.isDebugEnabled()) {
             log.debug(String.format("Filtering roleNames from search filter: %s", searchFilter));
         }
+        diagnosticLog.info(String.format("Filtering roleNames from search filter: %s", searchFilter));
         List<RoleBasicInfo> roles;
         try {
             roles = roleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain);
         } catch (IdentityRoleManagementException e) {
+            diagnosticLog.error(String.format("Error occurred while listing roles based on the search filter: %s. " +
+                            "Error message: %s", searchFilter, e.getMessage()));
             throw new CharonException(
                     String.format("Error occurred while listing roles based on the search filter: %s", searchFilter),
                     e);
@@ -315,6 +331,7 @@ public class SCIMRoleManager implements RoleManager {
     private List<Object> listRoles(Integer count, Integer startIndex, String sortBy, String sortOrder)
             throws CharonException, BadRequestException {
 
+        diagnosticLog.info("Fetching role list via SCIM 2.0");
         List<Object> rolesList = new ArrayList<>();
         try {
             // 0th index is to store total number of results.
@@ -328,6 +345,7 @@ public class SCIMRoleManager implements RoleManager {
             // Add the results list.
             rolesList.addAll(scimRoles);
         } catch (IdentityRoleManagementException e) {
+            diagnosticLog.error("Error occurred while listing roles. Error message: " + e.getMessage());
             throw new CharonException("Error occurred while listing roles.", e);
         }
         return rolesList;
@@ -373,6 +391,8 @@ public class SCIMRoleManager implements RoleManager {
             log.debug(String.format("Updating name of role %s to %s.", oldRole.getDisplayName(),
                     newRole.getDisplayName()));
         }
+        diagnosticLog.info(String.format("Updating name of role %s to %s via SCIM 2.0", oldRole.getDisplayName(),
+                newRole.getDisplayName()));
 
         // Update name if it is changed.
         String oldRoleDisplayName = oldRole.getDisplayName();
@@ -383,6 +403,7 @@ public class SCIMRoleManager implements RoleManager {
             try {
                 roleManagementService.updateRoleName(oldRole.getId(), newRoleDisplayName, tenantDomain);
             } catch (IdentityRoleManagementException e) {
+                diagnosticLog.error("Error occurred while updating role name. Error message: " + e.getMessage());
                 if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
                     throw new NotFoundException(e.getMessage());
                 } else if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
@@ -402,6 +423,7 @@ public class SCIMRoleManager implements RoleManager {
         if (log.isDebugEnabled()) {
             log.debug("Updating users of role: " + oldRole.getDisplayName());
         }
+        diagnosticLog.info("Updating users of role: " + oldRole.getDisplayName());
 
         Set<String> userIDsInOldRole = new HashSet<>(oldRole.getUsers());
         Set<String> userIDsInNewRole = new HashSet<>(newRole.getUsers());
@@ -418,6 +440,8 @@ public class SCIMRoleManager implements RoleManager {
                 roleManagementService.updateUserListOfRole(oldRole.getId(), new ArrayList<>(newUserIDList),
                         new ArrayList<>(deletedUserIDList), tenantDomain);
             } catch (IdentityRoleManagementException e) {
+                diagnosticLog.error("Error occurred while updating users in the role: " + newRole.getDisplayName()
+                + ". Error message: " + e.getMessage());
                 if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
@@ -433,6 +457,7 @@ public class SCIMRoleManager implements RoleManager {
         if (log.isDebugEnabled()) {
             log.debug("Updating groups of role: " + oldRole.getDisplayName());
         }
+        diagnosticLog.info("Updating groups of role: " + oldRole.getDisplayName() + " via SCIM 2.0");
 
         Set<String> groupIDsInOldRole = new HashSet<>(oldRole.getGroups());
         Set<String> groupIDsInNewRole = new HashSet<>(newRole.getGroups());
@@ -449,6 +474,8 @@ public class SCIMRoleManager implements RoleManager {
                 roleManagementService.updateGroupListOfRole(oldRole.getId(), new ArrayList<>(newGroupIDList),
                         new ArrayList<>(deleteGroupIDList), tenantDomain);
             } catch (IdentityRoleManagementException e) {
+                diagnosticLog.error("Error occurred while updating groups of role: " + newRole.getDisplayName() +
+                         ". Error message: " + e.getMessage());
                 if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
@@ -464,6 +491,7 @@ public class SCIMRoleManager implements RoleManager {
         if (log.isDebugEnabled()) {
             log.debug("Updating permissions of role: " + oldRole.getDisplayName());
         }
+        diagnosticLog.info("Updating permissions of role: " + oldRole.getDisplayName() + " via SCIM 2.0");
 
         List<String> oldRolePermissions = oldRole.getPermissions();
         List<String> newRolePermissions = newRole.getPermissions();
@@ -476,6 +504,8 @@ public class SCIMRoleManager implements RoleManager {
             try {
                 roleManagementService.setPermissionsForRole(oldRole.getId(), newRolePermissions, tenantDomain);
             } catch (IdentityRoleManagementException e) {
+                diagnosticLog.error("Error occurred while updating permissions for role: " +
+                        newRole.getDisplayName() + ". Error message: " + e.getMessage());
                 if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
