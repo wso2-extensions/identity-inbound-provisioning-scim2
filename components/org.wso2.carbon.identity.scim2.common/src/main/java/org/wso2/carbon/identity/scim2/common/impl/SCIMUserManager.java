@@ -3573,8 +3573,15 @@ public class SCIMUserManager implements UserManager {
     private org.wso2.carbon.user.core.common.User getUserFromUsername(String username)
             throws org.wso2.carbon.user.core.UserStoreException {
 
-        List<org.wso2.carbon.user.core.common.User> coreUsers = carbonUM.getUserListWithID(
-                UserCoreClaimConstants.USERNAME_CLAIM_URI, username, UserCoreConstants.DEFAULT_PROFILE);
+        String usernameClaimUri = UserCoreClaimConstants.USERNAME_CLAIM_URI;
+
+        //If primary login identifier claim is enabled, search for that claim in the user store.
+        if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
+            usernameClaimUri = getPrimaryLoginIdentifierClaim();
+        }
+
+        List<org.wso2.carbon.user.core.common.User> coreUsers = carbonUM.getUserListWithID(usernameClaimUri, username,
+                UserCoreConstants.DEFAULT_PROFILE);
 
         if (!coreUsers.isEmpty()) {
             // TODO: Should we throw an exception if multiple users are found?
