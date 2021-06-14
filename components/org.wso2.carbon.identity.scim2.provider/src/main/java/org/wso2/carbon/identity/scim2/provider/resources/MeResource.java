@@ -43,7 +43,7 @@ public class MeResource extends AbstractResource {
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String  excludedAttributes) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
+        String userId = SupportUtils.getAuthenticatedUserId();
         try {
             if(!isValidOutputFormat(outputFormat)){
                 String error = outputFormat + " is not supported.";
@@ -58,7 +58,7 @@ public class MeResource extends AbstractResource {
             // create charon-SCIM me endpoint and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
 
-            SCIMResponse scimResponse = meResourceManager.get(userName, userManager,attribute, excludedAttributes);
+            SCIMResponse scimResponse = meResourceManager.get(userId, userManager, attribute, excludedAttributes);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
             return SupportUtils.buildResponse(scimResponse);
@@ -158,7 +158,7 @@ public class MeResource extends AbstractResource {
                                @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
+        String userId = SupportUtils.getAuthenticatedUserId();
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -186,7 +186,7 @@ public class MeResource extends AbstractResource {
             MeResourceManager meResourceManager = new MeResourceManager();
 
             SCIMResponse response = meResourceManager.updateWithPUT(
-                    userName, resourceString, userManager, attribute, excludedAttributes);
+                    userId, resourceString, userManager, attribute, excludedAttributes);
 
             return SupportUtils.buildResponse(response);
 
@@ -205,7 +205,7 @@ public class MeResource extends AbstractResource {
                               @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                               String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
+        String userId = SupportUtils.getAuthenticatedUserId();
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -233,7 +233,7 @@ public class MeResource extends AbstractResource {
             MeResourceManager meResourceManager = new MeResourceManager();
 
             SCIMResponse response = meResourceManager.updateWithPATCH(
-                    userName, resourceString, userManager, attribute, excludedAttributes);
+                    userId, resourceString, userManager, attribute, excludedAttributes);
 
             return SupportUtils.buildResponse(response);
 

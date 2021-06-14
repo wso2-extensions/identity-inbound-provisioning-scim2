@@ -105,6 +105,17 @@ public class SupportUtils {
     }
 
     /**
+     * Get the user id of the user authenticated at the SCIM Endpoint. The user id will be set by
+     * the REST API Authentication valve (configured in identity.xml)
+     *
+     * @return tenant and userstore domain appended
+     */
+    public static String getAuthenticatedUserId() {
+
+        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserId();
+    }
+
+    /**
      * This builds the custom schema for tenants.
      * @param userManager
      * @param tenantId
