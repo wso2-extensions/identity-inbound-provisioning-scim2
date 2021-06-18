@@ -555,7 +555,8 @@ public class SCIMUserManager implements UserManager {
                     e.getMessage());
             String errorMessage;
             if (isNotifyUserstoreStatusEnabled()) {
-                errorMessage = String.format("Error occurred while deleting user with ID: %s. %s", userId, e.getMessage());
+                errorMessage = String.format("Error occurred while deleting user with ID: %s. %s",
+                        userId, e.getMessage());
             } else {
                 errorMessage = "Error occurred while deleting user with ID: " + userId;
             }
