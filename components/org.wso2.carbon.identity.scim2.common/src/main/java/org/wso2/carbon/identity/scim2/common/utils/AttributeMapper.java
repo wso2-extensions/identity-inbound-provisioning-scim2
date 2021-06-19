@@ -282,18 +282,16 @@ public class AttributeMapper {
                 attributeNames = attributeNameString.split("\\.");
             } else {
                 ArrayList<String> tempAttributeNames = new ArrayList<>();
-                String extensionURI = "";
+                StringBuilder extensionURI = new StringBuilder();
                 String[] attributeURIParts = attributeURI.split(":");
                 for (int i = 0; i < attributeURIParts.length - 1; i++) {
-                    extensionURI = extensionURI + ":" + attributeURIParts[i];
+                    extensionURI.append(":").append(attributeURIParts[i]);
                 }
                 String attributeNameString = attributeURIParts[attributeURIParts.length - 1];
                 attributeNames = attributeNameString.split("\\.");
                 tempAttributeNames.add(extensionURI.substring(1));
 
-                for (int i = 0; i < attributeNames.length; i++) {
-                    tempAttributeNames.add(attributeNames[i]);
-                }
+                tempAttributeNames.addAll(Arrays.asList(attributeNames));
                 attributeNames = tempAttributeNames.toArray(attributeNames);
             }
             try {
@@ -735,7 +733,7 @@ public class AttributeMapper {
             }
             DefaultAttributeFactory.createAttribute(subAttributeSchema, complexAttribute);
 
-            ComplexAttribute extensionComplexAttribute = null;
+            ComplexAttribute extensionComplexAttribute;
 
             if (((AbstractSCIMObject) scimObject).isAttributeExist(parentAttribute)) {
                 Attribute extensionAttribute = ((AbstractSCIMObject) scimObject).getAttribute(parentAttribute);
@@ -747,7 +745,7 @@ public class AttributeMapper {
             }
 
             Map<String, Attribute> extensionSubAttributes = extensionComplexAttribute.getSubAttributesList();
-            if (extensionComplexAttribute != null && extensionSubAttributes.containsKey(attributeNames[1])) {
+            if (extensionSubAttributes.containsKey(attributeNames[1])) {
                 //create attribute value as complex value
                 MultiValuedAttribute multiValuedAttribute =
                         (MultiValuedAttribute) extensionSubAttributes.get(attributeNames[1]);

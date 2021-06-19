@@ -198,8 +198,8 @@ public class AdminAttributeUtil {
         claimsList.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
         claimsList.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
         if (log.isDebugEnabled()) {
-            for (String key : claimsList.keySet()) {
-                log.debug("SCIM URI : " + key + " >> Value : " + claimsList.get(key));
+            for (Map.Entry<String, String> entry : claimsList.entrySet()) {
+                log.debug("SCIM URI : " + entry.getKey() + " >> Value : " + entry.getValue());
             }
         }
         return claimsList;
