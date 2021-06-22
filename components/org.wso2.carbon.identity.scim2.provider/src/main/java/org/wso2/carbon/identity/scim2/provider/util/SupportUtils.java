@@ -41,6 +41,8 @@ import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.schema.AttributeSchema;
 
 import javax.ws.rs.core.Response;
+
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -86,7 +88,7 @@ public class SupportUtils {
     public static String getUserNameFromBase64EncodedString(String encodedString) {
         // decode it and extract username and password
         byte[] decodedAuthHeader = Base64.decode(encodedString.split(" ")[1]);
-        String authHeader = new String(decodedAuthHeader);
+        String authHeader = new String(decodedAuthHeader, StandardCharsets.UTF_8);
         String userName = authHeader.split(":")[0];
         return userName;
     }

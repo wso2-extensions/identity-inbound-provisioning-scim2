@@ -1452,7 +1452,7 @@ public class SCIMUserManager implements UserManager {
         // limit larger than zero.
         if (limit <= 0) {
             return true;
-        } else if (!isPaginatedUserStoreAvailable() && !(carbonUM instanceof PaginatedUserStoreManager)) {
+        } else if (!isPaginatedUserStoreAvailable()) {
 
             // If the userStore does not support above conditions, filter should use old APIs.
             return true;
@@ -2084,7 +2084,6 @@ public class SCIMUserManager implements UserManager {
     private Map<String, String> getAllAttributes(String domainName) throws CharonException {
 
         Map<String, String> attributes = new HashMap<>();
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
 
         if (claimMetadataManagementService != null) {
             attributes.putAll(getMappedAttributes(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT, domainName));
@@ -2879,7 +2878,6 @@ public class SCIMUserManager implements UserManager {
     private Set<String> getGroupNamesForGroupsEndpoint(String domainName)
             throws UserStoreException, IdentitySCIMException {
 
-        SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
         if (StringUtils.isEmpty(domainName)) {
             Set<String> groupsList = new HashSet<>(Arrays.asList(carbonUM.getRoleNames()));
             // Remove roles.
@@ -4325,12 +4323,12 @@ public class SCIMUserManager implements UserManager {
     private List<String> getOnlyRequiredClaims(Set<String> claimURIList, Map<String, Boolean> requiredAttributes) {
 
         List<String> requiredClaimList = new ArrayList<>();
-        for (String requiredClaim : requiredAttributes.keySet()) {
-            if (requiredAttributes.get(requiredClaim)) {
-                if (claimURIList.contains(requiredClaim)) {
-                    requiredClaimList.add(requiredClaim);
+        for (Map.Entry<String, Boolean> requiredClaim : requiredAttributes.entrySet()) {
+            if (requiredClaim.getValue()) {
+                if (claimURIList.contains(requiredClaim.getKey())) {
+                    requiredClaimList.add(requiredClaim.getKey());
                 } else {
-                    String[] parts = requiredClaim.split("[.]");
+                    String[] parts = requiredClaim.getKey().split("[.]");
                     for (String claim : claimURIList) {
                         if (parts.length == 3) {
                             if (claim.contains(parts[0] + "." + parts[1])) {
@@ -4349,8 +4347,8 @@ public class SCIMUserManager implements UserManager {
                     }
                 }
             } else {
-                if (!requiredClaimList.contains(requiredClaim)) {
-                    requiredClaimList.add(requiredClaim);
+                if (!requiredClaimList.contains(requiredClaim.getKey())) {
+                    requiredClaimList.add(requiredClaim.getKey());
                 }
             }
         }

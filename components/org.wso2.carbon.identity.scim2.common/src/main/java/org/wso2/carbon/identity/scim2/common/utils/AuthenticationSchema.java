@@ -81,19 +81,19 @@ public class AuthenticationSchema {
     }
 
     public void setProperties(Map<String, String> properties) {
-        for (String property : properties.keySet()) {
-            if (property.equals("name")) {
-                setName(properties.get(property));
-            } else if (property.equals("description")) {
-                setDescription(properties.get(property));
-            } else if (property.equals("specUri")) {
-                setSpecUri(properties.get(property));
-            } else if (property.equals("documentationUri")) {
-                setDocumentationUri(properties.get(property));
-            } else if (property.equals("type")) {
-                setType(properties.get(property));
-            } else if (property.equals("primary")) {
-                setPrimary(properties.get(property));
+        for (Map.Entry<String, String> property : properties.entrySet()) {
+            if (property.getKey().equals("name")) {
+                setName(property.getValue());
+            } else if (property.getKey().equals("description")) {
+                setDescription(property.getValue());
+            } else if (property.getKey().equals("specUri")) {
+                setSpecUri(property.getValue());
+            } else if (property.getKey().equals("documentationUri")) {
+                setDocumentationUri(property.getValue());
+            } else if (property.getKey().equals("type")) {
+                setType(property.getValue());
+            } else if (property.getKey().equals("primary")) {
+                setPrimary(property.getValue());
             }
         }
     }
