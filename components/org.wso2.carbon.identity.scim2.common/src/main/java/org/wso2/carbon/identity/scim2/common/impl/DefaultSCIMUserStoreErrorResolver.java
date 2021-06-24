@@ -52,7 +52,7 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
         } else if (e instanceof org.wso2.carbon.user.core.UserStoreClientException) {
             String description = e.getMessage();
             if (StringUtils.isBlank(description)) {
-                description = "Error occurred while performing the operation";
+                description = "Invalid Request";
             }
             return new SCIMUserStoreException(description, HttpStatus.SC_BAD_REQUEST);
         }
