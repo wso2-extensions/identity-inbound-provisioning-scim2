@@ -469,7 +469,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void deleteUser(String userId) throws NotFoundException, CharonException {
+    public void deleteUser(String userId) throws NotFoundException, CharonException, BadRequestException {
 
         if (log.isDebugEnabled()) {
             log.debug("Deleting user: " + userId);
@@ -539,16 +539,36 @@ public class SCIMUserManager implements UserManager {
                 diagnosticLog.info("User: " + userName + " is deleted through SCIM.");
             }
 
+        } catch (UserStoreClientException e) {
+            diagnosticLog.error("Error occurred while deleting user with ID: " + userId + ". Error message: " +
+                    e.getMessage());
+            String errorMessage;
+            if (isNotifyUserstoreStatusEnabled()) {
+                errorMessage = String.format("Error occurred while deleting user with ID: %s. %s",
+                        userId, e.getMessage());
+            } else {
+                errorMessage = "Error occurred while deleting user with ID: " + userId;
+            }
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             diagnosticLog.error("Error occurred while deleting user with ID: " + userId + ". Error message: " +
                     e.getMessage());
-            String errMsg = "Error in deleting user: ";
+            String errorMessage;
             if (isNotifyUserstoreStatusEnabled()) {
-                errMsg = errMsg + userId + ". " + e.getMessage();
+                errorMessage = String.format("Error occurred while deleting user with ID: %s. %s",
+                        userId, e.getMessage());
             } else {
-                errMsg = errMsg + userName;
+                errorMessage = "Error occurred while deleting user with ID: " + userId;
             }
-            throw resolveError(e, errMsg);
+            /*
+            There are scenarios where the client exceptions are wrapped in the super class.Therefore checking for
+            possible client exception.
+             */
+            Throwable ex = ExceptionUtils.getRootCause(e);
+            if (ex instanceof UserStoreClientException) {
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
+            throw resolveError(e, errorMessage);
         }
     }
 
@@ -2364,7 +2384,8 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void deleteMe(String userName) throws NotFoundException, CharonException, NotImplementedException {
+    public void deleteMe(String userName) throws NotFoundException, CharonException, BadRequestException,
+            NotImplementedException {
 
         try {
             String userId = carbonUM.getUserIDFromUserName(userName);

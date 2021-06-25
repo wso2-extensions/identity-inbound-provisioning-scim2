@@ -43,7 +43,8 @@ public class DefaultSCIMUserStoreErrorResolverTest extends PowerMockTestCase {
         return new Object[][]{
                 {new UserStoreException("error: 30007"), HttpStatus.SC_NOT_FOUND},
                 {new org.wso2.carbon.user.core.UserStoreException("error", "32102"), HttpStatus.SC_BAD_REQUEST},
-                {new org.wso2.carbon.user.core.UserStoreClientException("error", "32103"), HttpStatus.SC_BAD_REQUEST}
+                {new org.wso2.carbon.user.core.UserStoreClientException("error", "32103"), HttpStatus.SC_BAD_REQUEST},
+                {new org.wso2.carbon.user.core.UserStoreClientException("error", "321xx"), HttpStatus.SC_BAD_REQUEST}
         };
     }
 
@@ -61,8 +62,7 @@ public class DefaultSCIMUserStoreErrorResolverTest extends PowerMockTestCase {
 
         return new Object[][]{
                 {new UserStoreException("error: 30008")},
-                {new org.wso2.carbon.user.core.UserStoreException("error", "32103")},
-                {new org.wso2.carbon.user.core.UserStoreClientException("error", "32104")},
+                {new org.wso2.carbon.user.core.UserStoreException("error", "32103")}
         };
     }
 

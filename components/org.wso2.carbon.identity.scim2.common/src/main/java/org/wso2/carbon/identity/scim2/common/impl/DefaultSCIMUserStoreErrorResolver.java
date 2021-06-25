@@ -49,6 +49,12 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
                 .ErrorMessages.ERROR_CODE_INVALID_DOMAIN_NAME.getCode().equals(((UserStoreClientException) e)
                         .getErrorCode())) {
             return new SCIMUserStoreException("Unable to proceed. Invalid domain name.", HttpStatus.SC_BAD_REQUEST);
+        } else if (e instanceof org.wso2.carbon.user.core.UserStoreClientException) {
+            String description = e.getMessage();
+            if (StringUtils.isBlank(description)) {
+                description = "Invalid Request";
+            }
+            return new SCIMUserStoreException(description, HttpStatus.SC_BAD_REQUEST);
         }
         return null;
     }
