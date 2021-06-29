@@ -442,7 +442,8 @@ public class SCIMRoleManager implements RoleManager {
             } catch (IdentityRoleManagementException e) {
                 diagnosticLog.error("Error occurred while updating users in the role: " + newRole.getDisplayName()
                 + ". Error message: " + e.getMessage());
-                if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+                if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode()) || StringUtils
+                        .equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
@@ -476,7 +477,8 @@ public class SCIMRoleManager implements RoleManager {
             } catch (IdentityRoleManagementException e) {
                 diagnosticLog.error("Error occurred while updating groups of role: " + newRole.getDisplayName() +
                          ". Error message: " + e.getMessage());
-                if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+                if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode()) || StringUtils
+                        .equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
