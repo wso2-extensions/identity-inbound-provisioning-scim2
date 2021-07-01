@@ -112,5 +112,6 @@ public class SCIMCommonConstants {
     public static final String DOB_REG_EX_VALIDATION_DEFAULT_ERROR =
             "Date of Birth is not in the correct format of YYYY-MM-DD";
     public static final String DATE_OF_BIRTH_REGEX = "^\\d{4}-\\d{2}-\\d{2}$";
+    public static final String ERROR_CODE_RESOURCE_LIMIT_REACHED = "ATS-10001";
 }
 
