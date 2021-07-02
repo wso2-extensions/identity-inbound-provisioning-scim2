@@ -79,6 +79,7 @@ import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
+import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
@@ -179,7 +180,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public User createUser(User user, Map<String, Boolean> requiredAttributes)
-            throws CharonException, ConflictException, BadRequestException {
+            throws CharonException, ConflictException, BadRequestException, ForbiddenException {
 
         diagnosticLog.info("Creating user via SCIM 2.0");
         String userStoreName = null;
@@ -346,6 +347,9 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
+            if (isResourceLimitReachedError(e)) {
+                handleResourceLimitReached();
+            }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
             diagnosticLog.error("Error occurred while adding the user: " + user.getUserName() + ". Error message: "
@@ -358,6 +362,9 @@ public class SCIMUserManager implements UserManager {
                         ex.getMessage());
                 if (log.isDebugEnabled()) {
                     log.debug(errorMessage, ex);
+                }
+                if (isResourceLimitReachedError((UserStoreClientException) ex)) {
+                    handleResourceLimitReached();
                 }
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
@@ -2378,7 +2385,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public User createMe(User user, Map<String, Boolean> requiredAttributes)
-            throws CharonException, ConflictException, BadRequestException {
+            throws CharonException, ConflictException, BadRequestException, ForbiddenException {
 
         return createUser(user, requiredAttributes);
     }
@@ -5837,5 +5844,16 @@ public class SCIMUserManager implements UserManager {
                     getSCIMCustomAttributeSchemaByTenant(IdentityTenantUtil.getTenantId(tenantDomain));
         }
         return null;
+    }
+
+    private boolean isResourceLimitReachedError(UserStoreClientException e) {
+
+        String errorCode = e.getErrorCode();
+        return SCIMCommonConstants.ERROR_CODE_RESOURCE_LIMIT_REACHED.equals(errorCode);
+    }
+
+    private void handleResourceLimitReached() throws ForbiddenException {
+
+        throw new ForbiddenException("Maximum number of allowed users have been reached.", "userLimitReached");
     }
 }
