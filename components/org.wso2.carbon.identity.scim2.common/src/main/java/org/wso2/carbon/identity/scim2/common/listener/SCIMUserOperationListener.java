@@ -58,7 +58,6 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DO
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROVISIONED_SOURCE_CLAIM;
 
 /**
  * This is to perform SCIM related operation on User Operations.
