@@ -1927,7 +1927,7 @@ public class SCIMUserManager implements UserManager {
             }
         }
 
-        paginateUsers(users, limit, offset);
+        users = paginateUsers(users, limit, offset);
         return users;
     }
 
@@ -3529,8 +3529,16 @@ public class SCIMUserManager implements UserManager {
                         String.format("%s doesn't belongs to user store: %s", userName, userStoreDomainOfGroup));
             }
 
+            String usernameClaimUri = UserCoreClaimConstants.USERNAME_CLAIM_URI;
+
+            // If primary login identifier claim is enabled, search for that claim in the user store.
+            if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
+                usernameClaimUri = getPrimaryLoginIdentifierClaim();
+            }
+
             // Check if the user ids & associated user name sent in updated (new) group exist in the user store.
-            String userId = carbonUM.getUserIDFromUserName(userName);
+            String userId =
+                    carbonUM.getUserIDFromProperties(usernameClaimUri, userName, UserCoreConstants.DEFAULT_PROFILE);
             if (StringUtils.isEmpty(userId)) {
                 String error = "User: " + userName + " doesn't exist in the user store. Hence can not update the " +
                         "group: " + displayName;
