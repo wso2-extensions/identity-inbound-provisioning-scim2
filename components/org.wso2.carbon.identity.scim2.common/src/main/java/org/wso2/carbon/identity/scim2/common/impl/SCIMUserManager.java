@@ -5342,6 +5342,7 @@ public class SCIMUserManager implements UserManager {
      * @return Map of attribute.
      */
     private Map<String, Attribute> getAllScimSchemaAttributes(Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap) {
+
         Map<String, Attribute> filteredFlatAttributeMap = new HashMap<>();
 
         for (Map.Entry<ExternalClaim, LocalClaim> entry : scimClaimToLocalClaimMap.entrySet()) {
