@@ -55,7 +55,7 @@ import java.util.UUID;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ENABLE_JIT_PROVISION_ENHANCE_FEATURE;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
 
@@ -171,8 +171,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         // Validate whether claim update request is for a provisioned user.
         if (isJitProvisionEnhancedFeature()) {
-            validateJitProvisionedUserClaimUpdate(getUsernameFromUserID(userID, userStoreManager),
-                    profileName, userStoreManager);
+            validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
         // Validate dob value against the regex.
         validateDateOfBirthClaimValue(claimURI, claimValue, userStoreManager);
