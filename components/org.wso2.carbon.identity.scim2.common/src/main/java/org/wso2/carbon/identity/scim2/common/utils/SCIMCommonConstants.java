@@ -122,7 +122,7 @@ public class SCIMCommonConstants {
 
         // SUO - SCIM User Operations.
         ERROR_CODE_INVALID_ATTRIBUTE_UPDATE("SUO-10000", "User attribute update is not allowed",
-                "The user: %s has been provisioned from federated IDP: %s. " +
+                "The user: %s has been JIT provisioned from federated IDP: %s. " +
                         "Hence provisioned user attributes are not allowed to update");
 
         private final String code;
