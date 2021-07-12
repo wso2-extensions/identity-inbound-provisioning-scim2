@@ -55,7 +55,7 @@ import java.util.UUID;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ENABLE_JIT_PROVISION_ENHANCE_FEATURE;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
 
@@ -171,7 +171,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         // Validate whether claim update request is for a provisioned user.
         if (isJitProvisionEnhancedFeature()) {
-            validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager),
+            validateJitProvisionedUserClaimUpdate(getUsernameFromUserID(userID, userStoreManager),
                     profileName, userStoreManager);
         }
         // Validate dob value against the regex.
@@ -230,8 +230,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         // Validate whether claim update request is for a provisioned user.
         if (isJitProvisionEnhancedFeature()) {
-            validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager),
-                    profileName, userStoreManager);
+            validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
 
         String lastModifiedDate = AttributeUtil.formatDateTime(Instant.now());
@@ -249,7 +248,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         // Validate whether claim update request is for a provisioned user.
         if (isJitProvisionEnhancedFeature()) {
-            validateClaimUpdate(userName, profileName, userStoreManager);
+            validateClaimUpdate(userName);
         }
         return true;
     }
@@ -259,7 +258,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         // Validate whether claim update request is for a provisioned user.
         if (isJitProvisionEnhancedFeature()) {
-            validateClaimUpdate(userName, profileName, userStoreManager);
+            validateClaimUpdate(userName);
         }
         return true;
     }
@@ -273,14 +272,12 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
      * Validate whether the claim update request is from a provisioned user.
      *
      * @param username         Username.
-     * @param profileName      Profile name.
-     * @param userStoreManager Userstore manager.
      * @throws UserStoreException if an error occurred while retrieving the user claim list.
      */
-    private void validateClaimUpdate(String username, String profileName,
-                                     UserStoreManager userStoreManager) throws UserStoreException {
+    private void validateClaimUpdate(String username) throws UserStoreException {
 
         boolean isAttributeSyncingEnabled = true;
+
         /*
         If attribute syncing is disabled, blocking the attribute editing is not required.
         ToDo: There should be an option to disable attribute syncing.
