@@ -21,13 +21,15 @@ package org.wso2.carbon.identity.scim2.common.listener;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.governance.model.UserIdentityClaim;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
@@ -37,10 +39,8 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
-import org.wso2.carbon.user.core.claim.Claim;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.common.User;
-import org.wso2.carbon.user.core.jdbc.UniqueIDJDBCUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
@@ -51,16 +51,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROVISIONED_USER;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROVISIONED_SOURCE_CLAIM;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SYNCED_ATTRIBUTE_EDITING_ENABLED;
 
 /**
  * This is to perform SCIM related operation on User Operations.
@@ -172,6 +170,11 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPreSetUserClaimValueWithID(String userID, String claimURI, String claimValue, String profileName,
                                                 UserStoreManager userStoreManager) throws UserStoreException {
 
+        // Validate whether claim update request is for a provisioned user.
+        if (isJitProvisionEnhancedFeature()) {
+            validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager),
+                    profileName, userStoreManager);
+        }
         // Validate dob value against the regex.
         validateDateOfBirthClaimValue(claimURI, claimValue, userStoreManager);
         return true;
@@ -226,7 +229,11 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
 
-        validateProvisionedUserClaimUpdate(userID, profileName, userStoreManager);
+        // Validate whether claim update request is for a provisioned user.
+        if (isJitProvisionEnhancedFeature()) {
+            validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager),
+                    profileName, userStoreManager);
+        }
 
         String lastModifiedDate = AttributeUtil.formatDateTime(Instant.now());
         Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
@@ -238,22 +245,49 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         return true;
     }
 
+    public boolean doPreSetUserClaimValues(String userName, Map<String, String> claims, String profileName,
+                                           UserStoreManager userStoreManager) throws UserStoreException {
+
+        // Validate whether claim update request is for a provisioned user.
+        if (isJitProvisionEnhancedFeature()) {
+            validateClaimUpdate(userName, profileName, userStoreManager);
+        }
+        return true;
+    }
+
+    public boolean doPreSetUserClaimValue(String userName, String claimURI, String claimValue, String profileName,
+                                          UserStoreManager userStoreManager) throws UserStoreException {
+
+        // Validate whether claim update request is for a provisioned user.
+        if (isJitProvisionEnhancedFeature()) {
+            validateClaimUpdate(userName, profileName, userStoreManager);
+        }
+        return true;
+    }
+
+    private String getUsernameFromUserID(String userID, UserStoreManager userStoreManager) throws UserStoreException {
+
+        return ((AbstractUserStoreManager) userStoreManager).getUserNameFromUserID(userID);
+    }
+
     /**
      * Validate whether the claim update request is from a provisioned user.
      *
-     * @param userID           User id.
+     * @param username         Username.
      * @param profileName      Profile name.
      * @param userStoreManager Userstore manager.
      * @throws UserStoreException if an error occurred while retrieving the user claim list.
      */
-    private void validateProvisionedUserClaimUpdate(String userID, String profileName,
-                                                    UserStoreManager userStoreManager) throws UserStoreException {
+    private void validateClaimUpdate(String username, String profileName,
+                                     UserStoreManager userStoreManager) throws UserStoreException {
 
+        boolean isAttributeSyncingEnabled = true;
         /*
-        Check whether the config is enabled to edit synced attributes of the provisioned user.
-        If it is enabled, blocking the attribute editing is not required.
+        If attribute syncing is disabled, blocking the attribute editing is not required.
+        ToDo: There should be an option to disable attribute syncing.
+        (https://github.com/wso2-enterprise/asgardeo-product/issues/4491)
          */
-        if (Boolean.parseBoolean(IdentityUtil.getProperty(SYNCED_ATTRIBUTE_EDITING_ENABLED))) {
+        if (!isAttributeSyncingEnabled) {
             return;
         }
 
@@ -261,30 +295,23 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         Check whether this is an attribute syncing flow by checking the PROVISIONED_USER thread local property.
         If it is an attribute syncing flow, blocking the attribute editing is not required.
          */
-        if (IdentityUtil.threadLocalProperties.get().get(PROVISIONED_USER) != null &&
-                (Boolean) IdentityUtil.threadLocalProperties.get().get(PROVISIONED_USER)) {
+        if (IdentityUtil.threadLocalProperties.get().get(FrameworkConstants.JIT_PROVISIONING_FLOW) != null &&
+                (Boolean) IdentityUtil.threadLocalProperties.get().get(FrameworkConstants.JIT_PROVISIONING_FLOW)) {
             return;
         }
 
-        String username = ((UniqueIDJDBCUserStoreManager) userStoreManager).getUserNameFromUserID(userID);
-        Claim[] userClaimValues = userStoreManager.getUserClaimValues(username, profileName);
+        boolean isExistingJITProvisionedUser;
+        try {
+            isExistingJITProvisionedUser = UserSessionStore.getInstance().isExistingUser(username);
+        } catch (UserSessionException e) {
+            throw new UserStoreException("Error while checking the federated user existence for the user: " + username);
+        }
 
-        /*
-        If the PROVISIONED_SOURCE_CLAIM is already set as claim of the user, that user can be identified as provisioned
-        user. Therefore attribute editing will be blocked for that user.
-         */
-        for (Claim claim : userClaimValues) {
-            String claimURI = claim.getClaimUri();
-            if (!PROVISIONED_SOURCE_CLAIM.equals(claimURI)) {
-                continue;
-            }
-            if (StringUtils.isNotBlank(claim.getValue())) {
-                String errorMsg = "The user: " + username + " has been provisioned from federated IDP: " +
-                        claim.getValue() + ". Hence provisioned user attributes are not allowed to update";
-                throw new UserStoreClientException(errorMsg);
-            } else {
-                break;
-            }
+        // If federated user is already provisioned, block that user's synced attribute editing.
+        if (isExistingJITProvisionedUser) {
+            throw new UserStoreClientException(
+                    SCIMCommonConstants.ErrorMessages.ERROR_CODE_INVALID_ATTRIBUTE_UPDATE.getMessage(),
+                    SCIMCommonConstants.ErrorMessages.ERROR_CODE_INVALID_ATTRIBUTE_UPDATE.getCode());
         }
     }
 
@@ -516,5 +543,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         // If http://wso2.org/claims/identity/isReadOnlyUser claim is requested, set the value checking the user store.
         claimMap.put(SCIMCommonConstants.READ_ONLY_USER_CLAIM, String.valueOf(userStoreManager.isReadOnly()));
         return true;
+    }
+
+    public static boolean isJitProvisionEnhancedFeature() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE));
     }
 }

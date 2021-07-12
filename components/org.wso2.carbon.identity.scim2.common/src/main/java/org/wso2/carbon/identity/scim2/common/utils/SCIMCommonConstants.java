@@ -84,8 +84,7 @@ public class SCIMCommonConstants {
     public static final String READ_ONLY_USER_CLAIM = "http://wso2.org/claims/identity/isReadOnlyUser";
 
     public static final String PROVISIONED_SOURCE_CLAIM = "http://wso2.org/claims/identity/userSource";
-    public static final String SYNCED_ATTRIBUTE_EDITING_ENABLED = "JITProvisioning.EnableSyncedAttributeEditing";
-    public static final String PROVISIONED_USER = "provisionedUser";
+    public static final String ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE = "JITProvisioning.EnableEnhancedFeature";
 
     public static final String SCIM_COMPLEX_MULTIVALUED_ATTRIBUTE_SUPPORT_ENABLED = "SCIM2" +
             ".ComplexMultiValuedAttributeSupportEnabled";
@@ -117,5 +116,48 @@ public class SCIMCommonConstants {
             "Date of Birth is not in the correct format of YYYY-MM-DD";
     public static final String DATE_OF_BIRTH_REGEX = "^\\d{4}-\\d{2}-\\d{2}$";
     public static final String ERROR_CODE_RESOURCE_LIMIT_REACHED = "ATS-10001";
+
+    /**
+     * Enum which contains the error codes and corresponding error messages.
+     */
+    public enum ErrorMessages {
+
+        // SUO - SCIM User Operations.
+        ERROR_CODE_INVALID_ATTRIBUTE_UPDATE("SUO-10000", "User attribute update is not allowed",
+                "The user: %s has been JIT provisioned from federated IDP: %s. " +
+                        "Hence provisioned user attributes are not allowed to update");
+
+        private final String code;
+        private final String message;
+        private final String description;
+
+        ErrorMessages(String code, String message, String description) {
+
+            this.code = code;
+            this.message = message;
+            this.description = description;
+        }
+
+        public String getCode() {
+
+            return code;
+        }
+
+        public String getMessage() {
+
+            return message;
+        }
+
+        public String getDescription() {
+
+            return this.description;
+        }
+
+        @Override
+        public String toString() {
+
+            return code + " : " + message;
+        }
+    }
 }
 
