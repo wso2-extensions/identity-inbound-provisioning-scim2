@@ -5303,7 +5303,7 @@ public class SCIMUserManager implements UserManager {
      * This will allow only the username claim or the claims with supported-by-default value true.
      *
      * @param scimClaimToLocalClaimMap
-     * @return List of filtered attributes.
+     * @return
      */
     private Map<String, Attribute> getFilteredUserSchemaAttributes(Map<ExternalClaim, LocalClaim>
                                                                            scimClaimToLocalClaimMap) {
@@ -5329,7 +5329,7 @@ public class SCIMUserManager implements UserManager {
      * Get filtered claims based on property `isSupportedByDefault` of mapped local dialect claim.
      *
      * @param scimClaimToLocalClaimMap
-     * @return
+     * @return List of filtered attributes.
      */
     private Map<String, Attribute> getFilteredSchemaAttributes(Map<ExternalClaim, LocalClaim>
                                                                                      scimClaimToLocalClaimMap) {
