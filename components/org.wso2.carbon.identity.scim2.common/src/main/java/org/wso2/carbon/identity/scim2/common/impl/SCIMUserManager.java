@@ -5231,7 +5231,7 @@ public class SCIMUserManager implements UserManager {
                             tenantDomain);
 
             Map<String, Attribute> filteredAttributeMap =
-                    getFilteredEnterpriseUserAndCustomSchemaAttributes(scimClaimToLocalClaimMap);
+                    getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
                     buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap);
 
@@ -5325,9 +5325,14 @@ public class SCIMUserManager implements UserManager {
         return filteredFlatAttributeMap;
     }
 
-    private Map<String, Attribute> getFilteredEnterpriseUserAndCustomSchemaAttributes(Map<ExternalClaim, LocalClaim>
+    /**
+     * Get filtered claims based on property `isSupportedByDefault` of mapped local dialect claim.
+     *
+     * @param scimClaimToLocalClaimMap
+     * @return
+     */
+    private Map<String, Attribute> getFilteredSchemaAttributes(Map<ExternalClaim, LocalClaim>
                                                                                      scimClaimToLocalClaimMap) {
-
         return scimClaimToLocalClaimMap.entrySet().stream()
                 .filter(entry -> isSupportedByDefault(entry.getValue()))
                 .map(e -> getSchemaAttributes(e.getKey(), e.getValue(), true))
@@ -5807,7 +5812,7 @@ public class SCIMUserManager implements UserManager {
                 getMappedLocalClaimsForDialect(getCustomSchemaURI(), tenantDomain);
 
         Map<String, Attribute> filteredAttributeMap
-                = getFilteredEnterpriseUserAndCustomSchemaAttributes(scimClaimToLocalClaimMap);
+                = getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
         Map<String, Attribute> hierarchicalAttributeMap =
                 buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap);
 
