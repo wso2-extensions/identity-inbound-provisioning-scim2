@@ -5231,7 +5231,7 @@ public class SCIMUserManager implements UserManager {
                             tenantDomain);
 
             Map<String, Attribute> filteredAttributeMap =
-                    getFilteredEnterpriseUserSchemaAttributes(scimClaimToLocalClaimMap);
+                    getFilteredEnterpriseUserAndCustomSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
                     buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap);
 
@@ -5325,39 +5325,13 @@ public class SCIMUserManager implements UserManager {
         return filteredFlatAttributeMap;
     }
 
-    private Map<String, Attribute> getFilteredEnterpriseUserSchemaAttributes(Map<ExternalClaim, LocalClaim>
+    private Map<String, Attribute> getFilteredEnterpriseUserAndCustomSchemaAttributes(Map<ExternalClaim, LocalClaim>
                                                                                      scimClaimToLocalClaimMap) {
 
         return scimClaimToLocalClaimMap.entrySet().stream()
                 .filter(entry -> isSupportedByDefault(entry.getValue()))
                 .map(e -> getSchemaAttributes(e.getKey(), e.getValue(), true))
                 .collect(Collectors.toMap(attr -> attr.getName(), Function.identity()));
-    }
-
-    /**
-     * Returns all attributes belong to the extension schema dialect.
-     * unless its mapped local dialect claim value "support by default value is false".
-     *
-     * @param scimClaimToLocalClaimMap
-     * @return Map of attribute.
-     */
-    private Map<String, Attribute> getAllScimSchemaAttributes(Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap) {
-
-        Map<String, Attribute> filteredFlatAttributeMap = new HashMap<>();
-
-        for (Map.Entry<ExternalClaim, LocalClaim> entry : scimClaimToLocalClaimMap.entrySet()) {
-
-            ExternalClaim scimClaim = entry.getKey();
-            LocalClaim mappedLocalClaim = entry.getValue();
-
-            if (isSupportedByDefault(mappedLocalClaim) || isUsernameClaim(scimClaim)) {
-                // Return only the schema of supported-by-default claims and the username claim.
-                Attribute schemaAttribute = getSchemaAttributes(scimClaim, mappedLocalClaim, false);
-                filteredFlatAttributeMap.put(schemaAttribute.getName(), schemaAttribute);
-            }
-        }
-
-        return filteredFlatAttributeMap;
     }
 
     private boolean isSupportedByDefault(LocalClaim mappedLocalClaim) {
@@ -5832,7 +5806,8 @@ public class SCIMUserManager implements UserManager {
         Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
                 getMappedLocalClaimsForDialect(getCustomSchemaURI(), tenantDomain);
 
-        Map<String, Attribute> filteredAttributeMap = getAllScimSchemaAttributes(scimClaimToLocalClaimMap);
+        Map<String, Attribute> filteredAttributeMap
+                = getFilteredEnterpriseUserAndCustomSchemaAttributes(scimClaimToLocalClaimMap);
         Map<String, Attribute> hierarchicalAttributeMap =
                 buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap);
 
