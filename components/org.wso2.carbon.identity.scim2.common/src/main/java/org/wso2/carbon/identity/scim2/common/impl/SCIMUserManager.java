@@ -5333,6 +5333,7 @@ public class SCIMUserManager implements UserManager {
      */
     private Map<String, Attribute> getFilteredSchemaAttributes(Map<ExternalClaim, LocalClaim>
                                                                                      scimClaimToLocalClaimMap) {
+
         return scimClaimToLocalClaimMap.entrySet().stream()
                 .filter(entry -> isSupportedByDefault(entry.getValue()))
                 .map(e -> getSchemaAttributes(e.getKey(), e.getValue(), true))
