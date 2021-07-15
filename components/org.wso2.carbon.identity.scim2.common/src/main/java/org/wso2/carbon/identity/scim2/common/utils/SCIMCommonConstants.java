@@ -83,8 +83,6 @@ public class SCIMCommonConstants {
 
     public static final String READ_ONLY_USER_CLAIM = "http://wso2.org/claims/identity/isReadOnlyUser";
 
-    public static final String ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE = "JITProvisioning.EnableEnhancedFeature";
-
     public static final String SCIM_COMPLEX_MULTIVALUED_ATTRIBUTE_SUPPORT_ENABLED = "SCIM2" +
             ".ComplexMultiValuedAttributeSupportEnabled";
     public static final String SCIM_ENABLE_FILTERING_ENHANCEMENTS = "SCIM2.EnableFilteringEnhancements";

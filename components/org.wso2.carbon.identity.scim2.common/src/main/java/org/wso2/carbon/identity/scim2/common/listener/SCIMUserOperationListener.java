@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
@@ -55,7 +56,6 @@ import java.util.UUID;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
 
@@ -170,7 +170,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                                                 UserStoreManager userStoreManager) throws UserStoreException {
 
         // Validate whether claim update request is for a provisioned user.
-        if (isJitProvisionEnhancedFeature()) {
+        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
         // Validate dob value against the regex.
@@ -228,7 +228,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
 
         // Validate whether claim update request is for a provisioned user.
-        if (isJitProvisionEnhancedFeature()) {
+        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
 
@@ -246,7 +246,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                                            UserStoreManager userStoreManager) throws UserStoreException {
 
         // Validate whether claim update request is for a provisioned user.
-        if (isJitProvisionEnhancedFeature()) {
+        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
             validateClaimUpdate(userName);
         }
         return true;
@@ -256,7 +256,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                                           UserStoreManager userStoreManager) throws UserStoreException {
 
         // Validate whether claim update request is for a provisioned user.
-        if (isJitProvisionEnhancedFeature()) {
+        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled())) {
             validateClaimUpdate(userName);
         }
         return true;
@@ -538,10 +538,5 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         // If http://wso2.org/claims/identity/isReadOnlyUser claim is requested, set the value checking the user store.
         claimMap.put(SCIMCommonConstants.READ_ONLY_USER_CLAIM, String.valueOf(userStoreManager.isReadOnly()));
         return true;
-    }
-
-    public static boolean isJitProvisionEnhancedFeature() {
-
-        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE));
     }
 }
