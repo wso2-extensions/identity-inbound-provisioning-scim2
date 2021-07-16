@@ -119,6 +119,10 @@
             <artifactId>org.wso2.carbon.identity.role.mgt.core</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.identity.governance</groupId>
             <artifactId>org.wso2.carbon.identity.password.policy</artifactId>
         </dependency>
@@ -195,7 +199,8 @@
 
                             org.wso2.carbon.base; version="${carbon.base.imp.pkg.version.range}",
                             org.wso2.carbon.user.api; version="${carbon.user.api.imp.pkg.version.range}",
-
+                            org.wso2.carbon.identity.application.authentication.framework;
+                            version="${identity.framework.version}",
                             org.wso2.carbon.identity.base; version="${identity.framework.version}",
                             org.wso2.carbon.identity.core.*; version="${identity.framework.version}",
                             org.wso2.carbon.identity.claim.metadata.mgt.*; version="${identity.framework.version}",

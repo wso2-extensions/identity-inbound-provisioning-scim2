@@ -21,13 +21,16 @@ package org.wso2.carbon.identity.scim2.common.listener;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.governance.model.UserIdentityClaim;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
@@ -49,7 +52,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
@@ -167,6 +169,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPreSetUserClaimValueWithID(String userID, String claimURI, String claimValue, String profileName,
                                                 UserStoreManager userStoreManager) throws UserStoreException {
 
+        // Validate whether claim update request is for a provisioned user.
+        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
+            validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
+        }
         // Validate dob value against the regex.
         validateDateOfBirthClaimValue(claimURI, claimValue, userStoreManager);
         return true;
@@ -221,6 +227,11 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
 
+        // Validate whether claim update request is for a provisioned user.
+        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
+            validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
+        }
+
         String lastModifiedDate = AttributeUtil.formatDateTime(Instant.now());
         Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
         String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
@@ -229,6 +240,74 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         // Validate dob value against the regex.
         validateDateOfBirthClaimValue(claims, userStoreManager);
         return true;
+    }
+
+    public boolean doPreSetUserClaimValues(String userName, Map<String, String> claims, String profileName,
+                                           UserStoreManager userStoreManager) throws UserStoreException {
+
+        // Validate whether claim update request is for a provisioned user.
+        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
+            validateClaimUpdate(userName);
+        }
+        return true;
+    }
+
+    public boolean doPreSetUserClaimValue(String userName, String claimURI, String claimValue, String profileName,
+                                          UserStoreManager userStoreManager) throws UserStoreException {
+
+        // Validate whether claim update request is for a provisioned user.
+        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
+            validateClaimUpdate(userName);
+        }
+        return true;
+    }
+
+    private String getUsernameFromUserID(String userID, UserStoreManager userStoreManager) throws UserStoreException {
+
+        return ((AbstractUserStoreManager) userStoreManager).getUserNameFromUserID(userID);
+    }
+
+    /**
+     * Validate whether the claim update request is from a provisioned user.
+     *
+     * @param username         Username.
+     * @throws UserStoreException if an error occurred while retrieving the user claim list.
+     */
+    private void validateClaimUpdate(String username) throws UserStoreException {
+
+        boolean isAttributeSyncingEnabled = true;
+
+        /*
+        If attribute syncing is disabled, blocking the attribute editing is not required.
+        ToDo: There should be an option to disable attribute syncing.
+        (https://github.com/wso2-enterprise/asgardeo-product/issues/4491)
+         */
+        if (!isAttributeSyncingEnabled) {
+            return;
+        }
+
+        /*
+        Check whether this is an attribute syncing flow by checking the PROVISIONED_USER thread local property.
+        If it is an attribute syncing flow, blocking the attribute editing is not required.
+         */
+        if (IdentityUtil.threadLocalProperties.get().get(FrameworkConstants.JIT_PROVISIONING_FLOW) != null &&
+                (Boolean) IdentityUtil.threadLocalProperties.get().get(FrameworkConstants.JIT_PROVISIONING_FLOW)) {
+            return;
+        }
+
+        boolean isExistingJITProvisionedUser;
+        try {
+            isExistingJITProvisionedUser = UserSessionStore.getInstance().isExistingUser(username);
+        } catch (UserSessionException e) {
+            throw new UserStoreException("Error while checking the federated user existence for the user: " + username);
+        }
+
+        // If federated user is already provisioned, block that user's synced attribute editing.
+        if (isExistingJITProvisionedUser) {
+            throw new UserStoreClientException(
+                    SCIMCommonConstants.ErrorMessages.ERROR_CODE_INVALID_ATTRIBUTE_UPDATE.getMessage(),
+                    SCIMCommonConstants.ErrorMessages.ERROR_CODE_INVALID_ATTRIBUTE_UPDATE.getCode());
+        }
     }
 
     private void validateDateOfBirthClaimValue(Map<String, String> claims, UserStoreManager userStoreManager)
