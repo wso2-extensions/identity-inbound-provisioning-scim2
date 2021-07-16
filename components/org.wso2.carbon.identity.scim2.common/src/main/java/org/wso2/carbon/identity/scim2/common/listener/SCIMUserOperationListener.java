@@ -256,7 +256,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                                           UserStoreManager userStoreManager) throws UserStoreException {
 
         // Validate whether claim update request is for a provisioned user.
-        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled())) {
+        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
             validateClaimUpdate(userName);
         }
         return true;

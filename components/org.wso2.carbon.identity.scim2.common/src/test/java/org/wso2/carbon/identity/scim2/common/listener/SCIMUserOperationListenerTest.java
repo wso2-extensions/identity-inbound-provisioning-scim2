@@ -26,6 +26,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
@@ -57,7 +58,6 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE;
 
 @PrepareForTest({UserCoreUtil.class, SCIMGroupHandler.class, SCIMCommonUtils.class, IdentityUtil.class})
 public class SCIMUserOperationListenerTest extends PowerMockTestCase {
@@ -218,7 +218,7 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         when(userStoreManager.isSCIMEnabled()).thenReturn(isSCIMEnabled);
 
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(ENABLE_JIT_PROVISIOING_ENHANCE_FEATURE)).thenReturn("false");
+        when(IdentityUtil.getProperty(FrameworkConstants.ENABLE_JIT_PROVISION_ENHANCE_FEATURE)).thenReturn("false");
 
         assertTrue(scimUserOperationListener.
                 doPreSetUserClaimValuesWithID(userId, claims, profile, userStoreManager));
