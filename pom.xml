@@ -134,6 +134,12 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
+                <scope>provided</scope>
+                <version>${identity.framework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.claim.metadata.mgt</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
@@ -229,7 +235,7 @@
         <inbound.auth.oauth.version>6.5.3</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.6.2-m9</carbon.kernel.version>
-        <identity.framework.version>5.20.59</identity.framework.version>
+        <identity.framework.version>5.20.118</identity.framework.version>
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.3.11</identity.governance.version>
