@@ -200,12 +200,15 @@
                             org.wso2.carbon.base; version="${carbon.base.imp.pkg.version.range}",
                             org.wso2.carbon.user.api; version="${carbon.user.api.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework;
-                            version="${identity.framework.version}",
-                            org.wso2.carbon.identity.base; version="${identity.framework.version}",
-                            org.wso2.carbon.identity.core.*; version="${identity.framework.version}",
-                            org.wso2.carbon.identity.claim.metadata.mgt.*; version="${identity.framework.version}",
-                            org.wso2.carbon.identity.role.mgt.core.*; version="${identity.framework.version}",
-                            org.wso2.carbon.user.mgt.*;version="${identity.framework.version}"
+                            version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.core.*;
+                            version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.claim.metadata.mgt.*;
+                            version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.role.mgt.core.*;
+                            version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.user.mgt.*;version="${carbon.identity.framework.imp.pkg.version.range}"
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.scim2.common.internal,
