@@ -170,7 +170,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                                                 UserStoreManager userStoreManager) throws UserStoreException {
 
         // Validate whether claim update request is for a provisioned user.
-        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
+        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled()) {
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
         // Validate dob value against the regex.
@@ -228,7 +228,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
 
         // Validate whether claim update request is for a provisioned user.
-        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
+        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled()) {
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
 
@@ -246,7 +246,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                                            UserStoreManager userStoreManager) throws UserStoreException {
 
         // Validate whether claim update request is for a provisioned user.
-        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
+        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled()) {
             validateClaimUpdate(userName);
         }
         return true;
@@ -256,7 +256,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                                           UserStoreManager userStoreManager) throws UserStoreException {
 
         // Validate whether claim update request is for a provisioned user.
-        if (FrameworkUtils.isJitProvisionEnhancedFeatureEnabled()) {
+        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled()) {
             validateClaimUpdate(userName);
         }
         return true;
