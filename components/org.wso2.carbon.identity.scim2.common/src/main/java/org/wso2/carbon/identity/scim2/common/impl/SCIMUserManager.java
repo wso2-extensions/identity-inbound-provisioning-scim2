@@ -2282,15 +2282,10 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void deleteMe(String userName) throws NotFoundException, CharonException, BadRequestException,
+    public void deleteMe(String userId) throws NotFoundException, CharonException, BadRequestException,
             NotImplementedException {
 
-        try {
-            String userId = carbonUM.getUserIDFromUserName(userName);
-            deleteUser(userId);
-        } catch (UserStoreException e) {
-            throw new CharonException("Error occurred while getting id for user : " + userName, e);
-        }
+        deleteUser(userId);
     }
 
     @Override

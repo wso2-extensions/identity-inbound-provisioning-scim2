@@ -95,10 +95,13 @@ public class SupportUtils {
 
     /**
      * Get the fully qualified username of the user authenticated at the SCIM Endpoint. The username will be set by
-     * the REST API Authentication valve (configured in identity.xml)
+     * the REST API Authentication valve
+     * @deprecated use {@link #getAuthenticatedUserId()} to use the authenticated user id instead of authenticated
+     * user name.
      *
      * @return tenant and userstore domain appended
      */
+    @Deprecated
     public static String getAuthenticatedUsername() {
         // Get authenticated username from the thread local.
         return PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -108,7 +111,7 @@ public class SupportUtils {
      * Get the user id of the user authenticated at the SCIM Endpoint. The user id will be set by
      * the REST API Authentication valve (configured in identity.xml)
      *
-     * @return tenant and userstore domain appended
+     * @return authenticated user id.
      */
     public static String getAuthenticatedUserId() {
 

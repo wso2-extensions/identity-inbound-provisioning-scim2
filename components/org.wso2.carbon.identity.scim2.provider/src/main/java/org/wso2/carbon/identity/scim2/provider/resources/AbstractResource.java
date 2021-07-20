@@ -98,7 +98,6 @@ public class AbstractResource {
      * Build an error message for a Charon exception.
      *
      * @param e CharonException
-     * @param encoder
      * @return
      */
     protected Response handleCharonException(CharonException e) {
