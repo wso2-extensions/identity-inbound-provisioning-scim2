@@ -169,8 +169,9 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPreSetUserClaimValueWithID(String userID, String claimURI, String claimValue, String profileName,
                                                 UserStoreManager userStoreManager) throws UserStoreException {
 
-        // Validate whether claim update request is for a provisioned user.
-        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled()) {
+        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled() && StringUtils.isNotBlank(claimURI) &&
+                !isIdentityClaimUpdate(claimURI)) {
+            // Validate whether claim update request is for a provisioned user.
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
         // Validate dob value against the regex.
@@ -227,8 +228,9 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
 
-        // Validate whether claim update request is for a provisioned user.
-        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled()) {
+        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled() && !claims.isEmpty() &&
+                !isIdentityClaimsUpdate(claims)) {
+            // Validate whether claim update request is for a JIT provisioned user.
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
 
@@ -245,8 +247,9 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPreSetUserClaimValues(String userName, Map<String, String> claims, String profileName,
                                            UserStoreManager userStoreManager) throws UserStoreException {
 
-        // Validate whether claim update request is for a provisioned user.
-        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled()) {
+        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled() && !claims.isEmpty() &&
+                !isIdentityClaimsUpdate(claims)) {
+            // Validate whether claim update request is for a JIT provisioned user.
             validateClaimUpdate(userName);
         }
         return true;
@@ -255,8 +258,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     public boolean doPreSetUserClaimValue(String userName, String claimURI, String claimValue, String profileName,
                                           UserStoreManager userStoreManager) throws UserStoreException {
 
-        // Validate whether claim update request is for a provisioned user.
-        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled()) {
+        if (FrameworkUtils.isJITProvisionEnhancedFeatureEnabled() && StringUtils.isNotBlank(claimURI)
+                && !isIdentityClaimUpdate(claimURI)) {
             validateClaimUpdate(userName);
         }
         return true;
@@ -270,7 +273,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     /**
      * Validate whether the claim update request is from a provisioned user.
      *
-     * @param username         Username.
+     * @param username Username.
      * @throws UserStoreException if an error occurred while retrieving the user claim list.
      */
     private void validateClaimUpdate(String username) throws UserStoreException {
@@ -538,5 +541,15 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         // If http://wso2.org/claims/identity/isReadOnlyUser claim is requested, set the value checking the user store.
         claimMap.put(SCIMCommonConstants.READ_ONLY_USER_CLAIM, String.valueOf(userStoreManager.isReadOnly()));
         return true;
+    }
+
+    private boolean isIdentityClaimsUpdate(Map<String, String> claims) {
+
+        return claims.entrySet().stream().anyMatch(claim -> isIdentityClaimUpdate(claim.getKey()));
+    }
+
+    private boolean isIdentityClaimUpdate(String claimURI) {
+
+        return claimURI.startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI);
     }
 }
