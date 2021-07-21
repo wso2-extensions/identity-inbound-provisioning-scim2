@@ -44,7 +44,6 @@ import java.util.UUID;
  */
 public class SCIMGroupHandler {
     private static final Log logger = LogFactory.getLog(SCIMGroupHandler.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private int tenantId;
 
     /**
@@ -127,14 +126,12 @@ public class SCIMGroupHandler {
      */
     public String getGroupName(String id) throws IdentitySCIMException {
 
-        diagnosticLog.info("Retrieving group name for the group ID: " + id);
         GroupDAO groupDAO = new GroupDAO();
         String roleName = groupDAO.getGroupNameById(tenantId, id);
         if (roleName == null) {
             if (logger.isDebugEnabled()) {
                 logger.debug("Role doesn't exist with id: " + id);
             }
-            diagnosticLog.info("Group does not exist with id: " + id);
             return null;
         } else {
             return roleName;

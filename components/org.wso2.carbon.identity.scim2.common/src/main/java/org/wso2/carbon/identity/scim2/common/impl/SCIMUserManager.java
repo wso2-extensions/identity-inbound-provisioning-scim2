@@ -141,7 +141,6 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
-    private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
     private String tenantDomain;
@@ -182,7 +181,6 @@ public class SCIMUserManager implements UserManager {
     public User createUser(User user, Map<String, Boolean> requiredAttributes)
             throws CharonException, ConflictException, BadRequestException, ForbiddenException {
 
-        diagnosticLog.info("Creating user via SCIM 2.0");
         String userStoreName = null;
         try {
             String userStoreDomainFromSP = getUserStoreDomainFromSP();
@@ -190,7 +188,6 @@ public class SCIMUserManager implements UserManager {
                 userStoreName = userStoreDomainFromSP;
             }
         } catch (IdentityApplicationManagementException e) {
-            diagnosticLog.error("Unable to retrieve userstore domain from SP. Error message: " + e.getMessage());
             throw new CharonException("Error retrieving User Store name. ", e);
         }
 
@@ -213,8 +210,6 @@ public class SCIMUserManager implements UserManager {
         }
 
         if (StringUtils.isNotBlank(userStoreDomainName) && !isSCIMEnabled(userStoreDomainName)) {
-            diagnosticLog.info("Cannot add user through scim to user store. SCIM is not " +
-                    "enabled for user store " + userStoreDomainName);
             throw new CharonException("Cannot add user through scim to user store " + ". SCIM is not " +
                     "enabled for user store " + userStoreDomainName);
         }
@@ -242,8 +237,6 @@ public class SCIMUserManager implements UserManager {
             // manipulate SCIM groups from user endpoint as this attribute has a mutability of "readOnly". Group
             // changes must be applied via Group Resource.
             if (claimsMap.containsKey(SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT)) {
-                diagnosticLog.info("Removing roles attribute since it has a mutability of 'readOnly' from /Users " +
-                        "endpoint.");
                 claimsMap.remove(SCIMConstants.UserSchemaConstants.ROLES_URI);
             }
 
@@ -265,7 +258,6 @@ public class SCIMUserManager implements UserManager {
 
             if (isExistingUser) {
                 String error = "User with the name: " + user.getUserName() + " already exists in the system.";
-                diagnosticLog.error(error);
                 throw new ConflictException(error);
             }
 
@@ -278,7 +270,6 @@ public class SCIMUserManager implements UserManager {
              the user instead of human readable username. The primary login identifier claim value will be the
              human readable username.*/
             if (isLoginIdentifiersEnabled()) {
-                diagnosticLog.info("Login identifier feature is enabled.");
                 String immutableUserIdentifier = getUniqueUserID();
                 String primaryLoginIdentifier = getPrimaryLoginIdentifierClaim();
                 if (StringUtils.isNotBlank(primaryLoginIdentifier)) {
@@ -288,8 +279,6 @@ public class SCIMUserManager implements UserManager {
                             coreUser = carbonUM.addUserWithID(immutableUserIdentifier,
                                     user.getPassword(), null, claimsInLocalDialect, null);
                         } else {
-                            diagnosticLog.error("The claim value for " + primaryLoginIdentifier + " " +
-                                    "and username should be same.");
                             throw new BadRequestException(
                                     "The claim value for " + primaryLoginIdentifier + " " +
                                             "and username should be same.");
@@ -324,8 +313,6 @@ public class SCIMUserManager implements UserManager {
                 log.debug("User: " + user.getUserName() + " and with ID " + user.getId() +
                         "  is created through SCIM.");
             }
-            diagnosticLog.info("User: " + user.getUserName() + " and with ID " + user.getId() +
-                    "  is created through SCIM.");
 
             // Get Claims related to SCIM claim dialect
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
@@ -343,7 +330,6 @@ public class SCIMUserManager implements UserManager {
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
                     e.getMessage());
-            diagnosticLog.error(errorMessage);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -352,8 +338,6 @@ public class SCIMUserManager implements UserManager {
             }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
-            diagnosticLog.error("Error occurred while adding the user: " + user.getUserName() + ". Error message: "
-                    + e.getMessage());
             // Sometimes client exceptions are wrapped in the super class.
             // Therefore checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
@@ -429,7 +413,6 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Retrieving user: " + userId);
         }
-        diagnosticLog.info("Retrieving user with ID: " + userId + " via SCIM 2.0");
 
         User scimUser;
         try {
@@ -445,7 +428,6 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug("User with SCIM id: " + userId + " does not exist in the system.");
                 }
-                diagnosticLog.error("Could not find a valid user with ID: " + userId);
                 return null;
             } else {
                 //get Claims related to SCIM claim dialect
@@ -459,11 +441,9 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
                 }
-                diagnosticLog.info("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
             }
         } catch (UserStoreException e) {
             String errMsg = "Error in getting user information from Carbon User Store for user: " + userId;
-            diagnosticLog.error(errMsg + ". Error message: " + e.getMessage());
             if (isNotifyUserstoreStatusEnabled()) {
                 throw resolveError(e, errMsg + ". " + e.getMessage());
             } else {
@@ -481,7 +461,6 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Deleting user: " + userId);
         }
-        diagnosticLog.info("Deleting user with ID: " + userId + " via SCIM 2.0");
         //get the user name of the user with this id
         org.wso2.carbon.user.core.common.User coreUser = null;
         String userName = null;
@@ -508,8 +487,6 @@ public class SCIMUserManager implements UserManager {
             try {
                 userStoreDomainFromSP = getUserStoreDomainFromSP();
             } catch (IdentityApplicationManagementException e) {
-                diagnosticLog.error("Error occurred while retrieving userstore domain from SP. Error message: " +
-                        e.getMessage());
                 throw new CharonException("Error retrieving User Store name. ", e);
             }
 
@@ -518,13 +495,10 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug("User with id: " + userId + " not found.");
                 }
-                diagnosticLog.error("Could not find a valid user with ID: " + userId);
                 throw new NotFoundException();
             } else if (userStoreDomainFromSP != null &&
                     !(userStoreDomainFromSP
                             .equalsIgnoreCase(coreUser.getUserStoreDomain()))) {
-                diagnosticLog.error("User :" + coreUser.getUsername() + " does not belong to user store " +
-                        userStoreDomainFromSP + "Hence user deleting failed.");
                 throw new CharonException("User :" + coreUser.getUsername() + "is not belong to user store " +
                         userStoreDomainFromSP + "Hence user updating fail");
             } else {
@@ -534,8 +508,6 @@ public class SCIMUserManager implements UserManager {
 
                 // Check if SCIM is enabled for the user store.
                 if (!isSCIMEnabled(userStoreDomainName)) {
-                    diagnosticLog.error("Cannot delete user: " + userName + " through SCIM from user store: " +
-                            userStoreDomainName + ". SCIM is not enabled for user store: " + userStoreDomainName);
                     throw new CharonException("Cannot delete user: " + userName + " through SCIM from user store: " +
                             userStoreDomainName + ". SCIM is not enabled for user store: " + userStoreDomainName);
                 }
@@ -543,12 +515,9 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug("User: " + userName + " is deleted through SCIM.");
                 }
-                diagnosticLog.info("User: " + userName + " is deleted through SCIM.");
             }
 
         } catch (UserStoreClientException e) {
-            diagnosticLog.error("Error occurred while deleting user with ID: " + userId + ". Error message: " +
-                    e.getMessage());
             String errorMessage;
             if (isNotifyUserstoreStatusEnabled()) {
                 errorMessage = String.format("Error occurred while deleting user with ID: %s. %s",
@@ -558,8 +527,6 @@ public class SCIMUserManager implements UserManager {
             }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            diagnosticLog.error("Error occurred while deleting user with ID: " + userId + ". Error message: " +
-                    e.getMessage());
             String errorMessage;
             if (isNotifyUserstoreStatusEnabled()) {
                 errorMessage = String.format("Error occurred while deleting user with ID: %s. %s",
@@ -638,7 +605,6 @@ public class SCIMUserManager implements UserManager {
                                    String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
-        diagnosticLog.info("Retrieving user list via SCIM 2.0.");
         List<Object> users = new ArrayList<>();
         // 0th index is to store total number of results.
         users.add(0);
@@ -648,7 +614,6 @@ public class SCIMUserManager implements UserManager {
         Set<org.wso2.carbon.user.core.common.User> coreUsers;
         long totalUsers = 0;
         if (StringUtils.isNotEmpty(domainName)) {
-            diagnosticLog.info("Fetching users in domain: " + domainName);
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName);
                 totalUsers = getTotalUsers(domainName);
@@ -656,7 +621,6 @@ public class SCIMUserManager implements UserManager {
                 coreUsers = listUsernamesUsingLegacyAPIs(domainName);
             }
         } else {
-            diagnosticLog.info("Domain name is empty. Listing users across all domains.");
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernamesAcrossAllDomains(offset, limit, sortBy, sortOrder);
 
@@ -681,7 +645,6 @@ public class SCIMUserManager implements UserManager {
                 }
                 log.debug(message);
             }
-            diagnosticLog.info("There are no users who comply with the requested conditions.");
         } else {
             List<Object> scimUsers = getUserDetails(coreUsers, requiredAttributes);
             if (totalUsers != 0) {
@@ -719,8 +682,6 @@ public class SCIMUserManager implements UserManager {
                 totalUsers = secondaryUserStoreManager.countUsersWithClaims(USERNAME_CLAIM, "*");
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            diagnosticLog.error("Error while getting total user count in domain: " + domainName + ". Error" +
-                    " message: " + e.getMessage());
             throw resolveError(e, "Error while getting total user count in domain: " + domainName);
         }
         return totalUsers;
@@ -768,9 +729,6 @@ public class SCIMUserManager implements UserManager {
                         "%s is not an instance of PaginatedUserStoreManager. Therefore pagination is not supported.",
                         domainName));
             }
-            diagnosticLog.error(String.format(
-                    "%s is not an instance of PaginatedUserStoreManager. Therefore pagination is not supported.",
-                    domainName));
             throw new CharonException(String.format("Pagination is not supported for %s.", domainName));
         }
     }
@@ -947,8 +905,6 @@ public class SCIMUserManager implements UserManager {
                     log.debug("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". "
                             + "Including user : " + coreUser.getUsername() + " in the response.");
                 }
-                diagnosticLog.info("SCIM is enabled for the user-store domain : " + userStoreDomainName + ". "
-                        + "Including user : " + coreUser.getUsername() + " in the response.");
 
                 User scimUser = this.getSCIMUser(coreUser, requiredClaims, scimToLocalClaimsMap, null);
                 if (scimUser != null) {
@@ -963,9 +919,6 @@ public class SCIMUserManager implements UserManager {
                             + "Hence user : " + coreUser.getUsername()
                             + " in this domain is excluded in the response.");
                 }
-                diagnosticLog.info("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". "
-                        + "Hence user : " + coreUser.getUsername()
-                        + " in this domain is excluded in the response.");
             }
         }
     }
@@ -978,7 +931,6 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug("Updating user: " + user.getUserName());
             }
-            diagnosticLog.info("Updating user with username: " + user.getUserName() + " via SCIM 2.0");
 
             // Set thread local property to signal the downstream SCIMUserOperationListener
             // about the provisioning route.
@@ -993,8 +945,6 @@ public class SCIMUserManager implements UserManager {
                 User oldUser = this.getUser(user.getId(), ResourceManagerUtil.getAllAttributeURIs(schema));
                 if (userStoreDomainFromSP != null && !userStoreDomainFromSP
                         .equalsIgnoreCase(IdentityUtil.extractDomainFromName(oldUser.getUserName()))) {
-                    diagnosticLog.error("User :" + oldUser.getUserName() + "is not belong to user store " +
-                            userStoreDomainFromSP + "Hence user updating failed.");
                     throw new CharonException("User :" + oldUser.getUserName() + "is not belong to user store " +
                             userStoreDomainFromSP + "Hence user updating fail");
                 }
@@ -1019,16 +969,12 @@ public class SCIMUserManager implements UserManager {
                             log.debug("Failing the request as attempting to modify username. Old username: "
                                     + oldUser.getUserName() + ", new username: " + user.getUserName());
                         }
-                        diagnosticLog.error("Failing the request as attempting to modify username. Old username: "
-                                + oldUser.getUserName() + ", new username: " + user.getUserName());
 
                         throw new BadRequestException("Attribute userName cannot be modified.",
                                 ResponseCodeConstants.MUTABILITY);
                     }
                 }
             } catch (IdentityApplicationManagementException e) {
-                diagnosticLog.error("Error occurred while retrieving userstore domain from SP. Error message: " +
-                        e.getMessage());
                 throw new CharonException("Error retrieving User Store name. ", e);
             }
 
@@ -1040,7 +986,6 @@ public class SCIMUserManager implements UserManager {
             }
 
             if (!isExistingUser) {
-                diagnosticLog.error("Could not find a valid user with username: " + user.getUserName());
                 throw new CharonException("User name is immutable in carbon user store.");
             }
 
@@ -1098,7 +1043,6 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
-                diagnosticLog.info("Updating password of user with ID: " + user.getId());
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
             }
 
@@ -1107,11 +1051,9 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug("User: " + user.getUserName() + " updated through SCIM.");
             }
-            diagnosticLog.info("User: " + user.getUserName() + " updated through SCIM.");
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
-            diagnosticLog.error(errorMessage);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -1119,7 +1061,6 @@ public class SCIMUserManager implements UserManager {
         } catch (UserStoreException e) {
             String errMsg = "Error while updating attributes of user: " + user.getUserName();
             log.error(errMsg, e);
-            diagnosticLog.error(errMsg + ". Error message: " + e.getMessage());
             // Sometimes client exceptions are wrapped in the super class.
             // Therefore checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
@@ -1145,11 +1086,9 @@ public class SCIMUserManager implements UserManager {
             reThrowMutabilityBadRequests(e);
 
             log.error("Error occurred while trying to update the user", e);
-            diagnosticLog.error("Error occurred while trying to update the user. Error message: " + e.getMessage());
             throw new CharonException("Error occurred while trying to update the user", e);
         } catch (CharonException e) {
             log.error("Error occurred while trying to update the user", e);
-            diagnosticLog.error("Error occurred while trying to update the user. Error message: " + e.getMessage());
             throw new CharonException("Error occurred while trying to update the user", e);
         }
     }
@@ -1171,7 +1110,6 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug("Updating user: " + user.getUserName());
             }
-            diagnosticLog.info("Updating user with name: " + user.getUserName() + " via SCIM 2.0");
 
              /* Set thread local property to signal the downstream SCIMUserOperationListener
                 about the provisioning route. */
@@ -1198,8 +1136,6 @@ public class SCIMUserManager implements UserManager {
                         String errorMessage =
                                 String.format("User : %s does not belong to userstore %s. Hence user updating failed",
                                         oldUser.getUserName(), userStoreDomainFromSP);
-                        diagnosticLog.error("User with name: " + oldUser.getUserName() + " does not belong to" +
-                                " usertore: " + userStoreDomainFromSP + ". Hence user updating failed.");
                         throw new CharonException(errorMessage);
                     }
                     if (!UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(userStoreDomainFromSP)) {
@@ -1212,27 +1148,21 @@ public class SCIMUserManager implements UserManager {
                 /* If primary login identifier configuration is enabled, username value can be another claim and it
                 could be modifiable. */
                 if (!(isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim()))) {
-                    diagnosticLog.info("Login identifier feature is enabled.");
                     // This is handled here as the IS is still not capable of updating the username via SCIM.
                     if (!StringUtils.equals(user.getUserName(), oldUser.getUserName())) {
                         if (log.isDebugEnabled()) {
                             log.debug("Failing the request as attempting to modify username. Old username: "
                                     + oldUser.getUserName() + ", new username: " + user.getUserName());
                         }
-                        diagnosticLog.error("Failing the request as attempting to modify username. Old username: "
-                                + oldUser.getUserName() + ", new username: " + user.getUserName());
                         throw new BadRequestException("Attribute userName cannot be modified.",
                                 ResponseCodeConstants.MUTABILITY);
                     }
                 }
             } catch (IdentityApplicationManagementException e) {
-                diagnosticLog.error("Error occurred while retrieving userstore domain from SP. Error message: " +
-                        e.getMessage());
                 throw new CharonException("Error retrieving Userstore name. ", e);
             }
 
             if (!validateUserExistence(user)) {
-                diagnosticLog.error("Could not find a valid user with name: " + user.getUserName());
                 throw new CharonException("User name is immutable in carbon user store.");
             }
 
@@ -1297,7 +1227,6 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
-                diagnosticLog.info("Updating password of user: " + user.getUserName());
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
             }
 
@@ -1306,16 +1235,11 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug("User: " + user.getUserName() + " updated through SCIM.");
             }
-            diagnosticLog.info("User: " + user.getUserName() + " updated through SCIM.");
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreException e) {
-            diagnosticLog.error("Error occurred while updating user with name: " + user.getUserName() + ". Error" +
-                    " message: " + e.getMessage());
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw resolveError(e, "Error while updating attributes of user: " + user.getUserName());
         } catch (BadRequestException e) {
-            diagnosticLog.error("Error occurred while trying to update the user: " + user.getUserName() + ". Error" +
-                    " message: " + e.getMessage());
             /*
             This is needed as most BadRequests are thrown to charon as
             CharonExceptions but if there are any bad requests handled
@@ -1325,8 +1249,6 @@ public class SCIMUserManager implements UserManager {
             reThrowMutabilityBadRequests(e);
             throw new CharonException("Error occurred while trying to update the user: " + user.getUserName(), e);
         } catch (CharonException e) {
-            diagnosticLog.error("Error occurred while trying to update the user: " + user.getUserName() + ". Error" +
-                    " message: " + e.getMessage());
             throw new CharonException("Error occurred while trying to update the user: " + user.getUserName(), e);
         }
     }
@@ -1365,7 +1287,6 @@ public class SCIMUserManager implements UserManager {
                                      String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
-        diagnosticLog.info("Filtering users via SCIM 2.0");
         // Handle limit equals NULL scenario.
         limit = handleLimitEqualsNULL(limit);
 
@@ -1377,13 +1298,11 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug("Listing users by multi attribute filter");
             }
-            diagnosticLog.info("Listing users by multi attribute filter");
 
             // Support multi attribute filtering.
             return getMultiAttributeFilteredUsers(node, requiredAttributes, offset, limit, sortBy, sortOrder,
                     domainName);
         } else {
-            diagnosticLog.error("Unknown operation. Not either an expression node or an operation node.");
             throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
         }
     }
@@ -1412,13 +1331,10 @@ public class SCIMUserManager implements UserManager {
             log.debug(String.format("Listing users by filter: %s %s %s", node.getAttributeValue(), node.getOperation(),
                     node.getValue()));
         }
-        diagnosticLog.info(String.format("Listing users by filter: %s %s %s", node.getAttributeValue(),
-                node.getOperation(), node.getValue()));
         // Check whether the filter operation is supported by the users endpoint.
         if (isFilteringNotSupported(node.getOperation())) {
             String errorMessage =
                     "Filter operation: " + node.getOperation() + " is not supported for filtering in users endpoint.";
-            diagnosticLog.error(errorMessage);
             throw new CharonException(errorMessage);
         }
         domainName = resolveDomainName(domainName, node);
@@ -1431,7 +1347,6 @@ public class SCIMUserManager implements UserManager {
             }
         } catch (NotImplementedException e) {
             String errorMessage = String.format("System does not support filter operator: %s", node.getOperation());
-            diagnosticLog.error(errorMessage);
             throw new CharonException(errorMessage, e);
         }
 
@@ -1448,7 +1363,6 @@ public class SCIMUserManager implements UserManager {
      */
     private String resolveDomainName(String domainName, ExpressionNode node) throws CharonException {
 
-        diagnosticLog.info("Resolving domain name from filter: " + domainName);
         try {
             // Extract the domain name if the domain name is embedded in the filter attribute value.
             domainName = resolveDomainNameInAttributeValue(domainName, node);
@@ -1456,7 +1370,6 @@ public class SCIMUserManager implements UserManager {
             String errorMessage = String
                     .format("Domain parameter: %s in request does not match with the domain name in the attribute "
                             + "value: %s ", domainName, node.getValue());
-            diagnosticLog.error(errorMessage);
             throw new CharonException(errorMessage, e);
         }
         // Get domain name according to Filter Enhancements properties as in identity.xml
@@ -1544,9 +1457,6 @@ public class SCIMUserManager implements UserManager {
             // Check whether the domain name is equal to the extracted domain name from attribute value.
             if (StringUtils.isNotEmpty(domainName) && StringUtils.isNotEmpty(extractedDomain) && !extractedDomain
                     .equalsIgnoreCase(domainName)) {
-                diagnosticLog.error(String.format("Domain name %s in the domain parameter does not match with the " +
-                        "domain name %s in search attribute value of %s claim." , domainName, extractedDomain,
-                        attributeName));
                 throw new BadRequestException(String.format(
                         " Domain name %s in the domain parameter does not match with the domain name %s in search "
                                 + "attribute value of %s claim.", domainName, extractedDomain, attributeName));
@@ -1555,8 +1465,6 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled())
                     log.debug(String.format("Domain name %s set from the domain name in the attribute value %s ",
                             extractedDomain, attributeValue));
-                diagnosticLog.info(String.format("Domain name %s set from the domain name in the attribute value %s ",
-                        extractedDomain, attributeValue));
                 return extractedDomain;
             }
         }
@@ -1589,14 +1497,11 @@ public class SCIMUserManager implements UserManager {
                     if (log.isDebugEnabled())
                         log.debug(String.format("Attribute value %s is embedded with a domain in %s claim, ",
                                 attributeValue, attributeName));
-                    diagnosticLog.info(String.format("Attribute value %s is embedded with a domain in %s claim, ",
-                            attributeValue, attributeName));
                     // If all the above conditions are true, then a domain is embedded to the attribute value.
                     return true;
                 }
             }
         }
-        diagnosticLog.info("Could not find domain name embedded in the attribute value.");
         // If no domain name in the attribute value, return false.
         return false;
     }
@@ -1683,8 +1588,6 @@ public class SCIMUserManager implements UserManager {
                 coreUsers = filterUsernames(condition, offset, limit, sortBy, sortOrder, userStoreDomainName);
             } catch (CharonException e) {
                 log.error("Error occurred while getting the users list for domain: " + userStoreDomainName, e);
-                diagnosticLog.error("Error occurred while getting the users list for domain: " + userStoreDomainName
-                + ". Error message: " + e.getMessage());
                 continue;
             }
             // Calculating new offset and limit parameters.
@@ -1784,8 +1687,6 @@ public class SCIMUserManager implements UserManager {
             log.debug(String.format("Filtering users in domain : %s with limit: %d and offset: %d.", domainName, limit,
                     offset));
         }
-        diagnosticLog.info(String.format("Filtering users in domain : %s with limit: %d and offset: %d.", domainName,
-                limit, offset));
         try {
             Set<org.wso2.carbon.user.core.common.User> users;
             if (removeDuplicateUsersInUsersResponseEnabled) {
@@ -1803,7 +1704,6 @@ public class SCIMUserManager implements UserManager {
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error while retrieving users for the domain: %s with limit: %d and " +
                     "offset: %d. %s", domainName, limit, offset, e.getMessage());
-            diagnosticLog.error(errorMessage);
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -1823,7 +1723,6 @@ public class SCIMUserManager implements UserManager {
             String errorMessage = String
                     .format("Error while retrieving users for the domain: %s with limit: %d and offset: %d.",
                             domainName, limit, offset);
-            diagnosticLog.error(errorMessage + ". Error message: " + e.getMessage());
             throw resolveError(e, errorMessage);
         }
     }
@@ -2250,14 +2149,12 @@ public class SCIMUserManager implements UserManager {
                                                 Map<String, Boolean> requiredAttributes)
             throws CharonException {
 
-        diagnosticLog.info("Retrieving filtered users.");
         List<Object> filteredUsers = new ArrayList<>();
 
         if (users == null || users.size() == 0) {
             if (log.isDebugEnabled()) {
                 log.debug("Users for this filter does not exist in the system.");
             }
-            diagnosticLog.info("Users for the given filter does not exist in the system.");
             return filteredUsers;
         } else {
             try {
@@ -2287,7 +2184,6 @@ public class SCIMUserManager implements UserManager {
                     addSCIMUsers(filteredUsers, users, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
                 }
             } catch (UserStoreException e) {
-                diagnosticLog.error("Error occurred while retrieving user details. Error message: " + e.getMessage());
                 throw resolveError(e, "Error in retrieve user details. ");
             }
         }
@@ -2332,7 +2228,6 @@ public class SCIMUserManager implements UserManager {
     public User getMe(String userName,
                       Map<String, Boolean> requiredAttributes) throws CharonException, NotFoundException {
 
-        diagnosticLog.info("Retrieving the current authenticated user via SCIM Me endpoint. Username: " + userName);
         if (log.isDebugEnabled()) {
             log.debug("Getting user: " + userName);
         }
@@ -2363,7 +2258,6 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug("User with userName : " + userName + " does not exist in the system.");
                 }
-                diagnosticLog.error("User with userName : " + userName + " does not exist in the system.");
                 throw new NotFoundException("No such user exist");
             } else {
                 // Set the schemas of the scim user.
@@ -2371,12 +2265,9 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
                 }
-                diagnosticLog.info("User: " + scimUser.getUserName() + " is retrieved through SCIM.");
                 return scimUser;
             }
         } catch (UserStoreException e) {
-            diagnosticLog.error("Error occurred while getting the authenticated user. Error message: " +
-                    e.getMessage());
             throw resolveError(e, "Error from getting the authenticated user");
         } catch (BadRequestException | NotImplementedException e) {
             throw new CharonException("Error from getting the authenticated user");
@@ -2416,7 +2307,6 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Creating group: " + group.getDisplayName());
         }
-        diagnosticLog.info("Creating group with name: " + group.getDisplayName() + " via SCIM 2.0");
         try {
             // Modify display name if no domain is specified, in order to support multiple user store feature.
             String originalName = group.getDisplayName();
@@ -2436,15 +2326,11 @@ public class SCIMUserManager implements UserManager {
                     roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(originalName);
                 }
             } catch (IdentityApplicationManagementException e) {
-                diagnosticLog.error("Error occurred while retrieving userstore domain from SP. Error message: " +
-                e.getMessage());
                 throw new CharonException("Error retrieving User Store name. ", e);
             }
 
             if (!isInternalOrApplicationGroup(domainName) && StringUtils.isNotBlank(domainName) && !isSCIMEnabled
                     (domainName)) {
-                diagnosticLog.error("Cannot create group through scim to user store. SCIM is not " +
-                        "enabled for user store " + domainName);
                 throw new CharonException("Cannot create group through scim to user store " + ". SCIM is not " +
                         "enabled for user store " + domainName);
             }
@@ -2452,7 +2338,6 @@ public class SCIMUserManager implements UserManager {
             //check if the group already exists
             if (carbonUM.isExistingRole(group.getDisplayName(), false)) {
                 String error = "Group with name: " + group.getDisplayName() + " already exists in the system.";
-                diagnosticLog.error(error);
                 throw new ConflictException(error);
             }
 
@@ -2475,13 +2360,11 @@ public class SCIMUserManager implements UserManager {
                     if (coreUser == null) {
                         String error = "User: " + userId + " doesn't exist in the user store. " +
                                 "Hence, can not create the group: " + group.getDisplayName();
-                        diagnosticLog.error(error);
                         throw new IdentitySCIMException(error);
                     } else if (coreUser.getUsername().indexOf(UserCoreConstants.DOMAIN_SEPARATOR) > 0 &&
                             !StringUtils.containsIgnoreCase(coreUser.getUsername(), domainName)) {
                         String error = "User: " + userId + " doesn't exist in the same user store. " +
                                 "Hence, can not create the group: " + group.getDisplayName();
-                        diagnosticLog.error(error);
                         throw new IdentitySCIMException(error);
                     } else {
                         members.add(coreUser.getUserID());
@@ -2509,7 +2392,6 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
                 }
-                diagnosticLog.info("Group: " + group.getDisplayName() + " is created through SCIM.");
             } else {
                 // Add other scim attributes in the identity DB since user store doesn't support some attributes.
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
@@ -2518,16 +2400,12 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
                 }
-                diagnosticLog.info("Group: " + group.getDisplayName() + " is created through SCIM.");
             }
         } catch (UserStoreException e) {
-            diagnosticLog.error("Error occurred while creating group via SCIM. Error message: " + e.getMessage());
             try {
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
                 scimGroupHandler.deleteGroupAttributes(group.getDisplayName());
             } catch (UserStoreException | IdentitySCIMException ex) {
-                diagnosticLog.error("Error occurred while doing rollback on SCIM create group operation. " +
-                        "Error message: " + e.getMessage());
                 throw resolveError(e, "Error occurred while doing rollback operation of the SCIM " +
                         "table entry for role: " + group.getDisplayName());
             }
@@ -2538,7 +2416,6 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug(error, e);
             }
-            diagnosticLog.error(error + ". Error message: " + e.getMessage());
             throw new BadRequestException(error, ResponseCodeConstants.INVALID_VALUE);
         }
         return group;
@@ -2550,7 +2427,6 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Retrieving group with id: " + id);
         }
-        diagnosticLog.info("Retrieving group with id: " + id);
         Group group = null;
         try {
             SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
@@ -2568,21 +2444,17 @@ public class SCIMUserManager implements UserManager {
                 group.setSchemas();
                 return group;
             } else {
-                diagnosticLog.error("Could not find a valid group for the given ID: " + id);
                 //returning null will send a resource not found error to client by Charon.
                 return null;
             }
         } catch (UserStoreException e) {
             String errorMsg = "Error in retrieving group : " + id;
-            diagnosticLog.error(errorMsg + ". Error message: " + e.getMessage());
             throw resolveError(e, errorMsg);
         } catch (IdentitySCIMException e) {
             String errorMsg = "Error in retrieving SCIM Group information from database.";
             log.error(errorMsg, e);
-            diagnosticLog.error(errorMsg + ". Error message: " + e.getMessage());
             throw new CharonException(errorMsg, e);
         } catch (CharonException | BadRequestException e) {
-            diagnosticLog.error("Error in retrieving group with ID: " + id + ". Error message: " + e.getMessage());
             throw new CharonException("Error in retrieving the group", e);
         }
     }
@@ -2641,7 +2513,6 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Deleting group: " + groupId);
         }
-        diagnosticLog.info("Deleting group with ID: " + groupId + " via SCIM 2.0");
         try {
             // Set thread local property to signal the downstream SCIMUserOperationListener
             // about the provisioning route.
@@ -2656,13 +2527,10 @@ public class SCIMUserManager implements UserManager {
                 try {
                     userStoreDomainFromSP = getUserStoreDomainFromSP();
                 } catch (IdentityApplicationManagementException e) {
-                    diagnosticLog.error("Error retrieving userstore domain from SP. Error message: " + e.getMessage());
                     throw new CharonException("Error retrieving User Store name. ", e);
                 }
                 if (userStoreDomainFromSP != null &&
                         !(userStoreDomainFromSP.equalsIgnoreCase(IdentityUtil.extractDomainFromName(groupName)))) {
-                    diagnosticLog.error("Group :" + groupName + "is not belong to user store " +
-                            userStoreDomainFromSP + "Hence group updating failed.");
                     throw new CharonException("Group :" + groupName + "is not belong to user store " +
                             userStoreDomainFromSP + "Hence group updating fail");
                 }
@@ -2671,8 +2539,6 @@ public class SCIMUserManager implements UserManager {
                 if (!isInternalOrApplicationGroup(userStoreDomainName) && StringUtils.isNotBlank(userStoreDomainName)
                         && !isSCIMEnabled
                         (userStoreDomainName)) {
-                    diagnosticLog.error("Cannot delete group: " + groupName + " through scim from user store: " +
-                            userStoreDomainName + ". SCIM is not enabled for user store: " + userStoreDomainName);
                     throw new CharonException("Cannot delete group: " + groupName + " through scim from user store: " +
                             userStoreDomainName + ". SCIM is not enabled for user store: " + userStoreDomainName);
                 }
@@ -2684,22 +2550,16 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + groupName + " is deleted through SCIM.");
                 }
-                diagnosticLog.info("Group: " + groupName + " is deleted through SCIM.");
 
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Group with SCIM id: " + groupId + " doesn't exist in the system.");
                 }
-                diagnosticLog.error("Group with SCIM id: " + groupId + " doesn't exist in the system.");
                 throw new NotFoundException();
             }
         } catch (UserStoreException e) {
-            diagnosticLog.error("Error occurred while deleting group: " + groupId + ". Error message: " +
-                    e.getMessage());
             throw resolveError(e, "Error occurred while deleting group " + groupId);
         } catch (IdentitySCIMException e) {
-            diagnosticLog.error("Error occurred while deleting group: " + groupId + ". Error message: " +
-                    e.getMessage());
             throw new CharonException("Error occurred while deleting group " + groupId, e);
         }
 
@@ -2807,8 +2667,6 @@ public class SCIMUserManager implements UserManager {
                         log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". Hence "
                                 + "group with name : " + groupName + " is excluded in the response.");
                     }
-                    diagnosticLog.info("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". Hence "
-                            + "group with name : " + groupName + " is excluded in the response.");
                 }
             }
         } catch (UserStoreClientException e) {
@@ -2816,7 +2674,6 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
-            diagnosticLog.error(errorMessage);
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             // Sometimes client exceptions are wrapped in the super class.
@@ -2832,14 +2689,11 @@ public class SCIMUserManager implements UserManager {
             }
             String errMsg = "Error in obtaining role names from user store.";
             errMsg += e.getMessage();
-            diagnosticLog.error(errMsg);
             throw resolveError(e, errMsg);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             String errMsg = "Error in retrieving role names from user store.";
-            diagnosticLog.error(errMsg + ". Error message: " + e.getMessage());
             throw resolveError(e, errMsg);
         } catch (IdentitySCIMException | BadRequestException e) {
-            diagnosticLog.error("Error in retrieving SCIM group information. Error message: " + e.getMessage());
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
         // Set the totalResults value in index 0.
@@ -2939,7 +2793,6 @@ public class SCIMUserManager implements UserManager {
                                       String domainName, Map<String, Boolean> requiredAttributes)
             throws NotImplementedException, CharonException, BadRequestException {
 
-        diagnosticLog.info("Filtering groups via SCIM 2.0");
         // Handle count equals NULL scenario.
         count = handleLimitEqualsNULL(count);
         if (rootNode instanceof ExpressionNode) {
@@ -2978,19 +2831,15 @@ public class SCIMUserManager implements UserManager {
             log.debug("Filtering groups with filter: " + attributeName + " + " + filterOperation + " + "
                     + attributeValue);
         }
-        diagnosticLog.info("Filtering groups with filter: " + attributeName + " + " + filterOperation + " + "
-                + attributeValue);
         // Check whether the filter operation is supported for filtering in groups.
         if (isFilteringNotSupported(filterOperation)) {
             String errorMessage = "Filter operation: " + filterOperation + " is not supported for groups filtering.";
-            diagnosticLog.error(errorMessage);
             throw new CharonException(errorMessage);
         }
         // Resolve the domain name in request according to 'FilterUsersAndGroupsOnlyFromPrimaryDomain' or
         // EnableFilteringEnhancements' properties in identity.xml or domain name embedded in the filter attribute
         // value.
         domainName = resolveDomain(domainName, node);
-        diagnosticLog.info("Resolved domain name in request: " + domainName);
         List<Object> filteredGroups = new ArrayList<>();
         // 0th index is to store total number of results.
         filteredGroups.add(0);
@@ -3025,11 +2874,8 @@ public class SCIMUserManager implements UserManager {
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             String errorMsg = "Error in filtering groups by attribute name : " + attributeName + ", "
                     + "attribute value : " + attributeValue + " and filter operation : " + filterOperation;
-            diagnosticLog.error(errorMsg + ". Error message: " + e.getMessage());
             throw resolveError(e, errorMsg);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            diagnosticLog.error("Error in filtering group with filter: " + attributeName + " + " +
-                    filterOperation + " + " + attributeValue + ". Error message: " + e.getMessage());
             throw resolveError(e, "Error in filtering group with filter: " + attributeName + " + " +
                     filterOperation + " + " + attributeValue);
         }
@@ -3191,7 +3037,6 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Updating group: " + currentGroupName);
         }
-        diagnosticLog.info("Patch group with name: " + currentGroupName + " via SCIM 2.0");
 
         try {
             List<PatchOperation> displayNameOperations = new ArrayList<>();
@@ -3297,16 +3142,12 @@ public class SCIMUserManager implements UserManager {
             }
 
         } catch (UserStoreException e) {
-            diagnosticLog.error("Error occurred while patching group. Error message: " + e.getMessage());
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
-            diagnosticLog.error("Error occurred while patching group. Error message: " + e.getMessage());
             throw new CharonException(e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
-            diagnosticLog.error("Error retrieving User Store name. Error message: " + e.getMessage());
             throw new CharonException("Error retrieving User Store name. ", e);
         } catch (BadRequestException e) {
-            diagnosticLog.error("Error occurred while patching group. Error message: " + e.getMessage());
             throw new CharonException("Error in updating the group", e);
         }
 
@@ -3347,14 +3188,10 @@ public class SCIMUserManager implements UserManager {
             throws IdentityApplicationManagementException, CharonException, BadRequestException, IdentitySCIMException,
             UserStoreException {
 
-        diagnosticLog.info("Updating group display name via SCIM 2.0. Old group name: " + oldGroupName + ", new " +
-                "group name: " + newGroupName);
         String userStoreDomainFromSP = getUserStoreDomainFromSP();
 
         String oldGroupDomain = IdentityUtil.extractDomainFromName(oldGroupName);
         if (userStoreDomainFromSP != null && !userStoreDomainFromSP.equalsIgnoreCase(oldGroupDomain)) {
-            diagnosticLog.error("Group :" + oldGroupName + "is not belong to user store " +
-                    userStoreDomainFromSP + "Hence group updating failed.");
             throw new CharonException("Group :" + oldGroupName + "is not belong to user store " +
                     userStoreDomainFromSP + "Hence group updating fail");
         }
@@ -3371,7 +3208,6 @@ public class SCIMUserManager implements UserManager {
             newGroupName = IdentityUtil.addDomainToName(newGroupNameWithoutDomain, oldGroupDomain);
         } else if (!oldGroupDomain.equals(updatedGroupDomain)) {
             // This is the case where the updated group domain does not match the old group's domain.
-            diagnosticLog.error("User store domain of the group is not matching with the given SCIM group Id.");
             throw new IdentitySCIMException(
                     "User store domain of the group is not matching with the given SCIM group Id.");
         }
@@ -3389,14 +3225,12 @@ public class SCIMUserManager implements UserManager {
     public Group updateGroup(Group oldGroup, Group newGroup, Map<String, Boolean> requiredAttributes)
             throws CharonException, BadRequestException {
 
-        diagnosticLog.info("Updating group with ID: " + oldGroup.getId() + " via SCIM 2.0");
         try {
             boolean updated = doUpdateGroup(oldGroup, newGroup);
             if (updated) {
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + oldGroup.getDisplayName() + " is updated through SCIM.");
                 }
-                diagnosticLog.info("Group: " + oldGroup.getDisplayName() + " is updated through SCIM.");
                 // In case the duplicate existing in the newGroup, query the corresponding group
                 // again and return it.
                 return getGroup(newGroup.getId(), requiredAttributes);
@@ -3408,16 +3242,12 @@ public class SCIMUserManager implements UserManager {
                 return oldGroup;
             }
         } catch (UserStoreException e) {
-            diagnosticLog.error("Error occurred while updating group. Error message: " + e.getMessage());
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
-            diagnosticLog.error("Error occurred while updating group. Error message: " + e.getMessage());
             throw new CharonException(e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
-            diagnosticLog.error("Error retrieving User Store name. Error message: " + e.getMessage());
             throw new CharonException("Error retrieving User Store name. ", e);
         } catch (CharonException e) {
-            diagnosticLog.error("Error occurred while updating group. Error message: " + e.getMessage());
             throw new CharonException("Error in updating the group", e);
         }
     }
@@ -3429,7 +3259,6 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Updating group: " + oldGroup.getDisplayName());
         }
-        diagnosticLog.info("Updating group: " + oldGroup.getDisplayName() + " via SCIM 2.0");
 
         String userStoreDomainForGroup = IdentityUtil.extractDomainFromName(newGroup.getDisplayName());
 
@@ -3523,8 +3352,6 @@ public class SCIMUserManager implements UserManager {
             String userStoreDomainOfUser = IdentityUtil.extractDomainFromName(userName);
             if (!isInternalOrApplicationGroup(userStoreDomainOfGroup) && !userStoreDomainOfGroup
                     .equalsIgnoreCase(userStoreDomainOfUser)) {
-                diagnosticLog.error(String.format("%s doesn't belongs to user store: %s", userName,
-                        userStoreDomainOfGroup));
                 throw new IdentitySCIMException(
                         String.format("%s doesn't belongs to user store: %s", userName, userStoreDomainOfGroup));
             }
@@ -3542,7 +3369,6 @@ public class SCIMUserManager implements UserManager {
             if (StringUtils.isEmpty(userId)) {
                 String error = "User: " + userName + " doesn't exist in the user store. Hence can not update the " +
                         "group: " + displayName;
-                diagnosticLog.error(error);
                 throw new IdentitySCIMException(error);
             }
             memberUserIds.add(userId);
@@ -3555,8 +3381,6 @@ public class SCIMUserManager implements UserManager {
 
         for (Object addedUserId : newlyAddedMemberIds) {
             if (!addedMemberIdsFromUserstore.contains(addedUserId.toString())) {
-                diagnosticLog.error(String.format("Provided SCIM user Id: %s doesn't match with the "
-                        + "userID obtained from user-store for the provided username.", addedUserId.toString()));
                 throw new BadRequestException(String.format("Provided SCIM user Id: %s doesn't match with the "
                         + "userID obtained from user-store for the provided username.", addedUserId.toString()),
                         ResponseCodeConstants.INVALID_VALUE);
@@ -3585,7 +3409,6 @@ public class SCIMUserManager implements UserManager {
             newGroup.setDisplayName(IdentityUtil.addDomainToName(newGroupNameWithoutDomain, oldGroupDomain));
         } else if (!oldGroupDomain.equals(updatedGroupDomain)) {
             // This is the case where the updated group domain does not match the old group's domain.
-            diagnosticLog.error("User store domain of the group is not matching with the given SCIM group Id.");
             throw new IdentitySCIMException(
                     "User store domain of the group is not matching with the given SCIM group Id.");
         }
@@ -3713,8 +3536,6 @@ public class SCIMUserManager implements UserManager {
             try {
                 return userStoreManager.isSCIMEnabled();
             } catch (UserStoreException e) {
-                diagnosticLog.error("Error while evaluating isSCIMEnalbed for user store. Error message: " +
-                        e.getMessage());
                 log.error("Error while evaluating isSCIMEnalbed for user store " + userStoreName, e);
             }
         }
@@ -3737,8 +3558,6 @@ public class SCIMUserManager implements UserManager {
 
         String userStoreDomainName = coreUser.getUserStoreDomain();
         if (StringUtils.isNotBlank(userStoreDomainName) && !isSCIMEnabled(userStoreDomainName)) {
-            diagnosticLog.error("Cannot get user through SCIM to user store. SCIM is not enabled for user store: "
-                    + userStoreDomainName);
             throw new CharonException("Cannot get user through SCIM to user store. SCIM is not enabled for user store: "
                     + userStoreDomainName);
         }
@@ -3862,14 +3681,10 @@ public class SCIMUserManager implements UserManager {
             }
 
         } catch (UserStoreException e) {
-            diagnosticLog.error("Error in getting user information for user: " +
-                    coreUser.getDomainQualifiedUsername() + ". Error message: " + e.getMessage());
             throw resolveError(e, "Error in getting user information for user: " +
                     coreUser.getDomainQualifiedUsername());
         } catch (CharonException | NotFoundException | IdentitySCIMException |
                 BadRequestException e) {
-            diagnosticLog.error("Error in getting user information for user: " +
-                    coreUser.getDomainQualifiedUsername() + ". Error message: " + e.getMessage());
             throw new CharonException("Error in getting user information for user: " +
                     coreUser.getDomainQualifiedUsername(), e);
         }
@@ -3931,7 +3746,6 @@ public class SCIMUserManager implements UserManager {
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             String errorMsg = "Error occurred while retrieving SCIM user information";
-            diagnosticLog.error(errorMsg + ". Error message: " + e.getMessage());
             throw resolveError(e, errorMsg);
         }
 
@@ -4086,8 +3900,6 @@ public class SCIMUserManager implements UserManager {
                     log.debug("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". " +
                             "Hence user : " + user.getUsername() + " in this domain is excluded in the response.");
                 }
-                diagnosticLog.error("SCIM is disabled for the user-store domain : " + userStoreDomainName + ". " +
-                        "Hence user : " + user.getUsername() + " in this domain is excluded in the response.");
             }
         }
         if (removeDuplicateUsersInUsersResponseEnabled) {
@@ -4698,7 +4510,6 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug(String.format("Filtering userNames from search attribute: %s", searchAttribute));
         }
-        diagnosticLog.info(String.format("Filtering userNames from search attribute: %s", searchAttribute));
 
         return new HashSet<>(carbonUM.getUserListWithID(attributeNameInLocalDialect, searchAttribute,
                 UserCoreConstants.DEFAULT_PROFILE));
