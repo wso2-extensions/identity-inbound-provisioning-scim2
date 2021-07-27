@@ -3363,9 +3363,14 @@ public class SCIMUserManager implements UserManager {
                 usernameClaimUri = getPrimaryLoginIdentifierClaim();
             }
 
+            UserStoreManager userStoreManager = carbonUM.getSecondaryUserStoreManager(userStoreDomainOfUser);
             // Check if the user ids & associated user name sent in updated (new) group exist in the user store.
-            String userId =
-                    carbonUM.getUserIDFromProperties(usernameClaimUri, userName, UserCoreConstants.DEFAULT_PROFILE);
+            String userId = null;
+            if (userStoreManager != null) {
+                userId = ((AbstractUserStoreManager) userStoreManager)
+                        .getUserIDFromProperties(usernameClaimUri, UserCoreUtil.removeDomainFromName(userName),
+                                UserCoreConstants.DEFAULT_PROFILE);
+            }
             if (StringUtils.isEmpty(userId)) {
                 String error = "User: " + userName + " doesn't exist in the user store. Hence can not update the " +
                         "group: " + displayName;
