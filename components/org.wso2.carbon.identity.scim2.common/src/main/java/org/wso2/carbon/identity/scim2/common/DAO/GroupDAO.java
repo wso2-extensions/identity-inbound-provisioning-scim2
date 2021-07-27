@@ -335,7 +335,40 @@ public class GroupDAO {
         return attributes;
     }
 
+    /**
+     * Get the id of the group with the given name.
+     *
+     * @param tenantId  Tenant id.
+     * @param groupName Name of the group.
+     * @return Id of the group with the given name.
+     * @throws IdentitySCIMException If an error occurred while getting the group id.
+     */
+    public String getGroupIdByName(int tenantId, String groupName) throws IdentitySCIMException {
+
+        String groupId = null;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
+             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.GET_GROUP_ID_BY_NAME_SQL)) {
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, groupName);
+            prepStmt.setString(3, SCIMConstants.CommonSchemaConstants.ID_URI);
+            try (ResultSet rs = prepStmt.executeQuery()) {
+                while (rs.next()) {
+                    groupId = rs.getString(1);
+                }
+            } catch (SQLException e) {
+                throw new IdentitySCIMException(String.format("Error when getting the SCIM Group information " +
+                        "from the persistence store for group: %s in tenant: %s", groupName, tenantId), e);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            throw new IdentitySCIMException(String.format("Error when getting the SCIM Group information from the " +
+                    "persistence store for group: %s in tenant: %s", groupName, tenantId), e);
+        }
+        return groupId;
+    }
+
     public String getGroupNameById(int tenantId, String id) throws IdentitySCIMException {
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         ResultSet rSet = null;

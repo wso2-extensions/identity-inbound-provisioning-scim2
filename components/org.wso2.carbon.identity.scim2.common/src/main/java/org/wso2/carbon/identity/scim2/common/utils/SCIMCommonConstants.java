@@ -18,6 +18,13 @@
 
 package org.wso2.carbon.identity.scim2.common.utils;
 
+import org.wso2.carbon.user.core.UserStoreConfigConstants;
+import org.wso2.charon3.core.schema.SCIMConstants;
+
+import java.util.HashMap;
+import java.util.Map;
+
+
 /**
  * Class to hold Identity SCIM Constants.
  */
@@ -113,6 +120,27 @@ public class SCIMCommonConstants {
             "Date of Birth is not in the correct format of YYYY-MM-DD";
     public static final String DATE_OF_BIRTH_REGEX = "^\\d{4}-\\d{2}-\\d{2}$";
     public static final String ERROR_CODE_RESOURCE_LIMIT_REACHED = "ATS-10001";
+
+    private static final Map<String, String> groupAttributeSchemaMap = new HashMap<>();
+
+    static {
+        groupAttributeSchemaMap.put(SCIMConstants.CommonSchemaConstants.ID_URI,
+                UserStoreConfigConstants.GROUP_ID_ATTRIBUTE);
+        groupAttributeSchemaMap.put(SCIMConstants.CommonSchemaConstants.CREATED_URI,
+                UserStoreConfigConstants.GROUP_CREATED_DATE_ATTRIBUTE);
+        groupAttributeSchemaMap.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
+                UserStoreConfigConstants.GROUP_LAST_MODIFIED_DATE_ATTRIBUTE);
+    }
+
+    /**
+     * Get the group mapped attributes.
+     *
+     * @return Group mapped attributes.
+     */
+    public static Map<String, String> getGroupAttributeSchemaMap() {
+
+        return groupAttributeSchemaMap;
+    }
 
     /**
      * Enum which contains the error codes and corresponding error messages.

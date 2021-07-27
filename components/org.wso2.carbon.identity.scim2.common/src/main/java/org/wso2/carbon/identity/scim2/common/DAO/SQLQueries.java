@@ -28,6 +28,8 @@ public class SQLQueries {
     public static final String GET_ATTRIBUTES_SQL =
             "SELECT ATTR_NAME, ATTR_VALUE FROM IDN_SCIM_GROUP WHERE IDN_SCIM_GROUP.TENANT_ID=? AND " +
                     "IDN_SCIM_GROUP.ROLE_NAME=?";
+    public static final String GET_GROUP_ID_BY_NAME_SQL = "SELECT ATTR_VALUE FROM IDN_SCIM_GROUP WHERE TENANT_ID=? " +
+            "AND ROLE_NAME=? AND IDN_SCIM_GROUP.ATTR_NAME=?";
     public static final String GET_GROUP_NAME_BY_ID_SQL =
             "SELECT ROLE_NAME FROM IDN_SCIM_GROUP WHERE IDN_SCIM_GROUP.TENANT_ID=? AND " +
                     "IDN_SCIM_GROUP.ATTR_VALUE=? AND IDN_SCIM_GROUP.ATTR_NAME=?";
