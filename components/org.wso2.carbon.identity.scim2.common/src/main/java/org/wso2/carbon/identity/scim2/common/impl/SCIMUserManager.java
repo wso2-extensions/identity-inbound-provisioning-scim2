@@ -3590,6 +3590,9 @@ public class SCIMUserManager implements UserManager {
                 groupsList = getMultiValuedAttributeList(userStoreDomainName, attributes,
                         SCIMConstants.UserSchemaConstants.GROUP_URI);
 
+                // Add userstore domain to the group names.
+                groupsList = addDomainToNames(userStoreDomainName, groupsList);
+
                 // Get user roles from attributes.
                 rolesList = getMultiValuedAttributeList(userStoreDomainName, attributes,
                         SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT);
@@ -5590,12 +5593,13 @@ public class SCIMUserManager implements UserManager {
 
         String groups = userClaimSearchEntry.getClaims().get(UserCoreConstants.USER_STORE_GROUPS_CLAIM);
         List<String> groupsList = new ArrayList<>();
+        String userStoreDomainName = userClaimSearchEntry.getUser().getUserStoreDomain();
         if (StringUtils.isNotBlank(groups)) {
-            String multiValuedAttributeSeparator = getMultivaluedAttributeSeparator(userClaimSearchEntry.getUser()
-                    .getUserStoreDomain());
+            String multiValuedAttributeSeparator = getMultivaluedAttributeSeparator(userStoreDomainName);
             groupsList = Arrays.asList(groups.split(multiValuedAttributeSeparator));
         }
-        return groupsList;
+        // Add userstore domain to the group names.
+        return addDomainToNames(userStoreDomainName, groupsList);
     }
 
     private List<String> getRoles(List<UniqueIDUserClaimSearchEntry> searchEntries,
@@ -5674,5 +5678,11 @@ public class SCIMUserManager implements UserManager {
     private void handleResourceLimitReached() throws ForbiddenException {
 
         throw new ForbiddenException("Maximum number of allowed users have been reached.", "userLimitReached");
+    }
+
+    private List<String> addDomainToNames(String userStoreDomainName, List<String> groupsList) {
+
+        return groupsList.stream().map(groupName -> UserCoreUtil.addDomainToName(groupName, userStoreDomainName))
+                .collect(Collectors.toList());
     }
 }
