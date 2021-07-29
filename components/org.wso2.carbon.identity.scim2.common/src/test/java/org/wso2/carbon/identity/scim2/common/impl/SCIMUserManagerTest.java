@@ -1225,17 +1225,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     }
 
     @Test(expectedExceptions = AbstractCharonException.class)
-    public void testDeleteMeWithException() throws Exception {
-
-        String userName = "testUser";
-        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
-                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        when(mockedUserStoreManager.getUserIDFromUserName(userName)).thenThrow(new UserStoreException());
-        scimUserManager.deleteMe(userName);
-        // This method is for testing of throwing CharonException, hence no assertion.
-    }
-
-    @Test(expectedExceptions = AbstractCharonException.class)
     public void testCreateUserWhenSCIMisDisabled() throws Exception {
 
         User user = new User();

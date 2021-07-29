@@ -48,7 +48,6 @@ public class RoleResource extends AbstractResource {
     @Path("{id}")
     @Produces({ MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON })
     public Response getRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-            @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes) {
@@ -80,8 +79,7 @@ public class RoleResource extends AbstractResource {
     @POST
     @Path("/.search")
     @Produces({ MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON })
-    public Response getRolesByPOST(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-            @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+    public Response getRolesByPOST(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat, String resourceString) {
 
         try {
@@ -119,8 +117,7 @@ public class RoleResource extends AbstractResource {
     }
 
     @POST
-    public Response createRole(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-            @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+    public Response createRole(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat, String resourceString) {
 
         try {
@@ -158,8 +155,7 @@ public class RoleResource extends AbstractResource {
     }
 
     @GET
-    public Response getRoles(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+    public Response getRoles(@HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
             @QueryParam(SCIMProviderConstants.FILTER) String filter,
             @QueryParam(SCIMProviderConstants.START_INDEX) Integer startIndex,
             @QueryParam(SCIMProviderConstants.COUNT) Integer count,
@@ -196,7 +192,6 @@ public class RoleResource extends AbstractResource {
     @DELETE
     @Path("{id}")
     public Response deleteRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-            @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat) {
         try {
             // defaults to application/scim+json.
@@ -229,7 +224,6 @@ public class RoleResource extends AbstractResource {
     @PUT
     @Path("{id}")
     public Response updateRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-            @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
             @HeaderParam(SCIMConstants.CONTENT_TYPE_HEADER) String inputFormat,
             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat, String resourceString) {
 
@@ -270,7 +264,6 @@ public class RoleResource extends AbstractResource {
     @PATCH
     @Path("{id}")
     public Response patchRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-            @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
             @HeaderParam(SCIMConstants.CONTENT_TYPE_HEADER) String inputFormat,
             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat, String resourceString) {
 

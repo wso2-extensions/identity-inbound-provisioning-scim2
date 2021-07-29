@@ -2225,11 +2225,11 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public User getMe(String userName,
+    public User getMe(String userId,
                       Map<String, Boolean> requiredAttributes) throws CharonException, NotFoundException {
 
         if (log.isDebugEnabled()) {
-            log.debug("Getting user: " + userName);
+            log.debug("Getting user: " + userId);
         }
 
         User scimUser;
@@ -2249,14 +2249,14 @@ public class SCIMUserManager implements UserManager {
                 requiredClaimsInLocalDialect = new ArrayList<>();
             }
 
-            org.wso2.carbon.user.core.common.User coreUser = carbonUM.getUser(null, userName);
+            org.wso2.carbon.user.core.common.User coreUser = carbonUM.getUser(userId, null);
 
             // We assume (since id is unique per user) only one user exists for a given id.
             scimUser = this.getSCIMUser(coreUser, requiredClaimsInLocalDialect, scimToLocalClaimsMap, null);
 
             if (scimUser == null) {
                 if (log.isDebugEnabled()) {
-                    log.debug("User with userName : " + userName + " does not exist in the system.");
+                    log.debug("User with user id : " + userId + " does not exist in the system.");
                 }
                 throw new NotFoundException("No such user exist");
             } else {
@@ -2282,15 +2282,10 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void deleteMe(String userName) throws NotFoundException, CharonException, BadRequestException,
+    public void deleteMe(String userId) throws NotFoundException, CharonException, BadRequestException,
             NotImplementedException {
 
-        try {
-            String userId = carbonUM.getUserIDFromUserName(userName);
-            deleteUser(userId);
-        } catch (UserStoreException e) {
-            throw new CharonException("Error occurred while getting id for user : " + userName, e);
-        }
+        deleteUser(userId);
     }
 
     @Override

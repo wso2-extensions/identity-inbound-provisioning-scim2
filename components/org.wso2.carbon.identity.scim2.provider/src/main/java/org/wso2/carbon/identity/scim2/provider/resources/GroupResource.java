@@ -73,12 +73,10 @@ public class GroupResource extends AbstractResource {
     @Path("{id}")
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                             @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                              @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                              @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                              @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             if (!isValidOutputFormat(outputFormat)) {
                 String error = outputFormat + " is not supported.";
@@ -91,7 +89,7 @@ public class GroupResource extends AbstractResource {
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.ID, id);
         requestAttributes.put(SCIMProviderConstants.ACCEPT_HEADER, outputFormat);
-        requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
+
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, GET.class.getSimpleName());
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, attribute);
         requestAttributes.put(SCIMProviderConstants.EXCLUDE_ATTRIBUTES, excludedAttributes);
@@ -103,11 +101,9 @@ public class GroupResource extends AbstractResource {
     @Path("{id}/permissions")
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getPermissionListOfGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                                             @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                              @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                              @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         if (!isValidOutputFormat(outputFormat)) {
             return handleFormatNotSupportedException(new FormatNotSupportedException("Output format: " + outputFormat + " is not supported."));
         }
@@ -115,7 +111,6 @@ public class GroupResource extends AbstractResource {
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.ID, id);
         requestAttributes.put(SCIMProviderConstants.ACCEPT_HEADER, outputFormat);
-        requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, GET.class.getSimpleName());
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, PERMISSIONS);
         requestAttributes.put(SCIMProviderConstants.SEARCH, "0");
@@ -126,14 +121,12 @@ public class GroupResource extends AbstractResource {
     @Path("{id}/permissions")
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response setPermissionForGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                                          @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                           @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                           @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                           @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                           @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                           String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         // content-type header is compulsory in post request.
         if (inputFormat == null) {
             return handleFormatNotSupportedException(new FormatNotSupportedException("Content type: " + SCIMProviderConstants.CONTENT_TYPE +
@@ -150,7 +143,6 @@ public class GroupResource extends AbstractResource {
 
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.ID, id);
-        requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, PUT.class.getSimpleName());
         requestAttributes.put(SCIMProviderConstants.RESOURCE_STRING, resourceString);
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, PERMISSIONS);
@@ -163,14 +155,12 @@ public class GroupResource extends AbstractResource {
     @Path("{id}/permissions")
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response patchPermissionForGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                                            @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                             @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                             String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         // content-type header is compulsory in post request.
         if (inputFormat == null) {
             return handleFormatNotSupportedException(new FormatNotSupportedException("Content type: " + SCIMProviderConstants.CONTENT_TYPE +
@@ -187,7 +177,6 @@ public class GroupResource extends AbstractResource {
 
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.ID, id);
-        requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, PATCH.class.getSimpleName());
         requestAttributes.put(SCIMProviderConstants.RESOURCE_STRING, resourceString);
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, PERMISSIONS);
@@ -199,12 +188,10 @@ public class GroupResource extends AbstractResource {
     @POST
     @Path("/.search")
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
-    public Response getGroupsByPOST(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                                    @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+    public Response getGroupsByPOST(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                     @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                     String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -225,7 +212,6 @@ public class GroupResource extends AbstractResource {
 
             Map<String, String> requestAttributes = new HashMap<>();
             requestAttributes.put(SCIMProviderConstants.ACCEPT_HEADER, outputFormat);
-            requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
             requestAttributes.put(SCIMProviderConstants.HTTP_VERB, POST.class.getSimpleName());
             requestAttributes.put(SCIMProviderConstants.RESOURCE_STRING, resourceString );
             requestAttributes.put(SCIMProviderConstants.SEARCH, "1");
@@ -238,14 +224,12 @@ public class GroupResource extends AbstractResource {
     }
 
     @POST
-    public Response createGroup(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                                @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+    public Response createGroup(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                 @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                 @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                 @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                 String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -268,7 +252,6 @@ public class GroupResource extends AbstractResource {
         }
 
         Map<String, String> requestAttributes = new HashMap<>();
-        requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, POST.class.getSimpleName());
         requestAttributes.put(SCIMProviderConstants.RESOURCE_STRING, resourceString);
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, attribute);
@@ -278,8 +261,7 @@ public class GroupResource extends AbstractResource {
     }
 
     @GET
-    public Response getGroup(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+    public Response getGroup(@HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                              @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                              @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                              @QueryParam(SCIMProviderConstants.FILTER) String filter,
@@ -289,7 +271,6 @@ public class GroupResource extends AbstractResource {
                              @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder,
                              @QueryParam(SCIMProviderConstants.DOMAIN) String domainName) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             if (!isValidOutputFormat(outputFormat)) {
                 String error = outputFormat + " is not supported.";
@@ -300,7 +281,6 @@ public class GroupResource extends AbstractResource {
         }
 
         Map<String, String> requestAttributes = new HashMap<>();
-        requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, GET.class.getSimpleName());
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, attribute);
         requestAttributes.put(SCIMProviderConstants.EXCLUDE_ATTRIBUTES, excludedAttributes);
@@ -317,10 +297,8 @@ public class GroupResource extends AbstractResource {
     @DELETE
     @Path("{id}")
     public Response deleteGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                                @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                 @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             if (!isValidOutputFormat(outputFormat)) {
                 String error = outputFormat + " is not supported.";
@@ -332,7 +310,6 @@ public class GroupResource extends AbstractResource {
 
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.ID, id);
-        requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, DELETE.class.getSimpleName());
         requestAttributes.put(SCIMProviderConstants.SEARCH, "0");
         return processRequest(requestAttributes);
@@ -341,14 +318,12 @@ public class GroupResource extends AbstractResource {
     @PUT
     @Path("{id}")
     public Response updateGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                                @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                 @HeaderParam(SCIMConstants.CONTENT_TYPE_HEADER) String inputFormat,
                                 @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                 @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                 @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                 String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             // content-type header is compulsory in put request.
             if (inputFormat == null) {
@@ -373,7 +348,6 @@ public class GroupResource extends AbstractResource {
 
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.ID, id);
-        requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, PUT.class.getSimpleName());
         requestAttributes.put(SCIMProviderConstants.RESOURCE_STRING, resourceString);
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, attribute);
@@ -385,14 +359,12 @@ public class GroupResource extends AbstractResource {
     @PATCH
     @Path("{id}")
     public Response patchGroup(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                               @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                @HeaderParam(SCIMConstants.CONTENT_TYPE_HEADER) String inputFormat,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
         try {
             // content-type header is compulsory in patch request.
             if (inputFormat == null) {
@@ -417,7 +389,6 @@ public class GroupResource extends AbstractResource {
 
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.ID, id);
-        requestAttributes.put(SCIMProviderConstants.AUTHORIZATION, userName);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, PATCH.class.getSimpleName());
         requestAttributes.put(SCIMProviderConstants.RESOURCE_STRING, resourceString);
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, attribute);

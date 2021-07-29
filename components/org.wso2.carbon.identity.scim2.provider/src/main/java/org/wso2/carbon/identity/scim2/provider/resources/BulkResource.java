@@ -36,8 +36,7 @@ import javax.ws.rs.core.Response;
 public class BulkResource extends AbstractResource {
 
     @POST
-    public Response createUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+    public Response createUser(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                String resourceString) {
         try {

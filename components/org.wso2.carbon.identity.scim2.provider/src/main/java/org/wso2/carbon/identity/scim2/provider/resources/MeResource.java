@@ -38,12 +38,11 @@ import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.getTenan
 public class MeResource extends AbstractResource {
     @GET
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
-    public Response getUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+    public Response getUser(@HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String  excludedAttributes) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
+        String userId = SupportUtils.getAuthenticatedUserId();
         try {
             if(!isValidOutputFormat(outputFormat)){
                 String error = outputFormat + " is not supported.";
@@ -58,7 +57,7 @@ public class MeResource extends AbstractResource {
             // create charon-SCIM me endpoint and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
 
-            SCIMResponse scimResponse = meResourceManager.get(userName, userManager,attribute, excludedAttributes);
+            SCIMResponse scimResponse = meResourceManager.get(userId, userManager, attribute, excludedAttributes);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
             return SupportUtils.buildResponse(scimResponse);
@@ -118,10 +117,9 @@ public class MeResource extends AbstractResource {
 
 
     @DELETE
-    public Response deleteUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
+    public Response deleteUser(@HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
+        String userId = SupportUtils.getAuthenticatedUserId();
         try {
             // defaults to application/scim+json.
             if (format == null) {
@@ -138,7 +136,7 @@ public class MeResource extends AbstractResource {
             // create charon-SCIM me resource manager and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
 
-            SCIMResponse scimResponse = meResourceManager.delete(userName, userManager);
+            SCIMResponse scimResponse = meResourceManager.delete(userId, userManager);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
             return SupportUtils.buildResponse(scimResponse);
@@ -151,14 +149,13 @@ public class MeResource extends AbstractResource {
     }
 
     @PUT
-    public Response updateUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+    public Response updateUser(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                @QueryParam (SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
+        String userId = SupportUtils.getAuthenticatedUserId();
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -186,7 +183,7 @@ public class MeResource extends AbstractResource {
             MeResourceManager meResourceManager = new MeResourceManager();
 
             SCIMResponse response = meResourceManager.updateWithPUT(
-                    userName, resourceString, userManager, attribute, excludedAttributes);
+                    userId, resourceString, userManager, attribute, excludedAttributes);
 
             return SupportUtils.buildResponse(response);
 
@@ -198,14 +195,13 @@ public class MeResource extends AbstractResource {
     }
 
     @PATCH
-    public Response patchUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                              @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+    public Response patchUser(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                               @QueryParam (SCIMProviderConstants.ATTRIBUTES) String attribute,
                               @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                               String resourceString) {
 
-        String userName = SupportUtils.getAuthenticatedUsername();
+        String userId = SupportUtils.getAuthenticatedUserId();
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -233,7 +229,7 @@ public class MeResource extends AbstractResource {
             MeResourceManager meResourceManager = new MeResourceManager();
 
             SCIMResponse response = meResourceManager.updateWithPATCH(
-                    userName, resourceString, userManager, attribute, excludedAttributes);
+                    userId, resourceString, userManager, attribute, excludedAttributes);
 
             return SupportUtils.buildResponse(response);
 
