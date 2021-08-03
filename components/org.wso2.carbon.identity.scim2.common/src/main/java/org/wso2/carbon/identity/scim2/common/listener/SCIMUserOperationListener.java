@@ -298,6 +298,16 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             return;
         }
 
+        /*
+        Check whether this is a mandatory claim update flow by checking the MANDATORY_CLAIM_UPDATE_FLOW thread
+        local property. If it is a mandatory claim update flow, blocking the attribute editing is not required.
+         */
+        if (IdentityUtil.threadLocalProperties.get().get(FrameworkConstants.MANDATORY_CLAIM_UPDATE_FLOW) != null &&
+                (Boolean) IdentityUtil.threadLocalProperties.get().
+                        get(FrameworkConstants.MANDATORY_CLAIM_UPDATE_FLOW)) {
+            return;
+        }
+
         boolean isExistingJITProvisionedUser;
         try {
             isExistingJITProvisionedUser = UserSessionStore.getInstance().isExistingUser(username);
