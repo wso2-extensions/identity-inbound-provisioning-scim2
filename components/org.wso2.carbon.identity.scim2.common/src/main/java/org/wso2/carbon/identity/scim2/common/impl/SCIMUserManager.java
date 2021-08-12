@@ -388,7 +388,7 @@ public class SCIMUserManager implements UserManager {
 
     private void handleErrorsOnRoleNamePolicy(Throwable e) throws BadRequestException {
 
-        if (e instanceof UserStoreException && (e.getMessage().contains(ERROR_CODE_INVALID_ROLE_NAME))) {
+        if (e != null && e instanceof UserStoreException && (e.getMessage().contains(ERROR_CODE_INVALID_ROLE_NAME))) {
             throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
         }
     }
