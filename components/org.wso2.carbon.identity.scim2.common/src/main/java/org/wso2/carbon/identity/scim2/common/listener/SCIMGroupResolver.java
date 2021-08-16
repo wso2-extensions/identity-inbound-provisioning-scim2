@@ -24,8 +24,9 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.core.AbstractIdentityGroupOperationEventListener;
+import org.wso2.carbon.identity.core.AbstractIdentityGroupResolver;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -48,17 +49,17 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildS
 import static org.wso2.carbon.user.core.UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME;
 
 /**
- * Scim group operation handler implementation.
+ * Implementation of group domain resolver.
  */
-public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEventListener {
+public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
 
-    private static final Log log = LogFactory.getLog(SCIMGroupOperationListener.class);
+    private static final Log log = LogFactory.getLog(SCIMGroupResolver.class);
     private static final String SQL_FILTERING_DELIMITER = "%";
 
     @Override
     public int getExecutionOrderId() {
 
-        int orderId = getOrderId();
+        int orderId = super.getExecutionOrderId();
         if (orderId != IdentityCoreConstants.EVENT_LISTENER_ORDER_ID) {
             return orderId;
         }
@@ -66,8 +67,45 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
     }
 
     @Override
-    public boolean postGetGroupsListOfUserByUserId(String userId, List<Group> groupList,
-                                                   UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean resolveGroupDomainByGroupId(Group group, int tenantId)
+            throws UserStoreException {
+
+        if (group == null || StringUtils.isBlank(group.getGroupID())) {
+            return true;
+        }
+        String groupId = group.getGroupID();
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Retrieving group with id:%s from tenant: %s", groupId, tenantId));
+        }
+        GroupDAO groupDAO = new GroupDAO();
+        String groupName;
+        try {
+            groupName = groupDAO.getGroupNameById(tenantId, groupId);
+        } catch (IdentitySCIMException exception) {
+            throw new UserStoreException(String.format("Error occurred while resolving the domain name for " +
+                    "group with id: %s in tenant: %s", groupId, tenantId), exception);
+        }
+        if (StringUtils.isBlank(groupName)) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("No group found in IDN_SCIM_GROUP with group id: %s in tenant: %s", groupId,
+                        tenantId));
+            }
+            return true;
+        }
+        String resolvedDomain = IdentityUtil.extractDomainFromName(groupName);
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Domain: %s resolved for group id: %s in tenant: %s", resolvedDomain, groupId,
+                    tenantId));
+        }
+        group.setGroupName(groupName);
+        group.setDisplayName(UserCoreUtil.removeDomainFromName(groupName));
+        group.setUserStoreDomain(resolvedDomain);
+        return true;
+    }
+
+    @Override
+    public boolean getGroupsListOfUserByUserId(String userId, List<Group> groupList,
+                                               UserStoreManager userStoreManager) throws UserStoreException {
 
         if (CollectionUtils.isEmpty(groupList)) {
             // To do filtering in IDN_SCIM_GROUP, we need group names. If the list is empty, we cannot do that.
@@ -83,7 +121,7 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
          */
         if (isGroupIdEnabled) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("SCIMGroupOperationListener will not be executed for userstore: %s in " +
+                log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
                                 "tenant %s since group id support is available in the userstore manager",
                         abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
                         tenantId));
@@ -104,7 +142,7 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
     }
 
     @Override
-    public boolean postGetGroupIdByName(String groupName, Group group, UserStoreManager userStoreManager)
+    public boolean getGroupIdByName(String groupName, Group group, UserStoreManager userStoreManager)
             throws UserStoreException {
 
         int tenantId = userStoreManager.getTenantId();
@@ -116,7 +154,7 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
          */
         if (isGroupIdEnabled) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("SCIMGroupOperationListener will not be executed for userstore: %s in " +
+                log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
                                 "tenant %s since group id support is available in the userstore manager",
                         abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
                         tenantId));
@@ -153,7 +191,7 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
     }
 
     @Override
-    public boolean postGetGroupNameById(String groupID, Group group, UserStoreManager userStoreManager)
+    public boolean getGroupNameById(String groupID, Group group, UserStoreManager userStoreManager)
             throws UserStoreException {
 
         int tenantId = userStoreManager.getTenantId();
@@ -165,7 +203,7 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
          */
         if (isGroupIdEnabled) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("SCIMGroupOperationListener will not be executed for userstore: %s in " +
+                log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
                                 "tenant %s since group id support is available in the userstore manager",
                         abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
                         tenantId));
@@ -195,8 +233,8 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
     }
 
     @Override
-    public boolean postGetGroupById(String groupID, List<String> requestedClaims, Group group,
-                                    UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean getGroupById(String groupID, List<String> requestedClaims, Group group,
+                                UserStoreManager userStoreManager) throws UserStoreException {
 
         int tenantId = userStoreManager.getTenantId();
         AbstractUserStoreManager abstractUserStoreManager = ((AbstractUserStoreManager) userStoreManager);
@@ -207,7 +245,7 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
          */
         if (isGroupIdEnabled) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("SCIMGroupOperationListener will not be executed for userstore: %s in " +
+                log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
                                 "tenant %s since group id support is available in the userstore manager",
                         abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
                         tenantId));
@@ -259,8 +297,8 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
     }
 
     @Override
-    public boolean postGetGroupByName(String groupName, List<String> requestedClaims, Group group,
-                                      UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean getGroupByName(String groupName, List<String> requestedClaims, Group group,
+                                  UserStoreManager userStoreManager) throws UserStoreException {
 
         int tenantId = userStoreManager.getTenantId();
         AbstractUserStoreManager abstractUserStoreManager = ((AbstractUserStoreManager) userStoreManager);
@@ -271,7 +309,7 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
          */
         if (isGroupIdEnabled) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("SCIMGroupOperationListener will not be executed for userstore: %s in " +
+                log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
                                 "tenant %s since group id support is available in the userstore manager",
                         abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
                         tenantId));
@@ -318,8 +356,8 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
     }
 
     @Override
-    public boolean postListGroups(Condition condition, int limit, int offset, String domain, String sortBy,
-                                  String sortOrder, List<Group> groupsList, UserStoreManager userStoreManager)
+    public boolean listGroups(Condition condition, int limit, int offset, String domain, String sortBy,
+                              String sortOrder, List<Group> groupsList, UserStoreManager userStoreManager)
             throws UserStoreException {
 
         int tenantId = userStoreManager.getTenantId();
@@ -331,7 +369,7 @@ public class SCIMGroupOperationListener extends AbstractIdentityGroupOperationEv
          */
         if (isGroupIdEnabled) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("SCIMGroupOperationListener will not be executed for userstore: %s in " +
+                log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
                                 "tenant %s since group id support is available in the userstore manager",
                         abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
                         tenantId));
