@@ -140,6 +140,7 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
+    private static final String ERROR_CODE_INVALID_ROLE_NAME = "30011";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
@@ -383,6 +384,13 @@ public class SCIMUserManager implements UserManager {
         // If all resolvers failed to resolve, log error and throw 500 status error.
         log.error(defaultMsg, e);
         return new CharonException(defaultMsg, e);
+    }
+
+    private void handleErrorsOnRoleNamePolicy(Throwable e) throws BadRequestException {
+
+        if (e != null && e instanceof UserStoreException && (e.getMessage().contains(ERROR_CODE_INVALID_ROLE_NAME))) {
+            throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+        }
     }
 
     private void handleErrorsOnUserNameAndPasswordPolicy(Throwable e) throws BadRequestException {
@@ -2404,6 +2412,7 @@ public class SCIMUserManager implements UserManager {
                 throw resolveError(e, "Error occurred while doing rollback operation of the SCIM " +
                         "table entry for role: " + group.getDisplayName());
             }
+            handleErrorsOnRoleNamePolicy(e);
             throw resolveError(e, "Error occurred while adding role : " + group.getDisplayName());
         } catch (IdentitySCIMException | BadRequestException e) {
             String error = "One or more group members do not exist in the same user store. " +
@@ -3009,11 +3018,12 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void updateGroup(Group oldGroup, Group newGroup) throws CharonException {
+    public void updateGroup(Group oldGroup, Group newGroup) throws CharonException, BadRequestException {
 
         try {
             doUpdateGroup(oldGroup, newGroup);
         } catch (UserStoreException e) {
+            handleErrorsOnRoleNamePolicy(e);
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
             throw new CharonException(e.getMessage(), e);
@@ -3237,6 +3247,7 @@ public class SCIMUserManager implements UserManager {
                 return oldGroup;
             }
         } catch (UserStoreException e) {
+            handleErrorsOnRoleNamePolicy(e);
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
             throw new CharonException(e.getMessage(), e);
