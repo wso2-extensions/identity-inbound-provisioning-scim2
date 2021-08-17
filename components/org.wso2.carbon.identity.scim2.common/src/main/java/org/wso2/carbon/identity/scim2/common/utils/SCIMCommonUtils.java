@@ -574,7 +574,7 @@ public class SCIMCommonUtils {
      * @param delimiter       Filter delimiter based on search type.
      * @return Search attribute.
      */
-    public static String buildSearchAttributeValue(String attributeName, String filterOperation, String attributeValue,
+    private String buildSearchAttributeValue(String attributeName, String filterOperation, String attributeValue,
                                                    String delimiter) {
 
         String searchAttribute = null;
@@ -601,7 +601,7 @@ public class SCIMCommonUtils {
      * @param delimiter       Filter delimiter based on search type.
      * @return Search attribute value.
      */
-    private static String createSearchValueForCoOperation(String attributeName, String filterOperation,
+    private String createSearchValueForCoOperation(String attributeName, String filterOperation,
                                                           String attributeValue, String delimiter) {
 
         /*
@@ -629,7 +629,7 @@ public class SCIMCommonUtils {
      * @param attributeName Attribute to filter.
      * @return True if the given attribute support embedding domain in attribute value..
      */
-    private static boolean isDomainSupportedAttribute(String attributeName) {
+    private boolean isDomainSupportedAttribute(String attributeName) {
 
         return SCIMConstants.UserSchemaConstants.USER_NAME_URI.equalsIgnoreCase(attributeName)
                 || SCIMConstants.CommonSchemaConstants.ID_URI.equalsIgnoreCase(attributeName)
@@ -648,7 +648,7 @@ public class SCIMCommonUtils {
      * @param attributeItems  Extracted domain and filter value.
      * @return Search attribute value.
      */
-    private static String createSearchValueWithDomainForCoEwOperations(String attributeName, String filterOperation,
+    private String createSearchValueWithDomainForCoEwOperations(String attributeName, String filterOperation,
                                                                        String attributeValue, String delimiter,
                                                                        String[] attributeItems) {
 
@@ -685,7 +685,7 @@ public class SCIMCommonUtils {
      * @param delimiter       Filter delimiter based on search type.
      * @return Search attribute value.
      */
-    private static String createSearchValueForEwOperation(String attributeName, String filterOperation, String attributeValue,
+    private String createSearchValueForEwOperation(String attributeName, String filterOperation, String attributeValue,
                                                           String delimiter) {
 
         /*
