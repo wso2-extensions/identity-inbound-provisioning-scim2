@@ -530,7 +530,7 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
      * Check whether the filter attribute support filtering with the domain embedded in the attribute value.
      *
      * @param attributeName Attribute to filter.
-     * @return True if the given attribute support embedding domain in attribute value..
+     * @return True if the given attribute support embedding domain in attribute value.
      */
     private boolean isDomainSupportedAttribute(String attributeName) {
 

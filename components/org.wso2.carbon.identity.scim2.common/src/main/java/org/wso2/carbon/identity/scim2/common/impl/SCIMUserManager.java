@@ -4665,7 +4665,7 @@ public class SCIMUserManager implements UserManager {
         } else {
             List<org.wso2.carbon.user.core.common.Group> groupList =
                     carbonUM.listGroups(buildExpressionCondition(attributeName, filterOperation, attributeValue),
-                            UserCoreConstants.MAX_USER_ROLE_LIST, 0, domainName, null, null);
+                            domainName, UserCoreConstants.MAX_USER_ROLE_LIST, 0, null, null);
             if (CollectionUtils.isEmpty(groupList)) {
                 return new ArrayList<>();
             }
