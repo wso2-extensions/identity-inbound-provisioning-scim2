@@ -283,7 +283,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         /*
         If attribute syncing is disabled, blocking the attribute editing is not required.
         ToDo: There should be an option to disable attribute syncing.
-        (https://github.com/wso2-enterprise/asgardeo-product/issues/4491)
+        (https://github.com/wso2/product-is/issues/12414)
          */
         if (!isAttributeSyncingEnabled) {
             return;
