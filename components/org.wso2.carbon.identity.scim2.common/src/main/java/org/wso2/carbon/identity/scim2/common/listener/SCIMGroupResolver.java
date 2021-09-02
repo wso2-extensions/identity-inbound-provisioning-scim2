@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreConfigConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -322,7 +323,15 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         Map<String, String> attributes;
         GroupDAO groupDAO = new GroupDAO();
         try {
-            attributes = groupDAO.getSCIMGroupAttributes(tenantId, groupName);
+            // There can be cases where the domain name is already in the group name.
+            if (StringUtils.isBlank(UserCoreUtil.extractDomainFromName(groupName))) {
+                String domainName = abstractUserStoreManager.getRealmConfiguration().
+                        getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
+                attributes =
+                        groupDAO.getSCIMGroupAttributes(tenantId, UserCoreUtil.addDomainToName(groupName, domainName));
+            } else {
+                attributes = groupDAO.getSCIMGroupAttributes(tenantId, groupName);
+            }
         } catch (IdentitySCIMException e) {
             throw new UserStoreException(String.format("Error occurred while getting the group attributes of " +
                     "group: %s in tenant: %s", groupName, tenantId), e);
