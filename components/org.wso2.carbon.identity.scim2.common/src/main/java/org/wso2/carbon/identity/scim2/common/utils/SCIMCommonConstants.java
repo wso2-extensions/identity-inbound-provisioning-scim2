@@ -130,6 +130,7 @@ public class SCIMCommonConstants {
                 UserStoreConfigConstants.GROUP_CREATED_DATE_ATTRIBUTE);
         groupAttributeSchemaMap.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
                 UserStoreConfigConstants.GROUP_LAST_MODIFIED_DATE_ATTRIBUTE);
+        groupAttributeSchemaMap.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, "GroupLocation");
     }
 
     /**
