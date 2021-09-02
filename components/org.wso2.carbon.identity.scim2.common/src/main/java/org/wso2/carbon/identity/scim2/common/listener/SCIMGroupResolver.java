@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreConfigConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -322,6 +323,12 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         Map<String, String> attributes;
         GroupDAO groupDAO = new GroupDAO();
         try {
+            // If the group name as the domain separator ( / ), that means, domain is in the name.
+            if (!groupName.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+                String domainName = abstractUserStoreManager.getRealmConfiguration().
+                        getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
+                groupName = UserCoreUtil.addDomainToName(groupName, domainName);
+            }
             attributes = groupDAO.getSCIMGroupAttributes(tenantId, groupName);
         } catch (IdentitySCIMException e) {
             throw new UserStoreException(String.format("Error occurred while getting the group attributes of " +
@@ -337,6 +344,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         String domainName = UserCoreUtil.extractDomainFromName(groupName);
         if (group == null) {
             group = new Group(groupId, resolveGroupName(groupName, domainName));
+        } else {
+            group.setGroupName(groupName);
         }
         // Set mandatory attributes.
         for (Map.Entry<String, String> entry : attributes.entrySet()) {
