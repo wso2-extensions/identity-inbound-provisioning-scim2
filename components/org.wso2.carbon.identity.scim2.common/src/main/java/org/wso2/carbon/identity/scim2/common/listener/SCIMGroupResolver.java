@@ -323,15 +323,13 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         Map<String, String> attributes;
         GroupDAO groupDAO = new GroupDAO();
         try {
-            // There can be cases where the domain name is already in the group name.
-            if (StringUtils.isBlank(UserCoreUtil.extractDomainFromName(groupName))) {
+            // If the group name as the domain separator ( / ), that means, domain is in the name.
+            if (!groupName.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
                 String domainName = abstractUserStoreManager.getRealmConfiguration().
                         getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
-                attributes =
-                        groupDAO.getSCIMGroupAttributes(tenantId, UserCoreUtil.addDomainToName(groupName, domainName));
-            } else {
-                attributes = groupDAO.getSCIMGroupAttributes(tenantId, groupName);
+                groupName = UserCoreUtil.addDomainToName(groupName, domainName);
             }
+            attributes = groupDAO.getSCIMGroupAttributes(tenantId, groupName);
         } catch (IdentitySCIMException e) {
             throw new UserStoreException(String.format("Error occurred while getting the group attributes of " +
                     "group: %s in tenant: %s", groupName, tenantId), e);
@@ -346,6 +344,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         String domainName = UserCoreUtil.extractDomainFromName(groupName);
         if (group == null) {
             group = new Group(groupId, resolveGroupName(groupName, domainName));
+        } else {
+            group.setGroupName(groupName);
         }
         // Set mandatory attributes.
         for (Map.Entry<String, String> entry : attributes.entrySet()) {
