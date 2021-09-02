@@ -564,4 +564,145 @@ public class SCIMCommonUtils {
         }
         return CUSTOM_USER_SCHEMA_URI;
     }
+
+    /**
+     * Build the search value after appending the delimiters according to the attribute name to be filtered.
+     *
+     * @param attributeName   Filter attribute name.
+     * @param filterOperation Operator value.
+     * @param attributeValue  Search value.
+     * @param delimiter       Filter delimiter based on search type.
+     * @return Search attribute.
+     */
+    private String buildSearchAttributeValue(String attributeName, String filterOperation, String attributeValue,
+                                                   String delimiter) {
+
+        String searchAttribute = null;
+        if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
+            searchAttribute = createSearchValueForCoOperation(attributeName, filterOperation, attributeValue,
+                    delimiter);
+        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
+            searchAttribute = attributeValue + delimiter;
+        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
+            searchAttribute = createSearchValueForEwOperation(attributeName, filterOperation, attributeValue,
+                    delimiter);
+        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
+            searchAttribute = attributeValue;
+        }
+        return searchAttribute;
+    }
+
+    /**
+     * Create search value for CO operation.
+     *
+     * @param attributeName   Filter attribute name.
+     * @param filterOperation Operator value.
+     * @param attributeValue  Filter attribute value.
+     * @param delimiter       Filter delimiter based on search type.
+     * @return Search attribute value.
+     */
+    private String createSearchValueForCoOperation(String attributeName, String filterOperation,
+                                                          String attributeValue, String delimiter) {
+
+        /*
+         * For attributes which support domain embedding, create search value by appending the delimiter after the
+         * domain separator.
+         */
+        if (isDomainSupportedAttribute(attributeName)) {
+
+            // Check whether domain is embedded in the attribute value.
+            String[] attributeItems = attributeValue.split(CarbonConstants.DOMAIN_SEPARATOR, 2);
+            if (attributeItems.length > 1) {
+                return createSearchValueWithDomainForCoEwOperations(attributeName, filterOperation, attributeValue,
+                        delimiter, attributeItems);
+            } else {
+                return delimiter + attributeValue + delimiter;
+            }
+        } else {
+            return delimiter + attributeValue + delimiter;
+        }
+    }
+
+    /**
+     * Check whether the filter attribute support filtering with the domain embedded in the attribute value.
+     *
+     * @param attributeName Attribute to filter.
+     * @return True if the given attribute support embedding domain in attribute value.
+     */
+    private boolean isDomainSupportedAttribute(String attributeName) {
+
+        return SCIMConstants.UserSchemaConstants.USER_NAME_URI.equalsIgnoreCase(attributeName)
+                || SCIMConstants.CommonSchemaConstants.ID_URI.equalsIgnoreCase(attributeName)
+                || SCIMConstants.UserSchemaConstants.GROUP_URI.equalsIgnoreCase(attributeName)
+                || SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI.equalsIgnoreCase(attributeName)
+                || SCIMConstants.GroupSchemaConstants.DISPLAY_URI.equalsIgnoreCase(attributeName);
+    }
+
+    /**
+     * Create search value for CO and EW operations when domain is detected in the filter attribute value.
+     *
+     * @param attributeName   Filter attribute name.
+     * @param filterOperation Operator value.
+     * @param attributeValue  Search value.
+     * @param delimiter       Filter delimiter based on search type.
+     * @param attributeItems  Extracted domain and filter value.
+     * @return Search attribute value.
+     */
+    private String createSearchValueWithDomainForCoEwOperations(String attributeName, String filterOperation,
+                                                                       String attributeValue, String delimiter,
+                                                                       String[] attributeItems) {
+
+        String searchAttribute;
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Domain detected in attribute value: %s for filter attribute: %s for filter " +
+                    "operation: %s.", attributeValue, attributeName, filterOperation));
+        }
+        if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
+            searchAttribute = attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR + delimiter + attributeItems[1];
+        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
+            searchAttribute =
+                    attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR + delimiter + attributeItems[1] + delimiter;
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Filter operation: %s is not supported by method "
+                        + "createSearchValueWithDomainForCoEwOperations to create a search value", filterOperation));
+            }
+            searchAttribute = attributeValue;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Search attribute value: %s is created for operation: %s created with domain : %s ",
+                    searchAttribute, filterOperation, attributeItems[0]));
+        }
+        return searchAttribute;
+    }
+
+    /**
+     * Create search value for EW operation.
+     *
+     * @param attributeName   Filter attribute name.
+     * @param filterOperation Operator value.
+     * @param attributeValue  Filter attribute value.
+     * @param delimiter       Filter delimiter based on search type.
+     * @return Search attribute value.
+     */
+    private String createSearchValueForEwOperation(String attributeName, String filterOperation, String attributeValue,
+                                                          String delimiter) {
+
+        /*
+         *For attributes which support domain embedding, create search value by appending the delimiter after
+         * the domain separator.
+         */
+        if (isDomainSupportedAttribute(attributeName)) {
+            // Extract the domain attached to the attribute value and then append the delimiter.
+            String[] attributeItems = attributeValue.split(CarbonConstants.DOMAIN_SEPARATOR, 2);
+            if (attributeItems.length > 1) {
+                return createSearchValueWithDomainForCoEwOperations(attributeName, filterOperation, attributeValue,
+                        delimiter, attributeItems);
+            } else {
+                return delimiter + attributeValue;
+            }
+        } else {
+            return delimiter + attributeValue;
+        }
+    }
 }

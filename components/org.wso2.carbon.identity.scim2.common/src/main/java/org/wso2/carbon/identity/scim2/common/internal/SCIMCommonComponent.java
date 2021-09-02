@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.handlers.SCIMClaimOperationEventHandler;
 import org.wso2.carbon.identity.scim2.common.impl.DefaultSCIMUserStoreErrorResolver;
+import org.wso2.carbon.identity.scim2.common.listener.SCIMGroupResolver;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMTenantMgtListener;
 import org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListener;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
@@ -43,6 +44,7 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
+import org.wso2.carbon.user.core.listener.GroupResolver;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.mgt.RolePermissionManagementService;
@@ -113,6 +115,10 @@ public class SCIMCommonComponent {
             // Register default implementation of SCIMUserStoreErrorResolver
             ctx.getBundleContext().registerService(SCIMUserStoreErrorResolver.class.getName(),
                     new DefaultSCIMUserStoreErrorResolver(), null);
+
+            // Register default implementation of SCIMGroupResolver.
+            ctx.getBundleContext().registerService(GroupResolver.class.getName(),
+                    new SCIMGroupResolver(), null);
 
             //Update super tenant user/group attributes.
             AdminAttributeUtil.updateAdminUser(MultitenantConstants.SUPER_TENANT_ID, true);

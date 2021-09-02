@@ -60,7 +60,6 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -88,6 +87,7 @@ import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -298,15 +298,19 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "groupName")
-    public void testGetGroup(Object roleName, String userStoreDomain, Object expected) throws Exception {
+    public void testGetGroup(String groupId, String roleName, String userStoreDomain, Object expected)
+            throws Exception {
 
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
-        when(mockedGroupDAO.getGroupNameById(anyInt(), anyString())).thenReturn((String) roleName);
+        when(mockedGroupDAO.getGroupNameById(anyInt(), anyString())).thenReturn(roleName);
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
+        when(mockedUserStoreManager.getGroup(groupId, null)).
+                thenReturn(buildUserCoreGroupResponse(roleName, groupId, userStoreDomain));
+        mockStatic(SCIMCommonUtils.class);
+        when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        Group result = scimUserManager.getGroup("1234567", new HashMap<String, Boolean>());
-
+        Group result = scimUserManager.getGroup(groupId, new HashMap<>());
         String actual = null;
         if (result != null) {
             actual = result.getDisplayName();
@@ -320,8 +324,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         Group group = new Group();
         group.setDisplayName("roleName");
         return new Object[][]{
-                {null, "userStoreDomain", null},
-                {"roleName", null, "roleName"}
+                {"123456", null, "userStoreDomain", null},
+                {"567890", "roleName", null, "roleName"}
         };
     }
 
@@ -400,7 +404,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(users);
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(list);
-
+        org.wso2.carbon.user.core.common.Group[] groupsArray = {buildUserCoreGroupResponse(roleName, "1234",
+                "dummyDomain")};
+        when(mockedUserStoreManager.listGroups(any(Condition.class), anyString(), anyInt(),
+                anyInt(), anyString(), anyString())).thenReturn(Arrays.asList(groupsArray.clone()));
+        when(mockedUserStoreManager.getGroupByGroupName(roleName, null)).
+                thenReturn(buildUserCoreGroupResponse(roleName, "123456789", null));
         whenNew(RealmConfiguration.class).withAnyArguments().thenReturn(mockRealmConfig);
         when(mockRealmConfig.getAdminRoleName()).thenReturn("admin");
         when(mockRealmConfig.isPrimary()).thenReturn(false);
@@ -538,6 +547,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getRealmService()).thenReturn(mockRealmService);
         when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockedRealmConfig);
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()).thenReturn(false);
 
         ClaimMapping[] claimMappings = getTestClaimMappings();
         when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(claimMappings);
@@ -650,6 +661,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         AbstractUserStoreManager abstractUserStoreManager = mock(AbstractUserStoreManager.class);
         when(abstractUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(roles);
+        for (String role : roles) {
+            when(abstractUserStoreManager.getGroupByGroupName(role, null)).
+                    thenReturn(buildUserCoreGroupResponse(role, "123456789", null));
+        }
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(true);
         when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
@@ -703,6 +718,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(abstractUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(roles);
         when(abstractUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
+        for(String role: roles){
+            when(abstractUserStoreManager.getGroupByGroupName(role, null)).
+                    thenReturn(buildUserCoreGroupResponse(role, "123456", "dummyDomain"));
+        }
         mockStatic(UserCoreUtil.class);
         when(UserCoreUtil.isEveryoneRole("role", mockedRealmConfig)).thenReturn(false);
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
@@ -1033,6 +1052,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getHybridRoleListOfUser(anyString(), anyString())).thenReturn(rolesList);
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+
+        for (String group : groupsList) {
+            when(mockedUserStoreManager.getGroupByGroupName(group, null)).
+                    thenReturn(buildUserCoreGroupResponse(group, "123456", "dummyDomain"));
+        }
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(secondaryUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
         when(mockedRealmConfig.getUserStoreProperty(anyString())).thenReturn(claimSeparator);
@@ -1322,5 +1346,23 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         scimUserManager.createUser(user, null);
         // This method is for testing of throwing BadRequestException, hence no assertion.
+    }
+
+    /**
+     * Build a group object with the given params to mock the userstore response.
+     *
+     * @param groupName  Name of the group.
+     * @param groupId    Group id.
+     * @param domainName Domain name.
+     * @return Group object.
+     */
+    private org.wso2.carbon.user.core.common.Group buildUserCoreGroupResponse(String groupName, String groupId,
+                                                                              String domainName) {
+
+        org.wso2.carbon.user.core.common.Group group = new org.wso2.carbon.user.core.common.Group();
+        group.setGroupName(groupName);
+        group.setGroupID(groupId);
+        group.setUserStoreDomain(domainName);
+        return group;
     }
 }
