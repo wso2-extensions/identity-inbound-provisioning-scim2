@@ -81,7 +81,10 @@ public class SCIMCustomSchemaProcessor {
             for (Map.Entry<String, String> claimProperties : entry.getValue().getClaimProperties().entrySet()){
                 String propertyName = modifyPropertyNamesToScimConvention(claimProperties.getKey());
                 if(StringUtils.isNotBlank(propertyName)) {
-                    // TODO remove this Required property altering after introducing proper user profile maintaining.
+                    /*
+                    TODO: https://github.com/wso2/product-is/issues/12451,
+                     remove this Required property altering after introducing proper user profile maintaining
+                     */
                     if (StringUtils.equalsIgnoreCase(propertyName, SCIMConfigConstants.REQUIRED)) {
                         attributeCharacteristics.put(propertyName, "false");
                         continue;
