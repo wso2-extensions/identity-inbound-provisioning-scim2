@@ -28,6 +28,9 @@ import org.wso2.carbon.user.api.UserStoreException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 
+/**
+ * Contains the unit test cases for DefaultSCIMUserStoreErrorResolver.
+ */
 public class DefaultSCIMUserStoreErrorResolverTest extends PowerMockTestCase {
 
     @Test
