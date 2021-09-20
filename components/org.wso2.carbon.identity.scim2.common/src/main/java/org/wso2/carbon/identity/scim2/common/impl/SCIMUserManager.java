@@ -1515,6 +1515,35 @@ public class SCIMUserManager implements UserManager {
         return false;
     }
 
+    private Set<org.wso2.carbon.user.core.common.User> filterUsersByGroup(Node node, int offset, int limit,
+                                                                          String domainName) throws CharonException {
+
+        // Set filter values.
+        String attributeName = ((ExpressionNode) node).getAttributeValue();
+        String filterOperation = ((ExpressionNode) node).getOperation();
+        String attributeValue = ((ExpressionNode) node).getValue();
+
+        // If there is a domain, append the domain with the domain separator in front of the new attribute value if
+        // domain separator is not found in the attribute value.
+        if (StringUtils.isNotEmpty(domainName) && StringUtils
+                .containsNone(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+            attributeValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR +
+                    ((ExpressionNode) node).getValue();
+        }
+
+        try {
+            List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
+            Set<org.wso2.carbon.user.core.common.User> users = getUserListOfRoles(roleNames);
+            users = paginateUsers(users, limit, offset);
+            return users;
+        } catch (UserStoreException e) {
+            String errorMessage = String.format("Error while filtering the users for filter with attribute name: "
+                            + "%s, filter operation: %s and attribute value: %s. ", attributeName, filterOperation,
+                    attributeValue);
+            throw resolveError(e, errorMessage);
+        }
+    }
+
     /**
      * Method to get users when a filter is used with a single attribute and when the user store is an instance of
      * PaginatedUserStoreManager since the filter API supports an instance of PaginatedUserStoreManager.
@@ -1532,6 +1561,11 @@ public class SCIMUserManager implements UserManager {
     private Set<org.wso2.carbon.user.core.common.User> filterUsers(Node node, int offset, int limit, String sortBy,
                                                                    String sortOrder, String domainName)
             throws CharonException, BadRequestException {
+
+        // Filter users when filter by group.
+        if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
+            return filterUsersByGroup(node, offset, limit, domainName);
+        }
 
         // Filter users when the domain is specified in the request.
         if (StringUtils.isNotEmpty(domainName)) {
@@ -4350,16 +4384,22 @@ public class SCIMUserManager implements UserManager {
                 // This is to support backward compatibility.
                 return users;
             } else {
-                return new TreeSet<>(new ArrayList<>(sortedSet).subList(offset - 1, sortedSet.size()));
+                AbstractSet<org.wso2.carbon.user.core.common.User>  usersSorted = new TreeSet<>(
+                        Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
+                usersSorted.addAll(new ArrayList<>(sortedSet).subList(offset - 1, sortedSet.size()));
+                return usersSorted;
             }
         } else {
             // If users.length > limit + offset, then return only the users bounded by the offset and the limit.
+            AbstractSet<org.wso2.carbon.user.core.common.User>  usersSorted = new TreeSet<>(
+                    Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
             if (users.size() > limit + offset) {
-                return new TreeSet<>(new ArrayList<>(sortedSet).subList(offset - 1, limit + offset - 1));
+                usersSorted.addAll(new ArrayList<>(sortedSet).subList(offset - 1, limit + offset - 1));
             } else {
                 // Return all the users from the offset.
-                return new TreeSet<>(new ArrayList<>(sortedSet).subList(offset - 1, sortedSet.size()));
+                usersSorted.addAll(new ArrayList<>(sortedSet).subList(offset - 1, sortedSet.size()));
             }
+            return usersSorted;
         }
     }
 
@@ -5028,7 +5068,7 @@ public class SCIMUserManager implements UserManager {
         // Iterate through received hybrid roles and filter out specific hybrid role
         // domain(Application or Internal) values.
         for (String hybridRole : hybridRoles) {
-            if (domainInAttributeValue != null && !hybridRole.startsWith(domainInAttributeValue)) {
+            if (domainInAttributeValue != null && !hybridRole.toUpperCase().startsWith(domainInAttributeValue.toUpperCase())) {
                 continue;
             }
             if (hybridRole.toLowerCase().startsWith(SCIMCommonConstants.INTERNAL_DOMAIN.toLowerCase()) || hybridRole
