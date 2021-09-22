@@ -361,7 +361,7 @@ public class SCIMCommonUtils {
     /**
      * This is used to get tenant domain.
      *
-     * @return tenant domain.
+     * @return user's tenant domain.
      */
     private static String getTenantDomain() {
 
