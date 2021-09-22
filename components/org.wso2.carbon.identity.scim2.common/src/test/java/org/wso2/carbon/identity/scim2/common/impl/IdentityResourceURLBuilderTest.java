@@ -39,6 +39,9 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
+/**
+ * Contains the unit test cases for IdentityResourceURLBuilder.
+ */
 @PrepareForTest({IdentityTenantUtil.class, ServiceURLBuilder.class})
 public class IdentityResourceURLBuilderTest extends PowerMockTestCase {
 
@@ -77,8 +80,7 @@ public class IdentityResourceURLBuilderTest extends PowerMockTestCase {
 
     @Test(dataProvider = "dataProviderForBuild")
     public void testBuild(boolean isTenantQualifiedUrlsEnabled, String url, String resource, boolean throwError,
-                          String expected)
-            throws NotFoundException, URLBuilderException {
+                          String expected) throws NotFoundException, URLBuilderException {
 
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedUrlsEnabled);
         when(mockServiceURLBuilder.build()).thenAnswer(invocationOnMock -> {
@@ -110,7 +112,6 @@ public class IdentityResourceURLBuilderTest extends PowerMockTestCase {
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedUrlsEnabled);
         when(mockServiceURLBuilder.build()).thenThrow(
                 new URLBuilderException("Protocol of service URL is not available."));
-
         IdentityResourceURLBuilder identityResourceURLBuilder = new IdentityResourceURLBuilder();
         identityResourceURLBuilder.build(resource);
     }
