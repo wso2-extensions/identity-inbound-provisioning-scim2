@@ -321,7 +321,7 @@ public class SCIMCommonUtils {
      */
     public static Map<String, String> getSCIMtoLocalMappings() throws UserStoreException {
 
-        String spTenantDomain = getTenantDomainFromSP();
+        String spTenantDomain = getTenantDomain();
 
         Map<String, String> scimToLocalClaimMap = new HashMap<>();
         try {
@@ -359,22 +359,20 @@ public class SCIMCommonUtils {
     }
 
     /**
-     * This is used to get tenant domain of thread local service provider.
+     * This is used to get tenant domain.
      *
-     * @return Service provider's tenant domain.
+     * @return tenant domain.
      */
-    private static String getTenantDomainFromSP() {
+    private static String getTenantDomain() {
 
         String tenantDomain;
-        ThreadLocalProvisioningServiceProvider threadLocalSP = IdentityApplicationManagementUtil
-                .getThreadLocalProvisioningServiceProvider();
-        if (threadLocalSP != null) {
-            return threadLocalSP.getTenantDomain();
-        } else if (IdentityTenantUtil.getTenantDomainFromContext() != null) {
-            return IdentityTenantUtil.getTenantDomainFromContext();
-        } else if (PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain() != null) {
-            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
         } else {
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+
+        if (tenantDomain.isEmpty()){
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
         return tenantDomain;
