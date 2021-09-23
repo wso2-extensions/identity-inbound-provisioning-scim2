@@ -373,6 +373,9 @@ public class SCIMCommonUtils {
         }
 
         if (StringUtils.isBlank(tenantDomain)){
+            if (log.isDebugEnabled()) {
+                log.debug("Tenant domain is empty, hence reading it as the super tenant domain.");
+            }
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
         return tenantDomain;
