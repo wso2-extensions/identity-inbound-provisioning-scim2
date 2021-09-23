@@ -321,31 +321,31 @@ public class SCIMCommonUtils {
      */
     public static Map<String, String> getSCIMtoLocalMappings() throws UserStoreException {
 
-        String spTenantDomain = getTenantDomainFromSP();
+        String tenantDomain = getTenantDomain();
 
         Map<String, String> scimToLocalClaimMap = new HashMap<>();
         try {
             // Get the SCIM "Core" claims.
             Map<String, String> coreClaims = ClaimMetadataHandler.getInstance()
                     .getMappingsMapFromOtherDialectToCarbon(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT, null,
-                            spTenantDomain, false);
+                            tenantDomain, false);
             scimToLocalClaimMap.putAll(coreClaims);
 
             // Get the SCIM "User" claims.
             Map<String, String> userClaims = ClaimMetadataHandler.getInstance()
                     .getMappingsMapFromOtherDialectToCarbon(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT, null,
-                            spTenantDomain, false);
+                            tenantDomain, false);
             scimToLocalClaimMap.putAll(userClaims);
 
             // Get the extension claims, if there are any extensions enabled.
             if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
                 Map<String, String> extensionClaims = ClaimMetadataHandler.getInstance()
                         .getMappingsMapFromOtherDialectToCarbon(SCIMUserSchemaExtensionBuilder.getInstance()
-                                .getExtensionSchema().getURI(), null, spTenantDomain, false);
+                                .getExtensionSchema().getURI(), null, tenantDomain, false);
                 scimToLocalClaimMap.putAll(extensionClaims);
             }
 
-            String userTenantDomain = getTenantDomainFromContext();
+            String userTenantDomain = getTenantDomain();
             Map<String, String> customExtensionClaims =
                     ClaimMetadataHandler.getInstance().getMappingsMapFromOtherDialectToCarbon(getCustomSchemaURI(),
                             null, userTenantDomain, false);
@@ -354,27 +354,28 @@ public class SCIMCommonUtils {
             return scimToLocalClaimMap;
         } catch (ClaimMetadataException e) {
             throw new UserStoreException("Error occurred while retrieving SCIM to Local claim mappings for tenant " +
-                    "domain : " + spTenantDomain, e);
+                    "domain : " + tenantDomain, e);
         }
     }
 
     /**
-     * This is used to get tenant domain of thread local service provider.
+     * This is used to get tenant domain.
      *
-     * @return Service provider's tenant domain.
+     * @return user's tenant domain.
      */
-    private static String getTenantDomainFromSP() {
+    private static String getTenantDomain() {
 
         String tenantDomain;
-        ThreadLocalProvisioningServiceProvider threadLocalSP = IdentityApplicationManagementUtil
-                .getThreadLocalProvisioningServiceProvider();
-        if (threadLocalSP != null) {
-            return threadLocalSP.getTenantDomain();
-        } else if (IdentityTenantUtil.getTenantDomainFromContext() != null) {
-            return IdentityTenantUtil.getTenantDomainFromContext();
-        } else if (PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain() != null) {
-            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
         } else {
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+
+        if (StringUtils.isBlank(tenantDomain)){
+            if (log.isDebugEnabled()) {
+                log.debug("Tenant domain is empty, hence reading it as the super tenant domain.");
+            }
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
         return tenantDomain;
