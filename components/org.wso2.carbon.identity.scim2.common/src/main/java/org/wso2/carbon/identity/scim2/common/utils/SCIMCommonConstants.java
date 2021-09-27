@@ -114,10 +114,13 @@ public class SCIMCommonConstants {
 
     // Date of Birth related constants.
     public static final String DATE_OF_BIRTH_LOCAL_CLAIM = "http://wso2.org/claims/dob";
+    public static final String GROUPS_LOCAL_CLAIM = "http://wso2.org/claims/groups";
     public static final String PROP_REG_EX = "RegEx";
     public static final String PROP_REG_EX_VALIDATION_ERROR = "RegExValidationError";
     public static final String DOB_REG_EX_VALIDATION_DEFAULT_ERROR =
             "Date of Birth is not in the correct format of YYYY-MM-DD";
+    public static final String NOT_EXISTING_GROUPS_ERROR = "The provided group/groups does not exist. Please " +
+            "provide valid group/groups.";
     public static final String DATE_OF_BIRTH_REGEX = "^\\d{4}-\\d{2}-\\d{2}$";
     public static final String ERROR_CODE_RESOURCE_LIMIT_REACHED = "ATS-10001";
 

@@ -56,6 +56,8 @@ import java.util.UUID;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.GROUPS_LOCAL_CLAIM;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
 
@@ -67,6 +69,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PR
 public class SCIMUserOperationListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log log = LogFactory.getLog(SCIMUserOperationListener.class);
+    private static final String VALUE_SEPARATOR = ",";
 
     @Override
     public int getExecutionOrderId() {
@@ -176,6 +179,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
         // Validate dob value against the regex.
         validateDateOfBirthClaimValue(claimURI, claimValue, userStoreManager);
+        // Validate if the groups are updated.
+        validateUserGroupClaim(claimURI, claimValue, userStoreManager);
         return true;
     }
 
@@ -241,6 +246,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         // Validate dob value against the regex.
         validateDateOfBirthClaimValue(claims, userStoreManager);
+        // Validate if the groups are updated.
+        validateUserGroups(claims, userStoreManager);
         return true;
     }
 
@@ -252,6 +259,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             // Validate whether claim update request is for a JIT provisioned user.
             validateClaimUpdate(userName);
         }
+        // Validate if the groups are updated.
+        validateUserGroups(claims, userStoreManager);
         return true;
     }
 
@@ -262,6 +271,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 && !isIdentityClaimUpdate(claimURI)) {
             validateClaimUpdate(userName);
         }
+        // Validate if the groups are updated.
+        validateUserGroupClaim(claimURI, claimValue, userStoreManager);
         return true;
     }
 
@@ -310,6 +321,64 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             throw new UserStoreClientException(
                     SCIMCommonConstants.ErrorMessages.ERROR_CODE_INVALID_ATTRIBUTE_UPDATE.getMessage(),
                     SCIMCommonConstants.ErrorMessages.ERROR_CODE_INVALID_ATTRIBUTE_UPDATE.getCode());
+        }
+    }
+
+    /**
+     * Validate whether the updating groups do exist in the system.
+     *
+     * @param claimURI         Claim uri.
+     * @param value            Claim value.
+     * @param userStoreManager Userstore manager.
+     * @throws UserStoreException If the group does not exist in the system or if an error occurred while checking
+     *                            for group existence.
+     */
+    private void validateUserGroupClaim(String claimURI, String value, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        Map<String, String> claimsMap = new HashMap<>();
+        claimsMap.put(claimURI, value);
+        validateUserGroups(claimsMap, userStoreManager);
+    }
+
+    /**
+     * Validate whether the updated groups does exist in the system.
+     *
+     * @param claims           List of claims to be updated.
+     * @param userStoreManager Userstore manager.
+     * @throws UserStoreException If the group does not exist in the system or if an error occurred while checking
+     *                            for group existence.
+     */
+    private void validateUserGroups(Map<String, String> claims, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        if (claims == null || !claims.containsKey(GROUPS_LOCAL_CLAIM)) {
+            return;
+        }
+        /*
+         * We do not need to validate the groups for JIT provisioned users. That will be handled when resolved group
+         * mappings for the provisioned users. Therefore, this check can be skipped for the JIT provisioned users.
+         */
+        if (IdentityUtil.threadLocalProperties.get().get(FrameworkConstants.JIT_PROVISIONING_FLOW) != null &&
+                (Boolean) IdentityUtil.threadLocalProperties.get().get(FrameworkConstants.JIT_PROVISIONING_FLOW)) {
+            return;
+        }
+        String value = claims.get(GROUPS_LOCAL_CLAIM);
+        if (StringUtils.isBlank(value)) {
+            return;
+        }
+        // We need to split if the user has provided comma separated list of groups.
+        String[] groups = value.split(VALUE_SEPARATOR);
+        boolean hasInvalidGroups = false;
+        for (String groupName : groups) {
+            // We need to identify the groups that does not exist in the system.
+            if (!userStoreManager.isExistingRole(groupName)) {
+                hasInvalidGroups = true;
+            }
+        }
+        if (hasInvalidGroups) {
+            // At least one group does not exist. We need to throw an error and abort the flow.
+            throw new UserStoreClientException(NOT_EXISTING_GROUPS_ERROR);
         }
     }
 
