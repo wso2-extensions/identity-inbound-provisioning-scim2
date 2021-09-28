@@ -181,7 +181,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         // Validate dob value against the regex.
         validateDateOfBirthClaimValue(claimURI, claimValue, userStoreManager);
         // Validate if the groups are updated.
-        validateUserGroupClaim(claimURI, claimValue, userStoreManager);
+        validateUserGroupClaim(userID, claimURI, claimValue, userStoreManager);
         return true;
     }
 
@@ -248,7 +248,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         // Validate dob value against the regex.
         validateDateOfBirthClaimValue(claims, userStoreManager);
         // Validate if the groups are updated.
-        validateUserGroups(claims, userStoreManager);
+        validateUserGroups(userID, claims, userStoreManager);
         return true;
     }
 
@@ -261,7 +261,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             validateClaimUpdate(userName);
         }
         // Validate if the groups are updated.
-        validateUserGroups(claims, userStoreManager);
+        validateUserGroups(userName, claims, userStoreManager);
         return true;
     }
 
@@ -273,7 +273,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             validateClaimUpdate(userName);
         }
         // Validate if the groups are updated.
-        validateUserGroupClaim(claimURI, claimValue, userStoreManager);
+        validateUserGroupClaim(userName, claimURI, claimValue, userStoreManager);
         return true;
     }
 
@@ -328,29 +328,33 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     /**
      * Validate whether the updating groups do exist in the system.
      *
+     * @param userIdentifier   User identifier.
      * @param claimURI         Claim uri.
      * @param value            Claim value.
      * @param userStoreManager Userstore manager.
      * @throws UserStoreException If the group does not exist in the system or if an error occurred while checking
      *                            for group existence.
      */
-    private void validateUserGroupClaim(String claimURI, String value, UserStoreManager userStoreManager)
+    private void validateUserGroupClaim(String userIdentifier, String claimURI, String value,
+                                        UserStoreManager userStoreManager)
             throws UserStoreException {
 
         Map<String, String> claimsMap = new HashMap<>();
         claimsMap.put(claimURI, value);
-        validateUserGroups(claimsMap, userStoreManager);
+        validateUserGroups(userIdentifier, claimsMap, userStoreManager);
     }
 
     /**
      * Validate whether the updated groups does exist in the system.
      *
+     * @param userIdentifier   User identifier.
      * @param claims           List of claims to be updated.
      * @param userStoreManager Userstore manager.
      * @throws UserStoreException If the group does not exist in the system or if an error occurred while checking
      *                            for group existence.
      */
-    private void validateUserGroups(Map<String, String> claims, UserStoreManager userStoreManager)
+    private void validateUserGroups(String userIdentifier, Map<String, String> claims,
+                                    UserStoreManager userStoreManager)
             throws UserStoreException {
 
         if (claims == null || !claims.containsKey(GROUPS_LOCAL_CLAIM)) {
@@ -374,12 +378,17 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         if (StringUtils.isEmpty(attributeSeparator)) {
             attributeSeparator = DEFAULT_VALUE_SEPARATOR;
         }
+        int tenant = userStoreManager.getTenantId();
         // We need to split if the user has provided a list of groups.
         String[] groups = value.split(attributeSeparator);
         boolean hasInvalidGroups = false;
         for (String groupName : groups) {
             // We need to identify the groups that does not exist in the system.
             if (!userStoreManager.isExistingRole(groupName)) {
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Invalid group: %s found for the claim update of user: %s in tenant: %s",
+                            groupName, userIdentifier, tenant));
+                }
                 hasInvalidGroups = true;
             }
         }
