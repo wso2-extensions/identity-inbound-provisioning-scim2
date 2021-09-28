@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
@@ -69,7 +70,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PR
 public class SCIMUserOperationListener extends AbstractIdentityUserOperationEventListener {
 
     private static final Log log = LogFactory.getLog(SCIMUserOperationListener.class);
-    private static final String VALUE_SEPARATOR = ",";
+    private static final String DEFAULT_VALUE_SEPARATOR = ",";
 
     @Override
     public int getExecutionOrderId() {
@@ -367,8 +368,14 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         if (StringUtils.isBlank(value)) {
             return;
         }
-        // We need to split if the user has provided comma separated list of groups.
-        String[] groups = value.split(VALUE_SEPARATOR);
+        // Resolve the multi attribute
+        String attributeSeparator =
+                userStoreManager.getRealmConfiguration().getUserStoreProperty(MULTI_ATTRIBUTE_SEPARATOR);
+        if (StringUtils.isEmpty(attributeSeparator)) {
+            attributeSeparator = DEFAULT_VALUE_SEPARATOR;
+        }
+        // We need to split if the user has provided a list of groups.
+        String[] groups = value.split(attributeSeparator);
         boolean hasInvalidGroups = false;
         for (String groupName : groups) {
             // We need to identify the groups that does not exist in the system.
