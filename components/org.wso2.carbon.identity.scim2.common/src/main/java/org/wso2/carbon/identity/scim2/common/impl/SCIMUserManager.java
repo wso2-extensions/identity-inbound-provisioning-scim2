@@ -5188,6 +5188,23 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
+    public List<Attribute> getCoreSchema() throws CharonException {
+
+        Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
+                getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT, tenantDomain);
+        Map<String, Attribute> filteredFlatAttributeMap = getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
+        Map<String, Attribute> hierarchicalAttributeMap = buildHierarchicalAttributeMapForStandardSchema
+                (filteredFlatAttributeMap);
+
+        List<Attribute> coreSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
+        if (log.isDebugEnabled()) {
+            logSchemaAttributes(coreSchemaAttributesList);
+        }
+
+        return coreSchemaAttributesList;
+    }
+
+    @Override
     public List<Attribute> getUserSchema() throws CharonException {
 
         Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
