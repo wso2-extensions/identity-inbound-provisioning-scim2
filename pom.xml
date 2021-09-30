@@ -239,7 +239,7 @@
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.3.11</identity.governance.version>
-        <charon.version>3.4.21</charon.version>
+        <charon.version>3.4.22</charon.version>
 
         <!--Maven Plugin Version-->
         <maven.compiler.plugin.version>2.3.1</maven.compiler.plugin.version>
