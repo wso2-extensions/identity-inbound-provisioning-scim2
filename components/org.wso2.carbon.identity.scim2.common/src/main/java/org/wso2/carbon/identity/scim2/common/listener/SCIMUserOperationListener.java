@@ -57,7 +57,11 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATT
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.GROUPS_LOCAL_CLAIM;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_LOCAL_CLAIM;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REG_EX_VALIDATION_DEFAULT_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
@@ -90,8 +94,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
-            // Validate dob value against the regex.
-            validateDateOfBirthClaimValue(claims, userStoreManager);
+            // Validate dob and mobile claim value against the regex.
+            validateClaimValue(claims, userStoreManager);
             this.populateSCIMAttributes(userID, claims);
             return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -178,48 +182,75 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             // Validate whether claim update request is for a provisioned user.
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
-        // Validate dob value against the regex.
-        validateDateOfBirthClaimValue(claimURI, claimValue, userStoreManager);
+        // Validate dob and mobile number value against the regex.
+        validateClaimValue(claimURI, claimValue, userStoreManager);
         // Validate if the groups are updated.
         validateUserGroupClaim(userID, claimURI, claimValue, userStoreManager);
         return true;
     }
 
-    private void validateDateOfBirthClaimValue(String claimURI, String claimValue, UserStoreManager userStoreManager)
+    private void validateClaimValue(String claimURI, String claimValue, UserStoreManager userStoreManager)
             throws UserStoreException {
 
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
         if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, claimURI)) {
-            String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-            Map<String, String> dateOfBirthClaimProperties = getDateOfBirthClaimProperties(tenantDomain);
-            String dateOfBirthRegex = dateOfBirthClaimProperties.get(PROP_REG_EX);
-            if (StringUtils.isEmpty(dateOfBirthRegex)) {
-                dateOfBirthRegex = DATE_OF_BIRTH_REGEX;
-            }
-            if (StringUtils.isNotEmpty(claimValue) && !claimValue.matches(dateOfBirthRegex)) {
-                String dateOfBirthRegexError = dateOfBirthClaimProperties.get(PROP_REG_EX_VALIDATION_ERROR);
-                if (StringUtils.isEmpty(dateOfBirthRegexError)) {
-                    dateOfBirthRegexError = DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
+            validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DATE_OF_BIRTH_REGEX,
+                    DOB_REG_EX_VALIDATION_DEFAULT_ERROR);
+        } else if (StringUtils.equalsIgnoreCase(MOBILE_LOCAL_CLAIM, claimURI)) {
+            validateClaimValueForRegex(claimURI, claimValue, tenantDomain, MOBILE_REGEX,
+                    MOBILE_REG_EX_VALIDATION_DEFAULT_ERROR);
+        }
+    }
+
+    private void validateClaimValueForRegex(String claimURI, String claimValue, String tenantDomain,
+                                            String defaultRegex, String defaultRegexValidationError)
+            throws UserStoreClientException {
+
+        if (StringUtils.isBlank(claimURI)) {
+            return;
+        }
+        Map<String, String> claimProperties = getClaimProperties(tenantDomain, claimURI);
+        if (claimProperties != null) {
+            String claimRegex = claimProperties.get(PROP_REG_EX);
+            if (StringUtils.isEmpty(claimRegex)) {
+                // If there is no configured claimRegex and default regex is blank nothing to validate.
+                if (StringUtils.isBlank(defaultRegex)) {
+                    return;
                 }
-                throw new UserStoreClientException(dateOfBirthRegexError);
+                claimRegex = defaultRegex;
+            }
+            if (StringUtils.isNotBlank(claimValue) && !claimValue.matches(claimRegex)) {
+                String regexError = claimProperties.get(PROP_REG_EX_VALIDATION_ERROR);
+                if (StringUtils.isEmpty(regexError)) {
+                    regexError = StringUtils.isNotBlank(defaultRegexValidationError) ? defaultRegexValidationError :
+                            String.format(ERROR_CODE_REGEX_VIOLATION.getDescription(), claimURI, claimRegex);
+                }
+                throw new UserStoreClientException(regexError, ERROR_CODE_REGEX_VIOLATION.getCode());
             }
         }
     }
 
-    private Map<String, String> getDateOfBirthClaimProperties(String tenantDomain) {
+    /**
+     * Get claim properties of a claim in a given tenant.
+     *
+     * @param tenantDomain The tenant domain.
+     * @param claimURI     Claim URI.
+     * @return Properties of the claim.
+     */
+    private Map<String, String> getClaimProperties(String tenantDomain, String claimURI) {
 
-        Map<String, String> DateOfBirthClaimProperties = null;
         try {
             List<LocalClaim> localClaims =
                     SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
             for (LocalClaim localClaim : localClaims) {
-                if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, localClaim.getClaimURI())) {
-                    DateOfBirthClaimProperties = localClaim.getClaimProperties();
+                if (StringUtils.equalsIgnoreCase(claimURI, localClaim.getClaimURI())) {
+                    return localClaim.getClaimProperties();
                 }
             }
         } catch (ClaimMetadataException e) {
             log.error("Error while retrieving local claim meta data.", e);
         }
-        return DateOfBirthClaimProperties;
+        return null;
     }
 
     @Override
@@ -245,8 +276,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
         claims.put(modifiedLocalClaimUri, lastModifiedDate);
 
-        // Validate dob value against the regex.
-        validateDateOfBirthClaimValue(claims, userStoreManager);
+        // Validate dob and mobile value against the regex.
+        validateClaimValue(claims, userStoreManager);
         // Validate if the groups are updated.
         validateUserGroups(userID, claims, userStoreManager);
         return true;
@@ -398,24 +429,17 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
     }
 
-    private void validateDateOfBirthClaimValue(Map<String, String> claims, UserStoreManager userStoreManager)
+    private void validateClaimValue(Map<String, String> claims, UserStoreManager userStoreManager)
             throws UserStoreException {
 
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
         if (claims.containsKey(DATE_OF_BIRTH_LOCAL_CLAIM)) {
-            String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-            Map<String, String> dateOfBirthClaimProperties = getDateOfBirthClaimProperties(tenantDomain);
-            String dateOfBirthRegex = dateOfBirthClaimProperties.get(PROP_REG_EX);
-            if (StringUtils.isEmpty(dateOfBirthRegex)) {
-                dateOfBirthRegex = DATE_OF_BIRTH_REGEX;
-            }
-            if (StringUtils.isNotEmpty(claims.get(DATE_OF_BIRTH_LOCAL_CLAIM)) &&
-                    !claims.get(DATE_OF_BIRTH_LOCAL_CLAIM).matches(dateOfBirthRegex)) {
-                String dateOfBirthRegexError = dateOfBirthClaimProperties.get(PROP_REG_EX_VALIDATION_ERROR);
-                if (StringUtils.isEmpty(dateOfBirthRegexError)) {
-                    dateOfBirthRegexError = DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
-                }
-                throw new UserStoreClientException(dateOfBirthRegexError);
-            }
+            validateClaimValueForRegex(DATE_OF_BIRTH_LOCAL_CLAIM, claims.get(DATE_OF_BIRTH_LOCAL_CLAIM), tenantDomain,
+                    DATE_OF_BIRTH_REGEX, DOB_REG_EX_VALIDATION_DEFAULT_ERROR);
+        }
+        if (claims.containsKey(MOBILE_LOCAL_CLAIM)) {
+            validateClaimValueForRegex(MOBILE_LOCAL_CLAIM, claims.get(MOBILE_LOCAL_CLAIM), tenantDomain, MOBILE_REGEX,
+                    MOBILE_REG_EX_VALIDATION_DEFAULT_ERROR);
         }
     }
 
