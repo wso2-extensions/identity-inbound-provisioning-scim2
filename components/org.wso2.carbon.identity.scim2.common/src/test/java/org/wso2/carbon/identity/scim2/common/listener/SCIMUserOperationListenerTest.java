@@ -28,6 +28,7 @@ import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -59,9 +60,11 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({UserCoreUtil.class, SCIMGroupHandler.class, SCIMCommonUtils.class, IdentityUtil.class})
+@PrepareForTest({UserCoreUtil.class, SCIMGroupHandler.class, SCIMCommonUtils.class, IdentityUtil.class,
+        IdentityTenantUtil.class})
 public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
+    private final String CARBON_SUPER = "carbon.super";
     private String userName = "testUser";
     private String userId = "e235e3b6-49a3-45ad-a2b8-097733ee73ff";
     private Object credential = new Object();
@@ -71,6 +74,8 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
     private Permission[] permissions = new Permission[0];
     private Map<String, String> claims = new HashMap<>();
     private String profile = "testProfile";
+    private String claimURI = "http://wso2.org/claims/country";
+    private String claimValue = "dummyValue";
     private boolean isAuthenticated = true;
     SCIMUserOperationListener scimUserOperationListener;
 
@@ -90,9 +95,13 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         scimUserOperationListener = spy(new SCIMUserOperationListener());
         mockStatic(UserCoreUtil.class);
         mockStatic(SCIMCommonUtils.class);
+        mockStatic(IdentityTenantUtil.class);
+        when(userStoreManager.getTenantId()).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(CARBON_SUPER);
     }
 
     @DataProvider(name = "testGetExecutionOrderIdData")
@@ -202,8 +211,9 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
     @Test
     public void testDoPreSetUserClaimValue() throws Exception {
-        assertTrue(scimUserOperationListener.doPreSetUserClaimValueWithID(eq(userId), anyString(), anyString(),
-                anyString(), eq(userStoreManager)));
+
+        assertTrue(scimUserOperationListener.doPreSetUserClaimValueWithID(userId, claimURI, claimValue, profile,
+                userStoreManager));
     }
 
     @Test
