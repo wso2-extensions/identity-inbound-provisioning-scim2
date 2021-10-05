@@ -119,7 +119,7 @@ public class SCIMCommonConstants {
     public static final String PROP_REG_EX_VALIDATION_ERROR = "RegExValidationError";
     public static final String DOB_REG_EX_VALIDATION_DEFAULT_ERROR =
             "Date of Birth is not in the correct format of YYYY-MM-DD";
-    public static final String MOBILE_REG_EX_VALIDATION_DEFAULT_ERROR =
+    public static final String MOBILE_REGEX_VALIDATION_DEFAULT_ERROR =
             "Mobile number is not in the correct format. Valid format is [+][country code][area code][local phone number]";
     public static final String NOT_EXISTING_GROUPS_ERROR = "The provided group/groups does not exist. Please " +
             "provide valid group/groups.";

@@ -61,7 +61,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.Er
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.GROUPS_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REG_EX_VALIDATION_DEFAULT_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX_VALIDATION_DEFAULT_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
@@ -189,6 +189,15 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         return true;
     }
 
+    /**
+     * Validate dob and mobile claim values against regex.
+     * This method can be removed once https://github.com/wso2/product-is/issues/9816 is fixed.
+     *
+     * @param claimURI         Claim URI.
+     * @param claimValue       Claim value.
+     * @param userStoreManager Userstore manager.
+     * @throws UserStoreException When claim value doesn't match with regex.
+     */
     private void validateClaimValue(String claimURI, String claimValue, UserStoreManager userStoreManager)
             throws UserStoreException {
 
@@ -198,10 +207,20 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                     DOB_REG_EX_VALIDATION_DEFAULT_ERROR);
         } else if (StringUtils.equalsIgnoreCase(MOBILE_LOCAL_CLAIM, claimURI)) {
             validateClaimValueForRegex(claimURI, claimValue, tenantDomain, MOBILE_REGEX,
-                    MOBILE_REG_EX_VALIDATION_DEFAULT_ERROR);
+                    MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
         }
     }
 
+    /**
+     * Validate claim value against regex.
+     *
+     * @param claimURI                    Claim URI.
+     * @param claimValue                  Claim value.
+     * @param tenantDomain                Tenant domain.
+     * @param defaultRegex                Default regex of the claim.
+     * @param defaultRegexValidationError Default error of claim for regex validation failure.
+     * @throws UserStoreClientException
+     */
     private void validateClaimValueForRegex(String claimURI, String claimValue, String tenantDomain,
                                             String defaultRegex, String defaultRegexValidationError)
             throws UserStoreClientException {
@@ -429,6 +448,14 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
     }
 
+    /**
+     * Validate dob and mobile claim values against the regex.
+     * This method can be removed once https://github.com/wso2/product-is/issues/9816 is fixed.
+     *
+     * @param claims           List of claims.
+     * @param userStoreManager Userstore manager.
+     * @throws UserStoreException When regex validation fails.
+     */
     private void validateClaimValue(Map<String, String> claims, UserStoreManager userStoreManager)
             throws UserStoreException {
 
@@ -439,7 +466,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
         if (claims.containsKey(MOBILE_LOCAL_CLAIM)) {
             validateClaimValueForRegex(MOBILE_LOCAL_CLAIM, claims.get(MOBILE_LOCAL_CLAIM), tenantDomain, MOBILE_REGEX,
-                    MOBILE_REG_EX_VALIDATION_DEFAULT_ERROR);
+                    MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
         }
     }
 
