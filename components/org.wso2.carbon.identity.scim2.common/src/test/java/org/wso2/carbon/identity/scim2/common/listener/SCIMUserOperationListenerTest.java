@@ -27,12 +27,14 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.Permission;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -83,6 +85,9 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
     UserStoreManager userStoreManager;
 
     @Mock
+    ClaimMetadataManagementService claimMetadataManagementService;
+
+    @Mock
     UserStore userStore;
 
     @Mock
@@ -90,6 +95,7 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
@@ -100,6 +106,7 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         mockStatic(UserCoreUtil.class);
         mockStatic(SCIMCommonUtils.class);
         mockStatic(IdentityTenantUtil.class);
+        SCIMCommonComponentHolder.setClaimManagementService(claimMetadataManagementService);
         when(userStoreManager.getTenantId()).thenReturn(-1234);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(CARBON_SUPER);
     }

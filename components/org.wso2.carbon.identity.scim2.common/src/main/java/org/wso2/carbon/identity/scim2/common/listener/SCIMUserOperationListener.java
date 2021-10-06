@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.listener;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,6 +55,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.COMMON_REGEX_VALIDATION_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
@@ -63,6 +65,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MO
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX_VALIDATION_DEFAULT_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_DISPLAYNAME;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
 
@@ -94,7 +97,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
-            // Validate dob and mobile claim value against the regex.
+            // Validate claim value against the regex.
             validateClaimValue(claims, userStoreManager);
             this.populateSCIMAttributes(userID, claims);
             return true;
@@ -182,7 +185,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             // Validate whether claim update request is for a provisioned user.
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
-        // Validate dob and mobile number value against the regex.
+        // Validate the claim value against the regex.
         validateClaimValue(claimURI, claimValue, userStoreManager);
         // Validate if the groups are updated.
         validateUserGroupClaim(userID, claimURI, claimValue, userStoreManager);
@@ -190,7 +193,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     /**
-     * Validate dob and mobile claim values against regex.
+     * Validate claim values against regex. Specially handles the dob and mobile claim values.
      * This method can be removed once https://github.com/wso2/product-is/issues/9816 is fixed.
      *
      * @param claimURI         Claim URI.
@@ -202,12 +205,18 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             throws UserStoreException {
 
         String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-        if (StringUtils.equalsIgnoreCase(DATE_OF_BIRTH_LOCAL_CLAIM, claimURI)) {
-            validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DATE_OF_BIRTH_REGEX,
-                    DOB_REG_EX_VALIDATION_DEFAULT_ERROR);
-        } else if (StringUtils.equalsIgnoreCase(MOBILE_LOCAL_CLAIM, claimURI)) {
-            validateClaimValueForRegex(claimURI, claimValue, tenantDomain, MOBILE_REGEX,
-                    MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
+        switch (claimURI) {
+            case DATE_OF_BIRTH_LOCAL_CLAIM:
+                validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DATE_OF_BIRTH_REGEX,
+                        DOB_REG_EX_VALIDATION_DEFAULT_ERROR);
+                break;
+            case MOBILE_LOCAL_CLAIM:
+                validateClaimValueForRegex(claimURI, claimValue, tenantDomain, MOBILE_REGEX,
+                        MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
+                break;
+            default:
+                validateClaimValueForRegex(claimURI, claimValue, tenantDomain, null, null);
+                break;
         }
     }
 
@@ -219,17 +228,20 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
      * @param tenantDomain                Tenant domain.
      * @param defaultRegex                Default regex of the claim.
      * @param defaultRegexValidationError Default error of claim for regex validation failure.
-     * @throws UserStoreClientException
+     * @throws UserStoreClientException When regex validation is failed.
      */
     private void validateClaimValueForRegex(String claimURI, String claimValue, String tenantDomain,
                                             String defaultRegex, String defaultRegexValidationError)
             throws UserStoreClientException {
 
         if (StringUtils.isBlank(claimURI)) {
+            if (log.isDebugEnabled()) {
+                log.debug("The claim URI is empty.");
+            }
             return;
         }
         Map<String, String> claimProperties = getClaimProperties(tenantDomain, claimURI);
-        if (claimProperties != null) {
+        if (MapUtils.isNotEmpty(claimProperties)) {
             String claimRegex = claimProperties.get(PROP_REG_EX);
             if (StringUtils.isEmpty(claimRegex)) {
                 // If there is no configured claimRegex and default regex is blank nothing to validate.
@@ -242,7 +254,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 String regexError = claimProperties.get(PROP_REG_EX_VALIDATION_ERROR);
                 if (StringUtils.isEmpty(regexError)) {
                     regexError = StringUtils.isNotBlank(defaultRegexValidationError) ? defaultRegexValidationError :
-                            String.format(ERROR_CODE_REGEX_VIOLATION.getDescription(), claimURI, claimRegex);
+                            String.format(COMMON_REGEX_VALIDATION_ERROR, claimProperties.get(PROP_DISPLAYNAME));
                 }
                 throw new UserStoreClientException(regexError, ERROR_CODE_REGEX_VIOLATION.getCode());
             }
@@ -261,6 +273,12 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         try {
             List<LocalClaim> localClaims =
                     SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
+            if (localClaims == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Returned claim list from ClaimManagementService is null");
+                }
+                return null;
+            }
             for (LocalClaim localClaim : localClaims) {
                 if (StringUtils.equalsIgnoreCase(claimURI, localClaim.getClaimURI())) {
                     return localClaim.getClaimProperties();
@@ -449,7 +467,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     }
 
     /**
-     * Validate dob and mobile claim values against the regex.
+     * Validate claim values against the regex. Specially handles the dob and mobile claim values.
      * This method can be removed once https://github.com/wso2/product-is/issues/9816 is fixed.
      *
      * @param claims           List of claims.
@@ -459,14 +477,29 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
     private void validateClaimValue(Map<String, String> claims, UserStoreManager userStoreManager)
             throws UserStoreException {
 
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-        if (claims.containsKey(DATE_OF_BIRTH_LOCAL_CLAIM)) {
-            validateClaimValueForRegex(DATE_OF_BIRTH_LOCAL_CLAIM, claims.get(DATE_OF_BIRTH_LOCAL_CLAIM), tenantDomain,
-                    DATE_OF_BIRTH_REGEX, DOB_REG_EX_VALIDATION_DEFAULT_ERROR);
+        if (MapUtils.isEmpty(claims)) {
+            if (log.isDebugEnabled()) {
+                log.debug("claim set is empty.");
+            }
+            return;
         }
-        if (claims.containsKey(MOBILE_LOCAL_CLAIM)) {
-            validateClaimValueForRegex(MOBILE_LOCAL_CLAIM, claims.get(MOBILE_LOCAL_CLAIM), tenantDomain, MOBILE_REGEX,
-                    MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        for (Map.Entry<String, String> claim : claims.entrySet()) {
+            if (StringUtils.isBlank(claim.getKey())) {
+                return;
+            }
+            switch (claim.getKey()) {
+                case DATE_OF_BIRTH_LOCAL_CLAIM:
+                    validateClaimValueForRegex(DATE_OF_BIRTH_LOCAL_CLAIM, claims.get(DATE_OF_BIRTH_LOCAL_CLAIM),
+                            tenantDomain, DATE_OF_BIRTH_REGEX, DOB_REG_EX_VALIDATION_DEFAULT_ERROR);
+                    break;
+                case MOBILE_LOCAL_CLAIM:
+                    validateClaimValueForRegex(MOBILE_LOCAL_CLAIM, claims.get(MOBILE_LOCAL_CLAIM), tenantDomain,
+                            MOBILE_REGEX, MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
+                    break;
+                default:
+                    validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, null, null);
+            }
         }
     }
 
