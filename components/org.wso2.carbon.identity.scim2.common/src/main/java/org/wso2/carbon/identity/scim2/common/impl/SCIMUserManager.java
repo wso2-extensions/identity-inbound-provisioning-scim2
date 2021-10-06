@@ -2371,6 +2371,8 @@ public class SCIMUserManager implements UserManager {
             if (!isInternalOrApplicationGroup(domainName) && StringUtils.isNotBlank(domainName) && !isSCIMEnabled
                     (domainName)) {
                 validateUserstoreDomain(domainName);
+                throw new CharonException("Cannot create group through in userstore. SCIM is not " +
+                        "enabled for user store: " + domainName);
             }
             group.setDisplayName(roleNameWithDomain);
             //check if the group already exists
@@ -2462,29 +2464,20 @@ public class SCIMUserManager implements UserManager {
 
     private void validateUserstoreDomain(String domainName) throws CharonException {
 
-        if (isInternalOrApplicationGroup(domainName)) {
-            return;
-        }
-        if (StringUtils.isBlank(domainName)) {
-            return;
-        }
-        String errorMsg = "Cannot create group through in userstore. SCIM is not " +
-                "enabled for user store: " + domainName;
-        // At this point either this is a primary domain name or secondary userstore domain name.
         UserStoreManager userStoreManager = carbonUM.getSecondaryUserStoreManager(domainName);
-        if (userStoreManager == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Invalid userstore domain: " + domainName + " found in the request");
-            }
-            CharonException charonException = new CharonException();
-            // We cannot say that the domain is invalid due to security concerns.
-            charonException.setDetail(errorMsg);
-            charonException.setStatus(HttpStatus.SC_BAD_REQUEST);
-            throw charonException;
+        if (userStoreManager != null) {
+            // There is a userstore with the given domain name.
+            return;
         }
-        if (!isSCIMEnabled(domainName)) {
-            throw new CharonException(errorMsg);
+        if (log.isDebugEnabled()) {
+            log.debug("Invalid userstore domain: " + domainName + " found in the request");
         }
+        CharonException charonException = new CharonException();
+        // We cannot say that the domain is invalid due to security concerns.
+        charonException.setDetail("Cannot create group through in userstore. SCIM is not " +
+                "enabled for user store: " + domainName);
+        charonException.setStatus(HttpStatus.SC_BAD_REQUEST);
+        throw charonException;
     }
 
     @Override
