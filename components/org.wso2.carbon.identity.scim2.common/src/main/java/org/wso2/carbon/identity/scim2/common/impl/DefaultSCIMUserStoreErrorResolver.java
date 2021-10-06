@@ -32,6 +32,7 @@ import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
  */
 public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorResolver {
 
+    private static final String ERROR_CODE_READ_ONLY_USERSTORE = "30002";
     private static final String ERROR_CODE_USER_NOT_FOUND = "30007";
 
     @Override
@@ -40,11 +41,14 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
         if (e.getMessage().contains(ERROR_CODE_USER_NOT_FOUND)) {
             String msg = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim();
             return new SCIMUserStoreException(msg, HttpStatus.SC_NOT_FOUND);
+        } else if (e.getMessage().contains(ERROR_CODE_READ_ONLY_USERSTORE)) {
+            String msg = "Invalid operation. User store is read only";
+            return new SCIMUserStoreException(msg, HttpStatus.SC_BAD_REQUEST);
         } else if (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
-                    .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_USERNAME_CANNOT_BE_EMPTY.getCode(),
-                            ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode())) {
-                return new SCIMUserStoreException("Unable to create the user. Username is a mandatory field.",
-                        HttpStatus.SC_BAD_REQUEST);
+                .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_USERNAME_CANNOT_BE_EMPTY.getCode(),
+                        ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode())) {
+            return new SCIMUserStoreException("Unable to create the user. Username is a mandatory field.",
+                    HttpStatus.SC_BAD_REQUEST);
         } else if (e instanceof org.wso2.carbon.user.core.UserStoreClientException && UserCoreErrorConstants
                 .ErrorMessages.ERROR_CODE_INVALID_DOMAIN_NAME.getCode().equals(((UserStoreClientException) e)
                         .getErrorCode())) {

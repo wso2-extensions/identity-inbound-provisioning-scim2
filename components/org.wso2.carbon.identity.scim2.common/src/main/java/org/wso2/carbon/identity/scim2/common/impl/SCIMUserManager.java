@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpStatus;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -2369,8 +2370,7 @@ public class SCIMUserManager implements UserManager {
 
             if (!isInternalOrApplicationGroup(domainName) && StringUtils.isNotBlank(domainName) && !isSCIMEnabled
                     (domainName)) {
-                throw new CharonException("Cannot create group through scim to user store " + ". SCIM is not " +
-                        "enabled for user store " + domainName);
+                validateUserstoreDomain(domainName);
             }
             group.setDisplayName(roleNameWithDomain);
             //check if the group already exists
@@ -2458,6 +2458,33 @@ public class SCIMUserManager implements UserManager {
             throw new BadRequestException(error, ResponseCodeConstants.INVALID_VALUE);
         }
         return group;
+    }
+
+    private void validateUserstoreDomain(String domainName) throws CharonException {
+
+        if (isInternalOrApplicationGroup(domainName)) {
+            return;
+        }
+        if (StringUtils.isBlank(domainName)) {
+            return;
+        }
+        String errorMsg = "Cannot create group through in userstore. SCIM is not " +
+                "enabled for user store: " + domainName;
+        // At this point either this is a primary domain name or secondary userstore domain name.
+        UserStoreManager userStoreManager = carbonUM.getSecondaryUserStoreManager(domainName);
+        if (userStoreManager == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Invalid userstore domain: " + domainName + " found in the request");
+            }
+            CharonException charonException = new CharonException();
+            // We cannot say that the domain is invalid due to security concerns.
+            charonException.setDetail(errorMsg);
+            charonException.setStatus(HttpStatus.SC_BAD_REQUEST);
+            throw charonException;
+        }
+        if (!isSCIMEnabled(domainName)) {
+            throw new CharonException(errorMsg);
+        }
     }
 
     @Override
