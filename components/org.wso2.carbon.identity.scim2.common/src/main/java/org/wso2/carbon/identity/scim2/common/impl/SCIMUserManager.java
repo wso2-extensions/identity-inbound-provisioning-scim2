@@ -2370,9 +2370,11 @@ public class SCIMUserManager implements UserManager {
 
             if (!isInternalOrApplicationGroup(domainName) && StringUtils.isNotBlank(domainName) && !isSCIMEnabled
                     (domainName)) {
-                validateUserstoreDomain(domainName);
-                throw new CharonException("Cannot create group through in userstore. SCIM is not " +
+                CharonException charonException = new CharonException();
+                charonException.setDetail("Cannot create group through in userstore. SCIM is not " +
                         "enabled for user store: " + domainName);
+                charonException.setStatus(HttpStatus.SC_BAD_REQUEST);
+                throw charonException;
             }
             group.setDisplayName(roleNameWithDomain);
             //check if the group already exists
@@ -2460,24 +2462,6 @@ public class SCIMUserManager implements UserManager {
             throw new BadRequestException(error, ResponseCodeConstants.INVALID_VALUE);
         }
         return group;
-    }
-
-    private void validateUserstoreDomain(String domainName) throws CharonException {
-
-        UserStoreManager userStoreManager = carbonUM.getSecondaryUserStoreManager(domainName);
-        if (userStoreManager != null) {
-            // There is a userstore with the given domain name.
-            return;
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Invalid userstore domain: " + domainName + " found in the request");
-        }
-        CharonException charonException = new CharonException();
-        // We cannot say that the domain is invalid due to security concerns.
-        charonException.setDetail("Cannot create group through in userstore. SCIM is not " +
-                "enabled for user store: " + domainName);
-        charonException.setStatus(HttpStatus.SC_BAD_REQUEST);
-        throw charonException;
     }
 
     @Override
