@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpStatus;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -2369,8 +2370,11 @@ public class SCIMUserManager implements UserManager {
 
             if (!isInternalOrApplicationGroup(domainName) && StringUtils.isNotBlank(domainName) && !isSCIMEnabled
                     (domainName)) {
-                throw new CharonException("Cannot create group through scim to user store " + ". SCIM is not " +
-                        "enabled for user store " + domainName);
+                CharonException charonException = new CharonException();
+                charonException.setDetail("Cannot create group through in userstore. SCIM is not " +
+                        "enabled for user store: " + domainName);
+                charonException.setStatus(HttpStatus.SC_BAD_REQUEST);
+                throw charonException;
             }
             group.setDisplayName(roleNameWithDomain);
             //check if the group already exists
