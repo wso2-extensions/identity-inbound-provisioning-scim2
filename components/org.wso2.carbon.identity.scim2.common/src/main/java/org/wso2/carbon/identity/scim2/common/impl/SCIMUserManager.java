@@ -2947,13 +2947,13 @@ public class SCIMUserManager implements UserManager {
                 if (memberOperation.getValues() instanceof Map) {
                     Map<String, String> memberObject = (Map<String, String>) memberOperation.getValues();
                     prepareAddedRemovedMemberLists(addedMembers, deletedMembers, newlyAddedMemberIds, memberOperation,
-                            memberObject);
+                            memberObject, currentGroupName);
                 } else if (memberOperation.getValues() instanceof List) {
                     List<Map<String, String>> memberOperationValues =
                             (List<Map<String, String>>) memberOperation.getValues();
                     for (Map<String, String> memberObject : memberOperationValues) {
                         prepareAddedRemovedMemberLists(addedMembers, deletedMembers, newlyAddedMemberIds,
-                                memberOperation, memberObject);
+                                memberOperation, memberObject, currentGroupName);
                     }
                 }
             }
@@ -3025,7 +3025,8 @@ public class SCIMUserManager implements UserManager {
 
     private void prepareAddedRemovedMemberLists(Set<String> addedMembers, Set<String> removedMembers,
                                                 Set<Object> newlyAddedMemberIds, PatchOperation memberOperation,
-                                                Map<String, String> memberObject) throws UserStoreException {
+                                                Map<String, String> memberObject, String currentGroupName)
+            throws UserStoreException {
 
         if (StringUtils.isEmpty(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY))) {
             List<org.wso2.carbon.user.core.common.User> userListWithID =
@@ -3037,7 +3038,11 @@ public class SCIMUserManager implements UserManager {
             }
         }
 
-        if (StringUtils.equals(memberOperation.getOperation(), SCIMConstants.OperationalConstants.ADD)) {
+        List<String> roleList =
+                Arrays.asList(carbonUM.getRoleListOfUser(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY)));
+
+        if (StringUtils.equals(memberOperation.getOperation(), SCIMConstants.OperationalConstants.ADD) &&
+                !roleList.contains(currentGroupName)) {
             removedMembers.remove(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
             addedMembers.add(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
             newlyAddedMemberIds.add(memberObject.get(SCIMConstants.GroupSchemaConstants.VALUE));
