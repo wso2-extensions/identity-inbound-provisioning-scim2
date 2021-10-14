@@ -1524,13 +1524,11 @@ public class SCIMUserManager implements UserManager {
         String filterOperation = ((ExpressionNode) node).getOperation();
         String attributeValue = ((ExpressionNode) node).getValue();
 
-        // If there is a domain, append the domain with the domain separator in front of the new attribute value if
-        // domain separator is not found in the attribute value.
-        if (StringUtils.isNotEmpty(domainName) && StringUtils
-                .containsNone(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
-            attributeValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR +
-                    ((ExpressionNode) node).getValue();
-        }
+        /*
+        If there is a domain and if the domain separator is not found in the attribute value, append the domain
+        with the domain separator in front of the new attribute value.
+         */
+        attributeValue = UserCoreUtil.addDomainToName(((ExpressionNode) node).getValue(), domainName);
 
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
@@ -1539,7 +1537,7 @@ public class SCIMUserManager implements UserManager {
             return users;
         } catch (UserStoreException e) {
             String errorMessage = String.format("Error while filtering the users for filter with attribute name: "
-                            + "%s, filter operation: %s and attribute value: %s. ", attributeName, filterOperation,
+                            + "%s, filter operation: %s and attribute value: %s.", attributeName, filterOperation,
                     attributeValue);
             throw resolveError(e, errorMessage);
         }
@@ -5072,7 +5070,7 @@ public class SCIMUserManager implements UserManager {
         // Iterate through received hybrid roles and filter out specific hybrid role
         // domain(Application or Internal) values.
         for (String hybridRole : hybridRoles) {
-            if (domainInAttributeValue != null && !hybridRole.toUpperCase().startsWith(domainInAttributeValue.toUpperCase())) {
+            if (domainInAttributeValue != null && !hybridRole.toLowerCase().startsWith(domainInAttributeValue.toLowerCase())) {
                 continue;
             }
             if (hybridRole.toLowerCase().startsWith(SCIMCommonConstants.INTERNAL_DOMAIN.toLowerCase()) || hybridRole
