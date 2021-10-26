@@ -43,7 +43,9 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
             String msg = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim();
             return new SCIMUserStoreException(msg, HttpStatus.SC_NOT_FOUND);
         } else if (e.getMessage().contains(ERROR_CODE_EXISTING_ROLE_NAME)) {
-            String msg = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim();
+            String groupName = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim().split(" ")[0];
+            String msg =
+                    "Group name: " + groupName + " is already there in the system. Please pick another group name.";
             return new SCIMUserStoreException(msg, HttpStatus.SC_CONFLICT);
         } else if (e.getMessage().contains(ERROR_CODE_READ_ONLY_USERSTORE)) {
             String msg = "Invalid operation. User store is read only";
