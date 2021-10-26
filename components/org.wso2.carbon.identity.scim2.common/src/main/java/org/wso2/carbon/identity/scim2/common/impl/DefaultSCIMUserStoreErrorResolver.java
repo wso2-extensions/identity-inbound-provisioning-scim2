@@ -34,6 +34,7 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
 
     private static final String ERROR_CODE_READ_ONLY_USERSTORE = "30002";
     private static final String ERROR_CODE_USER_NOT_FOUND = "30007";
+    private static final String ERROR_CODE_EXISTING_ROLE_NAME = "30012";
 
     @Override
     public SCIMUserStoreException resolve(UserStoreException e) {
@@ -41,6 +42,9 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
         if (e.getMessage().contains(ERROR_CODE_USER_NOT_FOUND)) {
             String msg = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim();
             return new SCIMUserStoreException(msg, HttpStatus.SC_NOT_FOUND);
+        } else if (e.getMessage().contains(ERROR_CODE_EXISTING_ROLE_NAME)) {
+            String msg = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim();
+            return new SCIMUserStoreException(msg, HttpStatus.SC_CONFLICT);
         } else if (e.getMessage().contains(ERROR_CODE_READ_ONLY_USERSTORE)) {
             String msg = "Invalid operation. User store is read only";
             return new SCIMUserStoreException(msg, HttpStatus.SC_BAD_REQUEST);
