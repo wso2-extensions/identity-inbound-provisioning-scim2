@@ -47,7 +47,10 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
             String msg =
                     "Group name: " + groupName + " is already there in the system. Please pick another group name.";
             return new SCIMUserStoreException(msg, HttpStatus.SC_CONFLICT);
-        } else if (e.getMessage().contains(ERROR_CODE_READ_ONLY_USERSTORE)) {
+        } else if (e.getMessage().contains(ERROR_CODE_READ_ONLY_USERSTORE) ||
+                (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
+                        .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_READONLY_USER_STORE.getCode(),
+                                ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode()))) {
             String msg = "Invalid operation. User store is read only";
             return new SCIMUserStoreException(msg, HttpStatus.SC_BAD_REQUEST);
         } else if (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
