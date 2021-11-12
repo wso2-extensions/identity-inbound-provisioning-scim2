@@ -23,6 +23,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.MDC;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
@@ -45,6 +46,7 @@ import javax.ws.rs.core.Response;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
 
@@ -57,6 +59,33 @@ public class SupportUtils {
 
     private SupportUtils() {}
 
+    public static final String CORRELATION_ID_MDC = "Correlation-ID";
+    public static final String TRACE_ID = "traceId";
+
+    /**
+     * Check whether correlation id present in the log MDC
+     *
+     * @return whether the correlation id is present
+     */
+    public static boolean isCorrelationIDPresent() {
+        return MDC.get(CORRELATION_ID_MDC) != null;
+    }
+
+    /**
+     * Get correlation id of current thread
+     *
+     * @return correlation-id
+     */
+    public static String getCorrelation() {
+        String ref;
+        if (isCorrelationIDPresent()) {
+            ref = MDC.get(CORRELATION_ID_MDC).toString();
+        } else {
+            ref = UUID.randomUUID().toString();
+
+        }
+        return ref;
+    }
     /**
      * build the jaxrs response
      * @param scimResponse
@@ -73,6 +102,12 @@ public class SupportUtils {
                 responseBuilder.header(entry.getKey(), entry.getValue());
             }
         }
+
+        // Checking whether it is a error response.
+        if (String.valueOf(scimResponse.getResponseStatus()).charAt(0) != '2') {
+            responseBuilder.header(TRACE_ID,getCorrelation());
+        }
+
         //set the payload of the response, if available.
         if (scimResponse.getResponseMessage() != null) {
             responseBuilder.entity(scimResponse.getResponseMessage());
