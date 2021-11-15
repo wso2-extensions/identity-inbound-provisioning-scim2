@@ -121,6 +121,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isNoti
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForGroupNamesInGroupsResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForUsernamesAndGroupNamesInResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
+import static org.wso2.carbon.user.core.UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI;
 
 public class SCIMUserManager implements UserManager {
 
@@ -1776,7 +1777,7 @@ public class SCIMUserManager implements UserManager {
      */
     private List<Object> getMultiAttributeFilteredUsers(Node node, Map<String, Boolean> requiredAttributes, int offset,
                                                         int limit, String sortBy, String sortOrder, String domainName)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         List<Object> filteredUsers = new ArrayList<>();
         // 0th index is to store total number of results.
@@ -1784,14 +1785,14 @@ public class SCIMUserManager implements UserManager {
         Set<org.wso2.carbon.user.core.common.User> users;
         // Handle pagination.
         if (limit > 0) {
-            users = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit, sortBy, sortOrder, domainName);
+            users = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit, sortBy, sortOrder, domainName, true);
             filteredUsers.set(0, users.size());
             filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
         } else {
             int maxLimit = getMaxLimit(domainName);
             if (StringUtils.isNotEmpty(domainName)) {
                 users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy,
-                        sortOrder, domainName);
+                        sortOrder, domainName, false);
                 filteredUsers.set(0, users.size());
                 filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
             } else {
@@ -1802,7 +1803,7 @@ public class SCIMUserManager implements UserManager {
                     if (carbonUM instanceof AbstractUserStoreManager) {
                         domainName = carbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
                         users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit,
-                                sortBy, sortOrder, domainName);
+                                sortBy, sortOrder, domainName, false);
                         totalUserCount += users.size();
                         filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
                     }
@@ -1989,8 +1990,8 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException
      */
     private Set<org.wso2.carbon.user.core.common.User> getFilteredUsersFromMultiAttributeFiltering(Node node,
-            int offset, int limit, String sortBy, String sortOrder, String domainName)
-            throws CharonException {
+            int offset, int limit, String sortBy, String sortOrder, String domainName, Boolean paginationRequested)
+            throws CharonException, BadRequestException {
 
         Set<org.wso2.carbon.user.core.common.User> coreUsers;
 
@@ -2008,7 +2009,11 @@ public class SCIMUserManager implements UserManager {
             } else {
                 coreUsers = new LinkedHashSet<>();
             }
-            coreUsers.addAll(carbonUM.getUserListWithID(getCondition(node, attributes), domainName,
+            Condition condition = getCondition(node, attributes);
+            if (paginationRequested) {
+                checkForPaginationSupport(condition);
+            }
+            coreUsers.addAll(carbonUM.getUserListWithID(condition, domainName,
                     UserCoreConstants.DEFAULT_PROFILE, limit, offset, sortBy, sortOrder));
             return coreUsers;
         } catch (UserStoreException e) {
@@ -5153,5 +5158,93 @@ public class SCIMUserManager implements UserManager {
             return UserCoreUtil.removeDomainFromName(roleName);
         }
         return roleName;
+    }
+
+    /**
+     * Extract filter expressions form the condition as a list.
+     *
+     * @param condition            condition.
+     * @param expressionConditions list of expression conditions.
+     */
+    private void getExpressionConditions(Condition condition, List<ExpressionCondition> expressionConditions) {
+
+        if (condition instanceof ExpressionCondition) {
+            ExpressionCondition expressionCondition = (ExpressionCondition) condition;
+            if (isConditionExist(expressionCondition)) {
+                expressionConditions.add(expressionCondition);
+            }
+        } else if (condition instanceof OperationalCondition) {
+            Condition leftCondition = ((OperationalCondition) condition).getLeftCondition();
+            getExpressionConditions(leftCondition, expressionConditions);
+            Condition rightCondition = ((OperationalCondition) condition).getRightCondition();
+            getExpressionConditions(rightCondition, expressionConditions);
+        }
+    }
+
+    private boolean isConditionExist(ExpressionCondition expressionCondition) {
+
+        if (StringUtils.isNotEmpty(expressionCondition.getAttributeName()) ||
+                StringUtils.isNotEmpty(expressionCondition.getAttributeValue()) ||
+                StringUtils.isNotEmpty(expressionCondition.getOperation())) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check whether the pagination support is enabled for filter requests that have both identity and default claims.
+     *
+     * @param condition Condition object.
+     * @return true if contains identity claims, false otherwise.
+     */
+    private void checkForPaginationSupport(Condition condition) throws UserStoreException, BadRequestException {
+
+        List<ExpressionCondition> expressionConditions = new ArrayList<>();
+        getExpressionConditions(condition, expressionConditions);
+        Boolean hasBothIdentityClaimAndDefaultClaims =
+                hasBothIdentityClaimAndDefaultClaims(expressionConditions);
+        Boolean paginationEnabled = Boolean.parseBoolean(
+                IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_COMPLEX_MULTI_ATTRIBUTE_FILTERING_ENABLED));
+        if (hasBothIdentityClaimAndDefaultClaims && !paginationEnabled) {
+            String errorMessage =
+                    "Pagination support is not enabled for multi attribute filtering with both identity claims and default claims";
+            throw new BadRequestException(errorMessage);
+        }
+    }
+
+    /**
+     * Check whether the filter has both identity and default claims.
+     *
+     * @param expressionConditions List of expression conditions.
+     */
+    private Boolean hasBothIdentityClaimAndDefaultClaims(List<ExpressionCondition> expressionConditions)
+            throws org.wso2.carbon.user.core.UserStoreException {
+
+        int identityClaimsCount = 0;
+        try {
+            List<LocalClaim> claimMapping1 = claimMetadataManagementService.getLocalClaims(tenantDomain);
+            for (ExpressionCondition expressionCondition : expressionConditions) {
+                List<LocalClaim> mappedClaim =
+                        claimMapping1.stream()
+                                .filter(mapping -> mapping.getMappedAttributes().get(0).getAttributeName() ==
+                                        expressionCondition.getAttributeName()).collect(Collectors.toList());
+                //Obtaining relevant URI for the mapped attribute.
+                if (mappedClaim.size() == 1) {
+                    String tempClaimURI = mappedClaim.get(0).getClaimURI();
+                    //Check if the claimURI are of type 'identity claims'.
+                    if (tempClaimURI.contains(IDENTITY_CLAIM_URI)) {
+                        identityClaimsCount += 1;
+                    }
+                }
+            }
+        } catch (ClaimMetadataException e) {
+            throw new org.wso2.carbon.user.core.UserStoreException(
+                    "Error occurred while checking the existence of identity claim filters from the expression nodes.",
+                    e);
+        }
+        if (identityClaimsCount > 0 && expressionConditions.size() != identityClaimsCount) {
+            return true;
+        }
+        return false;
     }
 }
