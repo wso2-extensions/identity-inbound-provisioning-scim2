@@ -5206,8 +5206,8 @@ public class SCIMUserManager implements UserManager {
         Boolean paginationEnabled = Boolean.parseBoolean(
                 IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_COMPLEX_MULTI_ATTRIBUTE_FILTERING_ENABLED));
         if (hasBothIdentityClaimAndDefaultClaims && !paginationEnabled) {
-            String errorMessage =
-                    "Pagination support is not enabled for multi attribute filtering with both identity claims and default claims";
+            String errorMessage = "Pagination support is not enabled for multi attribute filtering with both identity" +
+                    " claims and default claims";
             throw new BadRequestException(errorMessage);
         }
     }
