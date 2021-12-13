@@ -1262,11 +1262,10 @@ public class SCIMUserManager implements UserManager {
             if (isUseLegacyAPIs(limit)) {
                 users = filterUsersUsingLegacyAPIs(node, limit, offset, domainName);
             } else {
+                int maxLimit = getMaxLimit(domainName);
                 users = filterUsers(node, offset, limit, sortBy, sortOrder, domainName);
-            }
-            if (limit > 0 || offset != 1) {
                 // Get total users based on the filter query without depending on pagination params.
-                totalResults += filterUsersUsingLegacyAPIs(node, 0, 1, domainName).size();
+                totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
             }
 
         } catch (NotImplementedException e) {
