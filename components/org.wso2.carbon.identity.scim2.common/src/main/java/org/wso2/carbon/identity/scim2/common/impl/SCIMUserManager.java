@@ -3399,7 +3399,7 @@ public class SCIMUserManager implements UserManager {
 
     private Set<String> getMemberValuesFromUserstore(Set<String> memberUsernames, String userStoreDomainOfGroup,
                                                      String displayName) throws IdentitySCIMException,
-            org.wso2.carbon.user.core.UserStoreException {
+            org.wso2.carbon.user.core.UserStoreException, BadRequestException {
 
         Set<String> memberUserIds = new HashSet<>();
         for (String userName : memberUsernames) {
@@ -3430,7 +3430,7 @@ public class SCIMUserManager implements UserManager {
             if (StringUtils.isEmpty(userId)) {
                 String error = "User: " + userName + " doesn't exist in the user store. Hence can not update the " +
                         "group: " + displayName;
-                throw new IdentitySCIMException(error);
+                throw new BadRequestException(error);
             }
             memberUserIds.add(userId);
         }
