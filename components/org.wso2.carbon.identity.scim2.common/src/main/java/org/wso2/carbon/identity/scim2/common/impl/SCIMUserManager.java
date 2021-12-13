@@ -1255,19 +1255,28 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException(errorMessage);
         }
         domainName = resolveDomainName(domainName, node);
+        int totalResults = 0;
         try {
             // Check which APIs should the filter needs to follow.
+
             if (isUseLegacyAPIs(limit)) {
                 users = filterUsersUsingLegacyAPIs(node, limit, offset, domainName);
             } else {
                 users = filterUsers(node, offset, limit, sortBy, sortOrder, domainName);
             }
+            if (limit > 0 || offset != 1) {
+                // Get total users based on the filter query without depending on pagination params.
+                totalResults += filterUsersUsingLegacyAPIs(node, 0, 1, domainName).size();
+            }
+
         } catch (NotImplementedException e) {
             String errorMessage = String.format("System does not support filter operator: %s", node.getOperation());
             throw new CharonException(errorMessage, e);
         }
-
-        return getDetailedUsers(users, requiredAttributes);
+        if (totalResults == 0) {
+            totalResults = users.size();
+        }
+        return getDetailedUsers(users, requiredAttributes, totalResults);
     }
 
     /**
@@ -1747,7 +1756,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error in retrieving user details
      */
     private List<Object> getDetailedUsers(Set<org.wso2.carbon.user.core.common.User> coreUsers,
-                                          Map<String, Boolean> requiredAttributes)
+                                          Map<String, Boolean> requiredAttributes, int totalUsers)
             throws CharonException {
 
         List<Object> filteredUsers = new ArrayList<>();
@@ -1755,7 +1764,7 @@ public class SCIMUserManager implements UserManager {
         filteredUsers.add(0);
 
         // Set total number of filtered results.
-        filteredUsers.set(0, coreUsers.size());
+        filteredUsers.set(0, totalUsers);
 
         // Get details of the finalized user list.
         filteredUsers.addAll(getFilteredUserDetails(coreUsers, requiredAttributes));
@@ -1780,42 +1789,60 @@ public class SCIMUserManager implements UserManager {
             throws CharonException, BadRequestException {
 
         List<Object> filteredUsers = new ArrayList<>();
+        List<Object> filteredUserDetails = new ArrayList<>();
         // 0th index is to store total number of results.
         filteredUsers.add(0);
         Set<org.wso2.carbon.user.core.common.User> users;
+        int totalResults = 0;
         // Handle pagination.
         if (limit > 0) {
-            users = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit, sortBy, sortOrder, domainName, true);
-            filteredUsers.set(0, users.size());
-            filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
+            users = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit, sortBy, sortOrder, domainName,
+                    true);
+            filteredUserDetails = getFilteredUserDetails(users, requiredAttributes);
         } else {
-            int maxLimit = getMaxLimit(domainName);
-            if (StringUtils.isNotEmpty(domainName)) {
-                users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy,
-                        sortOrder, domainName, false);
-                filteredUsers.set(0, users.size());
-                filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
-            } else {
-                int totalUserCount = 0;
-                // If pagination and domain name are not given, then perform filtering on all available user stores.
-                while (carbonUM != null) {
-                    // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
-                    if (carbonUM instanceof AbstractUserStoreManager) {
-                        domainName = carbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
-                        users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit,
-                                sortBy, sortOrder, domainName, false);
-                        totalUserCount += users.size();
-                        filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
-                    }
-                    carbonUM = (AbstractUserStoreManager) carbonUM.getSecondaryUserStoreManager();
-                }
-                //set the total results
-                filteredUsers.set(0, totalUserCount);
-            }
+            filteredUserDetails = getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, offset, sortBy
+                    , sortOrder, domainName);
         }
+        if (limit > 0 || offset != 1) {
+            // Get total users based on the filter query.
+            totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, 1, sortBy, sortOrder,
+                    domainName).size();
+        }
+        if (totalResults == 0) {
+            totalResults = filteredUserDetails.size();
+        }
+        filteredUsers.set(0, totalResults);
+        filteredUsers.addAll(filteredUserDetails);
         return filteredUsers;
     }
 
+
+    private List<Object> getMultiAttributeFilteredUsersWithMaxLimit(Node node, Map<String, Boolean> requiredAttributes, int offset,
+                                                        String sortBy, String sortOrder, String domainName)
+            throws CharonException, BadRequestException {
+
+        List<Object> filteredUsers = new ArrayList<>();
+        Set<org.wso2.carbon.user.core.common.User> users;
+        int maxLimit = getMaxLimit(domainName);
+        if (StringUtils.isNotEmpty(domainName)) {
+            users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder, domainName
+                    , false);
+            return getFilteredUserDetails(users, requiredAttributes);
+        } else {
+            // If pagination and domain name are not given, then perform filtering on all available user stores.
+            while (carbonUM != null) {
+                // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
+                if (carbonUM instanceof AbstractUserStoreManager) {
+                    domainName = carbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
+                    users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder,
+                            domainName, false);
+                    filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
+                }
+                carbonUM = (AbstractUserStoreManager) carbonUM.getSecondaryUserStoreManager();
+            }
+            return filteredUsers;
+        }
+    }
     /**
      * Get maximum user limit to retrieve.
      *
