@@ -116,6 +116,7 @@ public class SCIMCommonConstants {
     public static final String MOBILE_LOCAL_CLAIM = "http://wso2.org/claims/mobile";
     public static final String GROUPS_LOCAL_CLAIM = "http://wso2.org/claims/groups";
     public static final String PROP_REG_EX = "RegEx";
+    public static final String PROP_READ_ONLY = "ReadOnly";
     public static final String PROP_REG_EX_VALIDATION_ERROR = "RegExValidationError";
     public static final String PROP_DISPLAYNAME = "DisplayName";
     public static final String DOB_REG_EX_VALIDATION_DEFAULT_ERROR =
@@ -162,7 +163,9 @@ public class SCIMCommonConstants {
                 "The user: %s has been JIT provisioned from federated IDP: %s. " +
                         "Hence provisioned user attributes are not allowed to update"),
         ERROR_CODE_REGEX_VIOLATION("SUO-10001", "Regex validation error",
-                "%s attribute value doesn't match with %s regex pattern");
+                "%s attribute value doesn't match with %s regex pattern"),
+        ERROR_CODE_READONLY_CLAIM_UPDATE("SUO-10002", "Read-only attribute update is not allowed",
+                "%s attribute is a readonly attribute. Hence attribute value update is not allowed.");
 
         private final String code;
         private final String message;
