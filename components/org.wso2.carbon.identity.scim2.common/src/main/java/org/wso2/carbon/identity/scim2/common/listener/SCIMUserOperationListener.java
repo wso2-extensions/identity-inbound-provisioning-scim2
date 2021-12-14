@@ -222,7 +222,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 .RESOURCE_TYPE_URI);
         // Skip metadata attributes and identity claims, as they are updating by the server itself.
         if (claimURI.equals(createdLocalClaimUri) || claimURI.equals(modifiedLocalClaimUri) ||
-                claimURI.equals(resourceTypeLocalClaimUri) || !isIdentityClaimUpdate(claimURI)) {
+                claimURI.equals(resourceTypeLocalClaimUri) || isIdentityClaimUpdate(claimURI)) {
             return false;
         }
         return MapUtils.isNotEmpty(claimProperties) && Boolean.parseBoolean(claimProperties.get(PROP_READ_ONLY));
