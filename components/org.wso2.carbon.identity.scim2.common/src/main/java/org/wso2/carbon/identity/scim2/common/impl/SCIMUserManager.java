@@ -84,6 +84,7 @@ import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
+import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.schema.SCIMDefinitions;
 import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
@@ -4793,8 +4794,8 @@ public class SCIMUserManager implements UserManager {
                 getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT, tenantDomain);
 
         Map<String, Attribute> filteredFlatAttributeMap = getFilteredUserSchemaAttributes(scimClaimToLocalClaimMap);
-        Map<String, Attribute> hierarchicalAttributeMap = buildHierarchicalAttributeMap(filteredFlatAttributeMap);
-
+        Map<String, Attribute> hierarchicalAttributeMap = buildHierarchicalAttributeMapForStandardSchema
+                (filteredFlatAttributeMap);
         List<Attribute> userSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
         if (log.isDebugEnabled()) {
             logSchemaAttributes(userSchemaAttributesList);
@@ -4821,7 +4822,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredEnterpriseUserSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMap(filteredAttributeMap);
+                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap);
 
             enterpriseUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -4905,7 +4906,7 @@ public class SCIMUserManager implements UserManager {
 
             if (isSupportedByDefault(mappedLocalClaim) || isUsernameClaim(scimClaim)) {
                 // Return only the schema of supported-by-default claims and the username claim.
-                Attribute schemaAttribute = getSchemaAttributes(scimClaim, mappedLocalClaim);
+                Attribute schemaAttribute = getSchemaAttributes(scimClaim, mappedLocalClaim, false);
                 filteredFlatAttributeMap.put(schemaAttribute.getName(), schemaAttribute);
             }
         }
@@ -4918,7 +4919,7 @@ public class SCIMUserManager implements UserManager {
 
         return scimClaimToLocalClaimMap.entrySet().stream()
                 .filter(entry -> isSupportedByDefault(entry.getValue()))
-                .map(e -> getSchemaAttributes(e.getKey(), e.getValue()))
+                .map(e -> getSchemaAttributes(e.getKey(), e.getValue(), true))
                 .collect(Collectors.toMap(attr -> attr.getName(), Function.identity()));
     }
 
@@ -4938,9 +4939,11 @@ public class SCIMUserManager implements UserManager {
      *
      * @param scimClaim
      * @param mappedLocalClaim
+     * @param isEnterpriseExtensionAttr
      * @return
      */
-    private Attribute getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim) {
+    private Attribute getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim,
+                                          boolean isEnterpriseExtensionAttr) {
 
         String name = scimClaim.getClaimURI();
         if (name.startsWith(scimClaim.getClaimDialectURI())) {
@@ -4954,7 +4957,7 @@ public class SCIMUserManager implements UserManager {
             attribute = new SimpleAttribute(name, null);
         }
 
-        pupulateBasicAttributes(mappedLocalClaim, attribute);
+        pupulateBasicAttributes(mappedLocalClaim, attribute, isEnterpriseExtensionAttr);
 
         return attribute;
     }
@@ -5002,8 +5005,10 @@ public class SCIMUserManager implements UserManager {
      *
      * @param mappedLocalClaim
      * @param attribute
+     * @param isEnterpriseExtensionAttr
      */
-    private void pupulateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute) {
+    private void pupulateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute,
+                                         boolean isEnterpriseExtensionAttr) {
 
         if (mappedLocalClaim != null) {
             attribute.setDescription(mappedLocalClaim.getClaimProperty(ClaimConstants.DESCRIPTION_PROPERTY));
@@ -5023,6 +5028,14 @@ public class SCIMUserManager implements UserManager {
         attribute.setCaseExact(false);
         if (attribute instanceof ComplexAttribute) {
             attribute.setType(SCIMDefinitions.DataType.COMPLEX);
+        } else if (isEnterpriseExtensionAttr) {
+            AttributeSchema attributeSchema = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getSubAttributeSchema(attribute.getName());
+            if (attributeSchema != null && attributeSchema.getType() != null) {
+                attribute.setType(attributeSchema.getType());
+            } else {
+                attribute.setType(SCIMDefinitions.DataType.STRING);
+            }
         } else {
             attribute.setType(SCIMDefinitions.DataType.STRING);
         }
@@ -5043,12 +5056,40 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
+     * Builds complex attribute schema for default user schema with correct sub attributes using the flat attribute map.
+     *
+     * @param filteredFlatAttributeMap
+     * @return
+     */
+    private Map<String, Attribute> buildHierarchicalAttributeMapForEnterpriseSchema(Map<String, Attribute>
+                                                                                            filteredFlatAttributeMap)
+            throws CharonException {
+
+        return buildHierarchicalAttributeMap(filteredFlatAttributeMap, true);
+    }
+
+    /**
+     * Builds complex attribute schema for enterprise user schema with correct sub attributes using the flat attribute
+     * map.
+     *
+     * @param filteredFlatAttributeMap
+     * @return
+     */
+    private Map<String, Attribute> buildHierarchicalAttributeMapForStandardSchema(Map<String, Attribute>
+                                                                                          filteredFlatAttributeMap)
+            throws CharonException {
+
+        return buildHierarchicalAttributeMap(filteredFlatAttributeMap, false);
+    }
+
+    /**
      * Builds complex attribute schema with correct sub attributes using the flat attribute map.
      *
      * @param filteredFlatAttributeMap
      * @return
      */
-    private Map<String, Attribute> buildHierarchicalAttributeMap(Map<String, Attribute> filteredFlatAttributeMap)
+    private Map<String, Attribute> buildHierarchicalAttributeMap(Map<String, Attribute> filteredFlatAttributeMap,
+                                                                 boolean isEnterpriseExtensionAttr)
             throws CharonException {
 
         Map<String, Attribute> simpleAttributeMap = new HashMap<>();
@@ -5060,7 +5101,7 @@ public class SCIMUserManager implements UserManager {
 
             if (attributeName.contains(".")) {
                 ComplexAttribute parentAttribute = handleSubAttribute(attribute, filteredFlatAttributeMap,
-                        complexAttributeMap);
+                        complexAttributeMap, isEnterpriseExtensionAttr);
                 complexAttributeMap.put(parentAttribute.getName(), parentAttribute);
             } else {
                 simpleAttributeMap.put(attributeName, attribute);
@@ -5080,7 +5121,8 @@ public class SCIMUserManager implements UserManager {
      * @return
      */
     private ComplexAttribute handleSubAttribute(Attribute attribute, Map<String, Attribute> flatAttributeMap,
-                                                Map<String, ComplexAttribute> complexAttributeMap)
+                                                Map<String, ComplexAttribute> complexAttributeMap,
+                                                boolean isEnterpriseExtensionAttr)
             throws CharonException {
 
         String attributeName = attribute.getName();
@@ -5095,7 +5137,7 @@ public class SCIMUserManager implements UserManager {
 
         if (parentAttribute == null) {
             parentAttribute = new ComplexAttribute(parentAttributeName);
-            pupulateBasicAttributes(null, parentAttribute);
+            pupulateBasicAttributes(null, parentAttribute, isEnterpriseExtensionAttr);
             complexAttributeMap.put(parentAttributeName, parentAttribute);
         }
 
