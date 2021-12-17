@@ -103,11 +103,6 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
             for (Map.Entry<String, String> claim : claims.entrySet()) {
                 Map<String, String> claimProperties = getClaimProperties(tenantDomain, claim.getKey());
-                // Validate whether a readonly attribute is updating.
-                if (isReadOnlyAttribute(claim.getKey(), claimProperties)) {
-                    throw new UserStoreClientException(ERROR_CODE_READONLY_CLAIM_UPDATE.getMessage(),
-                            ERROR_CODE_READONLY_CLAIM_UPDATE.getCode());
-                }
                 // Validate claim value against the regex.
                 validateClaimValue(claim.getKey(), claimProperties, claim.getValue());
             }
