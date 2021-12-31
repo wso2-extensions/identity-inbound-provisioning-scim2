@@ -4454,7 +4454,7 @@ public class SCIMUserManager implements UserManager {
                 claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI)) ||
                 claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) ||
                 claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI)) ||
-                claim.contains(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI);
+                claim.startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI + "/");
     }
 
     /**
@@ -4595,7 +4595,18 @@ public class SCIMUserManager implements UserManager {
         // Remove user claims.
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
             if (!isImmutableClaim(entry.getKey())) {
-                carbonUM.deleteUserClaimValueWithID(user.getId(), entry.getKey(), null);
+                {
+                    try {
+                        carbonUM.deleteUserClaimValueWithID(user.getId(), entry.getKey(), null);
+                    } catch (org.wso2.carbon.user.core.UserStoreException e) {
+                        if (!entry.getKey().startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI + "/") &&
+                                entry.getKey().startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI)) {
+                            if (log.isDebugEnabled()) {
+                                log.debug(e);
+                            }
+                        }
+                    }
+                }
             }
         }
 
