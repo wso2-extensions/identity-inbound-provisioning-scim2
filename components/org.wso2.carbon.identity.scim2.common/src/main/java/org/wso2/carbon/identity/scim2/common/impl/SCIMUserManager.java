@@ -4595,18 +4595,7 @@ public class SCIMUserManager implements UserManager {
         // Remove user claims.
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
             if (!isImmutableClaim(entry.getKey())) {
-                {
-                    try {
-                        carbonUM.deleteUserClaimValueWithID(user.getId(), entry.getKey(), null);
-                    } catch (org.wso2.carbon.user.core.UserStoreException e) {
-                        if (!entry.getKey().startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI + "/") &&
-                                entry.getKey().startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI)) {
-                            if (log.isDebugEnabled()) {
-                                log.debug(e);
-                            }
-                        }
-                    }
-                }
+                carbonUM.deleteUserClaimValueWithID(user.getId(), entry.getKey(), null);
             }
         }
 
