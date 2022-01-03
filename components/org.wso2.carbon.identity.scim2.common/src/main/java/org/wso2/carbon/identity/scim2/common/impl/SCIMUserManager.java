@@ -116,6 +116,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.URL_SEPERATOR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilteringEnhancementsEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isNotifyUserstoreStatusEnabled;
@@ -4454,7 +4455,7 @@ public class SCIMUserManager implements UserManager {
                 claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI)) ||
                 claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) ||
                 claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI)) ||
-                claim.startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI + "/");
+                claim.startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI + URL_SEPERATOR);
     }
 
     /**
