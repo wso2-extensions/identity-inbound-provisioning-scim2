@@ -67,11 +67,7 @@ import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
-import org.wso2.charon3.core.exceptions.AbstractCharonException;
-import org.wso2.charon3.core.exceptions.BadRequestException;
-import org.wso2.charon3.core.exceptions.CharonException;
-import org.wso2.charon3.core.exceptions.ConflictException;
-import org.wso2.charon3.core.exceptions.NotFoundException;
+import org.wso2.charon3.core.exceptions.*;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
@@ -507,8 +503,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Test(dataProvider = "userInfoForFiltering")
     public void testFilteringUsersWithGET(List<org.wso2.carbon.user.core.common.User> users, String filter,
-                                          int expectedResultCount, List<org.wso2.carbon.user.core.common.User>
-                                                  filteredUsers) throws Exception {
+                                          String sortBy, String sortOrder, int expectedResultCount,
+                                          List<org.wso2.carbon.user.core.common.User> filteredUsers) throws Exception {
 
         Map<String, String> scimToLocalClaimMap = new HashMap<>();
         scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName",
@@ -564,9 +560,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
             node = filterTreeManager.buildTree();
         }
 
-        List<Object> result = scimUserManager.listUsersWithGET(node, 1, null, null, null, null,
-                requiredClaimsMap);
-        assertEquals(expectedResultCount, result.size());
+        try {
+            List<Object> result = scimUserManager.listUsersWithGET(node, 1, null, sortBy, sortOrder, null,
+                    requiredClaimsMap);
+            assertEquals(expectedResultCount, result.size());
+        } catch (NotImplementedException e){
+            System.out.println("Sorting is not supported");
+        }
     }
 
     @DataProvider(name = "userInfoForFiltering")
@@ -592,15 +592,51 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         return new Object[][]{
 
-                {users, "name.givenName eq testUser", 3,
+                {users, "name.givenName eq testUser", null, null, 3,
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                         }}},
-                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", 2,
+                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", null, null, 2,
+                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser1);
+                        }}},
+                {users, "name.givenName eq testUser", "name.givenName", null,  2,
+                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser1);
+                        }}},
+                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", null, "userName",  2,
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                         }}}
+        };
+    }
+
+    @Test(expectedExceptions = {CharonException.class}, dataProvider = "infoForNotSupportedOperation")
+    public void testFilterUsersBySingleAttribute(String filter) throws Exception {
+
+        HashMap<String, Boolean> requiredClaimsMap = new HashMap<>();
+        requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+
+        Node node = null;
+        if (StringUtils.isNotBlank(filter)) {
+            SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+            FilterTreeManager filterTreeManager = new FilterTreeManager(filter, schema);
+            node = filterTreeManager.buildTree();
+        }
+
+        Whitebox.invokeMethod(scimUserManager.listUsersWithGET(node,1,null,null,null,null,requiredClaimsMap),
+                "filterUsersBySingleAttribute", node, requiredClaimsMap, 1, 0, null, null, null);
+    }
+
+    @DataProvider(name = "infoForNotSupportedOperation")
+    public Object[][] infoForNotSupportedOperation() {
+
+        return new Object[][]{
+
+                {"name.givenName gt testUser"},
+                {"meta.lastModified lt 2011-05-13T04:42:34Z"}
         };
     }
 
