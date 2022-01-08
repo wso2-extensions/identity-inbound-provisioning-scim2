@@ -539,24 +539,21 @@ public class SCIMUserManager implements UserManager {
         if (StringUtils.isNotEmpty(domainName)) {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName);
+                totalUsers = getTotalUsers(domainName);
             } else {
                 coreUsers = listUsernamesUsingLegacyAPIs(domainName);
-            }
-            if (isJDBCUSerStore(domainName)) {
-                totalUsers = getTotalUsers(domainName);
+                if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                    totalUsers = getTotalUsers(domainName);
+                }
             }
         } else {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernamesAcrossAllDomains(offset, limit, sortBy, sortOrder);
-
+                totalUsers += getTotalUsersFromAllUserStores();
             } else {
                 coreUsers = listUsernamesAcrossAllDomainsUsingLegacyAPIs();
-            }
-            String[] userStoreDomainNames = getDomainNames();
-            boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
-            if (canCountTotalUserCount) {
-                for (String userStoreDomainName : userStoreDomainNames) {
-                    totalUsers += getTotalUsers(userStoreDomainName);
+                if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                    totalUsers += getTotalUsersFromAllUserStores();
                 }
             }
         }
@@ -580,6 +577,19 @@ public class SCIMUserManager implements UserManager {
             users.addAll(scimUsers); // Set user details from index 1.
         }
         return users;
+    }
+
+    private long getTotalUsersFromAllUserStores() throws CharonException {
+
+        long totalUsers = 0;
+        String[] userStoreDomainNames = getDomainNames();
+        boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
+        if (canCountTotalUserCount) {
+            for (String userStoreDomainName : userStoreDomainNames) {
+                totalUsers += getTotalUsers(userStoreDomainName);
+            }
+        }
+        return totalUsers;
     }
 
     private boolean canCountTotalUserCount(String[] userStoreDomainNames) {
@@ -1267,15 +1277,16 @@ public class SCIMUserManager implements UserManager {
         int totalResults = 0;
         try {
             // Check which APIs should the filter needs to follow.
-
             if (isUseLegacyAPIs(limit)) {
                 users = filterUsersUsingLegacyAPIs(node, limit, offset, domainName);
+                if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                    return getDetailedUsers(users, requiredAttributes, users.size());
+                }
             } else {
                 users = filterUsers(node, offset, limit, sortBy, sortOrder, domainName);
-                // Get total users based on the filter query without depending on pagination params.
             }
             int maxLimit = getMaxLimit(domainName);
-            if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+            if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
                 if (StringUtils.isBlank(domainName)) {
                     String[] userStoreDomainNames = getDomainNames();
                     boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
@@ -1288,6 +1299,7 @@ public class SCIMUserManager implements UserManager {
                     maxLimit = getMaxLimitForTotalResults(domainName);
                 }
             }
+            // Get total users based on the filter query without depending on pagination params.
             totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
         } catch (NotImplementedException e) {
             String errorMessage = String.format("System does not support filter operator: %s", node.getOperation());
@@ -1299,7 +1311,7 @@ public class SCIMUserManager implements UserManager {
     private int getMaxLimitForTotalResults(String domainName) throws CharonException {
 
         int maxLimit = getMaxLimit(domainName);
-        if (isJDBCUSerStore(domainName) && SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+        if (isJDBCUSerStore(domainName) && !SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
             maxLimit = Math.toIntExact(getTotalUsers(domainName));
         }
         return maxLimit;
@@ -1852,16 +1864,19 @@ public class SCIMUserManager implements UserManager {
                     , false);
             return getFilteredUserDetails(users, requiredAttributes);
         } else {
+            AbstractUserStoreManager tempCarbonUM = carbonUM;
             // If pagination and domain name are not given, then perform filtering on all available user stores.
-            while (carbonUM != null) {
+            while (tempCarbonUM != null) {
                 // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
-                if (carbonUM instanceof AbstractUserStoreManager) {
-                    domainName = carbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
+                if (tempCarbonUM instanceof AbstractUserStoreManager) {
+                    domainName = tempCarbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
                     users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder,
                             domainName, false);
                     filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
                 }
-                carbonUM = (AbstractUserStoreManager) carbonUM.getSecondaryUserStoreManager();
+                // If secondary user store manager assigned to carbonUM then global variable carbonUM will contains the
+                // secondary user store manager.
+                tempCarbonUM = (AbstractUserStoreManager) tempCarbonUM.getSecondaryUserStoreManager();
             }
             return filteredUsers;
         }
