@@ -407,6 +407,18 @@ public class SCIMCommonUtils {
     }
 
     /**
+     * Checks whether the identity.xml config is available to consider max user limit for total results.If that property
+     * enabled, then this will return true.
+     *
+     * @return whether 'ConsiderMaxLimitForTotalResult' property is enabled in identity.xml.
+     */
+    public static boolean isConsiderMaxLimitForTotalResultEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_CONSIDER_MAX_LIMIT_FOR_TOTAL_RESULT));
+    }
+
+    /**
      * Checks whether the identity.xml config is available for prepending the 'PRIMARY/' in each role and
      * which belong to Primary domain in the response of Groups endpoints.
      *
