@@ -95,6 +95,8 @@ public class SCIMCommonConstants {
     public static final String SCIM_ENABLE_FILTERING_ENHANCEMENTS = "SCIM2.EnableFilteringEnhancements";
     public static final String SCIM_ENABLE_FILTER_USERS_AND_GROUPS_ONLY_FROM_PRIMARY_DOMAIN =
             "SCIM2.FilterUsersAndGroupsOnlyFromPrimaryDomain";
+    public static final String SCIM_ENABLE_CONSIDER_MAX_LIMIT_FOR_TOTAL_RESULT =
+            "SCIM2.ConsiderMaxLimitForTotalResult";
     public static final String SCIM_ENABLE_MANDATE_DOMAIN_FOR_GROUPNAMES_IN_GROUPS_RESPONSE =
             "SCIM2.MandateDomainForGroupNamesInGroupsResponse";
     public static final String SCIM_ENABLE_MANDATE_DOMAIN_FOR_USERNAMES_AND_GROUPNAMES_IN_RESPONSE =
