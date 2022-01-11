@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.lang.StringUtils;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -506,6 +508,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         };
     }
 
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
+
     @Test(dataProvider = "userInfoForFiltering")
     public void testFilteringUsersWithGET(List<org.wso2.carbon.user.core.common.User> users, String filter,
                                           String sortBy, String sortOrder, int expectedResultCount,
@@ -570,7 +575,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                     requiredClaimsMap);
             assertEquals(expectedResultCount, result.size());
         } catch (NotImplementedException e){
-            System.out.println("Sorting is not supported");
+            exception.expect(NotImplementedException.class);
+            exception.expectMessage("Sorting is not supported");
         }
     }
 
