@@ -105,6 +105,8 @@ public class SCIMCommonConstants {
     public static final String SCIM_NOTIFY_USERSTORE_STATUS = "SCIM2.NotifyUserstoreStatus";
     public static final String SCIM_2_REMOVE_DUPLICATE_USERS_IN_USERS_RESPONSE =
             "SCIM2.RemoveDuplicateUsersInUsersResponse";
+    public static final String SCIM2_COMPLEX_MULTI_ATTRIBUTE_FILTERING_ENABLED =
+            "SCIM2MultiAttributeFiltering.UsePagination";
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
