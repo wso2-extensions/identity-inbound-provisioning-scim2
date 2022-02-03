@@ -44,6 +44,8 @@ public class SCIMCommonConstants {
     public static final String CO = "co";
     public static final String SW = "sw";
     public static final String EW = "ew";
+    public static final String GE = "ge";
+    public static final String LE = "le";
 
     public static final String APPLICATION_DOMAIN = "Application";
     public static final String INTERNAL_DOMAIN = "Internal";
@@ -84,12 +86,18 @@ public class SCIMCommonConstants {
     public static final String SCIM_ENABLE_FILTERING_ENHANCEMENTS = "SCIM2.EnableFilteringEnhancements";
     public static final String SCIM_ENABLE_FILTER_USERS_AND_GROUPS_ONLY_FROM_PRIMARY_DOMAIN =
             "SCIM2.FilterUsersAndGroupsOnlyFromPrimaryDomain";
+    public static final String SCIM_ENABLE_CONSIDER_MAX_LIMIT_FOR_TOTAL_RESULT =
+            "SCIM2.ConsiderMaxLimitForTotalResult";
     public static final String SCIM_ENABLE_MANDATE_DOMAIN_FOR_GROUPNAMES_IN_GROUPS_RESPONSE =
             "SCIM2.MandateDomainForGroupNamesInGroupsResponse";
     public static final String SCIM_ENABLE_MANDATE_DOMAIN_FOR_USERNAMES_AND_GROUPNAMES_IN_RESPONSE =
             "SCIM2.MandateDomainForUsernamesAndGroupNamesInResponse";
     public static final String SCIM_RETURN_UPDATED_GROUP_IN_PATCH_RESPONSE = "SCIM2.ReturnUpdatedGroupInPatchResponse";
     public static final String SCIM_NOTIFY_USERSTORE_STATUS = "SCIM2.NotifyUserstoreStatus";
+    public static final String SCIM_2_REMOVE_DUPLICATE_USERS_IN_USERS_RESPONSE =
+            "SCIM2.RemoveDuplicateUsersInUsersResponse";
+    public static final String SCIM2_COMPLEX_MULTI_ATTRIBUTE_FILTERING_ENABLED =
+            "SCIM2MultiAttributeFiltering.UsePagination";
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";

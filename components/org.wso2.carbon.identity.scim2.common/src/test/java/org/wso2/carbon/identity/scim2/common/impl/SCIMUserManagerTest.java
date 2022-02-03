@@ -64,8 +64,10 @@ import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
+import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMAttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.schema.SCIMDefinitions;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 
 import java.util.ArrayList;
@@ -114,6 +116,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Mock
     private SCIMAttributeSchema mockedSCIMAttributeSchema;
+
+    @Mock
+    private AttributeSchema mockedAttributeSchema;
 
     @Mock
     private RealmConfiguration mockedRealmConfig;
@@ -608,6 +613,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockClaimMetadataManagementService.getLocalClaims(tenantDomain)).thenReturn(localClaimMap);
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(true);
+
+        SCIMUserSchemaExtensionBuilder sb = spy(new SCIMUserSchemaExtensionBuilder());
+        mockStatic(SCIMUserSchemaExtensionBuilder.class);
+        when(SCIMUserSchemaExtensionBuilder.getInstance()).thenReturn(sb);
+        when(sb.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
+        when(mockedSCIMAttributeSchema.getSubAttributeSchema(anyString())).thenReturn(mockedAttributeSchema);
+        when(mockedAttributeSchema.getType()).thenReturn(SCIMDefinitions.DataType.STRING);
 
         SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
                 tenantDomain);
