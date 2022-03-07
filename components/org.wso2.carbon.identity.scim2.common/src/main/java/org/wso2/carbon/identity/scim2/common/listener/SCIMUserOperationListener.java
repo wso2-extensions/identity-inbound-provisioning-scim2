@@ -69,6 +69,9 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PR
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
 
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.*;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
+
 /**
  * This is to perform SCIM related operation on User Operations.
  * For eg: when a user is created through UserAdmin API, we need to set some SCIM specific properties
@@ -313,7 +316,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
         claims.put(modifiedLocalClaimUri, lastModifiedDate);
 
-        // Validate dob and mobile value against the regex.
+        // Validate claim value against the regex.
         validateClaimValue(claims, userStoreManager);
         // Validate if the groups are updated.
         validateUserGroups(userID, claims, userStoreManager);
@@ -498,7 +501,9 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                             MOBILE_REGEX, MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
                     break;
                 default:
-                    validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, null, null);
+                    if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
+                        validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, DEFAULT_REGEX, null);
+                    }
             }
         }
     }
