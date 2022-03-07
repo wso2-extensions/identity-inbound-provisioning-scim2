@@ -2042,6 +2042,8 @@ public class SCIMUserManager implements UserManager {
                 conditionOperation = ExpressionOperation.GT.toString();
             } else if (SCIMCommonConstants.LT.equals(operation)) {
                 conditionOperation = ExpressionOperation.LT.toString();
+            } else if (SCIMCommonConstants.NE.equals(operation)) {
+                conditionOperation = ExpressionOperation.NE.toString();
             } else {
                 conditionOperation = operation;
             }

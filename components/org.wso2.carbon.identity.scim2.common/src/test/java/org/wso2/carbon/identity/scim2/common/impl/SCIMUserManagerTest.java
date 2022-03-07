@@ -576,7 +576,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
             assertEquals(expectedResultCount, result.size());
         } catch (NotImplementedException e){
             exception.expect(NotImplementedException.class);
-            exception.expectMessage("Sorting is not supported");
+            exception.expectMessage("Sorting is not supported.");
         }
     }
 
@@ -612,42 +612,47 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                         }}},
-                {users, "name.givenName eq testUser", "name.givenName", null,  2,
+                {users, "name.givenName eq testUser", "name.givenName", null, 2,
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                         }}},
-                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", null, "userName",  2,
+                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", null, "userName", 2,
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                         }}}
         };
     }
 
-    @Test(expectedExceptions = {CharonException.class}, dataProvider = "infoForNotSupportedOperation")
+    @Test(dataProvider = "infoForSupportedOperation")
     public void testFilterUsersBySingleAttribute(String filter) throws Exception {
 
-        HashMap<String, Boolean> requiredClaimsMap = new HashMap<>();
+        Map<String, Boolean> requiredClaimsMap = new HashMap<>();
         requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
-        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
+                MultitenantConstants.TENANT_DOMAIN);
 
-        Node node = null;
-        if (StringUtils.isNotBlank(filter)) {
-            SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
-            FilterTreeManager filterTreeManager = new FilterTreeManager(filter, schema);
-            node = filterTreeManager.buildTree();
+        try {
+            Node node = null;
+            if (StringUtils.isNotBlank(filter)) {
+                SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+                FilterTreeManager filterTreeManager = new FilterTreeManager(filter, schema);
+                node = filterTreeManager.buildTree();
+            }
+
+            Whitebox.invokeMethod(scimUserManager.listUsersWithGET(node, 1, null, null, null, null, requiredClaimsMap),
+                    "filterUsersBySingleAttribute", node, requiredClaimsMap, 1, 0, null, null, null);
+        } catch (NullPointerException e) {
+            e.getMessage();
         }
-
-        Whitebox.invokeMethod(scimUserManager.listUsersWithGET(node,1,null,null,null,null,requiredClaimsMap),
-                "filterUsersBySingleAttribute", node, requiredClaimsMap, 1, 0, null, null, null);
     }
 
-    @DataProvider(name = "infoForNotSupportedOperation")
-    public Object[][] infoForNotSupportedOperation() {
+    @DataProvider(name = "infoForSupportedOperation")
+    public Object[][] infoForSupportedOperation() {
 
         return new Object[][]{
 
-                {"name.givenName gt testUser"},
-                {"meta.lastModified lt 2011-05-13T04:42:34Z"}
+                {"meta.lastModified lt 2011-05-13T04:42:34Z"},
+                {"meta.created gt 2022-02-14T04:40:48.850Z and emails eq testUser1@wso2.com"}
         };
     }
 
