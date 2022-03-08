@@ -68,8 +68,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NO
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_DISPLAYNAME;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
-
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.*;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
 
 /**

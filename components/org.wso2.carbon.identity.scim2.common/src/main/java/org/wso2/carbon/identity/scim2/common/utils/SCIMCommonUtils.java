@@ -722,7 +722,7 @@ public class SCIMCommonUtils {
     /**
      * Checks whether the regex validation for user claim input is enabled.
      *
-     * @return True if enterprise user extension enabled.
+     * @return True if regex validation for user claims enabled.
      */
     public static boolean isRegexValidationForUserClaimEnabled() {
 
