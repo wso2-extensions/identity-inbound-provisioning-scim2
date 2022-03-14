@@ -99,8 +99,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
-            // Validate claim value against the regex.
-            validateClaimValue(claims, userStoreManager);
+            // Validate claim value against the regex if user claim input regex validation configuration is enabled.
+            if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
+                validateClaimValue(claims, userStoreManager);
+            }
             this.populateSCIMAttributes(userID, claims);
             return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -315,8 +317,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
         claims.put(modifiedLocalClaimUri, lastModifiedDate);
 
-        // Validate claim value against the regex.
-        validateClaimValue(claims, userStoreManager);
+        // Validate claim value against the regex if user claim input regex validation configuration is enabled.
+        if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
+            validateClaimValue(claims, userStoreManager);
+        }
         // Validate if the groups are updated.
         validateUserGroups(userID, claims, userStoreManager);
         return true;
@@ -500,9 +504,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                             MOBILE_REGEX, MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
                     break;
                 default:
-                    if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
-                        validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, DEFAULT_REGEX, null);
-                    }
+                    validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, DEFAULT_REGEX, null);
             }
         }
     }
