@@ -718,15 +718,4 @@ public class SCIMCommonUtils {
             return delimiter + attributeValue;
         }
     }
-
-    /**
-     * Checks whether the regex validation for user claim input is enabled.
-     *
-     * @return True if regex validation for user claims enabled.
-     */
-    public static boolean isRegexValidationForUserClaimEnabled() {
-
-        return Boolean.parseBoolean(IdentityUtil
-                .getProperty(SCIMCommonConstants.ENABLE_REGEX_VALIDATION_FOR_USER_CLAIM_INPUTS));
-    }
 }

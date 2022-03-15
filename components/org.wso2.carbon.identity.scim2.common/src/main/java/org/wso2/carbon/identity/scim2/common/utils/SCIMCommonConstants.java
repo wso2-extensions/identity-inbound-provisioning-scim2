@@ -80,7 +80,6 @@ public class SCIMCommonConstants {
     public static final String PAGINATION_DEFAULT_COUNT = "pagination-default-count";
     public static final String CUSTOM_USER_SCHEMA_ENABLED = "custom-user-schema-enabled";
     public static final String CUSTOM_USER_SCHEMA_URI = "custom-user-schema-uri";
-    public static final String ENABLE_REGEX_VALIDATION_FOR_USER_CLAIM_INPUTS = "UserClaimUpdate.EnableUserClaimInputRegexValidation";
 
     public static final java.lang.String ASK_PASSWORD_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:askPassword";
     public static final java.lang.String VERIFY_EMAIL_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:verifyEmail";
@@ -134,7 +133,6 @@ public class SCIMCommonConstants {
     public static final String MOBILE_REGEX =
             "^\\s*(?:\\+?(\\d{1,3}))?[-. (]*(\\d{3})?[-. )]*(\\d{3})?[-. ]*(\\d{4,6})(?: *x(\\d+))?\\s*$";
     public static final String ERROR_CODE_RESOURCE_LIMIT_REACHED = "ATS-10001";
-    public static final String DEFAULT_REGEX = "[^<>`'/]+";
 
     private static final Map<String, String> groupAttributeSchemaMap = new HashMap<>();
 
