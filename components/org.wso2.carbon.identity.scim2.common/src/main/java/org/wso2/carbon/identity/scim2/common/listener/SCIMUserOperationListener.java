@@ -55,19 +55,20 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.COMMON_REGEX_VALIDATION_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.GROUPS_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX_VALIDATION_DEFAULT_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_DISPLAYNAME;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.COMMON_REGEX_VALIDATION_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.GROUPS_LOCAL_CLAIM;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_DISPLAYNAME;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
 
 /**
  * This is to perform SCIM related operation on User Operations.
@@ -97,8 +98,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
-            // Validate claim value against the regex.
-            validateClaimValue(claims, userStoreManager);
+            // Validate claim value against the regex if user claim input regex validation configuration is enabled.
+            if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
+                validateClaimValue(claims, userStoreManager);
+            }
             this.populateSCIMAttributes(userID, claims);
             return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -185,8 +188,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             // Validate whether claim update request is for a provisioned user.
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
-        // Validate the claim value against the regex.
-        validateClaimValue(claimURI, claimValue, userStoreManager);
+        // Validate claim value against the regex if user claim input regex validation configuration is enabled.
+        if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
+            validateClaimValue(claimURI, claimValue, userStoreManager);
+        }
         // Validate if the groups are updated.
         validateUserGroupClaim(userID, claimURI, claimValue, userStoreManager);
         return true;
@@ -215,7 +220,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                         MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
                 break;
             default:
-                validateClaimValueForRegex(claimURI, claimValue, tenantDomain, null, null);
+                validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DEFAULT_REGEX, null);
                 break;
         }
     }
@@ -313,8 +318,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
         claims.put(modifiedLocalClaimUri, lastModifiedDate);
 
-        // Validate dob and mobile value against the regex.
-        validateClaimValue(claims, userStoreManager);
+        // Validate claim value against the regex if user claim input regex validation configuration is enabled.
+        if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
+            validateClaimValue(claims, userStoreManager);
+        }
         // Validate if the groups are updated.
         validateUserGroups(userID, claims, userStoreManager);
         return true;
@@ -498,7 +505,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                             MOBILE_REGEX, MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
                     break;
                 default:
-                    validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, null, null);
+                    validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, DEFAULT_REGEX, null);
             }
         }
     }
