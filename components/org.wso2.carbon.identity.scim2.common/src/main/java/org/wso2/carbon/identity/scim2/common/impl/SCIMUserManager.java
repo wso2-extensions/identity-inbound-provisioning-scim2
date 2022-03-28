@@ -5011,7 +5011,7 @@ public class SCIMUserManager implements UserManager {
                 claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) ||
                 claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI)) ||
                 claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.GROUP_URI)) ||
-                claim.contains(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI);
+                claim.contains(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI_PREFIX);
     }
 
     /**

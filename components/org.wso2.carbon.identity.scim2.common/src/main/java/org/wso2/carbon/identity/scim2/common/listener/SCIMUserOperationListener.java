@@ -726,6 +726,6 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
     private boolean isIdentityClaimUpdate(String claimURI) {
 
-        return claimURI.startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI);
+        return claimURI.startsWith(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI_PREFIX);
     }
 }
