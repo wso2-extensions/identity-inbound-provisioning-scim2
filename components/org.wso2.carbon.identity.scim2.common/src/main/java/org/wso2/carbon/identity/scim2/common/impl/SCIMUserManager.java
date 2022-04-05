@@ -3877,7 +3877,6 @@ public class SCIMUserManager implements UserManager {
                     // Carbon specific roles do not possess SCIM info, hence skipping them.
                     continue;
                 }
-
                 Group groupObject = groupMetaAttributesCache.get(groupName);
                 if (groupObject == null && !groupMetaAttributesCache.containsKey(groupName)) {
                     org.wso2.carbon.user.core.common.Group userGroup =
@@ -6054,13 +6053,17 @@ public class SCIMUserManager implements UserManager {
         if (StringUtils.isNotBlank(group.getCreatedDate())) {
             scimGroup.setCreatedInstant(Date.from(AttributeUtil.parseDateTime(group.getCreatedDate())).toInstant());
         } else {
-            log.error("Group created date is not specified for group: " + groupName);
+            if (log.isDebugEnabled()) {
+                log.debug("Group created date is not specified for group: " + groupName);
+            }
         }
         if (StringUtils.isNotBlank(group.getLastModifiedDate())) {
             scimGroup.setLastModifiedInstant(
                     Date.from(AttributeUtil.parseDateTime(group.getLastModifiedDate())).toInstant());
         } else {
-            log.error("Group last modified date is not specified for group: " + groupName);
+            if (log.isDebugEnabled()) {
+                log.debug("Group last modified date is not specified for group: " + groupName);
+            }
         }
         return scimGroup;
     }
