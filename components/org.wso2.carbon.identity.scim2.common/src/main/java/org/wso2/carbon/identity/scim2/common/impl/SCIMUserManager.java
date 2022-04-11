@@ -1470,15 +1470,20 @@ public class SCIMUserManager implements UserManager {
         String filterOperation = node.getOperation();
         String attributeValue = node.getValue();
 
+        String primaryUSDomain = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.
+                RealmConfig.PROPERTY_DOMAIN_NAME);
+        if (StringUtils.isEmpty(primaryUSDomain)) {
+            primaryUSDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+        }
         if ((isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled()) && !StringUtils
                 .contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
-            return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+            return primaryUSDomain;
 
         } else if (isFilteringEnhancementsEnabled()) {
             if (SCIMCommonConstants.EQ.equalsIgnoreCase(filterOperation)) {
                 if (StringUtils.equals(attributeName, SCIMConstants.UserSchemaConstants.USER_NAME_URI) && !StringUtils
                         .contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
-                    return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+                    return primaryUSDomain;
                 }
             }
         }
@@ -3124,13 +3129,18 @@ public class SCIMUserManager implements UserManager {
      */
     private String getDomainWithFilterProperties(ExpressionNode node) {
 
+        String primaryUSDomain = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.
+                RealmConfig.PROPERTY_DOMAIN_NAME);
+        if (StringUtils.isEmpty(primaryUSDomain)) {
+            primaryUSDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+        }
         if (isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled()) {
-            return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+            return primaryUSDomain;
         } else if (isFilteringEnhancementsEnabled()) {
             // To maintain backward compatibility.
             if (SCIMCommonConstants.EQ.equalsIgnoreCase(node.getOperation())) {
                 if (StringUtils.equals(node.getAttributeValue(), SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI)) {
-                    return UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+                    return primaryUSDomain;
                 }
             }
         }
