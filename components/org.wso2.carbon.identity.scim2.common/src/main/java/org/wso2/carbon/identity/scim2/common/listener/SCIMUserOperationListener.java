@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.recovery.util.Utils;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
@@ -98,6 +99,14 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
+
+            // Assert whether verifyEmail claim is set and emailaddress claim is not provided.
+            if (Boolean.parseBoolean(Utils.getEmailVerifyTemporaryClaim().getValue()) &&
+                    claims.get(UserCoreConstants.ClaimTypeURIs.EMAIL_ADDRESS) == null) {
+                Utils.clearEmailVerifyTemporaryClaim();
+                throw new UserStoreClientException("verifyEmail claim is set, but the email addresses not provided");
+            }
+
             // Validate claim value against the regex if user claim input regex validation configuration is enabled.
             if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
                 validateClaimValue(claims, userStoreManager);
