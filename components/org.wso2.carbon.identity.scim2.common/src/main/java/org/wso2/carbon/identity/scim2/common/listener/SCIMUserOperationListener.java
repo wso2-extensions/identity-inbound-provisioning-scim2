@@ -99,23 +99,24 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
-
-            // Assert whether verifyEmail claim is set and emailaddress claim is not provided.
-            if (Boolean.parseBoolean(Utils.getEmailVerifyTemporaryClaim().getValue()) &&
-                    claims.get(UserCoreConstants.ClaimTypeURIs.EMAIL_ADDRESS) == null) {
-                Utils.clearEmailVerifyTemporaryClaim();
-                throw new UserStoreClientException("verifyEmail claim is set, but the email addresses not provided");
-            }
-
-            // Validate claim value against the regex if user claim input regex validation configuration is enabled.
-            if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
-                validateClaimValue(claims, userStoreManager);
-            }
-            this.populateSCIMAttributes(userID, claims);
-            return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
         }
+
+        // Assert whether verifyEmail claim is set and emailaddress claim is not provided.
+        if (Boolean.parseBoolean(Utils.getEmailVerifyTemporaryClaim().getValue()) &&
+                claims.get(UserCoreConstants.ClaimTypeURIs.EMAIL_ADDRESS) == null) {
+            Utils.clearEmailVerifyTemporaryClaim();
+            throw new UserStoreClientException("verifyEmail claim is set, but the email addresses not provided");
+        }
+
+        // Validate claim value against the regex if user claim input regex validation configuration is enabled.
+        if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
+            validateClaimValue(claims, userStoreManager);
+        }
+        this.populateSCIMAttributes(userID, claims);
+
+        return true;
     }
 
     @Override

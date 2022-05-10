@@ -31,14 +31,18 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.recovery.util.Utils;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.Permission;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.common.UserStore;
@@ -63,13 +67,14 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 @PrepareForTest({UserCoreUtil.class, SCIMGroupHandler.class, SCIMCommonUtils.class, IdentityUtil.class,
-        IdentityTenantUtil.class})
+        IdentityTenantUtil.class, Utils.class})
 public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
     private final String CARBON_SUPER = "carbon.super";
     private String userName = "testUser";
     private String userId = "e235e3b6-49a3-45ad-a2b8-097733ee73ff";
     private Object credential = new Object();
+    private String emailAddress = "testuser@gmail.com";
     private String roleName = "testRole";
     private String[] roleList = new String[]{"testRole1, testRole2"};
     private String[] userList = new String[]{"testUser1, testUser2"};
@@ -109,6 +114,7 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         SCIMCommonComponentHolder.setClaimManagementService(claimMetadataManagementService);
         when(userStoreManager.getTenantId()).thenReturn(-1234);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(CARBON_SUPER);
+        mockStatic(Utils.class);
     }
 
     @DataProvider(name = "testGetExecutionOrderIdData")
@@ -152,6 +158,10 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         when(scimUserOperationListener.isEnable()).thenReturn(isEnabled);
         when(userStoreManager.isSCIMEnabled()).thenReturn(isSCIMEnabled);
 
+        Claim verifyTemporaryClaim = new Claim();
+        verifyTemporaryClaim.setValue("false");
+        when(Utils.getEmailVerifyTemporaryClaim()).thenReturn(verifyTemporaryClaim);
+
         assertTrue(scimUserOperationListener.doPreAddUserWithID(userId, credential, roleList, claims, profile,
                 userStoreManager));
     }
@@ -162,6 +172,36 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         when(userStoreManager.isSCIMEnabled()).thenThrow(new UserStoreException());
 
         scimUserOperationListener.doPreAddUserWithID(userName, credential, roleList, claims, profile, userStoreManager);
+    }
+
+    @Test
+    public void testDoPreAddUserEmailVerifyEnabled() throws Exception {
+
+        when(scimUserOperationListener.isEnable()).thenReturn(true);
+        when(userStoreManager.isSCIMEnabled()).thenReturn(true);
+
+        Map<String, String> claimSet = new HashMap<>();
+        claimSet.put(UserCoreConstants.ClaimTypeURIs.EMAIL_ADDRESS, emailAddress);
+        Claim verifyTemporaryClaim = new Claim();
+        verifyTemporaryClaim.setValue("true");
+        when(Utils.getEmailVerifyTemporaryClaim()).thenReturn(verifyTemporaryClaim);
+
+        assertTrue(scimUserOperationListener.doPreAddUserWithID(userId, credential, roleList, claimSet, profile,
+                userStoreManager));
+    }
+
+    @Test(expectedExceptions = UserStoreClientException.class)
+    public void testDoPreAddUserEmailVerifyEnabledNullEmail() throws Exception {
+
+        when(scimUserOperationListener.isEnable()).thenReturn(true);
+        when(userStoreManager.isSCIMEnabled()).thenReturn(true);
+
+        Claim verifyTemporaryClaim = new Claim();
+        verifyTemporaryClaim.setValue("true");
+        when(Utils.getEmailVerifyTemporaryClaim()).thenReturn(verifyTemporaryClaim);
+
+        scimUserOperationListener.doPreAddUserWithID(userId, credential, roleList, claims, profile,
+                userStoreManager);
     }
 
     @Test
