@@ -59,6 +59,7 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATT
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_VERIFY_EMAIL_NOT_SET;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX_VALIDATION_DEFAULT_ERROR;
@@ -107,7 +108,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         if (Boolean.parseBoolean(Utils.getEmailVerifyTemporaryClaim().getValue()) &&
                 claims.get(UserCoreConstants.ClaimTypeURIs.EMAIL_ADDRESS) == null) {
             Utils.clearEmailVerifyTemporaryClaim();
-            throw new UserStoreClientException("verifyEmail claim is set, but the email addresses not provided");
+            throw new UserStoreClientException(ERROR_CODE_VERIFY_EMAIL_NOT_SET.getMessage(),
+                    ERROR_CODE_VERIFY_EMAIL_NOT_SET.getCode());
         }
 
         // Validate claim value against the regex if user claim input regex validation configuration is enabled.

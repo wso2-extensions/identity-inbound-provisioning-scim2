@@ -168,7 +168,9 @@ public class SCIMCommonConstants {
                 "The user: %s has been JIT provisioned from federated IDP: %s. " +
                         "Hence provisioned user attributes are not allowed to update"),
         ERROR_CODE_REGEX_VIOLATION("SUO-10001", "Regex validation error",
-                "%s attribute value doesn't match with %s regex pattern");
+                "%s attribute value doesn't match with %s regex pattern"),
+        ERROR_CODE_VERIFY_EMAIL_NOT_SET("SUO-10002", "Error in validating email verification", "verifyEmail claim " +
+                "is set, but the email addresses are not provided");
 
         private final String code;
         private final String message;
