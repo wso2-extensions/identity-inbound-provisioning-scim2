@@ -2508,21 +2508,19 @@ public class SCIMUserManager implements UserManager {
         try {
             // Modify display name if no domain is specified, in order to support multiple user store feature.
             String originalName = group.getDisplayName();
-            String roleNameWithDomain = null;
-            String domainName = "";
+            String roleNameWithDomain;
+            String domainName;
             try {
                 if (getUserStoreDomainFromSP() != null) {
                     domainName = getUserStoreDomainFromSP();
-                    roleNameWithDomain = IdentityUtil
-                            .addDomainToName(UserCoreUtil.removeDomainFromName(originalName), domainName);
                 } else if (originalName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
                     domainName = IdentityUtil.extractDomainFromName(originalName);
-                    roleNameWithDomain = IdentityUtil
-                            .addDomainToName(UserCoreUtil.removeDomainFromName(originalName), domainName);
                 } else {
                     domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
-                    roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(originalName);
                 }
+                // Append the relevant domain name to the group.
+                roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(
+                        IdentityUtil.addDomainToName(UserCoreUtil.removeDomainFromName(originalName), domainName));
             } catch (IdentityApplicationManagementException e) {
                 throw new CharonException("Error retrieving User Store name. ", e);
             }
