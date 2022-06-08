@@ -258,8 +258,19 @@ public class SCIMRoleManager implements RoleManager {
         }
         List<Object> scimRoles = getScimRolesList(roles);
 
+        int rolesCount;
+        try {
+            rolesCount = roleManagementService.getRolesCount(tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while getting the total number of roles: %s", searchFilter), e);
+        }
         // Set total number of results to 0th index.
-        filteredRoles.set(0, scimRoles.size());
+        if (rolesCount == 0) {
+            filteredRoles.set(0, scimRoles.size());
+        } else {
+            filteredRoles.set(0, rolesCount);
+        }
         // Add the results list.
         filteredRoles.addAll(scimRoles);
 
@@ -323,8 +334,13 @@ public class SCIMRoleManager implements RoleManager {
                     .getRoles(count, startIndex, sortBy, sortOrder, tenantDomain);
             List<Object> scimRoles = getScimRolesList(roles);
 
+            int rolesCount = roleManagementService.getRolesCount(tenantDomain);
             // Set total number of results to 0th index.
-            rolesList.set(0, scimRoles.size());
+            if (rolesCount == 0) {
+                rolesList.set(0, scimRoles.size());
+            } else {
+                rolesList.set(0, rolesCount);
+            }
             // Add the results list.
             rolesList.addAll(scimRoles);
         } catch (IdentityRoleManagementException e) {
