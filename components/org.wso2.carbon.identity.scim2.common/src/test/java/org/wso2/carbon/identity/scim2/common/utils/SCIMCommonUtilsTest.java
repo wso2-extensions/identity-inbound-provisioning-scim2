@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
@@ -32,7 +31,7 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.internal.DefaultServiceURLBuilder;
+import org.wso2.carbon.identity.core.DefaultServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
