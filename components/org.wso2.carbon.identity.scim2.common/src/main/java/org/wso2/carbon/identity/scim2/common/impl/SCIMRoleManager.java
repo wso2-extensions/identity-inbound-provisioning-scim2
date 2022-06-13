@@ -54,6 +54,7 @@ import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
+import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.ROLE_CONTAINS_DOMAIN_SEPARATOR;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 
 /**
@@ -101,6 +102,9 @@ public class SCIMRoleManager implements RoleManager {
 
             return createdRole;
         } catch (IdentityRoleManagementException e) {
+            if (StringUtils.equals(ROLE_CONTAINS_DOMAIN_SEPARATOR.getCode(), e.getErrorCode())) {
+                throw new BadRequestException(e.getMessage());
+            }
             if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
                 throw new ConflictException(e.getMessage());
             } else if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
