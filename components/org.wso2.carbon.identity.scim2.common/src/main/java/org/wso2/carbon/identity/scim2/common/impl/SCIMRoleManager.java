@@ -258,19 +258,8 @@ public class SCIMRoleManager implements RoleManager {
         }
         List<Object> scimRoles = getScimRolesList(roles);
 
-        int rolesCount;
-        try {
-            rolesCount = roleManagementService.getRolesCount(tenantDomain);
-        } catch (IdentityRoleManagementException e) {
-            throw new CharonException(
-                    String.format("Error occurred while getting the total number of roles: %s", searchFilter), e);
-        }
         // Set total number of results to 0th index.
-        if (rolesCount == 0) {
-            filteredRoles.set(0, scimRoles.size());
-        } else {
-            filteredRoles.set(0, rolesCount);
-        }
+        filteredRoles.set(0, scimRoles.size());
         // Add the results list.
         filteredRoles.addAll(scimRoles);
 
