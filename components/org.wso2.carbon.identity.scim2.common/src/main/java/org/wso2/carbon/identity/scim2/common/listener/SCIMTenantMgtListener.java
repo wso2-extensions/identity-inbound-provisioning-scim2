@@ -18,11 +18,16 @@
 
 package org.wso2.carbon.identity.scim2.common.listener;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.AbstractIdentityTenantMgtListener;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
 import org.wso2.carbon.stratos.common.exception.StratosException;
+import org.wso2.carbon.user.api.Tenant;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.service.RealmService;
 
 /**
  * Tenant activation listener for SCIM component to do the task when the tenant get create.
@@ -41,12 +46,26 @@ public class SCIMTenantMgtListener extends AbstractIdentityTenantMgtListener {
             }
             return;
         }
-        if (log.isDebugEnabled()) {
-            log.debug("SCIMTenantMgtListener is fired for Tenant ID : " + tenantId);
+        RealmService realmService = SCIMCommonComponentHolder.getRealmService();
+        try {
+            Tenant tenant = realmService.getTenantManager().getTenant(tenantId);
+            /*
+            If the tenant has an associated organization id, that tenant is created during an organization creation.
+            Therefore, no tenant admin is created inside the tenant. No need to update such admin claims.
+             */
+            String organizationID = tenant.getAssociatedOrganizationUUID();
+            if (StringUtils.isNotBlank(organizationID)) {
+                return;
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("SCIMTenantMgtListener is fired for Tenant ID : " + tenantId);
+            }
+            // Update admin user attributes.
+            AdminAttributeUtil.updateAdminUser(tenantId, false);
+            // Update admin group attributes.
+            AdminAttributeUtil.updateAdminGroup(tenantId);
+        } catch (UserStoreException e) {
+            log.error(e);
         }
-        //Update admin user attributes.
-        AdminAttributeUtil.updateAdminUser(tenantId, false);
-        //Update admin group attributes.
-        AdminAttributeUtil.updateAdminGroup(tenantId);
     }
 }
