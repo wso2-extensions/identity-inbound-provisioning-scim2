@@ -58,9 +58,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyListOf;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
@@ -423,7 +423,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Node rootNode = generateNodeBasedOnNodeType(nodeType, null);
         when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
                 thenAnswer(invocationOnMock -> {
-                    Integer countArg = invocationOnMock.getArgumentAt(0, Integer.class);
+                    Integer countArg = invocationOnMock.getArgument(0);
                     if (countArg != null && countArg < 0) {
                         String errorMessage = String.format("Invalid limit requested. Limit value should be " +
                                 "greater than or equal to zero. limit: %s", count);
@@ -433,7 +433,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                 });
         when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(), anyString(), anyString()))
                 .thenAnswer(invocationOnMock -> {
-                    Integer countArg = invocationOnMock.getArgumentAt(1, Integer.class);
+                    Integer countArg = invocationOnMock.getArgument(1);
                     if (countArg != null && countArg < 0) {
                         String errorMessage = String.format("Invalid limit requested. Limit value should be " +
                                 "greater than or equal to zero. limit: %s", count);
@@ -462,7 +462,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Node rootNode = generateNodeBasedOnNodeType(nodeType, null);
         when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
                 thenAnswer(invocationOnMock -> {
-                    Integer startIndexArg = invocationOnMock.getArgumentAt(1, Integer.class);
+                    Integer startIndexArg = invocationOnMock.getArgument(1);
                     if (startIndexArg != null && startIndexArg < 0) {
                         String errorMessage =
                                 "Invalid offset requested. Offset value should be greater " +
@@ -473,7 +473,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                 });
         when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(), anyString(), anyString()))
                 .thenAnswer(invocationOnMock -> {
-                    Integer startIndexArg = invocationOnMock.getArgumentAt(2, Integer.class);
+                    Integer startIndexArg = invocationOnMock.getArgument(2);
                     if (startIndexArg != null && startIndexArg < 0) {
                         String errorMessage =
                                 "Invalid offset requested. offset value should be greater than or " +
@@ -655,9 +655,9 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         when(mockRoleManagementService.updateRoleName(anyString(), anyString(), anyString())).
                 thenAnswer(invocationOnMock -> {
-                    String newRoleNameArg = invocationOnMock.getArgumentAt(1, String.class);
-                    String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
-                    String tenantDomainArg = invocationOnMock.getArgumentAt(2, String.class);
+                    String newRoleNameArg = invocationOnMock.getArgument(1);
+                    String roleIdArg = invocationOnMock.getArgument(0);
+                    String tenantDomainArg = invocationOnMock.getArgument(2);
                     if (EXISTING_ROLE_NAMES.contains(newRoleNameArg)) {
                         throw new IdentityRoleManagementClientException(ROLE_ALREADY_EXISTS.getCode(),
                                 "Role name: " + newRoleNameArg +
@@ -711,8 +711,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         when(mockRoleManagementService.updateUserListOfRole(
                 anyString(), anyListOf(String.class), anyListOf(String.class), anyString())).
                 thenAnswer(invocationOnMock -> {
-                    String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
-                    String tenantDomainArg = invocationOnMock.getArgumentAt(3, String.class);
+                    String roleIdArg = invocationOnMock.getArgument(0);
+                    String tenantDomainArg = invocationOnMock.getArgument(3);
                     if (INVALID_ROLE_IDS.contains(roleIdArg)) {
                         String errorMessage =
                                 "Invalid scenario. Multiple roles found for the given role name: " + roleIdArg
@@ -756,8 +756,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         when(mockRoleManagementService.updateGroupListOfRole(
                 anyString(), anyListOf(String.class), anyListOf(String.class), anyString())).
                 thenAnswer(invocationOnMock -> {
-                    String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
-                    String tenantDomainArg = invocationOnMock.getArgumentAt(3, String.class);
+                    String roleIdArg = invocationOnMock.getArgument(0);
+                    String tenantDomainArg = invocationOnMock.getArgument(3);
                     if (INVALID_ROLE_IDS.contains(roleIdArg)) {
                         String errorMessage =
                                 "Invalid scenario. Multiple roles found for the given role name: " + roleIdArg
@@ -803,8 +803,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         when(mockRoleManagementService.setPermissionsForRole(
                 anyString(), anyListOf(String.class), anyString())).
                 thenAnswer(invocationOnMock -> {
-                    String roleIdArg = invocationOnMock.getArgumentAt(0, String.class);
-                    String tenantDomainArg = invocationOnMock.getArgumentAt(2, String.class);
+                    String roleIdArg = invocationOnMock.getArgument(0);
+                    String tenantDomainArg = invocationOnMock.getArgument(2);
                     if (INVALID_ROLE_IDS.contains(roleIdArg)) {
                         String errorMessage =
                                 "Invalid scenario. Multiple roles found for the given role name: " + roleIdArg
@@ -877,7 +877,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Node rootNode = generateNodeBasedOnNodeType(nodeType, "name");
         when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
                 thenAnswer(invocationOnMock -> {
-                    Integer countArg = invocationOnMock.getArgumentAt(0, Integer.class);
+                    Integer countArg = invocationOnMock.getArgument(0);
                     if (countArg != null && countArg < 0) {
                         String errorMessage =
                                 "Invalid limit requested. Limit value should be greater than or equal to zero. limit: "
@@ -888,7 +888,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                 });
         when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(), anyString(), anyString()))
                 .thenAnswer(invocationOnMock -> {
-                    Integer countArg = invocationOnMock.getArgumentAt(1, Integer.class);
+                    Integer countArg = invocationOnMock.getArgument(1);
 
                     if (countArg != null && countArg < 0) {
                         String errorMessage =
@@ -919,7 +919,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Node rootNode = generateNodeBasedOnNodeType(nodeType, "name");
         when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
                 thenAnswer(invocationOnMock -> {
-                    Integer startIndexArg = invocationOnMock.getArgumentAt(1, Integer.class);
+                    Integer startIndexArg = invocationOnMock.getArgument(1);
 
                     if (startIndexArg != null && startIndexArg < 0) {
                         String errorMessage =
@@ -931,7 +931,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                 });
         when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(), anyString(), anyString()))
                 .thenAnswer(invocationOnMock -> {
-                    Integer startIndexArg = invocationOnMock.getArgumentAt(2, Integer.class);
+                    Integer startIndexArg = invocationOnMock.getArgument(2);
 
                     if (startIndexArg != null && startIndexArg < 0) {
                         String errorMessage =
