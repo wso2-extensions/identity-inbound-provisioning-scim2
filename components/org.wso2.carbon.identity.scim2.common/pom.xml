@@ -229,6 +229,10 @@
                     <systemPropertyVariables>
                         <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
                     </systemPropertyVariables>
+                    <argLine>
+                        --add-opens java.base/jdk.internal.loader=ALL-UNNAMED
+                        --add-opens java.xml/jdk.xml.internal=ALL-UNNAMED
+                    </argLine>
                 </configuration>
             </plugin>
             <plugin>
