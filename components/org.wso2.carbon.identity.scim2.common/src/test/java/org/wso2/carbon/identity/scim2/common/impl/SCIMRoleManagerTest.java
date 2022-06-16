@@ -595,7 +595,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         when(mockRoleManagementService.getRoles(anyString(), nullable(Integer.class), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> roleList);
         when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
-                thenAnswer(invocationOnMock -> roleList);
+                thenAnswer(invo dcationOnMock -> roleList);
         when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> roleList);
         when(mockRoleManagementService.getRolesCount(anyString())).thenAnswer(invocationOnMock -> 5);
