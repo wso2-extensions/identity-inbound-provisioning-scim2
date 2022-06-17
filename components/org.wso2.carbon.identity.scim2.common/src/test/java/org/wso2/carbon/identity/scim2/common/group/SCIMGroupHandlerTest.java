@@ -43,6 +43,7 @@ import java.util.Calendar;
 import java.util.Set;
 import java.util.HashSet;
 
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.anyMap;
@@ -164,14 +165,14 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
         mockStatic(SCIMCommonUtils.class);
 
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-        when(connection.prepareStatement(anyString())).thenReturn(mockedPreparedStatement);
-        when(StringUtils.isNotEmpty(anyString())).thenReturn(true);
-        when(SCIMCommonUtils.getPrimaryFreeGroupName(anyString())).thenReturn("directors");
+        when(connection.prepareStatement(nullable(String.class))).thenReturn(mockedPreparedStatement);
+        when(StringUtils.isNotEmpty(nullable(String.class))).thenReturn(true);
+        when(SCIMCommonUtils.getPrimaryFreeGroupName(nullable(String.class))).thenReturn("directors");
         when(mockedPreparedStatement.executeQuery()).thenReturn(resultSet);
         when(mockedGroupDAO.getGroupNameById(1, "5")).thenReturn("directors");
         assertEquals(new SCIMGroupHandler(1).getGroupName("5"), "directors", "asserting for existance");
 
-        when(StringUtils.isNotEmpty(anyString())).thenReturn(false);
+        when(StringUtils.isNotEmpty(nullable(String.class))).thenReturn(false);
         assertNull(new SCIMGroupHandler(1).getGroupName("NON_EXISITNG_GROUP_NAME"), "asserting for non existance");
     }
 
