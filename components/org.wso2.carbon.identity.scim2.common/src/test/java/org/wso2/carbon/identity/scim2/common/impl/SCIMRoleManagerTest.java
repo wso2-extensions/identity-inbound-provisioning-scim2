@@ -61,7 +61,8 @@ import java.util.HashSet;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyListOf;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -960,12 +961,14 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             throws IdentityRoleManagementException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, "name");
+        System.out.println(nodeType);
+        System.out.println(rootNode);
 
-        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
+        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenThrow(unExpectedErrorThrower(tenantDomain, sError,
                         "Error while listing roles in tenantDomain: "));
-        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(),
-                anyString(), anyString())).thenThrow(unExpectedErrorThrower(tenantDomain, sError,
+        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class),
+                nullable(String.class), anyString())).thenThrow(unExpectedErrorThrower(tenantDomain, sError,
                 "Error while listing roles in tenantDomain: "));
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         assertThrows(CharonException.class, () -> roleManager.
