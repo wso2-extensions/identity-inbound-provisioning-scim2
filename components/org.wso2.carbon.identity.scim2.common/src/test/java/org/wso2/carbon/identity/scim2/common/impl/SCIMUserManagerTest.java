@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -472,8 +473,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         HashMap<String, Boolean> requiredClaimsMap = new HashMap<>();
         requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        List<Object> result = scimUserManager.listUsersWithGET(null, 1, 0, null, null, requiredClaimsMap);
-        assertEquals(expectedResultCount, result.size());
+        UsersGetResponse result = scimUserManager.listUsersWithGET(null, 1, 0, null,
+                null, requiredClaimsMap);
+        assertEquals(expectedResultCount, result.getUsers().size());
     }
 
     @DataProvider(name = "listUser")
@@ -569,9 +571,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
             node = filterTreeManager.buildTree();
         }
 
-        List<Object> result = scimUserManager.listUsersWithGET(node, 1, null, null, null, null,
+        UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, null, null, null, null,
                 requiredClaimsMap);
-        assertEquals(expectedResultCount, result.size());
+        assertEquals(expectedResultCount, result.getUsers().size());
     }
 
     @DataProvider(name = "userInfoForFiltering")
@@ -1444,7 +1446,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
         doReturn(listOfUsers).when(scimUserManager)
                 .listUsersWithGET(any(), any(), any(), anyString(), anyString(), anyString(), anyMap());
-        List<Object> users = scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
+        UsersGetResponse users = scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
         assertEquals(listOfUsers, users);
     }
 
