@@ -296,6 +296,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         org.wso2.carbon.identity.role.mgt.core.Role role = getDummyIdentityRole(roleId, roleName, domain, tenantDomain,
                 isEmptyLists);
+        System.out.println(role);
         Map<String, Boolean> attributeMap = null;
         if (attributeKey != null) {
             // If attributeKey is not null, Add dummy data to attributeMap.
@@ -306,6 +307,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         Role scimRole = scimRoleManager.getRole(roleId, attributeMap);
+        System.out.println(scimRole);
         assertScimRoleFull(scimRole, roleId);
     }
 
@@ -421,7 +423,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             throws IdentityRoleManagementException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, null);
-        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
+        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> {
                     Integer countArg = invocationOnMock.getArgument(0);
                     if (countArg != null && countArg < 0) {
@@ -431,7 +433,17 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return null;
                 });
-        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(), anyString(), anyString()))
+        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString()))
+                .thenAnswer(invocationOnMock -> {
+                    Integer countArg = invocationOnMock.getArgument(1);
+                    if (countArg != null && countArg < 0) {
+                        String errorMessage = String.format("Invalid limit requested. Limit value should be " +
+                                "greater than or equal to zero. limit: %s", count);
+                        throw new IdentityRoleManagementClientException(INVALID_LIMIT.getCode(), errorMessage);
+                    }
+                    return null;
+                });
+        when(mockRoleManagementService.getRoles(nullable(String.class), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString()))
                 .thenAnswer(invocationOnMock -> {
                     Integer countArg = invocationOnMock.getArgument(1);
                     if (countArg != null && countArg < 0) {
@@ -460,7 +472,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             throws IdentityRoleManagementException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, null);
-        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
+        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> {
                     Integer startIndexArg = invocationOnMock.getArgument(1);
                     if (startIndexArg != null && startIndexArg < 0) {
@@ -471,7 +483,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return null;
                 });
-        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(), anyString(), anyString()))
+        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString()))
                 .thenAnswer(invocationOnMock -> {
                     Integer startIndexArg = invocationOnMock.getArgument(2);
                     if (startIndexArg != null && startIndexArg < 0) {
@@ -482,6 +494,21 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return null;
                 });
+        when(mockRoleManagementService.getRoles(nullable(String.class), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString()))
+                .thenAnswer(invocationOnMock -> {
+                    Integer startIndexArg = invocationOnMock.getArgument(2);
+                    if (startIndexArg != null && startIndexArg < 0) {
+                        String errorMessage =
+                                "Invalid offset requested. offset value should be greater than or " +
+                                        "equal to zero. offset: " + startIndexArg;
+                        throw new IdentityRoleManagementClientException(INVALID_LIMIT.getCode(), errorMessage);
+                    }
+                    return null;
+                });
+
+        if(rootNode!=null){
+            System.out.println(rootNode.toString());
+        }
 
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN);
         assertThrows(CharonException.class, () -> roleManager.
@@ -503,11 +530,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             throws IdentityRoleManagementException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, "name");
-        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
+        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenThrow(unExpectedErrorThrower(tenantDomain, sError,
                         "Error while listing roles in tenantDomain: "));
-        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(),
-                anyString(), anyString())).
+        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenThrow(unExpectedErrorThrower(tenantDomain, sError,
                         "Error while listing roles in tenantDomain: "));
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
@@ -562,15 +588,19 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Node rootNode = generateNodeBasedOnNodeType(nodeType, "name", operation);
         List<RoleBasicInfo> roleList = getDummyRoleBasicInfoList();
 
-        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
+        when(mockRoleManagementService.getRoles(nullable(Integer.class), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> roleList);
-        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(),
-                anyString(), anyString())).
+        when(mockRoleManagementService.getRoles(anyString(), nullable(Integer.class), anyInt(), nullable(String.class), nullable(String.class), anyString())).
+                thenAnswer(invocationOnMock -> roleList);
+        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
+                thenAnswer(invocationOnMock -> roleList);
+        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> roleList);
         when(mockRoleManagementService.getRolesCount(anyString())).thenAnswer(invocationOnMock -> 5);
 
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN);
         List<Object> listRolesWithGET = roleManager.listRolesWithGET(rootNode, 2, (Integer) count, null, null);
+
         int totalRolesCount = (Integer)listRolesWithGET.get(0);
         if (rootNode == null) {
             assertEquals(totalRolesCount, 5);
@@ -875,7 +905,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             throws IdentityRoleManagementException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, "name");
-        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
+        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> {
                     Integer countArg = invocationOnMock.getArgument(0);
                     if (countArg != null && countArg < 0) {
@@ -886,7 +916,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return null;
                 });
-        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(), anyString(), anyString()))
+        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString()))
                 .thenAnswer(invocationOnMock -> {
                     Integer countArg = invocationOnMock.getArgument(1);
 
@@ -917,7 +947,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             throws IdentityRoleManagementException {
 
         Node rootNode = generateNodeBasedOnNodeType(nodeType, "name");
-        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), anyString(), anyString(), anyString())).
+        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> {
                     Integer startIndexArg = invocationOnMock.getArgument(1);
 
@@ -929,7 +959,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return null;
                 });
-        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), anyString(), anyString(), anyString()))
+        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString()))
                 .thenAnswer(invocationOnMock -> {
                     Integer startIndexArg = invocationOnMock.getArgument(2);
 
