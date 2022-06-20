@@ -128,6 +128,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMRoleURL(anyString())).thenReturn(DUMMY_SCIM_URL);
+        when(SCIMCommonUtils.getSCIMRoleURL(nullable(String.class))).thenReturn(DUMMY_SCIM_URL);
         when(mockRoleManagementService.getSystemRoles()).thenReturn(SYSTEM_ROLES);
     }
 
@@ -297,7 +298,6 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         org.wso2.carbon.identity.role.mgt.core.Role role = getDummyIdentityRole(roleId, roleName, domain, tenantDomain,
                 isEmptyLists);
-        System.out.println(role);
         Map<String, Boolean> attributeMap = null;
         if (attributeKey != null) {
             // If attributeKey is not null, Add dummy data to attributeMap.
@@ -308,7 +308,6 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         Role scimRole = scimRoleManager.getRole(roleId, attributeMap);
-        System.out.println(scimRole);
         assertScimRoleFull(scimRole, roleId);
     }
 
