@@ -223,6 +223,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Role role = getDummyRole(roleId, roleDisplayName);
         when(mockRoleManagementService.addRole(anyString(), anyListOf(String.class), anyListOf(String.class),
                 anyListOf(String.class), anyString())).thenReturn(new RoleBasicInfo(roleId, roleDisplayName));
+        when(mockRoleManagementService.addRole(nullable(String.class), anyListOf(String.class), anyListOf(String.class),
+                anyListOf(String.class), anyString())).thenReturn(new RoleBasicInfo(roleId, roleDisplayName));
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         Role createdRole = scimRoleManager.createRole(role);
         assertEquals(createdRole.getDisplayName(), roleDisplayName);
