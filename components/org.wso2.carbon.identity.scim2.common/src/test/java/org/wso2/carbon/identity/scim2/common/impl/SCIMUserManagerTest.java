@@ -552,6 +552,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getRealmService()).thenReturn(mockRealmService);
         when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockedRealmConfig);
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()).thenReturn(false);
 
         ClaimMapping[] claimMappings = getTestClaimMappings();
         when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(claimMappings);
