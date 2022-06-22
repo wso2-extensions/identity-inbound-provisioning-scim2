@@ -1954,9 +1954,8 @@ public class SCIMUserManager implements UserManager {
 
         if (userList == null) {
             return new UsersGetResponse(0, Collections.emptyList());
-        } else {
-            return new UsersGetResponse(totalUsers, userList);
         }
+        return new UsersGetResponse(totalUsers, userList);
     }
 
     /**
@@ -2009,8 +2008,8 @@ public class SCIMUserManager implements UserManager {
     }
 
 
-    private List<User> getMultiAttributeFilteredUsersWithMaxLimit(Node node, Map<String, Boolean> requiredAttributes, int offset,
-                                                        String sortBy, String sortOrder, String domainName, int maxLimit)
+    private List<User> getMultiAttributeFilteredUsersWithMaxLimit(Node node, Map<String, Boolean> requiredAttributes,
+                           int offset, String sortBy, String sortOrder, String domainName, int maxLimit)
             throws CharonException, BadRequestException {
 
         List<User> filteredUsers = new ArrayList<>();

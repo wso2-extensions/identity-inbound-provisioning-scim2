@@ -473,8 +473,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         HashMap<String, Boolean> requiredClaimsMap = new HashMap<>();
         requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        UsersGetResponse result = scimUserManager.listUsersWithGET(null, 1, 0, null,
-                null, requiredClaimsMap);
+        UsersGetResponse result = scimUserManager.listUsersWithGET(null, 1, 0, null, null, requiredClaimsMap);
         assertEquals(expectedResultCount, result.getUsers().size());
     }
 
