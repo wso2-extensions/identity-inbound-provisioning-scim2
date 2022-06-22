@@ -95,13 +95,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anySet;
-import static org.mockito.Matchers.anyMap;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.anyMap;
 
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
@@ -899,6 +900,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonComponentHolder.getRolePermissionManagementService())
                 .thenReturn(mockedRolePermissionManagementService);
         when(mockedRolePermissionManagementService.getRolePermissions(anyString(), anyInt())).thenReturn(permission);
+        when(mockedRolePermissionManagementService.getRolePermissions(nullable(String.class), anyInt())).thenReturn(permission);
         String[] actual = scimUserManager.getGroupPermissions(roleName);
         assertEquals(expected, actual);
     }
