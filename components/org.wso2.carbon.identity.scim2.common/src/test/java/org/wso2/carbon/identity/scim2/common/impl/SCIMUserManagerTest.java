@@ -276,6 +276,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 .set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
 
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
+
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getRoleListOfUser(anyString())).thenReturn(userRoles);
         mockStatic(AttributeMapper.class);
@@ -287,6 +290,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         user.setUsername("testUserName");
         user.setUserID(UUID.randomUUID().toString());
         when(mockedUserStoreManager.getUser(anyString(), anyString())).thenReturn(user);
+
+        when(mockedUserStoreManager.getUser(nullable(String.class), nullable(String.class))).thenReturn(user);
+
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         CommonTestUtils.initPrivilegedCarbonContext(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         mockStatic(ClaimMetadataHandler.class);
