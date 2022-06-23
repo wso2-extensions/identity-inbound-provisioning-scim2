@@ -281,6 +281,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         MemberModifier.field(AbstractUserStoreManager.class, "userStoreManagerHolder")
                 .set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
 
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+
         when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
 
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
