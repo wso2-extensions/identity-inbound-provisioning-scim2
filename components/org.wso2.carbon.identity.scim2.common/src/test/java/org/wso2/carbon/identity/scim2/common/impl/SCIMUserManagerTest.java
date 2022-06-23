@@ -416,6 +416,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 "dummyDomain")};
         when(mockedUserStoreManager.listGroups(any(Condition.class), anyString(), anyInt(),
                 anyInt(), anyString(), anyString())).thenReturn(Arrays.asList(groupsArray.clone()));
+
+        when(mockedUserStoreManager.listGroups(any(Condition.class), nullable(String.class), anyInt(),
+                nullable(Integer.class), nullable(String.class), nullable(String.class))).thenReturn(Arrays.asList(groupsArray.clone()));
+
         when(mockedUserStoreManager.getGroupByGroupName(roleName, null)).
                 thenReturn(buildUserCoreGroupResponse(roleName, "123456789", null));
         whenNew(RealmConfiguration.class).withAnyArguments().thenReturn(mockRealmConfig);
