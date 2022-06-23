@@ -1619,6 +1619,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.isExistingUserWithID(anyString())).thenReturn(true);
         when(mockedUserStoreManager.isExistingUser(anyString())).thenReturn(true);
         when(mockedUserStoreManager.getUserList(anyString(), anyString(), anyString())).thenReturn(existingUserList);
+        when(mockedUserStoreManager.getUserList(anyString(), anyString(), nullable(String.class))).thenReturn(existingUserList);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
                 .thenReturn(secondaryUserStoreManager);
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
