@@ -1375,6 +1375,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
 
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
+
         for (String group : groupsList) {
             when(mockedUserStoreManager.getGroupByGroupName(group, null)).
                     thenReturn(buildUserCoreGroupResponse(group, "123456", "dummyDomain"));
