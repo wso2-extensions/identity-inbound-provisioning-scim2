@@ -538,11 +538,21 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 .thenReturn(filteredUsers);
         when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
                 anyInt(), anyString(), anyString())).thenReturn(filteredUsers);
+
+        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), nullable(String.class), nullable(String.class), anyInt(),
+                nullable(Integer.class), nullable(String.class), nullable(String.class))).thenReturn(filteredUsers);
+
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.listSCIMGroups(anyInt())).thenReturn(anySet());
+
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(null)).thenReturn(mockedUserStoreManager);
+
         when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(null)).thenReturn(secondaryUserStoreManager);
+
         when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManager);
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
 
