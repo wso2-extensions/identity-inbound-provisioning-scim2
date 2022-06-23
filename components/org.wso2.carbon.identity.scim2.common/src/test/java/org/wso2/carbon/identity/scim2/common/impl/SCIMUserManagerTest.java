@@ -865,6 +865,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
         doReturn(oldUser).when(scimUserManager).getUser(anyString(), anyMap());
 
+        doReturn(oldUser).when(scimUserManager).getUser(nullable(String.class), nullable(Map.class));
+
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
 
