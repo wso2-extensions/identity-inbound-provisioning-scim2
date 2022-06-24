@@ -5576,7 +5576,6 @@ public class SCIMUserManager implements UserManager {
         return "active".equals(name);
     }
 
-
     private boolean isMultivaluedAttribute(String name) {
 
         switch (name) {
