@@ -275,8 +275,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         MemberModifier.field(AbstractUserStoreManager.class, "userStoreManagerHolder")
                 .set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
 
-        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
-
         when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
 
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
@@ -463,10 +461,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockedUserStoreManager.getUserListWithID("http://wso2.org/claims/userid", "*", null)).thenReturn(users);
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
-        whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
-        when(mockedGroupDAO.listSCIMGroups()).thenReturn(anySet());
 
-        when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
+        //whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
+        //when(mockedGroupDAO.listSCIMGroups()).thenReturn(anySet());
+
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(null)).thenReturn(mockedUserStoreManager);
+
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(isScimEnabledForPrimary);
 
         when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManager);
@@ -496,7 +496,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         user.setUserID(UUID.randomUUID().toString());
         user.setUsername("testUser3");
         user.setUserStoreDomain("SECONDARY");
-
         users.add(user);
 
         return new Object[][]{
@@ -1088,7 +1087,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockedUserStoreManager.getHybridRoleListOfUser(anyString(), anyString())).thenReturn(rolesList);
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
-        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
 
         when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
 
