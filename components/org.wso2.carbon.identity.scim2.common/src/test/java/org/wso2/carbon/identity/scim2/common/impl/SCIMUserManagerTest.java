@@ -281,8 +281,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         MemberModifier.field(AbstractUserStoreManager.class, "userStoreManagerHolder")
                 .set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
 
-        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
-
         when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
 
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
@@ -1374,8 +1372,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockedUserStoreManager.getHybridRoleListOfUser(anyString(), anyString())).thenReturn(rolesList);
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
-
-        when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
 
         when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
 
