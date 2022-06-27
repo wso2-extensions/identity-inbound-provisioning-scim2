@@ -1369,8 +1369,8 @@ public class SCIMUserManager implements UserManager {
             // Check which APIs should the filter needs to follow.
             if (isUseLegacyAPIs(limit)) {
                 users = filterUsersUsingLegacyAPIs(node, limit, offset, domainName);
+                filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
                 if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
-                    filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
                     return getDetailedUsers(filteredUsers, users.size());
                 }
             } else {
