@@ -253,7 +253,7 @@
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
 
         <!-- Axis2 Version -->
-        <axis2.wso2.version>1.6.1-wso2v37</axis2.wso2.version>
+        <axis2.wso2.version>1.6.1-wso2v80</axis2.wso2.version>
 
         <axiom.wso2.version>1.2.11-wso2v16</axiom.wso2.version>
 
