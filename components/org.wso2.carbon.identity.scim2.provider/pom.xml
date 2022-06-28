@@ -93,7 +93,7 @@
             </plugin>
             <plugin>
                 <artifactId>maven-war-plugin</artifactId>
-                <version>2.2</version>
+                <version>3.1.0</version>
                 <configuration>
                     <warName>scim2</warName>
                 </configuration>
