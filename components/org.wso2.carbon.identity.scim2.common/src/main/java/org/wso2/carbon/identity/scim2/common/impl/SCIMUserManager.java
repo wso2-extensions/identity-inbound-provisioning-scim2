@@ -5571,6 +5571,11 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    private boolean isBooleanAttribute(String name) {
+
+        return "active".equals(name);
+    }
+
     private boolean isMultivaluedAttribute(String name) {
 
         switch (name) {
@@ -5625,6 +5630,8 @@ public class SCIMUserManager implements UserManager {
                 attribute.setType(SCIMDefinitions.DataType.STRING);
             }
 
+        } else if (isBooleanAttribute(attribute.getName())) {
+            attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
         } else {
             attribute.setType(SCIMDefinitions.DataType.STRING);
         }
