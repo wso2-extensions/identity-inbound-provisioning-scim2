@@ -1377,27 +1377,45 @@ public class SCIMUserManager implements UserManager {
             } else {
                 users = filterUsers(node, offset, limit, sortBy, sortOrder, domainName);
             }
-            int maxLimit = getMaxLimit(domainName);
-            if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
-                if (StringUtils.isBlank(domainName)) {
-                    String[] userStoreDomainNames = getDomainNames();
-                    boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
-                    if (canCountTotalUserCount) {
-                        for (String userStoreDomainName : userStoreDomainNames) {
-                            maxLimit += getTotalUsers(userStoreDomainName);
+            // Check that total user count matching the client query needs to be calculated.
+            if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()
+                    || SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+                int maxLimit = getMaxLimit(domainName);
+                if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                    if (StringUtils.isBlank(domainName)) {
+                        String[] userStoreDomainNames = getDomainNames();
+                        boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
+                        if (canCountTotalUserCount) {
+                            for (String userStoreDomainName : userStoreDomainNames) {
+                                maxLimit += getTotalUsers(userStoreDomainName);
+                            }
                         }
+                    } else {
+                        maxLimit = getMaxLimitForTotalResults(domainName);
                     }
-                } else {
-                    maxLimit = getMaxLimitForTotalResults(domainName);
+                    maxLimit = Math.max(maxLimit, limit);
                 }
+                // Get total users based on the filter query without depending on pagination params.
+                totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
+            } else {
+                totalResults += users.size();
             }
-            // Get total users based on the filter query without depending on pagination params.
-            totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
         } catch (NotImplementedException e) {
             String errorMessage = String.format("System does not support filter operator: %s", node.getOperation());
             throw new CharonException(errorMessage, e);
         }
         return getDetailedUsers(users, requiredAttributes, totalResults);
+    }
+
+    /**
+     * Method to check whether the all configured user stores are JDBC.
+     *
+     * @return True if all the configured user stores are JDBC. False otherwise.
+     */
+    private boolean isAllConfiguredUserStoresJDBC() {
+
+        String[] userStoreDomainNames = getDomainNames();
+        return canCountTotalUserCount(userStoreDomainNames);
     }
 
     private int getMaxLimitForTotalResults(String domainName) throws CharonException {
@@ -1980,11 +1998,22 @@ public class SCIMUserManager implements UserManager {
             filteredUserDetails = getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, offset, sortBy
                     , sortOrder, domainName, maxLimit);
         }
-
-        int maxLimit = getMaxLimitForTotalResults(domainName);
-        // Get total users based on the filter query.
-        totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, 1, sortBy,
-                sortOrder, domainName, maxLimit).size();
+        // Check that total user count matching the client query needs to be calculated.
+        if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC() ||
+                SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+            int maxLimit = getMaxLimitForTotalResults(domainName);
+            if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                maxLimit = Math.max(maxLimit, limit);
+            }
+            // Get total users based on the filter query.
+            totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, 1, sortBy,
+                    sortOrder, domainName, maxLimit).size();
+        } else {
+            totalResults += filteredUserDetails.size();
+            if (totalResults == 0 && filteredUsers.size() > 1) {
+                totalResults = filteredUsers.size() - 1;
+            }
+        }
         filteredUsers.set(0, totalResults);
         filteredUsers.addAll(filteredUserDetails);
         return filteredUsers;

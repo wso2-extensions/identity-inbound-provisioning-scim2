@@ -419,6 +419,18 @@ public class SCIMCommonUtils {
     }
 
     /**
+     * Checks whether the identity.xml config is available to consider total records matching the client
+     * query for the 'totalResults' in LDAP. If that property enabled, then this will return true.
+     *
+     * @return whether 'ConsiderTotalRecordsForTotalResultLDAP' property is enabled in identity.xml.
+     */
+    public static boolean isConsiderTotalRecordsForTotalResultOfLDAPEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM_ENABLE_CONSIDER_TOTAL_RECORDS_FOR_TOTAL_RESULT_OF_LDAP));
+    }
+
+    /**
      * Checks whether the identity.xml config is available for prepending the 'PRIMARY/' in each role and
      * which belong to Primary domain in the response of Groups endpoints.
      *
