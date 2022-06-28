@@ -19,16 +19,16 @@
 
     <test name="facebook-authenticator-all" preserve-order="true" parallel="false">
         <classes>
-            <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtilsTest"/>
+<!--            <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtilsTest"/>-->
             <class name="org.wso2.carbon.identity.scim2.common.utils.AttributeMapperTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AuthenticationSchemaTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessorTest"/>
-            <class name="org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandlerTest"/>
-            <class name="org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListenerTest"/>
-            <class name="org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManagerTest"/>
-            <class name="org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtilTest"/>
-            <class name="org.wso2.carbon.identity.scim2.common.impl.SCIMUserManagerTest"/>
-            <class name="org.wso2.carbon.identity.scim2.common.impl.SCIMRoleManagerTest"/>
+<!--            <class name="org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandlerTest"/>-->
+<!--            <class name="org.wso2.carbon.identity.scim2.common.listener.SCIMUserOperationListenerTest"/>-->
+<!--            <class name="org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManagerTest"/>-->
+<!--            <class name="org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtilTest"/>-->
+<!--            <class name="org.wso2.carbon.identity.scim2.common.impl.SCIMUserManagerTest"/>-->
+<!--            <class name="org.wso2.carbon.identity.scim2.common.impl.SCIMRoleManagerTest"/>-->
             <class name="org.wso2.carbon.identity.scim2.common.impl.IdentityResourceURLBuilderTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.impl.DefaultSCIMUserStoreErrorResolverTest"/>
         </classes>

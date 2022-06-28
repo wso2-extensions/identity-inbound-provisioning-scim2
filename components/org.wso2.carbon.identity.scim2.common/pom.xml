@@ -232,6 +232,7 @@
                     <argLine>
                         --add-opens java.base/jdk.internal.loader=ALL-UNNAMED
                         --add-opens java.xml/jdk.xml.internal=ALL-UNNAMED
+                        --add-opens java.base/java.lang=ALL-UNNAMED
                     </argLine>
                 </configuration>
             </plugin>
