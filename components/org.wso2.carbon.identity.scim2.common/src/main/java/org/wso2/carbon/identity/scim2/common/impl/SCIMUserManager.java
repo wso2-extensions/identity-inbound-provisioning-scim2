@@ -1985,8 +1985,8 @@ public class SCIMUserManager implements UserManager {
             filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
         } else {
             int maxLimit = getMaxLimit(domainName);
-            filteredUsers = getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, offset, sortBy
-                    , sortOrder, domainName, maxLimit);
+            users = getMultiAttributeFilteredUsersWithMaxLimit(node, offset, sortBy, sortOrder, domainName, maxLimit);
+            filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
         }
         // Check that total user count matching the client query needs to be calculated.
         if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC() ||
@@ -2008,16 +2008,15 @@ public class SCIMUserManager implements UserManager {
     }
 
 
-    private List<User> getMultiAttributeFilteredUsersWithMaxLimit(Node node, Map<String, Boolean> requiredAttributes,
-                           int offset, String sortBy, String sortOrder, String domainName, int maxLimit)
+    private Set<org.wso2.carbon.user.core.common.User> getMultiAttributeFilteredUsersWithMaxLimit(Node node, int offset,
+                                           String sortBy, String sortOrder, String domainName, int maxLimit)
             throws CharonException, BadRequestException {
 
-        List<User> filteredUsers = new ArrayList<>();
-        Set<org.wso2.carbon.user.core.common.User> users;
+        Set<org.wso2.carbon.user.core.common.User> users = null;
         if (StringUtils.isNotEmpty(domainName)) {
             users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder, domainName,
                     false);
-            return getFilteredUserDetails(users, requiredAttributes);
+            return users;
         } else {
             AbstractUserStoreManager tempCarbonUM = carbonUM;
             // If pagination and domain name are not given, then perform filtering on all available user stores.
@@ -2027,13 +2026,12 @@ public class SCIMUserManager implements UserManager {
                     domainName = tempCarbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
                     users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder,
                             domainName, false);
-                    filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
                 }
                 // If secondary user store manager assigned to carbonUM then global variable carbonUM will contains the
                 // secondary user store manager.
                 tempCarbonUM = (AbstractUserStoreManager) tempCarbonUM.getSecondaryUserStoreManager();
             }
-            return filteredUsers;
+            return users;
         }
     }
     /**
