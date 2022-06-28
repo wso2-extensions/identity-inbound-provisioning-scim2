@@ -236,6 +236,11 @@
                         --add-opens java.base/java.util=ALL-UNNAMED
                         --add-opens java.base/java.time=ALL-UNNAMED
                         --add-opens java.base/java.text=ALL-UNNAMED
+                        --add-opens=java.base/sun.nio.fs=ALL-UNNAMED
+                        --add-opens=java.base/java.io=ALL-UNNAMED
+                        --add-opens java.base/java.util.stream=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        --add-opens java.base/java.security=ALL-UNNAMED
                     </argLine>
                 </configuration>
             </plugin>
