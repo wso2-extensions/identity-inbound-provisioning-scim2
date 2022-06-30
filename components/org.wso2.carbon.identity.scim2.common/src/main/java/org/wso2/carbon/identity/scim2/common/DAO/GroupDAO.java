@@ -349,7 +349,7 @@ public class GroupDAO {
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.GET_GROUP_ID_BY_NAME_SQL)) {
             prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, groupName);
+            prepStmt.setString(2, SCIMCommonUtils.getGroupNameWithDomain(groupName));
             prepStmt.setString(3, SCIMConstants.CommonSchemaConstants.ID_URI);
             try (ResultSet rs = prepStmt.executeQuery()) {
                 while (rs.next()) {

@@ -133,7 +133,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         for (Group group : groupList) {
             // We need to only provide the group name and group id.
             try {
-                group.setGroupID(groupDAO.getGroupIdByName(tenantId, group.getGroupName()));
+                group.setGroupID(groupDAO.getGroupIdByName(tenantId,
+                        UserCoreUtil.addDomainToName(group.getGroupName(), group.getUserStoreDomain())));
             } catch (IdentitySCIMException e) {
                 throw new UserStoreException(String.format("Error occurred while getting the group id of " +
                         "group: %s in tenant: %s", group.getGroupName(), tenantId), e);
@@ -168,7 +169,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         String groupId;
         GroupDAO groupDAO = new GroupDAO();
         try {
-            groupId = groupDAO.getGroupIdByName(tenantId, groupName);
+            groupId = groupDAO.getGroupIdByName(tenantId,
+                    UserCoreUtil.addDomainToName(group.getGroupName(), group.getUserStoreDomain()));
         } catch (IdentitySCIMException e) {
             throw new UserStoreException(String.format("Error occurred while getting the group id of " +
                     "group: %s in tenant: %s", groupName, tenantId), e);
