@@ -163,6 +163,11 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             }
             return true;
         }
+
+        if (group == null) {
+            throw new IllegalArgumentException("Group object should be non-null for the id to be populated");
+        }
+
         if (log.isDebugEnabled()) {
             log.debug(String.format("Retrieving group with name: %s from tenant: %s", groupName, tenantId));
         }
@@ -181,15 +186,7 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             }
             return true;
         }
-        String domainName = UserCoreUtil.extractDomainFromName(groupName);
-        if (group == null) {
-            group = new Group(groupId);
-            group.setGroupName(resolveGroupName(groupName, domainName));
-            group.setUserStoreDomain(domainName);
-            group.setDisplayName(UserCoreUtil.removeDomainFromName(groupName));
-        } else {
-            group.setGroupID(groupId);
-        }
+        group.setGroupID(groupId);
         return true;
     }
 
