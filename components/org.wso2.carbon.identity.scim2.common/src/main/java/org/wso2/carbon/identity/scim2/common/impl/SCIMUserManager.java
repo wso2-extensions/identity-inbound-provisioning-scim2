@@ -87,6 +87,7 @@ import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.User;
+import org.wso2.charon3.core.objects.plainobjects.GroupsGetResponse;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -2781,7 +2782,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Object> listGroupsWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
+    public GroupsGetResponse listGroupsWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
                                           String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
@@ -2799,7 +2800,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Object> listGroupsWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
+    public GroupsGetResponse listGroupsWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
                                           String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
@@ -2846,13 +2847,12 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException If an error occurred.
      * @throws BadRequestException If an error occurred.
      */
-    private List<Object> listGroups(int startIndex, Integer count, String sortBy, String sortOrder, String domainName,
-                                    Map<String, Boolean> requiredAttributes) throws CharonException,
+    private GroupsGetResponse listGroups(int startIndex, Integer count, String sortBy, String sortOrder, String domainName,
+                                         Map<String, Boolean> requiredAttributes) throws CharonException,
             BadRequestException {
 
-        List<Object> groupList = new ArrayList<>();
-        // 0th index is to store total number of results.
-        groupList.add(0);
+        GroupsGetResponse groupsResponse = new GroupsGetResponse(0, Collections.emptyList());
+        List<Group> groupList = new ArrayList<>();
         try {
             Set<String> groupNames;
             if (carbonUM.isRoleAndGroupSeparationEnabled()) {
@@ -2911,9 +2911,9 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentitySCIMException | BadRequestException e) {
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
-        // Set the totalResults value in index 0.
-        groupList.set(0, groupList.size() - 1);
-        return groupList;
+        groupsResponse.setTotalGroups(groupList.size());
+        groupsResponse.setGroups(groupList);
+        return groupsResponse;
     }
 
     /**
@@ -3004,7 +3004,7 @@ public class SCIMUserManager implements UserManager {
      * @throws NotImplementedException Complex filters are used.
      * @throws CharonException         Unknown node operation.
      */
-    private List<Object> filterGroups(Node rootNode, int startIndex, Integer count, String sortBy, String sortOrder,
+    private GroupsGetResponse filterGroups(Node rootNode, int startIndex, Integer count, String sortBy, String sortOrder,
                                       String domainName, Map<String, Boolean> requiredAttributes)
             throws NotImplementedException, CharonException, BadRequestException {
 
@@ -3034,7 +3034,7 @@ public class SCIMUserManager implements UserManager {
      * @return Filtered groups
      * @throws CharonException Error in Filtering
      */
-    private List<Object> filterGroupsBySingleAttribute(ExpressionNode node, int startIndex, int count, String sortBy,
+    private GroupsGetResponse filterGroupsBySingleAttribute(ExpressionNode node, int startIndex, int count, String sortBy,
                                                        String sortOrder, String domainName,
                                                        Map<String, Boolean> requiredAttributes)
             throws CharonException, BadRequestException {
@@ -3055,9 +3055,7 @@ public class SCIMUserManager implements UserManager {
         // EnableFilteringEnhancements' properties in identity.xml or domain name embedded in the filter attribute
         // value.
         domainName = resolveDomain(domainName, node);
-        List<Object> filteredGroups = new ArrayList<>();
-        // 0th index is to store total number of results.
-        filteredGroups.add(0);
+        List<Group> filteredGroups = new ArrayList<>();
         try {
             List<String> groupsList = new ArrayList<>(getGroupList(node, domainName));
 
@@ -3080,9 +3078,7 @@ public class SCIMUserManager implements UserManager {
                         }
                     } else {
                         // Returning null will send a resource not found error to client by Charon.
-                        filteredGroups.clear();
-                        filteredGroups.add(0);
-                        return filteredGroups;
+                        return new GroupsGetResponse(0, null);
                     }
                 }
             }
@@ -3094,9 +3090,7 @@ public class SCIMUserManager implements UserManager {
             throw resolveError(e, "Error in filtering group with filter: " + attributeName + " + " +
                     filterOperation + " + " + attributeValue);
         }
-        // Set the totalResults value in index 0.
-        filteredGroups.set(0, filteredGroups.size() - 1);
-        return filteredGroups;
+        return new GroupsGetResponse(filteredGroups.size(), filteredGroups);
     }
 
     /**
@@ -3705,7 +3699,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Object> listGroupsWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
+    public GroupsGetResponse listGroupsWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
             throws BadRequestException, NotImplementedException, CharonException {
 
         return listGroupsWithGET(searchRequest.getFilter(), searchRequest.getStartIndex(), searchRequest.getCount(),

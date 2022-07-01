@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.charon3.core.objects.plainobjects.GroupsGetResponse;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -425,10 +426,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
 
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
                 null, requiredAttributes);
 
-        assertEquals(roleList.size(), 2);
+        assertEquals(groupsResponse.getGroups().size(), 1);
 
     }
 
@@ -674,12 +675,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
 
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
-        List<Object> roleList = scimUserManager
+        GroupsGetResponse groupsResponse = scimUserManager
                 .listGroupsWithGET(null, 1, null, null, null, "Application", requiredAttributes);
-        roleList.remove(0); //The first entry is the count of roles.
-        assertEquals("Application/Apple", ((Group) roleList.get(0)).getDisplayName());
-        assertEquals("Application/MyApp", ((Group) roleList.get(1)).getDisplayName());
-        assertEquals(roleList.size(), 2);
+        assertEquals(groupsResponse.getGroups().get(0).getDisplayName(), "Application/Apple");
+        assertEquals(groupsResponse.getGroups().get(1).getDisplayName(), "Application/MyApp");
+        assertEquals(groupsResponse.getGroups().size(), 2);
     }
 
     @DataProvider(name = "listApplicationRoles")
@@ -731,11 +731,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
 
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
-        List<Object> roleList = scimUserManager
+        GroupsGetResponse groupsResponse = scimUserManager
                 .listGroupsWithGET(node, 1, null, null, null, "Application", requiredAttributes);
-        roleList.remove(0); //The first entry is the count of roles.
-        assertEquals("Application/MyApp", ((Group) roleList.get(0)).getDisplayName());
-        assertEquals(roleList.size(), 1);
+        assertEquals(groupsResponse.getGroups().get(0).getDisplayName(), "Application/MyApp");
+        assertEquals(groupsResponse.getGroups().size(), 1);
     }
 
     @DataProvider(name = "applicationDomainWithFilters")
