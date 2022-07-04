@@ -127,7 +127,7 @@ import static org.testng.Assert.assertTrue;
         IdentityTenantUtil.class, AbstractUserStoreManager.class, Group.class, UserCoreUtil.class,
         ApplicationManagementService.class, RolePermissionManagementService.class, SCIMCommonComponentHolder.class,
         SCIMUserManager.class})
-@PowerMockIgnore("java.sql.*")
+@PowerMockIgnore({"java.sql.*","javax.xml.*","org.w3c.dom.*","org.xml.sax.*"})
 public class SCIMUserManagerTest extends PowerMockTestCase {
 
     private static final String USERNAME_LOCAL_CLAIM = "http://wso2.org/claims/username";
