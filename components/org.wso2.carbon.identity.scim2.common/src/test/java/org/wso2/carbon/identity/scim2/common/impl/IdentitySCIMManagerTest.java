@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.mockito.Mock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
@@ -54,7 +55,7 @@ import static org.testng.Assert.fail;
  * Contains the unit test cases for IdentitySCIMManager.
  */
 @PrepareForTest({SCIMCommonUtils.class, PrivilegedCarbonContext.class, SCIMCommonComponentHolder.class,CharonConfiguration.class})
-
+@PowerMockIgnore({"javax.xml.*","org.w3c.dom.*","org.xml.sax.*"})
 public class IdentitySCIMManagerTest extends PowerMockTestCase {
 
     @Mock
