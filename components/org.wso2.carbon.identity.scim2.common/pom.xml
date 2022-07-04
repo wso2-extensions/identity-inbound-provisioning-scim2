@@ -246,6 +246,7 @@
                         --add-opens java.base/java.util.stream=ALL-UNNAMED
                         --add-opens java.base/java.lang.reflect=ALL-UNNAMED
                         --add-opens java.base/java.security=ALL-UNNAMED
+                        --add-opens=java.base/sun.reflect.misc=ALL-UNNAMED
                     </argLine>
                 </configuration>
             </plugin>
