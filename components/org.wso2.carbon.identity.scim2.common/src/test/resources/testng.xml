@@ -19,7 +19,7 @@
 
     <test name="facebook-authenticator-all" preserve-order="true" parallel="false">
         <classes>
-<!--            <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtilsTest"/>-->
+            <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtilsTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AttributeMapperTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AuthenticationSchemaTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessorTest"/>

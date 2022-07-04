@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.mockito.Mock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
@@ -48,6 +49,7 @@ import static org.testng.Assert.assertNull;
 
 
 @PrepareForTest({IdentityUtil.class, UserCoreUtil.class, IdentityTenantUtil.class, ServiceURLBuilder.class})
+@PowerMockIgnore({"javax.xml.*","org.w3c.dom.*","org.xml.sax.*"})
 public class SCIMCommonUtilsTest extends PowerMockTestCase {
 
     private static final String ID = "8a439cf6-3c6b-47d2-94bf-34d072495af3";
