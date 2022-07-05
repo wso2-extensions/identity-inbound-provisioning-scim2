@@ -20,7 +20,6 @@ jobs:
     strategy:
       matrix:
         java-version: [ 11, 17 ]
-
     steps:
       - uses: actions/checkout@v2
       - name: Set up Adopt JDK 11 and 17
