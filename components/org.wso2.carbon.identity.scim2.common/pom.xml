@@ -23,7 +23,6 @@
         <relativePath>../../pom.xml</relativePath>
         <version>3.0.3-SNAPSHOT</version>
     </parent>
-
     <modelVersion>4.0.0</modelVersion>
     <artifactId>org.wso2.carbon.identity.scim2.common</artifactId>
     <name>WSO2 Carbon - SCIM 2.0 - Common Component</name>
@@ -33,7 +32,6 @@
         <dependency>
             <groupId>com.sun.xml.parsers</groupId>
             <artifactId>jaxp-ri</artifactId>
-            <version>1.4.5</version>
         </dependency>
         <dependency>
             <groupId>commons-collections.wso2</groupId>
