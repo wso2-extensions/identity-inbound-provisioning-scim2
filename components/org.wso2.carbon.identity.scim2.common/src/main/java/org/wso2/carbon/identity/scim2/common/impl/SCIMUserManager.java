@@ -2787,7 +2787,7 @@ public class SCIMUserManager implements UserManager {
 
                 //delete group in carbon UM
                 carbonUM.deleteRole(groupName);
-                carbonUM.deleteHybridGroup(groupName);
+                carbonUM.removeGroupByNameFromRoleMapping(groupName);
 
                 //we do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
                 if (log.isDebugEnabled()) {
@@ -3390,8 +3390,8 @@ public class SCIMUserManager implements UserManager {
                         addedMemberIdsFromUserstore.toArray(new String[0]));
             }
 
-            // Update the group name in the hybrid group-role mapper.
-            carbonUM.updateHybridGroupName(currentGroupName, newGroupName);
+            // Update the group name in UM_HYBRID_GROUP_ROLE table.
+            carbonUM.updateGroupName(currentGroupName, newGroupName);
 
         } catch (UserStoreException e) {
             throw resolveError(e, e.getMessage());
