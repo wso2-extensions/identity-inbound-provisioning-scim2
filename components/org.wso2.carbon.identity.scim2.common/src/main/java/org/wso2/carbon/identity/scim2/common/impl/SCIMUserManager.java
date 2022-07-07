@@ -2787,7 +2787,7 @@ public class SCIMUserManager implements UserManager {
 
                 //delete group in carbon UM
                 carbonUM.deleteRole(groupName);
-                carbonUM.removeGroupByNameFromRoleMapping(groupName);
+                carbonUM.removeGroupRoleMappingByGroupName(groupName);
 
                 //we do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
                 if (log.isDebugEnabled()) {
