@@ -130,6 +130,11 @@
             <artifactId>org.wso2.carbon.identity.password.policy</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.testutil</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
         </dependency>
