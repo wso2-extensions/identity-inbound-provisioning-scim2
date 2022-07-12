@@ -48,6 +48,7 @@
                 <groupId>com.sun.xml.parsers</groupId>
                 <artifactId>jaxp-ri</artifactId>
                 <version>1.4.5</version>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>javax.ws.rs</groupId>
