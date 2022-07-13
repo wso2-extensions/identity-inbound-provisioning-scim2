@@ -1996,7 +1996,7 @@ public class SCIMUserManager implements UserManager {
                 maxLimit = Math.max(maxLimit, limit);
             }
             // Get total users based on the filter query.
-            totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, 1, sortBy,
+            totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, 1, sortBy,
                     sortOrder, domainName, maxLimit).size();
         } else {
             totalResults += filteredUsers.size();
