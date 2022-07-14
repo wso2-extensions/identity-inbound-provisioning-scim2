@@ -1378,27 +1378,45 @@ public class SCIMUserManager implements UserManager {
             } else {
                 users = filterUsers(node, offset, limit, sortBy, sortOrder, domainName);
             }
-            int maxLimit = getMaxLimit(domainName);
-            if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
-                if (StringUtils.isBlank(domainName)) {
-                    String[] userStoreDomainNames = getDomainNames();
-                    boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
-                    if (canCountTotalUserCount) {
-                        for (String userStoreDomainName : userStoreDomainNames) {
-                            maxLimit += getTotalUsers(userStoreDomainName);
+            // Check that total user count matching the client query needs to be calculated.
+            if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()
+                    || SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+                int maxLimit = getMaxLimit(domainName);
+                if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                    if (StringUtils.isBlank(domainName)) {
+                        String[] userStoreDomainNames = getDomainNames();
+                        boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
+                        if (canCountTotalUserCount) {
+                            for (String userStoreDomainName : userStoreDomainNames) {
+                                maxLimit += getTotalUsers(userStoreDomainName);
+                            }
                         }
+                    } else {
+                        maxLimit = getMaxLimitForTotalResults(domainName);
                     }
-                } else {
-                    maxLimit = getMaxLimitForTotalResults(domainName);
+                    maxLimit = Math.max(maxLimit, limit);
                 }
+                // Get total users based on the filter query without depending on pagination params.
+                totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
+            } else {
+                totalResults += users.size();
             }
-            // Get total users based on the filter query without depending on pagination params.
-            totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
         } catch (NotImplementedException e) {
             String errorMessage = String.format("System does not support filter operator: %s", node.getOperation());
             throw new CharonException(errorMessage, e);
         }
         return getDetailedUsers(users, requiredAttributes, totalResults);
+    }
+
+    /**
+     * Method to check whether the all configured user stores are JDBC.
+     *
+     * @return True if all the configured user stores are JDBC. False otherwise.
+     */
+    private boolean isAllConfiguredUserStoresJDBC() {
+
+        String[] userStoreDomainNames = getDomainNames();
+        return canCountTotalUserCount(userStoreDomainNames);
     }
 
     private int getMaxLimitForTotalResults(String domainName) throws CharonException {
@@ -1981,11 +1999,22 @@ public class SCIMUserManager implements UserManager {
             filteredUserDetails = getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, offset, sortBy
                     , sortOrder, domainName, maxLimit);
         }
-
-        int maxLimit = getMaxLimitForTotalResults(domainName);
-        // Get total users based on the filter query.
-        totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, 1, sortBy,
-                sortOrder, domainName, maxLimit).size();
+        // Check that total user count matching the client query needs to be calculated.
+        if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC() ||
+                SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+            int maxLimit = getMaxLimitForTotalResults(domainName);
+            if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                maxLimit = Math.max(maxLimit, limit);
+            }
+            // Get total users based on the filter query.
+            totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, 1, sortBy,
+                    sortOrder, domainName, maxLimit).size();
+        } else {
+            totalResults += filteredUserDetails.size();
+            if (totalResults == 0 && filteredUsers.size() > 1) {
+                totalResults = filteredUsers.size() - 1;
+            }
+        }
         filteredUsers.set(0, totalResults);
         filteredUsers.addAll(filteredUserDetails);
         return filteredUsers;
@@ -2509,21 +2538,19 @@ public class SCIMUserManager implements UserManager {
         try {
             // Modify display name if no domain is specified, in order to support multiple user store feature.
             String originalName = group.getDisplayName();
-            String roleNameWithDomain = null;
-            String domainName = "";
+            String roleNameWithDomain;
+            String domainName;
             try {
                 if (getUserStoreDomainFromSP() != null) {
                     domainName = getUserStoreDomainFromSP();
-                    roleNameWithDomain = IdentityUtil
-                            .addDomainToName(UserCoreUtil.removeDomainFromName(originalName), domainName);
                 } else if (originalName.indexOf(CarbonConstants.DOMAIN_SEPARATOR) > 0) {
                     domainName = IdentityUtil.extractDomainFromName(originalName);
-                    roleNameWithDomain = IdentityUtil
-                            .addDomainToName(UserCoreUtil.removeDomainFromName(originalName), domainName);
                 } else {
                     domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
-                    roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(originalName);
                 }
+                // Append the relevant domain name to the group.
+                roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(
+                        IdentityUtil.addDomainToName(UserCoreUtil.removeDomainFromName(originalName), domainName));
             } catch (IdentityApplicationManagementException e) {
                 throw new CharonException("Error retrieving User Store name. ", e);
             }
@@ -2761,6 +2788,7 @@ public class SCIMUserManager implements UserManager {
 
                 //delete group in carbon UM
                 carbonUM.deleteRole(groupName);
+                carbonUM.removeGroupRoleMappingByGroupName(groupName);
 
                 //we do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
                 if (log.isDebugEnabled()) {
@@ -3355,6 +3383,9 @@ public class SCIMUserManager implements UserManager {
                         deletedMemberIdsFromUserstore.toArray(new String[0]),
                         addedMemberIdsFromUserstore.toArray(new String[0]));
             }
+
+            // Update the group name in UM_HYBRID_GROUP_ROLE table.
+            carbonUM.updateGroupName(currentGroupName, newGroupName);
 
         } catch (UserStoreException e) {
             throw resolveError(e, e.getMessage());
@@ -5567,6 +5598,11 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    private boolean isBooleanAttribute(String name) {
+
+        return "active".equals(name);
+    }
+
     private boolean isMultivaluedAttribute(String name) {
 
         switch (name) {
@@ -5621,6 +5657,8 @@ public class SCIMUserManager implements UserManager {
                 attribute.setType(SCIMDefinitions.DataType.STRING);
             }
 
+        } else if (isBooleanAttribute(attribute.getName())) {
+            attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
         } else {
             attribute.setType(SCIMDefinitions.DataType.STRING);
         }

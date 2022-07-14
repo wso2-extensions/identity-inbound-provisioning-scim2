@@ -133,7 +133,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         for (Group group : groupList) {
             // We need to only provide the group name and group id.
             try {
-                group.setGroupID(groupDAO.getGroupIdByName(tenantId, group.getGroupName()));
+                group.setGroupID(groupDAO.getGroupIdByName(tenantId,
+                        UserCoreUtil.addDomainToName(group.getGroupName(), group.getUserStoreDomain())));
             } catch (IdentitySCIMException e) {
                 throw new UserStoreException(String.format("Error occurred while getting the group id of " +
                         "group: %s in tenant: %s", group.getGroupName(), tenantId), e);
@@ -162,13 +163,19 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             }
             return true;
         }
+
+        if (group == null) {
+            throw new IllegalArgumentException("Group object should be non-null for the id to be populated");
+        }
+
         if (log.isDebugEnabled()) {
             log.debug(String.format("Retrieving group with name: %s from tenant: %s", groupName, tenantId));
         }
         String groupId;
         GroupDAO groupDAO = new GroupDAO();
         try {
-            groupId = groupDAO.getGroupIdByName(tenantId, groupName);
+            groupId = groupDAO.getGroupIdByName(tenantId,
+                    UserCoreUtil.addDomainToName(group.getGroupName(), group.getUserStoreDomain()));
         } catch (IdentitySCIMException e) {
             throw new UserStoreException(String.format("Error occurred while getting the group id of " +
                     "group: %s in tenant: %s", groupName, tenantId), e);
@@ -179,15 +186,7 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             }
             return true;
         }
-        String domainName = UserCoreUtil.extractDomainFromName(groupName);
-        if (group == null) {
-            group = new Group(groupId);
-            group.setGroupName(resolveGroupName(groupName, domainName));
-            group.setUserStoreDomain(domainName);
-            group.setDisplayName(UserCoreUtil.removeDomainFromName(groupName));
-        } else {
-            group.setGroupID(groupId);
-        }
+        group.setGroupID(groupId);
         return true;
     }
 

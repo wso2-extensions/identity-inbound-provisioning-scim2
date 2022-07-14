@@ -98,6 +98,8 @@ public class SCIMCommonConstants {
             "SCIM2.FilterUsersAndGroupsOnlyFromPrimaryDomain";
     public static final String SCIM_ENABLE_CONSIDER_MAX_LIMIT_FOR_TOTAL_RESULT =
             "SCIM2.ConsiderMaxLimitForTotalResult";
+    public static final String SCIM_ENABLE_CONSIDER_TOTAL_RECORDS_FOR_TOTAL_RESULT_OF_LDAP =
+            "SCIM2.ConsiderTotalRecordsForTotalResultOfLDAP";
     public static final String SCIM_ENABLE_MANDATE_DOMAIN_FOR_GROUPNAMES_IN_GROUPS_RESPONSE =
             "SCIM2.MandateDomainForGroupNamesInGroupsResponse";
     public static final String SCIM_ENABLE_MANDATE_DOMAIN_FOR_USERNAMES_AND_GROUPNAMES_IN_RESPONSE =
@@ -111,6 +113,7 @@ public class SCIMCommonConstants {
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
+    public static final String ORGANIZATION_PATH_PARAM = "/o/";
 
     //Configuration for primary login identifiers
     public static final String ENABLE_LOGIN_IDENTIFIERS = "LoginIdentifiers.Enable";

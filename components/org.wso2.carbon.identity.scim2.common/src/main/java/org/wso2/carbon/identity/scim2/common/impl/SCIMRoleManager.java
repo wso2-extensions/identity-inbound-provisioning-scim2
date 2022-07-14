@@ -313,12 +313,16 @@ public class SCIMRoleManager implements RoleManager {
                     .getRoles(count, startIndex, sortBy, sortOrder, tenantDomain);
             List<Role> scimRoles = getScimRolesList(roles);
 
+            int rolesCount = roleManagementService.getRolesCount(tenantDomain);
+            if (rolesCount == 0) {
+                rolesCount = scimRoles.size();
+            } 
             // Add the results list.
             rolesList.addAll(scimRoles);
         } catch (IdentityRoleManagementException e) {
             throw new CharonException("Error occurred while listing roles.", e);
         }
-        return new RolesGetResponse(rolesList.size(), rolesList);
+        return new RolesGetResponse(rolesCount, rolesList);
     }
 
     private List<Role> getScimRolesList(List<RoleBasicInfo> roles) throws BadRequestException, CharonException {
