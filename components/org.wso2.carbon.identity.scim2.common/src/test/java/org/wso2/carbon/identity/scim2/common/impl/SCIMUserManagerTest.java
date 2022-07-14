@@ -726,11 +726,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockClaimMetadataManagementService.getLocalClaims(anyString())).thenReturn(localClaimList);
         when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(externalClaimList);
-        List<Object> result = scimUserManager.listUsersWithGET(node, 1, count, null, null, domain,
+        UsersGetResponse userResponse = scimUserManager.listUsersWithGET(node, 1, count, null, null, domain,
                 requiredClaimsMap);
 
-        assertEquals(expectedResultCount, result.size());
-        assertEquals(expectedTotalCount, result.get(0));
+        assertEquals(expectedResultCount, userResponse.getUsers().size());
+        assertEquals(expectedTotalCount, userResponse.getTotalUsers());
     }
 
     @DataProvider(name = "getDataForFilterUsersWithPagination")
@@ -802,7 +802,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser2);
                             add(testUser3);
                         }},
-                        true, false, "PRIMARY", 2, 4, 3, 3},
+                        true, false, "PRIMARY", 2, 4, 2, 3},
                 {users, "name.givenName eq testUser",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
@@ -813,7 +813,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser2);
                             add(testUser3);
                         }},
-                        false, false, "PRIMARY", 2, 4, 3, 2},
+                        false, false, "PRIMARY", 2, 4, 2, 2},
 
                 {users, "name.givenName eq testUser",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
@@ -825,7 +825,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser2);
                             add(testUser3);
                         }},
-                        true, false, "SECONDARY", 2, 4, 3, 3},
+                        true, false, "SECONDARY", 2, 4, 2, 3},
                 {users, "name.givenName eq testUser",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
@@ -836,7 +836,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser2);
                             add(testUser3);
                         }},
-                        true, true, "SECONDARY", 2, 4, 3, 3},
+                        true, true, "SECONDARY", 2, 4, 2, 3},
 
                 {users, "name.givenName sw testUser and name.givenName co New",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
@@ -846,7 +846,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser4);
                             add(testUser5);
                         }},
-                        true, false, "PRIMARY", 1, 4, 2, 2},
+                        true, false, "PRIMARY", 1, 4, 1, 2},
                 {users, "name.givenName sw testUser and name.givenName co New",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
@@ -855,7 +855,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser4);
                             add(testUser5);
                         }},
-                        false, false, "PRIMARY", 1, 4, 2, 1},
+                        false, false, "PRIMARY", 1, 4, 1, 1},
 
                 {users, "name.givenName sw testUser and name.givenName co New",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
@@ -865,7 +865,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser4);
                             add(testUser5);
                         }},
-                        true, false, "SECONDARY", 1, 4, 2, 2},
+                        true, false, "SECONDARY", 1, 4, 1, 2},
                 {users, "name.givenName sw testUser and name.givenName co New",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
@@ -874,7 +874,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser4);
                             add(testUser5);
                         }},
-                        false, false, "SECONDARY", 1, 4, 2, 2},
+                        false, false, "SECONDARY", 1, 4, 1, 2},
 
         };
     }
