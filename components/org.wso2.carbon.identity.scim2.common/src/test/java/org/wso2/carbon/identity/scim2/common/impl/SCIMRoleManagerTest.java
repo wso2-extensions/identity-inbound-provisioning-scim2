@@ -570,12 +570,12 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         when(mockRoleManagementService.getRolesCount(anyString())).thenAnswer(invocationOnMock -> 5);
 
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN);
-        List<Object> listRolesWithGET = roleManager.listRolesWithGET(rootNode, 2, (Integer) count, null, null);
-        int totalRolesCount = (Integer)listRolesWithGET.get(0);
+        RolesGetResponse rolesResponse = roleManager.listRolesWithGET(rootNode, 2, (Integer) count, null, null);
+
         if (rootNode == null) {
-            assertEquals(totalRolesCount, 5);
+            assertEquals(rolesResponse.getTotalRoles(), 5);
         } else {
-            assertEquals(totalRolesCount, roleList.size());
+            assertEquals(rolesResponse.getTotalRoles(), roleList.size());
         }
         assertTrue(true, "list roles works as expected");
     }
