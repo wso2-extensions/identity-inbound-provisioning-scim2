@@ -44,6 +44,7 @@ import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.User;
+import org.wso2.charon3.core.objects.plainobjects.RolesGetResponse;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
@@ -402,8 +403,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             throws NotImplementedException, BadRequestException, CharonException {
 
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN);
-        List<Object> roles = roleManager.listRolesWithGET(null, 1, 0, null, null);
-        assertEquals(roles.size(), 0);
+        RolesGetResponse rolesResponse = roleManager.listRolesWithGET(null, 1, 0, null, null);
+        assertEquals(rolesResponse.getRoles().size(), 0);
     }
 
     @DataProvider(name = "dataProviderForListRolesWithGETInvalidLimit")
@@ -569,12 +570,12 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         when(mockRoleManagementService.getRolesCount(anyString())).thenAnswer(invocationOnMock -> 5);
 
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN);
-        List<Object> listRolesWithGET = roleManager.listRolesWithGET(rootNode, 2, (Integer) count, null, null);
-        int totalRolesCount = (Integer)listRolesWithGET.get(0);
+        RolesGetResponse rolesResponse = roleManager.listRolesWithGET(rootNode, 2, (Integer) count, null, null);
+
         if (rootNode == null) {
-            assertEquals(totalRolesCount, 5);
+            assertEquals(rolesResponse.getTotalRoles(), 5);
         } else {
-            assertEquals(totalRolesCount, roleList.size());
+            assertEquals(rolesResponse.getTotalRoles(), roleList.size());
         }
         assertTrue(true, "list roles works as expected");
     }
@@ -855,9 +856,9 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             CharonException {
 
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN2);
-        List<Object> roles = roleManager.listRolesWithPost(getDummySearchRequest(null, 2, 0,
+        RolesGetResponse rolesResponse = roleManager.listRolesWithPost(getDummySearchRequest(null, 2, 0,
                 null, null));
-        assertEquals(roles.size(), 0);
+        assertEquals(rolesResponse.getRoles().size(), 0);
     }
 
     @DataProvider(name = "dataProviderForListRolesWithPOSTInvalidLimit")

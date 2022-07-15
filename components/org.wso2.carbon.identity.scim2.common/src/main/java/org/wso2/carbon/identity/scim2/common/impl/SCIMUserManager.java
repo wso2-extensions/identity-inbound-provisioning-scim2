@@ -87,6 +87,8 @@ import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.User;
+import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
+import org.wso2.charon3.core.objects.plainobjects.GroupsGetResponse;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -559,7 +561,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     @Deprecated
-    public List<Object> listUsersWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
+    public UsersGetResponse listUsersWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
                                          String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
@@ -573,7 +575,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Object> listUsersWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
+    public UsersGetResponse listUsersWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
                                          String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
@@ -582,7 +584,7 @@ public class SCIMUserManager implements UserManager {
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
         } else if (count != null && count == 0) {
-            return Collections.emptyList();
+            return new UsersGetResponse(0, Collections.emptyList());
         } else if (rootNode != null) {
             return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
         } else {
@@ -591,7 +593,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Object> listUsersWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
+    public UsersGetResponse listUsersWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         return listUsersWithGET(searchRequest.getFilter(), (Integer) searchRequest.getStartIndex(),
@@ -612,14 +614,11 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error while listing users
      * @throws BadRequestException
      */
-    private List<Object> listUsers(Map<String, Boolean> requiredAttributes, int offset, Integer limit,
+    private UsersGetResponse listUsers(Map<String, Boolean> requiredAttributes, int offset, Integer limit,
                                    String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
-        List<Object> users = new ArrayList<>();
-        // 0th index is to store total number of results.
-        users.add(0);
-
+        List<User> scimUsers = new ArrayList<>();
         // Handle limit equals NULL scenario.
         limit = handleLimitEqualsNULL(limit);
         Set<org.wso2.carbon.user.core.common.User> coreUsers;
@@ -656,15 +655,14 @@ public class SCIMUserManager implements UserManager {
                 log.debug(message);
             }
         } else {
-            List<Object> scimUsers = getUserDetails(coreUsers, requiredAttributes);
+            scimUsers = getUserDetails(coreUsers, requiredAttributes);
             if (totalUsers != 0) {
-                users.set(0, Math.toIntExact(totalUsers)); // Set total number of results to 0th index.
+                totalUsers = Math.toIntExact(totalUsers); // Set total number of results to 0th index.
             } else {
-                users.set(0, scimUsers.size());
+                totalUsers = scimUsers.size();
             }
-            users.addAll(scimUsers); // Set user details from index 1.
         }
-        return users;
+        return getDetailedUsers(scimUsers, (int) totalUsers);
     }
 
     private long getTotalUsersFromAllUserStores() throws CharonException {
@@ -885,11 +883,11 @@ public class SCIMUserManager implements UserManager {
      * @return User list with detailed attributes
      * @throws CharonException Error while retrieving users
      */
-    private List<Object> getUserDetails(Set<org.wso2.carbon.user.core.common.User> coreUsers,
+    private List<User> getUserDetails(Set<org.wso2.carbon.user.core.common.User> coreUsers,
                                         Map<String, Boolean> requiredAttributes)
             throws CharonException {
 
-        List<Object> users = new ArrayList<>();
+        List<User> users = new ArrayList<>();
         try {
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
@@ -917,7 +915,7 @@ public class SCIMUserManager implements UserManager {
         return users;
     }
 
-    private void retrieveSCIMUsers(List<Object> users, Set<org.wso2.carbon.user.core.common.User> coreUsers,
+    private void retrieveSCIMUsers(List<User> users, Set<org.wso2.carbon.user.core.common.User> coreUsers,
                                    List<String> requiredClaims, Map<String, String> scimToLocalClaimsMap)
             throws CharonException {
 
@@ -1311,7 +1309,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error filtering the users.
      * @throws BadRequestException
      */
-    private List<Object> filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
+    private UsersGetResponse filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
                                      String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
@@ -1349,11 +1347,12 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error while filtering
      * @throws BadRequestException
      */
-    private List<Object> filterUsersBySingleAttribute(ExpressionNode node, Map<String, Boolean> requiredAttributes,
+    private UsersGetResponse filterUsersBySingleAttribute(ExpressionNode node, Map<String, Boolean> requiredAttributes,
                                                       int offset, int limit, String sortBy, String sortOrder,
                                                       String domainName) throws CharonException, BadRequestException {
 
         Set<org.wso2.carbon.user.core.common.User> users;
+        List<User> filteredUsers = new ArrayList<>();
 
         if (log.isDebugEnabled()) {
             log.debug(String.format("Listing users by filter: %s %s %s", node.getAttributeValue(), node.getOperation(),
@@ -1371,11 +1370,13 @@ public class SCIMUserManager implements UserManager {
             // Check which APIs should the filter needs to follow.
             if (isUseLegacyAPIs(limit)) {
                 users = filterUsersUsingLegacyAPIs(node, limit, offset, domainName);
+                filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
                 if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
-                    return getDetailedUsers(users, requiredAttributes, users.size());
+                    return getDetailedUsers(filteredUsers, users.size());
                 }
             } else {
                 users = filterUsers(node, offset, limit, sortBy, sortOrder, domainName);
+                filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
             }
             // Check that total user count matching the client query needs to be calculated.
             if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()
@@ -1404,7 +1405,7 @@ public class SCIMUserManager implements UserManager {
             String errorMessage = String.format("System does not support filter operator: %s", node.getOperation());
             throw new CharonException(errorMessage, e);
         }
-        return getDetailedUsers(users, requiredAttributes, totalResults);
+        return getDetailedUsers(filteredUsers, totalResults);
     }
 
     /**
@@ -1944,25 +1945,18 @@ public class SCIMUserManager implements UserManager {
     /**
      * Method to remove duplicate users and get the user details.
      *
-     * @param coreUsers          Filtered user names
-     * @param requiredAttributes Required attributes in the response
+     * @param userList          List of users retrieved.
+     * @param totalUsers        Total number of results for the query.
      * @return Users list with populated attributes
      * @throws CharonException Error in retrieving user details
      */
-    private List<Object> getDetailedUsers(Set<org.wso2.carbon.user.core.common.User> coreUsers,
-                                          Map<String, Boolean> requiredAttributes, int totalUsers)
+    private UsersGetResponse getDetailedUsers(List<User> userList, int totalUsers)
             throws CharonException {
 
-        List<Object> filteredUsers = new ArrayList<>();
-        // 0th index is to store total number of results.
-        filteredUsers.add(0);
-
-        // Set total number of filtered results.
-        filteredUsers.set(0, totalUsers);
-
-        // Get details of the finalized user list.
-        filteredUsers.addAll(getFilteredUserDetails(coreUsers, requiredAttributes));
-        return filteredUsers;
+        if (userList == null) {
+            return new UsersGetResponse(0, Collections.emptyList());
+        }
+        return new UsersGetResponse(totalUsers, userList);
     }
 
     /**
@@ -1978,14 +1972,11 @@ public class SCIMUserManager implements UserManager {
      * @return
      * @throws CharonException
      */
-    private List<Object> getMultiAttributeFilteredUsers(Node node, Map<String, Boolean> requiredAttributes,
+    private UsersGetResponse getMultiAttributeFilteredUsers(Node node, Map<String, Boolean> requiredAttributes,
                                                         int offset, int limit, String sortBy, String sortOrder,
                                                         String domainName) throws CharonException, BadRequestException {
 
-        List<Object> filteredUsers = new ArrayList<>();
-        List<Object> filteredUserDetails = new ArrayList<>();
-        // 0th index is to store total number of results.
-        filteredUsers.add(0);
+        List<User> filteredUsers = new ArrayList<>();
         Set<org.wso2.carbon.user.core.common.User> users;
         int totalResults = 0;
         // Handle pagination.
@@ -1995,8 +1986,8 @@ public class SCIMUserManager implements UserManager {
             filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
         } else {
             int maxLimit = getMaxLimit(domainName);
-            filteredUserDetails = getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, offset, sortBy
-                    , sortOrder, domainName, maxLimit);
+            users = getMultiAttributeFilteredUsersWithMaxLimit(node, offset, sortBy, sortOrder, domainName, maxLimit);
+            filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
         }
         // Check that total user count matching the client query needs to be calculated.
         if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC() ||
@@ -2006,30 +1997,27 @@ public class SCIMUserManager implements UserManager {
                 maxLimit = Math.max(maxLimit, limit);
             }
             // Get total users based on the filter query.
-            totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, requiredAttributes, 1, sortBy,
+            totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, 1, sortBy,
                     sortOrder, domainName, maxLimit).size();
         } else {
-            totalResults += filteredUserDetails.size();
+            totalResults += filteredUsers.size();
             if (totalResults == 0 && filteredUsers.size() > 1) {
                 totalResults = filteredUsers.size() - 1;
             }
         }
-        filteredUsers.set(0, totalResults);
-        filteredUsers.addAll(filteredUserDetails);
-        return filteredUsers;
+        return getDetailedUsers(filteredUsers, totalResults);
     }
 
 
-    private List<Object> getMultiAttributeFilteredUsersWithMaxLimit(Node node, Map<String, Boolean> requiredAttributes, int offset,
-                                                        String sortBy, String sortOrder, String domainName, int maxLimit)
+    private Set<org.wso2.carbon.user.core.common.User> getMultiAttributeFilteredUsersWithMaxLimit(Node node, int offset,
+                                           String sortBy, String sortOrder, String domainName, int maxLimit)
             throws CharonException, BadRequestException {
 
-        List<Object> filteredUsers = new ArrayList<>();
-        Set<org.wso2.carbon.user.core.common.User> users;
+        Set<org.wso2.carbon.user.core.common.User> users = null;
         if (StringUtils.isNotEmpty(domainName)) {
             users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder, domainName,
                     false);
-            return getFilteredUserDetails(users, requiredAttributes);
+            return users;
         } else {
             AbstractUserStoreManager tempCarbonUM = carbonUM;
             // If pagination and domain name are not given, then perform filtering on all available user stores.
@@ -2039,13 +2027,12 @@ public class SCIMUserManager implements UserManager {
                     domainName = tempCarbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
                     users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder,
                             domainName, false);
-                    filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
                 }
                 // If secondary user store manager assigned to carbonUM then global variable carbonUM will contains the
                 // secondary user store manager.
                 tempCarbonUM = (AbstractUserStoreManager) tempCarbonUM.getSecondaryUserStoreManager();
             }
-            return filteredUsers;
+            return users;
         }
     }
     /**
@@ -2377,11 +2364,11 @@ public class SCIMUserManager implements UserManager {
      * @return
      * @throws CharonException
      */
-    private List<Object> getFilteredUserDetails(Set<org.wso2.carbon.user.core.common.User> users,
+    private List<User> getFilteredUserDetails(Set<org.wso2.carbon.user.core.common.User> users,
                                                 Map<String, Boolean> requiredAttributes)
             throws CharonException {
 
-        List<Object> filteredUsers = new ArrayList<>();
+        List<User> filteredUsers = new ArrayList<>();
 
         if (users == null || users.size() == 0) {
             if (log.isDebugEnabled()) {
@@ -2422,7 +2409,7 @@ public class SCIMUserManager implements UserManager {
         return filteredUsers;
     }
 
-    private void addSCIMUsers(List<Object> filteredUsers, Set<org.wso2.carbon.user.core.common.User> users,
+    private void addSCIMUsers(List<User> filteredUsers, Set<org.wso2.carbon.user.core.common.User> users,
                               List<String> requiredClaims,
                               Map<String, String> scimToLocalClaimsMap)
             throws CharonException {
@@ -2809,7 +2796,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Object> listGroupsWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
+    public GroupsGetResponse listGroupsWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
                                           String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
@@ -2827,7 +2814,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Object> listGroupsWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
+    public GroupsGetResponse listGroupsWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
                                           String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
@@ -2874,13 +2861,12 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException If an error occurred.
      * @throws BadRequestException If an error occurred.
      */
-    private List<Object> listGroups(int startIndex, Integer count, String sortBy, String sortOrder, String domainName,
-                                    Map<String, Boolean> requiredAttributes) throws CharonException,
+    private GroupsGetResponse listGroups(int startIndex, Integer count, String sortBy, String sortOrder, String domainName,
+                                         Map<String, Boolean> requiredAttributes) throws CharonException,
             BadRequestException {
 
-        List<Object> groupList = new ArrayList<>();
-        // 0th index is to store total number of results.
-        groupList.add(0);
+        GroupsGetResponse groupsResponse = new GroupsGetResponse(0, Collections.emptyList());
+        List<Group> groupList = new ArrayList<>();
         try {
             Set<String> groupNames;
             if (carbonUM.isRoleAndGroupSeparationEnabled()) {
@@ -2939,9 +2925,9 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentitySCIMException | BadRequestException e) {
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
-        // Set the totalResults value in index 0.
-        groupList.set(0, groupList.size() - 1);
-        return groupList;
+        groupsResponse.setTotalGroups(groupList.size());
+        groupsResponse.setGroups(groupList);
+        return groupsResponse;
     }
 
     /**
@@ -3032,7 +3018,7 @@ public class SCIMUserManager implements UserManager {
      * @throws NotImplementedException Complex filters are used.
      * @throws CharonException         Unknown node operation.
      */
-    private List<Object> filterGroups(Node rootNode, int startIndex, Integer count, String sortBy, String sortOrder,
+    private GroupsGetResponse filterGroups(Node rootNode, int startIndex, Integer count, String sortBy, String sortOrder,
                                       String domainName, Map<String, Boolean> requiredAttributes)
             throws NotImplementedException, CharonException, BadRequestException {
 
@@ -3062,7 +3048,7 @@ public class SCIMUserManager implements UserManager {
      * @return Filtered groups
      * @throws CharonException Error in Filtering
      */
-    private List<Object> filterGroupsBySingleAttribute(ExpressionNode node, int startIndex, int count, String sortBy,
+    private GroupsGetResponse filterGroupsBySingleAttribute(ExpressionNode node, int startIndex, int count, String sortBy,
                                                        String sortOrder, String domainName,
                                                        Map<String, Boolean> requiredAttributes)
             throws CharonException, BadRequestException {
@@ -3083,9 +3069,7 @@ public class SCIMUserManager implements UserManager {
         // EnableFilteringEnhancements' properties in identity.xml or domain name embedded in the filter attribute
         // value.
         domainName = resolveDomain(domainName, node);
-        List<Object> filteredGroups = new ArrayList<>();
-        // 0th index is to store total number of results.
-        filteredGroups.add(0);
+        List<Group> filteredGroups = new ArrayList<>();
         try {
             List<String> groupsList = new ArrayList<>(getGroupList(node, domainName));
 
@@ -3108,9 +3092,7 @@ public class SCIMUserManager implements UserManager {
                         }
                     } else {
                         // Returning null will send a resource not found error to client by Charon.
-                        filteredGroups.clear();
-                        filteredGroups.add(0);
-                        return filteredGroups;
+                        return new GroupsGetResponse(0, null);
                     }
                 }
             }
@@ -3122,9 +3104,7 @@ public class SCIMUserManager implements UserManager {
             throw resolveError(e, "Error in filtering group with filter: " + attributeName + " + " +
                     filterOperation + " + " + attributeValue);
         }
-        // Set the totalResults value in index 0.
-        filteredGroups.set(0, filteredGroups.size() - 1);
-        return filteredGroups;
+        return new GroupsGetResponse(filteredGroups.size(), filteredGroups);
     }
 
     /**
@@ -3736,7 +3716,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public List<Object> listGroupsWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
+    public GroupsGetResponse listGroupsWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
             throws BadRequestException, NotImplementedException, CharonException {
 
         return listGroupsWithGET(searchRequest.getFilter(), searchRequest.getStartIndex(), searchRequest.getCount(),

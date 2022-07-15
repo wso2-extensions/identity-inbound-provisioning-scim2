@@ -47,6 +47,8 @@ import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
+import org.wso2.charon3.core.objects.plainobjects.GroupsGetResponse;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -112,9 +114,9 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.testng.AssertJUnit.assertEquals;
-import static org.testng.AssertJUnit.assertNotNull;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 /*
  * Unit tests for SCIMUserManager
@@ -430,10 +432,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
 
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        List<Object> roleList = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(node, 1, 1, null, null,
                 null, requiredAttributes);
 
-        assertEquals(roleList.size(), 2);
+        assertEquals(groupsResponse.getGroups().size(), 1);
 
     }
 
@@ -472,8 +474,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         HashMap<String, Boolean> requiredClaimsMap = new HashMap<>();
         requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        List<Object> result = scimUserManager.listUsersWithGET(null, 1, 0, null, null, requiredClaimsMap);
-        assertEquals(expectedResultCount, result.size());
+        UsersGetResponse result = scimUserManager.listUsersWithGET(null, 1, 0, null, null, requiredClaimsMap);
+        assertEquals(result.getUsers().size(), expectedResultCount);
     }
 
     @DataProvider(name = "listUser")
@@ -495,18 +497,18 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
                 // If SCIM is enabled for both primary and secondary, result should contain a total of 4 entries,
                 // including the metadata in index position.
-                {users, true, true, 4},
+                {users, true, true, 3},
 
                 // If SCIM is enabled for primary but not for secondary, result should contain 3 entries including
                 // the metadata in index position and 2 users [testUser1, testUser2] from primary user-store domain.
-                {users, true, false, 3},
+                {users, true, false, 2},
 
                 // If SCIM is enabled for secondary but not for primary, result should contain 2 entries including
                 // the metadata in index position and 1 users [SECONDARY/testUser3] from secondary user-store domain.
-                {users, false, true, 2},
+                {users, false, true, 1},
 
                 // If no users are present in user-stores, result should contain a single entry for metadata.
-                {Collections.EMPTY_LIST, true, true, 1}
+                {Collections.EMPTY_LIST, true, true, 0}
         };
     }
 
@@ -569,9 +571,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
             node = filterTreeManager.buildTree();
         }
 
-        List<Object> result = scimUserManager.listUsersWithGET(node, 1, null, null, null, null,
+        UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, null, null, null, null,
                 requiredClaimsMap);
-        assertEquals(expectedResultCount, result.size());
+        assertEquals(result.getUsers().size(), expectedResultCount);
     }
 
     @DataProvider(name = "userInfoForFiltering")
@@ -597,12 +599,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         return new Object[][]{
 
-                {users, "name.givenName eq testUser", 3,
+                {users, "name.givenName eq testUser", 2,
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                         }}},
-                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", 2,
+                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", 1,
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                         }}}
@@ -725,11 +727,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockClaimMetadataManagementService.getLocalClaims(anyString())).thenReturn(localClaimList);
         when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(externalClaimList);
-        List<Object> result = scimUserManager.listUsersWithGET(node, 1, count, null, null, domain,
+        UsersGetResponse userResponse = scimUserManager.listUsersWithGET(node, 1, count, null, null, domain,
                 requiredClaimsMap);
 
-        assertEquals(expectedResultCount, result.size());
-        assertEquals(expectedTotalCount, result.get(0));
+        assertEquals(expectedResultCount, userResponse.getUsers().size());
+        assertEquals(expectedTotalCount, userResponse.getTotalUsers());
     }
 
     @DataProvider(name = "getDataForFilterUsersWithPagination")
@@ -801,7 +803,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser2);
                             add(testUser3);
                         }},
-                        true, false, "PRIMARY", 2, 4, 3, 3},
+                        true, false, "PRIMARY", 2, 4, 2, 3},
                 {users, "name.givenName eq testUser",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
@@ -812,7 +814,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser2);
                             add(testUser3);
                         }},
-                        false, false, "PRIMARY", 2, 4, 3, 2},
+                        false, false, "PRIMARY", 2, 4, 2, 2},
 
                 {users, "name.givenName eq testUser",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
@@ -824,7 +826,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser2);
                             add(testUser3);
                         }},
-                        true, false, "SECONDARY", 2, 4, 3, 3},
+                        true, false, "SECONDARY", 2, 4, 2, 3},
                 {users, "name.givenName eq testUser",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
@@ -835,7 +837,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser2);
                             add(testUser3);
                         }},
-                        true, true, "SECONDARY", 2, 4, 3, 3},
+                        true, true, "SECONDARY", 2, 4, 2, 3},
 
                 {users, "name.givenName sw testUser and name.givenName co New",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
@@ -845,7 +847,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser4);
                             add(testUser5);
                         }},
-                        true, false, "PRIMARY", 1, 4, 2, 2},
+                        true, false, "PRIMARY", 1, 4, 1, 2},
                 {users, "name.givenName sw testUser and name.givenName co New",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
@@ -854,7 +856,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser4);
                             add(testUser5);
                         }},
-                        false, false, "PRIMARY", 1, 4, 2, 1},
+                        false, false, "PRIMARY", 1, 4, 1, 1},
 
                 {users, "name.givenName sw testUser and name.givenName co New",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
@@ -864,7 +866,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser4);
                             add(testUser5);
                         }},
-                        true, false, "SECONDARY", 1, 4, 2, 2},
+                        true, false, "SECONDARY", 1, 4, 1, 2},
                 {users, "name.givenName sw testUser and name.givenName co New",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
@@ -873,7 +875,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser4);
                             add(testUser5);
                         }},
-                        false, false, "SECONDARY", 1, 4, 2, 2},
+                        false, false, "SECONDARY", 1, 4, 1, 2},
 
         };
     }
@@ -951,12 +953,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
 
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
-        List<Object> roleList = scimUserManager
+        GroupsGetResponse groupsResponse = scimUserManager
                 .listGroupsWithGET(null, 1, null, null, null, "Application", requiredAttributes);
-        roleList.remove(0); //The first entry is the count of roles.
-        assertEquals("Application/Apple", ((Group) roleList.get(0)).getDisplayName());
-        assertEquals("Application/MyApp", ((Group) roleList.get(1)).getDisplayName());
-        assertEquals(roleList.size(), 2);
+
+        assertEquals(groupsResponse.getGroups().get(0).getDisplayName(), "Application/Apple");
+        assertEquals(groupsResponse.getGroups().get(1).getDisplayName(), "Application/MyApp");
+        assertEquals(groupsResponse.getGroups().size(), 2);
     }
 
     @DataProvider(name = "listApplicationRoles")
@@ -1008,11 +1010,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
 
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
-        List<Object> roleList = scimUserManager
+        GroupsGetResponse groupsResponse = scimUserManager
                 .listGroupsWithGET(node, 1, null, null, null, "Application", requiredAttributes);
-        roleList.remove(0); //The first entry is the count of roles.
-        assertEquals("Application/MyApp", ((Group) roleList.get(0)).getDisplayName());
-        assertEquals(roleList.size(), 1);
+
+        assertEquals(groupsResponse.getGroups().get(0).getDisplayName(), "Application/MyApp");
+        assertEquals(groupsResponse.getGroups().size(), 1);
     }
 
     @DataProvider(name = "applicationDomainWithFilters")
@@ -1130,7 +1132,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
             }
         }
 
-        assertTrue("UserName claim update is not properly handled.", hasExpectedBehaviour);
+        assertTrue(hasExpectedBehaviour, "UserName claim update is not properly handled.");
     }
 
     @Test
@@ -1164,7 +1166,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         List<Attribute> list = scimUserManager.getUserSchema();
-        assertEquals(3, list.size());
+        assertEquals(list.size(), 3);
     }
 
     @Test(dataProvider = "groupPermission")
@@ -1177,7 +1179,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 .thenReturn(mockedRolePermissionManagementService);
         when(mockedRolePermissionManagementService.getRolePermissions(anyString(), anyInt())).thenReturn(permission);
         String[] actual = scimUserManager.getGroupPermissions(roleName);
-        assertEquals(expected, actual);
+        assertEquals(actual, expected);
     }
 
     @DataProvider(name = "groupPermission")
@@ -1368,13 +1370,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId("carbon.super")).thenReturn(-1234);
         User scimUser = scimUserManager.getUser(userId, requiredAttributes);
-        assertEquals(expectedNoOfAttributes, scimUser.getAttributeList().size());
+        assertEquals(scimUser.getAttributeList().size(), expectedNoOfAttributes);
         // Check whether the added multi valued attributes for the addresses attribute are contained.
-        assertEquals(2,
-                ((MultiValuedAttribute) scimUser.getAttribute("addresses")).getAttributeValues().size());
-        assertEquals(expectedUserName, scimUser.getUserName());
-        assertEquals(expectedNoOfGroups, scimUser.getGroups().size());
-        assertEquals(expectedNoOfRoles, scimUser.getRoles().size());
+        assertEquals(
+                ((MultiValuedAttribute) scimUser.getAttribute("addresses")).getAttributeValues().size(), 2);
+        assertEquals(scimUser.getUserName(), expectedUserName);
+        assertEquals(scimUser.getGroups().size(), expectedNoOfGroups);
+        assertEquals(scimUser.getRoles().size(), expectedNoOfRoles);
     }
 
     @DataProvider(name = "exceptionHandlingConfigurations")
@@ -1437,15 +1439,14 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     public void testListUsersWithPost() throws Exception {
 
         SearchRequest searchRequest = new SearchRequest();
-        List<Object> listOfUsers = new ArrayList<>();
-
+        UsersGetResponse usersGetResponse = new UsersGetResponse(0, Collections.emptyList());
         Map<String, Boolean> requiredAttributes = new HashMap<>();
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
-        doReturn(listOfUsers).when(scimUserManager)
+        doReturn(usersGetResponse).when(scimUserManager)
                 .listUsersWithGET(any(), any(), any(), anyString(), anyString(), anyString(), anyMap());
-        List<Object> users = scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
-        assertEquals(listOfUsers, users);
+        UsersGetResponse users = scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
+        assertEquals(users, usersGetResponse);
     }
 
     @Test(expectedExceptions = NotFoundException.class)
