@@ -1051,7 +1051,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                             add(testUser4);
                             add(testUser5);
                         }},
-                        false, false, "PRIMARY", 1, 4, 1, 1},
+                        false, false, "PRIMARY", 1, 4, 1, 2},
 
                 {users, "name.givenName sw testUser and name.givenName co New",
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
