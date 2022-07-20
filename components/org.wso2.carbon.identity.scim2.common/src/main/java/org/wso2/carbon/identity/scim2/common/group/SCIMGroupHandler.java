@@ -217,8 +217,7 @@ public class SCIMGroupHandler {
         if (groupDAO.isExistingGroup(oldRoleName, this.tenantId)) {
             groupDAO.updateRoleName(this.tenantId, oldRoleName, newRoleName);
         } else {
-            throw new IdentitySCIMException("Non-existent group: " + oldRoleName +
-                    " is trying to be updated..");
+            logger.warn("Non-existent group: " + oldRoleName + " is trying to be updated..");
         }
     }
 

@@ -29,7 +29,6 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
-import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.charon3.core.objects.Group;
 
@@ -47,6 +46,7 @@ import java.util.HashSet;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.anyMap;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -283,13 +283,13 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
 
         SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(1);
         ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
-        scimGroupHandler.updateRoleName("EXISTANT_ROLE_NAME", "NEW_ROLE_NAME");
+        scimGroupHandler.updateRoleName("EXISTENT_ROLE_NAME", "NEW_ROLE_NAME");
         verify(mockedGroupDAO).updateRoleName(anyInt(),argumentCaptor.capture(),anyString());
-        assertEquals(argumentCaptor.getValue(),"EXISTANT_ROLE_NAME");
+        assertEquals(argumentCaptor.getValue(),"EXISTENT_ROLE_NAME");
     }
 
-    @Test(expectedExceptions = IdentitySCIMException.class)
-    public void testUpdateRoleNameException() throws Exception {
+    @Test
+    public void testUpdateRoleNameNonExistent() throws Exception {
         ResultSet resultSet = mock(ResultSet.class);
         mockStatic(IdentityDatabaseUtil.class);
         mockStatic(SCIMCommonUtils.class);
@@ -300,7 +300,7 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
 
         SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(1);
         scimGroupHandler.updateRoleName("NON_EXISTENT_ROLE_NAME", "NEW_ROLE_NAME");
-        //this method is for testing of throwing IdentitySCIMException, hence no assertion
+        verify(mockedGroupDAO, times(0)).updateRoleName(anyInt(),anyString(),anyString());
     }
 
     @Test
