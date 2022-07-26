@@ -213,6 +213,10 @@ public class SCIMUserManager implements UserManager {
             user.setUserName(IdentityUtil.addDomainToName(user.getUserName(), userStoreDomainName));
         }
 
+        if (!isUserStoreExist(userStoreDomainName)){
+            throw new BadRequestException("Invalid userstore domain.");
+        }
+
         if (StringUtils.isNotBlank(userStoreDomainName) && !isSCIMEnabled(userStoreDomainName)) {
             throw new CharonException("Cannot add user through scim to user store " + ". SCIM is not " +
                     "enabled for user store " + userStoreDomainName);
@@ -6080,5 +6084,20 @@ public class SCIMUserManager implements UserManager {
 
         return groupsList.stream().map(groupName -> UserCoreUtil.addDomainToName(groupName, userStoreDomainName))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * This method will return whether user store exist or not
+     *
+     * @param userStoreName user store name
+     * @return whether user store exist or not for the particular domain
+     */
+    private boolean isUserStoreExist(String userStoreName) {
+
+        UserStoreManager userStoreManager = carbonUM.getSecondaryUserStoreManager(userStoreName);
+        if (userStoreManager != null) {
+            return true;
+        }
+        return false;
     }
 }
