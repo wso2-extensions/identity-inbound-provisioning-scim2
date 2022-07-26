@@ -213,10 +213,6 @@ public class SCIMUserManager implements UserManager {
             user.setUserName(IdentityUtil.addDomainToName(user.getUserName(), userStoreDomainName));
         }
 
-        if (!isUserStoreExist(userStoreDomainName)){
-            throw new BadRequestException("Invalid userstore domain.");
-        }
-
         if (StringUtils.isNotBlank(userStoreDomainName) && !isSCIMEnabled(userStoreDomainName)) {
             throw new CharonException("Cannot add user through scim to user store " + ". SCIM is not " +
                     "enabled for user store " + userStoreDomainName);
@@ -891,7 +887,7 @@ public class SCIMUserManager implements UserManager {
      */
     private List<Object> getUserDetails(Set<org.wso2.carbon.user.core.common.User> coreUsers,
                                         Map<String, Boolean> requiredAttributes)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         List<Object> users = new ArrayList<>();
         try {
@@ -923,7 +919,7 @@ public class SCIMUserManager implements UserManager {
 
     private void retrieveSCIMUsers(List<Object> users, Set<org.wso2.carbon.user.core.common.User> coreUsers,
                                    List<String> requiredClaims, Map<String, String> scimToLocalClaimsMap)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         for (org.wso2.carbon.user.core.common.User coreUser : coreUsers) {
 
@@ -1937,7 +1933,7 @@ public class SCIMUserManager implements UserManager {
      */
     private List<Object> getDetailedUsers(Set<org.wso2.carbon.user.core.common.User> coreUsers,
                                           Map<String, Boolean> requiredAttributes, int totalUsers)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         List<Object> filteredUsers = new ArrayList<>();
         // 0th index is to store total number of results.
@@ -2354,7 +2350,7 @@ public class SCIMUserManager implements UserManager {
      */
     private List<Object> getFilteredUserDetails(Set<org.wso2.carbon.user.core.common.User> users,
                                                 Map<String, Boolean> requiredAttributes)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         List<Object> filteredUsers = new ArrayList<>();
 
@@ -2400,7 +2396,7 @@ public class SCIMUserManager implements UserManager {
     private void addSCIMUsers(List<Object> filteredUsers, Set<org.wso2.carbon.user.core.common.User> users,
                               List<String> requiredClaims,
                               Map<String, String> scimToLocalClaimsMap)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         User scimUser;
         for (org.wso2.carbon.user.core.common.User user : users) {
@@ -2725,7 +2721,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void deleteGroup(String groupId) throws NotFoundException, CharonException {
+    public void deleteGroup(String groupId) throws NotFoundException, CharonException, BadRequestException {
 
         if (log.isDebugEnabled()) {
             log.debug("Deleting group: " + groupId);
@@ -3205,7 +3201,7 @@ public class SCIMUserManager implements UserManager {
      * @throws UserStoreException
      */
     private Group getRoleWithDefaultAttributes(String roleName, Map<String, Boolean> requiredAttributes)
-            throws CharonException, UserStoreException {
+            throws CharonException, UserStoreException, BadRequestException {
 
         String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
         if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
@@ -3758,9 +3754,12 @@ public class SCIMUserManager implements UserManager {
      * @param userStoreName user store name
      * @return whether scim is enabled or not for the particular user store
      */
-    private boolean isSCIMEnabled(String userStoreName) {
+    private boolean isSCIMEnabled(String userStoreName) throws BadRequestException {
 
         UserStoreManager userStoreManager = carbonUM.getSecondaryUserStoreManager(userStoreName);
+        if (userStoreManager == null) {
+            throw new BadRequestException("Invalid userstore domain.");
+        }
         if (userStoreManager != null) {
             try {
                 return userStoreManager.isSCIMEnabled();
@@ -3781,7 +3780,7 @@ public class SCIMUserManager implements UserManager {
      */
     private User getSCIMUser(org.wso2.carbon.user.core.common.User coreUser, List<String> claimURIList,
                              Map<String, String> scimToLocalClaimsMap, Map<String, String> userClaimValues)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         User scimUser = null;
 
@@ -3948,7 +3947,7 @@ public class SCIMUserManager implements UserManager {
      */
     private Set<User> getSCIMUsers(Set<org.wso2.carbon.user.core.common.User> users, List<String> claimURIList,
                                    Map<String, String> scimToLocalClaimsMap, Map<String, Boolean> requiredAttributes)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         List<User> scimUsers = new ArrayList<>();
 
@@ -6086,18 +6085,4 @@ public class SCIMUserManager implements UserManager {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * This method will return whether user store exist or not
-     *
-     * @param userStoreName user store name
-     * @return whether user store exist or not for the particular domain
-     */
-    private boolean isUserStoreExist(String userStoreName) {
-
-        UserStoreManager userStoreManager = carbonUM.getSecondaryUserStoreManager(userStoreName);
-        if (userStoreManager != null) {
-            return true;
-        }
-        return false;
-    }
 }
