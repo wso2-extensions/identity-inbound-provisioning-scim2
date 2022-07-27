@@ -3760,7 +3760,7 @@ public class SCIMUserManager implements UserManager {
         if (userStoreManager == null) {
             throw new BadRequestException("Invalid userstore domain.");
         }
-        if (userStoreManager != null) {
+        else {
             try {
                 return userStoreManager.isSCIMEnabled();
             } catch (UserStoreException e) {
