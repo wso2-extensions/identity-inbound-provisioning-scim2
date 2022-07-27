@@ -53,6 +53,9 @@ public class SCIMCommonConstants {
     public static final String EW = "ew";
     public static final String GE = "ge";
     public static final String LE = "le";
+    public static final String GT = "gt";
+    public static final String LT = "lt";
+    public static final String NE = "ne";
 
     public static final String APPLICATION_DOMAIN = "Application";
     public static final String INTERNAL_DOMAIN = "Internal";
@@ -61,7 +64,7 @@ public class SCIMCommonConstants {
 
     //config constants
     public static final String CHARON_CONFIG_NAME = "charon-config.xml";
-    public static final String ELEMENT_NAME_AUTHENTICATION_SCHEMES = "authenticationSchemes";;
+    public static final String ELEMENT_NAME_AUTHENTICATION_SCHEMES = "authenticationSchemes";
     public static final String ELEMENT_NAME_PROPERTY = "Property";
     public static final String ELEMENT_NAME_SCHEMA = "schema";
     public static final String ATTRIBUTE_NAME_NAME = "name";
