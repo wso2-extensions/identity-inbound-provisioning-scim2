@@ -1479,7 +1479,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         org.wso2.carbon.user.core.common.User coreUser = new org.wso2.carbon.user.core.common.User();
         coreUser.setUserID(userId);
         coreUser.setUsername("coreUser");
-        coreUser.setUserStoreDomain("PRIMARY");
+        coreUser.setUserStoreDomain("DomainName");
         List<org.wso2.carbon.user.core.common.User> coreUsers = new ArrayList<>();
         coreUsers.add(coreUser);
 
@@ -1487,6 +1487,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         AbstractUserStoreManager mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(coreUsers);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager("DomainName")).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(false);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         mockStatic(ApplicationManagementService.class);
@@ -1495,7 +1497,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         scimUserManager.deleteUser(userId);
         // This method is for testing of throwing CharonException, hence no assertion.
     }
-
     @Test(expectedExceptions = CharonException.class)
     public void testDeleteUserWithUserStoreDomainMismatch() throws Exception {
 
@@ -1524,6 +1525,28 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(serviceProvider);
         scimUserManager.deleteUser(userId);
         // This method is for testing of throwing CharonException, hence no assertion.
+    }
+
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testCreateUserWithInvalidUserStoreName() throws Exception {
+
+        User user = new User();
+        user.setUserName("testUser");
+
+        mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
+                .thenReturn(null);
+        InboundProvisioningConfig inboundProvisioningConfig = new InboundProvisioningConfig();
+        inboundProvisioningConfig.setProvisioningUserStore("DomainName");
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setInboundProvisioningConfig(inboundProvisioningConfig);
+        mockStatic(ApplicationManagementService.class);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(serviceProvider);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        scimUserManager.createUser(user, null);
+        // This method is for testing of throwing BadRequestException, hence no assertion.
     }
 
     @Test(expectedExceptions = AbstractCharonException.class)
