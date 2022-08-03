@@ -38,6 +38,7 @@ import org.wso2.charon3.core.extensions.RoleManager;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.User;
+import org.wso2.charon3.core.objects.plainobjects.RolesGetResponse;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
@@ -175,13 +176,13 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     @Override
-    public List<Object> listRolesWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
-            String sortOrder) throws CharonException, NotImplementedException, BadRequestException {
+    public RolesGetResponse listRolesWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
+                            String sortOrder) throws CharonException, NotImplementedException, BadRequestException {
 
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported.");
         } else if (count != null && count == 0) {
-            return Collections.emptyList();
+            return new RolesGetResponse(0, Collections.emptyList());
         } else if (rootNode != null) {
             return filterRoles(rootNode, count, startIndex, sortBy, sortOrder);
         } else {
@@ -200,7 +201,7 @@ public class SCIMRoleManager implements RoleManager {
      * @return Detailed user list.
      * @throws CharonException Error filtering the roles.
      */
-    private List<Object> filterRoles(Node node, Integer count, Integer startIndex, String sortBy, String sortOrder)
+    private RolesGetResponse filterRoles(Node node, Integer count, Integer startIndex, String sortBy, String sortOrder)
             throws CharonException, NotImplementedException, BadRequestException {
 
         // Handle single attribute search.
@@ -225,7 +226,7 @@ public class SCIMRoleManager implements RoleManager {
      * @return Filtered roles.
      * @throws CharonException Error filtering the roles.
      */
-    private List<Object> filterRolesBySingleAttribute(ExpressionNode node, Integer count, Integer startIndex,
+    private RolesGetResponse filterRolesBySingleAttribute(ExpressionNode node, Integer count, Integer startIndex,
             String sortBy, String sortOrder) throws CharonException, BadRequestException {
 
         String attributeName = node.getAttributeValue();
@@ -241,9 +242,6 @@ public class SCIMRoleManager implements RoleManager {
             throw new BadRequestException(errorMessage);
         }
 
-        List<Object> filteredRoles = new ArrayList<>();
-        // 0th index is to store total number of results.
-        filteredRoles.add(0);
         String searchFilter = getSearchFilter(filterOperation, attributeValue);
         if (log.isDebugEnabled()) {
             log.debug(String.format("Filtering roleNames from search filter: %s", searchFilter));
@@ -256,14 +254,8 @@ public class SCIMRoleManager implements RoleManager {
                     String.format("Error occurred while listing roles based on the search filter: %s", searchFilter),
                     e);
         }
-        List<Object> scimRoles = getScimRolesList(roles);
-
-        // Set total number of results to 0th index.
-        filteredRoles.set(0, scimRoles.size());
-        // Add the results list.
-        filteredRoles.addAll(scimRoles);
-
-        return filteredRoles;
+        List<Role> scimRoles = getScimRolesList(roles);
+        return new RolesGetResponse(scimRoles.size(), scimRoles);
     }
 
     /**
@@ -312,35 +304,32 @@ public class SCIMRoleManager implements RoleManager {
      * @return List of roles.
      * @throws CharonException Error while listing users
      */
-    private List<Object> listRoles(Integer count, Integer startIndex, String sortBy, String sortOrder)
+    private RolesGetResponse listRoles(Integer count, Integer startIndex, String sortBy, String sortOrder)
             throws CharonException, BadRequestException {
 
-        List<Object> rolesList = new ArrayList<>();
+        List<Role> rolesList = new ArrayList<>();
+        int rolesCount;
         try {
-            // 0th index is to store total number of results.
-            rolesList.add(0);
             List<RoleBasicInfo> roles = roleManagementService
                     .getRoles(count, startIndex, sortBy, sortOrder, tenantDomain);
-            List<Object> scimRoles = getScimRolesList(roles);
+            List<Role> scimRoles = getScimRolesList(roles);
 
-            int rolesCount = roleManagementService.getRolesCount(tenantDomain);
+            rolesCount = roleManagementService.getRolesCount(tenantDomain);
             // Set total number of results to 0th index.
             if (rolesCount == 0) {
-                rolesList.set(0, scimRoles.size());
-            } else {
-                rolesList.set(0, rolesCount);
+                rolesCount = scimRoles.size();
             }
             // Add the results list.
             rolesList.addAll(scimRoles);
         } catch (IdentityRoleManagementException e) {
             throw new CharonException("Error occurred while listing roles.", e);
         }
-        return rolesList;
+        return new RolesGetResponse(rolesCount, rolesList);
     }
 
-    private List<Object> getScimRolesList(List<RoleBasicInfo> roles) throws BadRequestException, CharonException {
+    private List<Role> getScimRolesList(List<RoleBasicInfo> roles) throws BadRequestException, CharonException {
 
-        List<Object> scimRoles = new ArrayList<>();
+        List<Role> scimRoles = new ArrayList<>();
         for (RoleBasicInfo roleBasicInfo : roles) {
             Role scimRole = new Role();
             scimRole.setDisplayName(roleBasicInfo.getName());
@@ -527,7 +516,7 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     @Override
-    public List<Object> listRolesWithPost(SearchRequest searchRequest)
+    public RolesGetResponse listRolesWithPost(SearchRequest searchRequest)
             throws NotImplementedException, BadRequestException, CharonException {
 
         return listRolesWithGET(searchRequest.getFilter(), searchRequest.getStartIndex(), searchRequest.getCount(),
