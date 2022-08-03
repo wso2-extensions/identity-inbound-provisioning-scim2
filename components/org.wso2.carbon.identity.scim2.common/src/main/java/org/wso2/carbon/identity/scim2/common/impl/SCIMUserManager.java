@@ -4224,9 +4224,10 @@ public class SCIMUserManager implements UserManager {
      * @param group
      * @param userStoreDomain
      * @return
-     * @throws CharonException
+     * @throws CharonException, BadRequestException
      */
-    private void appendDomainToMembers(Group group, String userStoreDomain) throws CharonException {
+    private void appendDomainToMembers(Group group, String userStoreDomain) throws CharonException,
+            BadRequestException {
 
         if (StringUtils.isBlank(userStoreDomain) || CollectionUtils.isEmpty(group.getMembers())) {
             return;
@@ -4241,6 +4242,10 @@ public class SCIMUserManager implements UserManager {
                 for (Attribute attributeValue : attributeValues) {
                     SimpleAttribute displayNameAttribute = (SimpleAttribute) attributeValue.getSubAttribute(
                             SCIMConstants.CommonSchemaConstants.DISPLAY);
+                    if (displayNameAttribute == null) {
+                        throw new BadRequestException("Display name attribute of a member is empty while adding to " +
+                                "the group: " + group.getDisplayName());
+                    }
                     String displayName =
                             AttributeUtil.getStringValueOfAttribute(displayNameAttribute.getValue(),
                                     displayNameAttribute.getType());
