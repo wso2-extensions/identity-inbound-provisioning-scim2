@@ -5275,8 +5275,7 @@ public class SCIMUserManager implements UserManager {
 
         List<String> scimDisabledHybridRoles = new ArrayList<>();
         for (String role : roles) {
-            if (!scimRoles.contains(role) && SCIMCommonUtils.isHybridRole(role) && !UserCoreUtil.isEveryoneRole(role,
-                    carbonUM.getRealmConfiguration())) {
+            if (!scimRoles.contains(role) && SCIMCommonUtils.isHybridRole(role)) {
                 scimDisabledHybridRoles.add(role);
             }
         }
