@@ -885,7 +885,7 @@ public class SCIMUserManager implements UserManager {
      */
     private List<User> getUserDetails(Set<org.wso2.carbon.user.core.common.User> coreUsers,
                                         Map<String, Boolean> requiredAttributes)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         List<User> users = new ArrayList<>();
         try {
@@ -917,7 +917,7 @@ public class SCIMUserManager implements UserManager {
 
     private void retrieveSCIMUsers(List<User> users, Set<org.wso2.carbon.user.core.common.User> coreUsers,
                                    List<String> requiredClaims, Map<String, String> scimToLocalClaimsMap)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         for (org.wso2.carbon.user.core.common.User coreUser : coreUsers) {
 
@@ -1951,7 +1951,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error in retrieving user details
      */
     private UsersGetResponse getDetailedUsers(List<User> userList, int totalUsers)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         if (userList == null) {
             return new UsersGetResponse(0, Collections.emptyList());
@@ -2366,7 +2366,7 @@ public class SCIMUserManager implements UserManager {
      */
     private List<User> getFilteredUserDetails(Set<org.wso2.carbon.user.core.common.User> users,
                                                 Map<String, Boolean> requiredAttributes)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         List<User> filteredUsers = new ArrayList<>();
 
@@ -2412,7 +2412,7 @@ public class SCIMUserManager implements UserManager {
     private void addSCIMUsers(List<User> filteredUsers, Set<org.wso2.carbon.user.core.common.User> users,
                               List<String> requiredClaims,
                               Map<String, String> scimToLocalClaimsMap)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         User scimUser;
         for (org.wso2.carbon.user.core.common.User user : users) {
@@ -2737,7 +2737,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void deleteGroup(String groupId) throws NotFoundException, CharonException {
+    public void deleteGroup(String groupId) throws NotFoundException, CharonException, BadRequestException {
 
         if (log.isDebugEnabled()) {
             log.debug("Deleting group: " + groupId);
@@ -3211,7 +3211,7 @@ public class SCIMUserManager implements UserManager {
      * @throws UserStoreException
      */
     private Group getRoleWithDefaultAttributes(String roleName, Map<String, Boolean> requiredAttributes)
-            throws CharonException, UserStoreException {
+            throws CharonException, UserStoreException, BadRequestException {
 
         String userStoreDomainName = IdentityUtil.extractDomainFromName(roleName);
         if (isInternalOrApplicationGroup(userStoreDomainName) || isSCIMEnabled(userStoreDomainName)) {
@@ -3767,10 +3767,12 @@ public class SCIMUserManager implements UserManager {
      * @param userStoreName user store name
      * @return whether scim is enabled or not for the particular user store
      */
-    private boolean isSCIMEnabled(String userStoreName) {
+    private boolean isSCIMEnabled(String userStoreName) throws BadRequestException {
 
         UserStoreManager userStoreManager = carbonUM.getSecondaryUserStoreManager(userStoreName);
-        if (userStoreManager != null) {
+        if (userStoreManager == null) {
+            throw new BadRequestException("Invalid user store name.");
+        }else {
             try {
                 return userStoreManager.isSCIMEnabled();
             } catch (UserStoreException e) {
@@ -3790,7 +3792,7 @@ public class SCIMUserManager implements UserManager {
      */
     private User getSCIMUser(org.wso2.carbon.user.core.common.User coreUser, List<String> claimURIList,
                              Map<String, String> scimToLocalClaimsMap, Map<String, String> userClaimValues)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         User scimUser = null;
 
@@ -3957,7 +3959,7 @@ public class SCIMUserManager implements UserManager {
      */
     private Set<User> getSCIMUsers(Set<org.wso2.carbon.user.core.common.User> users, List<String> claimURIList,
                                    Map<String, String> scimToLocalClaimsMap, Map<String, Boolean> requiredAttributes)
-            throws CharonException {
+            throws CharonException, BadRequestException {
 
         List<User> scimUsers = new ArrayList<>();
 
