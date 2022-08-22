@@ -165,7 +165,7 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
         mockStatic(SCIMCommonUtils.class);
 
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-        when(connection.prepareStatement(nullable(String.class))).thenReturn(mockedPreparedStatement);
+        when(connection.prepareStatement(anyString())).thenReturn(mockedPreparedStatement);
         when(StringUtils.isNotEmpty(nullable(String.class))).thenReturn(true);
         when(SCIMCommonUtils.getPrimaryFreeGroupName(nullable(String.class))).thenReturn("directors");
         when(mockedPreparedStatement.executeQuery()).thenReturn(resultSet);
