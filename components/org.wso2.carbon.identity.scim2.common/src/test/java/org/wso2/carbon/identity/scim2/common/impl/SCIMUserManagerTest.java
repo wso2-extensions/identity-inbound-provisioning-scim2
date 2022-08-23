@@ -281,8 +281,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         MemberModifier.field(AbstractUserStoreManager.class, "userStoreManagerHolder")
                 .set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
 
-        when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
-
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getRoleListOfUser(anyString())).thenReturn(userRoles);
         mockStatic(AttributeMapper.class);
@@ -293,7 +292,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         org.wso2.carbon.user.core.common.User user = new org.wso2.carbon.user.core.common.User();
         user.setUsername("testUserName");
         user.setUserID(UUID.randomUUID().toString());
-        when(mockedUserStoreManager.getUser(nullable(String.class), nullable(String.class))).thenReturn(user);
+        when(mockedUserStoreManager.getUser(anyString(), nullable(String.class))).thenReturn(user);
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         CommonTestUtils.initPrivilegedCarbonContext(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         mockStatic(ClaimMetadataHandler.class);
@@ -414,8 +413,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(list);
         org.wso2.carbon.user.core.common.Group[] groupsArray = {buildUserCoreGroupResponse(roleName, "1234",
                 "dummyDomain")};
-        when(mockedUserStoreManager.listGroups(any(Condition.class), nullable(String.class), anyInt(),
-                nullable(Integer.class), nullable(String.class), nullable(String.class))).thenReturn(Arrays.asList(groupsArray.clone()));
+        when(mockedUserStoreManager.listGroups(any(Condition.class), anyString(), anyInt(),
+                anyInt(), nullable(String.class), nullable(String.class))).thenReturn(Arrays.asList(groupsArray.clone()));
         when(mockedUserStoreManager.getGroupByGroupName(roleName, null)).
                 thenReturn(buildUserCoreGroupResponse(roleName, "123456789", null));
         whenNew(RealmConfiguration.class).withAnyArguments().thenReturn(mockRealmConfig);
@@ -489,6 +488,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         user.setUserID(UUID.randomUUID().toString());
         user.setUsername("testUser3");
         user.setUserStoreDomain("SECONDARY");
+
         users.add(user);
 
         return new Object[][]{
@@ -535,17 +535,15 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getUserListWithID("http://wso2.org/claims/userid", "*", null)).thenReturn(users);
         when(mockedUserStoreManager.getUserListWithID("http://wso2.org/claims/givenname", "testUser", "default"))
                 .thenReturn(filteredUsers);
-        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), nullable(String.class), nullable(String.class), anyInt(),
-                nullable(Integer.class), nullable(String.class), nullable(String.class))).thenReturn(filteredUsers);
+        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
+                anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsers);
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.listSCIMGroups(anyInt())).thenReturn(anySet());
-        when(mockedUserStoreManager.getSecondaryUserStoreManager(null)).thenReturn(mockedUserStoreManager);
-        when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
-        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
-        when(mockedUserStoreManager.getSecondaryUserStoreManager(null)).thenReturn(secondaryUserStoreManager);
         when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManager);
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
 
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
         when(mockedRealmConfig.getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_USER_LIST))
@@ -587,6 +585,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         testUser1Attributes.put("http://wso2.org/claims/givenname", "testUser");
         testUser1Attributes.put("http://wso2.org/claims/emailaddress", "testUser1@wso2.com");
         testUser1.setAttributes(testUser1Attributes);
+        testUser1.setUserStoreDomain("PRIMARY");
         users.add(testUser1);
 
         org.wso2.carbon.user.core.common.User testUser2 = new org.wso2.carbon.user.core.common.User(UUID.randomUUID()
@@ -595,6 +594,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         testUser2Attributes.put("http://wso2.org/claims/givenname", "testUser");
         testUser2Attributes.put("http://wso2.org/claims/emailaddress", "testUser2@wso2.com");
         testUser2.setAttributes(testUser2Attributes);
+        testUser2.setUserStoreDomain("PRIMARY");
         users.add(testUser2);
 
         return new Object[][]{
@@ -640,7 +640,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(count),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithPagination);
 
-
         when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(configuredMaxLimit),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithoutPagination);
 
@@ -648,11 +647,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithoutPagination);
 
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
-        if(domain=="PRIMARY"){
+
+        if(domain.equals("PRIMARY")){
             when(mockedUserStoreManager.getSecondaryUserStoreManager(null)).thenReturn(mockedUserStoreManager);
         } else {
             when(mockedUserStoreManager.getSecondaryUserStoreManager(null)).thenReturn(secondaryUserStoreManager);
         }
+
         when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManagerJDBC);
@@ -729,7 +730,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         }};
 
         when(mockClaimMetadataManagementService.getLocalClaims(anyString())).thenReturn(localClaimList);
-        when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(externalClaimList);
+        when(mockClaimMetadataManagementService.getExternalClaims(nullable(String.class), anyString())).thenReturn(externalClaimList);
         UsersGetResponse userResponse = scimUserManager.listUsersWithGET(node, 1, count, null, null, domain,
                 requiredClaimsMap);
 
@@ -1122,7 +1123,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
-        doReturn(oldUser).when(scimUserManager).getUser(nullable(String.class), nullable(Map.class));
+        doReturn(oldUser).when(scimUserManager).getUser(nullable(String.class), anyMap());
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
 
@@ -1333,7 +1334,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getRoleListOfUserWithID(nullable(String.class))).thenReturn(groupsList);
         when(mockedUserStoreManager.getHybridRoleListOfUser(anyString(), anyString())).thenReturn(rolesList);
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
-        when(mockedUserStoreManager.getSecondaryUserStoreManager(nullable(String.class))).thenReturn(secondaryUserStoreManager);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+
         for (String group : groupsList) {
             when(mockedUserStoreManager.getGroupByGroupName(group, null)).
                     thenReturn(buildUserCoreGroupResponse(group, "123456", "dummyDomain"));
