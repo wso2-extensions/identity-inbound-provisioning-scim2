@@ -130,7 +130,7 @@ public class SCIMCommonUtils {
         try {
             String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
             if (organizationRoutingSupported && StringUtils.isNotBlank(organizationId)) {
-                String serverUrl = ServiceURLBuilder.create().build().getAbsolutePublicURL();
+                String serverUrl = ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath();
                 scimURL = serverUrl + SCIMCommonConstants.ORGANIZATION_PATH_PARAM + organizationId +
                         SCIMCommonConstants.SCIM2_ENDPOINT;
             } else {
