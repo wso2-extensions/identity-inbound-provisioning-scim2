@@ -483,6 +483,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     }
                     return null;
                 });
+
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN);
         assertThrows(CharonException.class, () -> roleManager.
                 listRolesWithGET(rootNode, startIndex, 2, null, null));
@@ -506,7 +507,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenThrow(unExpectedErrorThrower(tenantDomain, sError,
                         "Error while listing roles in tenantDomain: "));
-        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
+        when(mockRoleManagementService.getRoles(anyString(), anyInt(), anyInt(), nullable(String.class),
+                nullable(String.class), anyString())).
                 thenThrow(unExpectedErrorThrower(tenantDomain, sError,
                         "Error while listing roles in tenantDomain: "));
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
@@ -561,9 +563,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Node rootNode = generateNodeBasedOnNodeType(nodeType, "name", operation);
         List<RoleBasicInfo> roleList = getDummyRoleBasicInfoList();
 
-        when(mockRoleManagementService.getRoles(nullable(Integer.class), anyInt(), nullable(String.class), nullable(String.class), anyString())).
+        when(mockRoleManagementService.getRoles(anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> roleList);
-        when(mockRoleManagementService.getRoles(anyString(), nullable(Integer.class), anyInt(), nullable(String.class), nullable(String.class), anyString())).
+        when(mockRoleManagementService.getRoles(anyString(), nullable(Integer.class), anyInt(), nullable(String.class),
+                nullable(String.class), anyString())).
                 thenAnswer(invocationOnMock -> roleList);
         when(mockRoleManagementService.getRolesCount(anyString())).thenAnswer(invocationOnMock -> 5);
 
