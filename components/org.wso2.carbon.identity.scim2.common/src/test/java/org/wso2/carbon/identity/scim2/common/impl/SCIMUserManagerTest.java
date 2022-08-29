@@ -459,7 +459,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockedUserStoreManager.getUserListWithID("http://wso2.org/claims/userid", "*", null)).thenReturn(users);
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
-        when(mockedUserStoreManager.getSecondaryUserStoreManager(null)).thenReturn(mockedUserStoreManager);
+        whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
+        when(mockedGroupDAO.listSCIMGroups()).thenReturn(anySet());
+        when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(isScimEnabledForPrimary);
         when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManager);
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(isScimEnabledForSecondary);
@@ -479,17 +481,26 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     @DataProvider(name = "listUser")
     public Object[][] listUser() throws Exception {
 
-        List<org.wso2.carbon.user.core.common.User> users = new ArrayList<org.wso2.carbon.user.core.common.User>() {{
-            add(new org.wso2.carbon.user.core.common.User(UUID.randomUUID().toString(), "testUser1", "testUser1"));
-            add(new org.wso2.carbon.user.core.common.User(UUID.randomUUID().toString(), "testUser2", "testUser2"));
-        }};
+        List<org.wso2.carbon.user.core.common.User> users = new ArrayList<>();
 
-        org.wso2.carbon.user.core.common.User user = new org.wso2.carbon.user.core.common.User();
-        user.setUserID(UUID.randomUUID().toString());
-        user.setUsername("testUser3");
-        user.setUserStoreDomain("SECONDARY");
+        org.wso2.carbon.user.core.common.User user1 = new org.wso2.carbon.user.core.common.User();
+        user1.setUserID(UUID.randomUUID().toString());
+        user1.setUsername("testUser1");
+        user1.setUserStoreDomain("PRIMARY");
 
-        users.add(user);
+        org.wso2.carbon.user.core.common.User user2 = new org.wso2.carbon.user.core.common.User();
+        user2.setUserID(UUID.randomUUID().toString());
+        user2.setUsername("testUser2");
+        user2.setUserStoreDomain("PRIMARY");
+
+        org.wso2.carbon.user.core.common.User user3 = new org.wso2.carbon.user.core.common.User();
+        user3.setUserID(UUID.randomUUID().toString());
+        user3.setUsername("testUser3");
+        user3.setUserStoreDomain("SECONDARY");
+
+        users.add(user1);
+        users.add(user2);
+        users.add(user3);
 
         return new Object[][]{
 
