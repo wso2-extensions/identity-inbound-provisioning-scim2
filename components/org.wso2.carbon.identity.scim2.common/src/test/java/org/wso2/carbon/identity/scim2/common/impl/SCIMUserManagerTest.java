@@ -1338,7 +1338,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(), nullable(String.class)))
                 .thenReturn(userClaimValues);
         when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(isRoleAndGroupSeparationEnabled);
-        when(mockedUserStoreManager.getRoleListOfUserWithID(nullable(String.class))).thenReturn(groupsList);
+        when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(groupsList);
         when(mockedUserStoreManager.getHybridRoleListOfUser(anyString(), anyString())).thenReturn(rolesList);
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
