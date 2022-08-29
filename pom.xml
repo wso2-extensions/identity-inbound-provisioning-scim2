@@ -47,7 +47,7 @@
             <dependency>
                 <groupId>com.sun.xml.parsers</groupId>
                 <artifactId>jaxp-ri</artifactId>
-                <version>1.4.5</version>
+                <version>${jaxp-ri-version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -299,6 +299,8 @@
 
         <findsecbugs-plugin.version>1.10.1</findsecbugs-plugin.version>
         <spotbugs-maven-plugin.version>4.5.3.0</spotbugs-maven-plugin.version>
+
+        <jaxp-ri-version>1.4.5</jaxp-ri-version>
     </properties>
 
     <build>
