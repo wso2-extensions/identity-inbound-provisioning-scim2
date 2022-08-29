@@ -459,8 +459,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         when(mockedUserStoreManager.getUserListWithID("http://wso2.org/claims/userid", "*", null)).thenReturn(users);
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
-        whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
-        when(mockedGroupDAO.listSCIMGroups()).thenReturn(anySet());
         when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(isScimEnabledForPrimary);
         when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManager);
