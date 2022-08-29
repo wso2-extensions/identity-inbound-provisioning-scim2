@@ -1116,6 +1116,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         User newUser = new User();
         newUser.setUserName("newUser");
+        newUser.setId("newUserId");
 
         mockStatic(ApplicationManagementService.class);
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
@@ -1123,7 +1124,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
-        doReturn(oldUser).when(scimUserManager).getUser(nullable(String.class), anyMap());
+        doReturn(oldUser).when(scimUserManager).getUser(anyString(), anyMap());
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
 
@@ -1324,11 +1325,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(user.getUserStoreDomain()).thenReturn(userStoreDomainName);
         when(user.getUsername()).thenReturn((username));
         when(user.getDomainQualifiedUsername()).thenReturn(domainQualifiedUserName);
+        when(user.getUserID()).thenReturn((userId));
 
         mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserWithID(anyString(), nullable(String[].class), anyString())).thenReturn(user);
         when(mockedUserStoreManager.getTenantId()).thenReturn(1234567);
-        when(mockedUserStoreManager.getUserClaimValuesWithID(nullable(String.class), any(), nullable(String.class)))
+        when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(), nullable(String.class)))
                 .thenReturn(userClaimValues);
         when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(isRoleAndGroupSeparationEnabled);
         when(mockedUserStoreManager.getRoleListOfUserWithID(nullable(String.class))).thenReturn(groupsList);
