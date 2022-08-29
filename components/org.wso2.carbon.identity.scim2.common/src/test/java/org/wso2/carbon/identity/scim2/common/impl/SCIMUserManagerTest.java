@@ -547,10 +547,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsers);
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
-        whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
-        when(mockedGroupDAO.listSCIMGroups(anyInt())).thenReturn(anySet());
-        when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY")).thenReturn(secondaryUserStoreManager);
-        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
 
@@ -739,7 +735,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         }};
 
         when(mockClaimMetadataManagementService.getLocalClaims(anyString())).thenReturn(localClaimList);
-        when(mockClaimMetadataManagementService.getExternalClaims(nullable(String.class), anyString())).thenReturn(externalClaimList);
+        when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(externalClaimList);
         UsersGetResponse userResponse = scimUserManager.listUsersWithGET(node, 1, count, null, null, domain,
                 requiredClaimsMap);
 
