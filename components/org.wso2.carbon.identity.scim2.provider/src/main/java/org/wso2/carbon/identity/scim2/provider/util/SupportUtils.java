@@ -25,11 +25,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
+import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCustomSchemaProcessor;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
@@ -37,8 +41,13 @@ import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
+import org.wso2.charon3.core.objects.User;
+import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.protocol.SCIMResponse;
+import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import org.wso2.charon3.core.schema.AttributeSchema;
+import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
+import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 
 import javax.ws.rs.core.Response;
 
@@ -54,6 +63,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCus
 public class SupportUtils {
 
     private static final Log log = LogFactory.getLog(SupportUtils.class);
+    private static final String ASK_PASSWORD_CONFIRMATION_CODE_HEADER_NAME = "Ask-Password-Confirmation-Code";
 
     private SupportUtils() {}
 
@@ -169,5 +179,72 @@ public class SupportUtils {
             return IdentityTenantUtil.getTenantDomainFromContext();
         }
         return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+    }
+
+    /**
+     * To build response after creating a user resource.
+     *
+     * @param scimResponse SCIM response.
+     * @return Jaxrs response.
+     */
+    public static Response buildCreateUserResponse(SCIMResponse scimResponse) {
+
+        if (!(scimResponse.getResponseStatus() == ResponseCodeConstants.CODE_CREATED) ||
+                !IdentityUtil.threadLocalProperties.get()
+                        .containsKey(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY)) {
+            return buildResponse(scimResponse);
+        }
+
+        String confirmationCode = getAskPasswordConfirmationCodeThreadLocal();
+        if (StringUtils.isNotEmpty(confirmationCode)) {
+            scimResponse.getHeaderParamMap().put(ASK_PASSWORD_CONFIRMATION_CODE_HEADER_NAME, confirmationCode);
+        }
+        return buildResponse(scimResponse);
+    }
+
+    /**
+     * To get the ask password confirmation code from thread local.
+     *
+     * @return Confirmation code.
+     */
+    private static String getAskPasswordConfirmationCodeThreadLocal() {
+
+        Object confirmationCode = IdentityUtil.threadLocalProperties.get()
+                .get(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY);
+        if (confirmationCode != null && !confirmationCode.toString()
+                .equals(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_INITIAL_VALUE)) {
+            return confirmationCode.toString();
+        }
+        return null;
+    }
+
+    /**
+     * Check whether the resource include ask password.
+     *
+     * @param resourceString Resource body.
+     * @param userManager User Manager.
+     * @return True if askPassword is true in resource string.
+     */
+    public static boolean isAskPasswordFlow(String resourceString, UserManager userManager) {
+
+        try {
+            SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+            if (userManager != null) {
+                schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema(userManager);
+            }
+            User user = AbstractResourceManager.getDecoder().decodeResource(resourceString, schema, new User());
+            Map<String, String> claimsMap = AttributeMapper.getClaimsMap(user);
+            Map<String, String> claimsInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap);
+            if (claimsInLocalDialect.containsKey(IdentityRecoveryConstants.ASK_PASSWORD_CLAIM)) {
+                return Boolean.parseBoolean(claimsInLocalDialect.get(IdentityRecoveryConstants.ASK_PASSWORD_CLAIM));
+            }
+        } catch (UserStoreException | BadRequestException | CharonException | InternalErrorException |
+                 NotImplementedException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Returning false due to error while checking whether the request is askPassword.", e);
+            }
+            return false;
+        }
+        return false;
     }
 }

@@ -18,7 +18,9 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
+import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
@@ -108,15 +110,21 @@ public class UserResource extends AbstractResource {
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
 
+            // To initialize a thread local to get confirmation code of the user for ask password flow if notification
+            // mange by client application.
+            initializeAskPasswordConfirmationCodeThreadLocal(resourceString, userManager);
+
             SCIMResponse response = userResourceManager.create(resourceString, userManager,
                     attribute, excludedAttributes);
 
-            return SupportUtils.buildResponse(response);
+            return SupportUtils.buildCreateUserResponse(response);
 
         } catch (CharonException e) {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            removeAskPasswordConfirmationCodeThreadLocal();
         }
     }
 
@@ -336,5 +344,29 @@ public class UserResource extends AbstractResource {
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }
+    }
+
+    /**
+     * To initialize the Ask password confirmation code thread local if the ask password is true.
+     *
+     * @param resourceString Resource body.
+     * @param userManager User Manager.
+     */
+    private void initializeAskPasswordConfirmationCodeThreadLocal(String resourceString, UserManager userManager) {
+
+        if (SupportUtils.isAskPasswordFlow(resourceString, userManager)) {
+            IdentityUtil.threadLocalProperties.get()
+                    .put(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY,
+                            IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_INITIAL_VALUE);
+        }
+    }
+
+    /**
+     * Remove the ask password confirmation code thread local.
+     */
+    private void removeAskPasswordConfirmationCodeThreadLocal() {
+
+        IdentityUtil.threadLocalProperties.get()
+                .remove(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY);
     }
 }
