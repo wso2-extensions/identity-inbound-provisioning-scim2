@@ -288,7 +288,7 @@
         </carbon.identity.framework.imp.pkg.version.range>
 
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
-        <testng.version>7.0.0</testng.version>
+        <testng.version>6.9.10</testng.version>
         <jacoco.version>0.8.4</jacoco.version>
         <!-- Mockito Versions are Updated  -->
         <mockito.version>2.23.4</mockito.version>
