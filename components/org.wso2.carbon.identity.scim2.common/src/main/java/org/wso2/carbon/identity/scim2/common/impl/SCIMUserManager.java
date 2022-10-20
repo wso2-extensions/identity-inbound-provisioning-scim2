@@ -3831,7 +3831,6 @@ public class SCIMUserManager implements UserManager {
                 // Get user roles from attributes.
                 rolesList = getMultiValuedAttributeList(userStoreDomainName, attributes,
                         SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT);
-                checkForSCIMDisabledHybridRoles(rolesList);
 
                 // Skip groups and roles claims because they are handled separately.
                 filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ROLES_URI, SCIMConstants.
@@ -3845,9 +3844,6 @@ public class SCIMUserManager implements UserManager {
 
                     // Set roles.
                     rolesList = carbonUM.getHybridRoleListOfUser(coreUser.getUsername(), coreUser.getUserStoreDomain());
-                    checkForSCIMDisabledHybridRoles(rolesList);
-                } else {
-                    checkForSCIMDisabledHybridRoles(groupsList);
                 }
             }
 
@@ -4086,8 +4082,6 @@ public class SCIMUserManager implements UserManager {
                             if (carbonUM.isRoleAndGroupSeparationEnabled()) {
                                 // Remove roles, if the role and group separation feature is enabled.
                                 groupsList.removeIf(SCIMCommonUtils::isHybridRole);
-                            } else {
-                                checkForSCIMDisabledHybridRoles(groupsList);
                             }
                         }
 
@@ -4122,7 +4116,6 @@ public class SCIMUserManager implements UserManager {
                     } else if (carbonUM.isRoleAndGroupSeparationEnabled()) {
                         List<String> rolesList = carbonUM.getHybridRoleListOfUser(user.getUsername(),
                                 user.getUserStoreDomain());
-                        checkForSCIMDisabledHybridRoles(rolesList);
                         setRolesOfUser(rolesList, groupMetaAttributesCache, user, scimUser);
                     }
 
@@ -4383,7 +4376,6 @@ public class SCIMUserManager implements UserManager {
         Map<String, Group> groupMetaAttributesCache = new HashMap<>();
         List<String> rolesOfGroup = carbonUM.getHybridRoleListOfGroup(UserCoreUtil.removeDomainFromName(groupName),
                 UserCoreUtil.extractDomainFromName(groupName));
-        checkForSCIMDisabledHybridRoles(rolesOfGroup);
 
         // Add roles of group.
         for (String roleName : rolesOfGroup) {
@@ -4880,12 +4872,10 @@ public class SCIMUserManager implements UserManager {
             }
 
             List<String> roles = new ArrayList<>(fullRoleList);
-            checkForSCIMDisabledHybridRoles(roles);
             return roles;
         } else if (attributeName.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI)) {
             attributeValue = prependDomainNameToTheAttributeValue(attributeValue, domainName);
             List<String> roles = getRoleNames(attributeName, filterOperation, attributeValue);
-            checkForSCIMDisabledHybridRoles(roles);
             return roles;
         } else {
             List<org.wso2.carbon.user.core.common.Group> groupList =
@@ -4936,28 +4926,6 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException("Unsupported Attribute: " + attributeName);
         }
         return new ExpressionCondition(conditionOperation, conditionAttributeName, attributeValue);
-    }
-
-    /**
-     * Check for hybrid roles created while SCIM is disabled and create SCIM attributes for them.
-     *
-     * @param roles Role list.
-     * @throws CharonException {@link CharonException}.
-     */
-    private void checkForSCIMDisabledHybridRoles(List<String> roles) throws CharonException {
-
-        try {
-            SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-            Set<String> scimRoles = groupHandler.listSCIMRoles();
-            List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(new HashSet<>(roles), scimRoles);
-            if (!scimDisabledHybridRoles.isEmpty()) {
-                createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
-            }
-        } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            throw resolveError(e, "Error in retrieving SCIM Group information from database.");
-        } catch (IdentitySCIMException e) {
-            throw new CharonException("Error in retrieving SCIM Group information from database.", e);
-        }
     }
 
     /**
@@ -5988,7 +5956,6 @@ public class SCIMUserManager implements UserManager {
             String multivaluedAttributeSeparator = getMultivaluedAttributeSeparator(
                     user.getUserStoreDomain());
             rolesList = Arrays.asList(roles.split(multivaluedAttributeSeparator));
-            checkForSCIMDisabledHybridRoles(rolesList);
         }
         return rolesList;
     }
