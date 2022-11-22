@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.impl;
 
+import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
@@ -45,6 +46,7 @@ import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.objects.plainobjects.RolesGetResponse;
+import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
@@ -278,11 +280,11 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         return new Object[][]{
                 {SAMPLE_VALID_ROLE_ID, SAMPLE_VALID_ROLE_NAME, "roleDomain1", SAMPLE_TENANT_DOMAIN,
-                        "urn:ietf:params:scim:schemas:extension:2.0:Role:groups.value", true, false},
+                        SCIMConstants.RoleSchemaConstants.USERS_URI, true, false},
                 {SAMPLE_VALID_ROLE_ID2, SAMPLE_VALID_ROLE_NAME2, null, SAMPLE_TENANT_DOMAIN,
-                        "urn:ietf:params:scim:schemas:extension:2.0:Role:groups.value", false, false},
+                        SCIMConstants.RoleSchemaConstants.USERS_URI, false, false},
                 {SAMPLE_VALID_ROLE_ID2, SAMPLE_SYSTEM_ROLE_NAME, null, SAMPLE_TENANT_DOMAIN,
-                        "urn:ietf:params:scim:schemas:extension:2.0:Role:groups.value", false, true},
+                        SCIMConstants.RoleSchemaConstants.USERS_URI, false, true},
                 {SAMPLE_VALID_ROLE_ID, null, "roleDomain1", SAMPLE_TENANT_DOMAIN2, null, false, true},
                 {SAMPLE_VALID_ROLE_ID2, "", "roleDomainX", SAMPLE_TENANT_DOMAIN, "", true, false},
                 {null, SAMPLE_VALID_ROLE_NAME, "", SAMPLE_TENANT_DOMAIN2, null, true, false},
@@ -298,7 +300,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         org.wso2.carbon.identity.role.mgt.core.Role role = getDummyIdentityRole(roleId, roleName, domain, tenantDomain,
                 isEmptyLists);
         Map<String, Boolean> attributeMap = null;
-        if (attributeKey != null) {
+        if (StringUtils.isNotBlank(attributeKey)) {
             // If attributeKey is not null, Add dummy data to attributeMap.
             attributeMap = new HashMap<>();
             attributeMap.put(attributeKey, attributeValue);
