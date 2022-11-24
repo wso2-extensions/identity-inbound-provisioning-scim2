@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -557,6 +558,9 @@ public class SCIMRoleManager implements RoleManager {
             List<PatchOperation> groupOperations = new ArrayList<>();
             List<PatchOperation> permissionOperations = new ArrayList<>();
 
+            if (MapUtils.isEmpty(patchOperations)) {
+                throw new CharonException("Patch operation can't be null or empty");
+            }
             for (List<PatchOperation> patchOperationList : patchOperations.values()) {
                 for (PatchOperation patchOperation : patchOperationList) {
                     switch (patchOperation.getAttributeName()) {
@@ -575,6 +579,7 @@ public class SCIMRoleManager implements RoleManager {
                     }
                 }
             }
+
 
             if (CollectionUtils.isNotEmpty(displayNameOperations)) {
                 String newRoleName = (String) displayNameOperations.get(displayNameOperations.size() - 1).getValues();
@@ -695,7 +700,7 @@ public class SCIMRoleManager implements RoleManager {
                 roleManagementService.updateUserListOfRole(roleId, new ArrayList<>(newUserIDList),
                         new ArrayList<>(deletedUserIDList), tenantDomain);
             } catch (IdentityRoleManagementException e) {
-                if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+                if (INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
@@ -744,7 +749,7 @@ public class SCIMRoleManager implements RoleManager {
             try {
                 roleManagementService.setPermissionsForRole(roleId, newRolePermissions, tenantDomain);
             } catch (IdentityRoleManagementException e) {
-                if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+                if (INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
@@ -793,7 +798,7 @@ public class SCIMRoleManager implements RoleManager {
         }
 
         if (memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY) == null) {
-            throw new BadRequestException("User is not exist in any role.");
+            throw new BadRequestException("User can't be resolved from the given user Id.");
         }
 
         List<String> roleList = Arrays.asList(userStoreManager.
@@ -839,7 +844,7 @@ public class SCIMRoleManager implements RoleManager {
                 roleManagementService.updateGroupListOfRole(roleId, new ArrayList<>(newGroupIDList),
                         new ArrayList<>(deleteGroupIDList), tenantDomain);
             } catch (IdentityRoleManagementException e) {
-                if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+                if (INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
