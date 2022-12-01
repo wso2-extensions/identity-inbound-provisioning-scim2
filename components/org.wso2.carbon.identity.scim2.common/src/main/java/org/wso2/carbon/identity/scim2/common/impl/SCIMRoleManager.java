@@ -19,16 +19,24 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.RoleBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.mgt.core.UserBasicInfo;
+import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
@@ -39,13 +47,18 @@ import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.objects.plainobjects.RolesGetResponse;
+import org.wso2.charon3.core.protocol.ResponseCodeConstants;
+import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
+import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +80,7 @@ public class SCIMRoleManager implements RoleManager {
     private String tenantDomain;
     private Set<String> systemRoles;
     private static final String FILTERING_DELIMITER = "*";
+    private UserIDResolver userIDResolver = new UserIDResolver();
 
     public SCIMRoleManager(RoleManagementService roleManagementService, String tenantDomain) {
 
@@ -117,7 +131,12 @@ public class SCIMRoleManager implements RoleManager {
             throws BadRequestException, CharonException, NotFoundException {
 
         try {
-            org.wso2.carbon.identity.role.mgt.core.Role role = roleManagementService.getRole(roleID, tenantDomain);
+            org.wso2.carbon.identity.role.mgt.core.Role role;
+            if (isUsersAttributeRequired(requiredAttributes)) {
+                role = roleManagementService.getRole(roleID, tenantDomain);
+            } else  {
+                role = roleManagementService.getRoleWithoutUsers(roleID, tenantDomain);
+            }
             Role scimRole = new Role();
             scimRole.setId(role.getId());
             scimRole.setDisplayName(role.getName());
@@ -521,5 +540,399 @@ public class SCIMRoleManager implements RoleManager {
 
         return listRolesWithGET(searchRequest.getFilter(), searchRequest.getStartIndex(), searchRequest.getCount(),
                 searchRequest.getSortBy(), searchRequest.getSortOder());
+    }
+
+    @Override
+    public Role patchRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
+            throws BadRequestException, CharonException, ConflictException, NotFoundException {
+
+        String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Updating Role: " + currentRoleName);
+        }
+
+        List<PatchOperation> displayNameOperations = new ArrayList<>();
+        List<PatchOperation> memberOperations = new ArrayList<>();
+        List<PatchOperation> groupOperations = new ArrayList<>();
+        List<PatchOperation> permissionOperations = new ArrayList<>();
+
+        if (MapUtils.isEmpty(patchOperations)) {
+            throw new CharonException("Patch operation can't be null or empty");
+        }
+        for (List<PatchOperation> patchOperationList : patchOperations.values()) {
+            for (PatchOperation patchOperation : patchOperationList) {
+                switch (patchOperation.getAttributeName()) {
+                    case (SCIMConstants.RoleSchemaConstants.DISPLAY_NAME):
+                        displayNameOperations.add(patchOperation);
+                        break;
+                    case (SCIMConstants.RoleSchemaConstants.USERS):
+                        memberOperations.add(patchOperation);
+                        break;
+                    case (SCIMConstants.RoleSchemaConstants.GROUPS):
+                        groupOperations.add(patchOperation);
+                        break;
+                    case (SCIMConstants.RoleSchemaConstants.PERMISSIONS):
+                        permissionOperations.add(patchOperation);
+                        break;
+                }
+            }
+        }
+
+
+        if (CollectionUtils.isNotEmpty(displayNameOperations)) {
+            String newRoleName = (String) displayNameOperations.get(displayNameOperations.size() - 1).getValues();
+            updateRoleName(roleId, currentRoleName, newRoleName);
+        }
+
+        if (CollectionUtils.isNotEmpty(permissionOperations)) {
+            updatePermissions(roleId, permissionOperations);
+        }
+
+        if (CollectionUtils.isNotEmpty(groupOperations)) {
+            updateGroups(roleId, groupOperations);
+        }
+
+        if (CollectionUtils.isNotEmpty(memberOperations)) {
+            updateUsers(roleId, currentRoleName, memberOperations);
+        }
+
+        HashMap<String, Boolean> requiredAttributes = new HashMap<>();
+        requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
+        return getRole(roleId, requiredAttributes);
+    }
+
+    private void updateUsers(String roleId, String currentRoleName, List<PatchOperation> memberOperations)
+            throws BadRequestException, CharonException {
+
+        Collections.sort(memberOperations);
+        Set<String> addedUsers = new HashSet<>();
+        Set<String> deletedUsers = new HashSet<>();
+        Set<Object> newlyAddedUsersIds = new HashSet<>();
+
+        for (PatchOperation memberOperation : memberOperations) {
+            if (memberOperation.getValues() instanceof Map) {
+                Map<String, String> memberObject = (Map<String, String>) memberOperation.getValues();
+                prepareAddedRemovedUserLists(addedUsers, deletedUsers, newlyAddedUsersIds,
+                        memberOperation, memberObject, currentRoleName);
+            } else if (memberOperation.getValues() instanceof List) {
+                List<Map<String, String>> memberOperationValues =
+                        (List<Map<String, String>>) memberOperation.getValues();
+                for (Map<String, String> memberObject : memberOperationValues) {
+                    prepareAddedRemovedUserLists(addedUsers, deletedUsers, newlyAddedUsersIds,
+                            memberOperation, memberObject, currentRoleName);
+                }
+            }
+        }
+
+        if (isNotEmpty(addedUsers) || isNotEmpty(deletedUsers)) {
+            doUpdateUsers(addedUsers, deletedUsers, newlyAddedUsersIds, roleId);
+        }
+    }
+
+    private void updateGroups(String roleId, List<PatchOperation> groupOperations)
+            throws CharonException, BadRequestException {
+
+        try {
+            Collections.sort(groupOperations);
+            Set<String> addedGroupIds = new HashSet<>();
+            Set<String> deletedGroupIds = new HashSet<>();
+            Set<String> replaceGroupsIds = new HashSet<>();
+
+            List<GroupBasicInfo> groupListOfRole = roleManagementService.getGroupListOfRole(roleId, tenantDomain);
+
+            for (PatchOperation groupOperation : groupOperations) {
+                if (groupOperation.getValues() instanceof Map) {
+                    Map<String, String> groupObject = (Map<String, String>) groupOperation.getValues();
+                    prepareAddedRemovedGroupLists(addedGroupIds, deletedGroupIds, replaceGroupsIds,
+                            groupOperation, groupObject, groupListOfRole);
+                } else if (groupOperation.getValues() instanceof List) {
+                    List<Map<String, String>> memberOperationValues =
+                            (List<Map<String, String>>) groupOperation.getValues();
+                    for (Map<String, String> groupObject : memberOperationValues) {
+                        prepareAddedRemovedGroupLists(addedGroupIds, deletedGroupIds, replaceGroupsIds,
+                                groupOperation, groupObject, groupListOfRole);
+                    }
+                }
+                prepareReplacedGroupLists(groupListOfRole, addedGroupIds, deletedGroupIds, replaceGroupsIds);
+            }
+
+            if (isNotEmpty(addedGroupIds) || isNotEmpty(deletedGroupIds)) {
+                doUpdateGroups(roleId, addedGroupIds, deletedGroupIds);
+            }
+        } catch (IdentityRoleManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while retrieving the group list for role: %s", roleId), e);
+        }
+    }
+
+    private String getCurrentRoleName(String roleId, String tenantDomain) throws CharonException, BadRequestException {
+
+        String currentRoleName;
+        try {
+            currentRoleName = roleManagementService.getRoleNameByRoleId(roleId, tenantDomain);
+            if (isInternalRole(currentRoleName)) {
+                currentRoleName = addInternalDomain(currentRoleName);
+            }
+        } catch (IdentityRoleManagementException e) {
+            if ((ROLE_NOT_FOUND.getCode()).equals(e.getErrorCode())) {
+                throw new BadRequestException(e.getMessage());
+            }
+            throw new CharonException(String.format("Error occurred while getting the role name by " +
+                    "the role id: %s", roleId), e);
+        }
+        return currentRoleName;
+    }
+
+    private void doUpdateUsers(Set<String> newUserList, Set<String> deletedUserList, Set<Object> newlyAddedMemberIds,
+                               String roleId) throws CharonException, BadRequestException {
+
+        // Update the role with added users and deleted users.
+        List<String> newUserIDList = getUserIDList(new ArrayList<>(newUserList), tenantDomain);
+        List<String> deletedUserIDList = getUserIDList(new ArrayList<>(deletedUserList), tenantDomain);
+
+        if (isNotEmpty(newUserList) && !(newlyAddedMemberIds.size() == 1 && newlyAddedMemberIds.contains(null))) {
+            validateUserIds(newUserIDList, newlyAddedMemberIds);
+        }
+
+        if (isNotEmpty(newUserIDList) || isNotEmpty(deletedUserIDList)) {
+            try {
+                roleManagementService.updateUserListOfRole(roleId, new ArrayList<>(newUserIDList),
+                        new ArrayList<>(deletedUserIDList), tenantDomain);
+            } catch (IdentityRoleManagementException e) {
+                if (INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage());
+                }
+                throw new CharonException(
+                        String.format("Error occurred while updating users in the role: %s", roleId), e);
+            }
+        }
+    }
+
+    private void updateRoleName(String roleId, String oldRoleDisplayName, String newRoleDisplayName)
+            throws CharonException, ConflictException, NotFoundException {
+
+        if (!StringUtils.equals(oldRoleDisplayName, newRoleDisplayName)) {
+            try {
+                roleManagementService.updateRoleName(roleId, newRoleDisplayName, tenantDomain);
+            } catch (IdentityRoleManagementException e) {
+                if ((ROLE_NOT_FOUND.getCode()).equals(e.getErrorCode())) {
+                    throw new NotFoundException(e.getMessage());
+                } else if ((ROLE_ALREADY_EXISTS.getCode()).equals(e.getErrorCode())) {
+                    throw new ConflictException(e.getMessage());
+                }
+                throw new CharonException(
+                        String.format("Error occurred while updating role name from: %s to %s", oldRoleDisplayName,
+                                newRoleDisplayName), e);
+            }
+        }
+    }
+
+    private void updatePermissions(String roleId, List<PatchOperation> permissionOperations)
+            throws BadRequestException, CharonException {
+
+        List<String> oldRolePermissions;
+        List<String> newRolePermissions = getNewRolePermissions(permissionOperations);
+        try {
+            oldRolePermissions =
+                    roleManagementService.getPermissionListOfRole(roleId, tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while retrieving the permissions for role: %s", roleId), e);
+        }
+
+        // Update the role with specified permissions.
+        if (hasPermissionsChanged(oldRolePermissions, newRolePermissions)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Permissions have changed. Updating permissions of role: " + roleId);
+            }
+            try {
+                roleManagementService.setPermissionsForRole(roleId, newRolePermissions, tenantDomain);
+            } catch (IdentityRoleManagementException e) {
+                if (INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage());
+                }
+                throw new CharonException(
+                        String.format("Error occurred while updating permissions for role: %s", roleId), e);
+            }
+        }
+    }
+
+    private void prepareAddedRemovedGroupLists(Set<String> addedGroupsIds, Set<String> removedGroupsIds,
+                                               Set<String> replacedGroupsIds, PatchOperation groupOperation,
+                                               Map<String, String> groupObject, List<GroupBasicInfo> groupListOfRole) {
+
+        switch (groupOperation.getOperation()) {
+            case (SCIMConstants.OperationalConstants.ADD):
+                removedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                if (!isGroupExist(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE), groupListOfRole)) {
+                    addedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                }
+                break;
+            case (SCIMConstants.OperationalConstants.REMOVE):
+                addedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                removedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                break;
+            case (SCIMConstants.OperationalConstants.REPLACE):
+                replacedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                break;
+        }
+    }
+
+    private void prepareAddedRemovedUserLists(Set<String> addedMembers, Set<String> removedMembers,
+                                              Set<Object> newlyAddedMemberIds, PatchOperation memberOperation,
+                                              Map<String, String> memberObject, String currentRoleName)
+            throws BadRequestException, CharonException {
+
+        try {
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm()
+                            .getUserStoreManager();
+            if (StringUtils.isEmpty(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY))) {
+                List<org.wso2.carbon.user.core.common.User> userListWithID =
+                        userStoreManager.getUserListWithID(SCIMConstants.CommonSchemaConstants.ID_URI,
+                                memberObject.get(SCIMConstants.CommonSchemaConstants.VALUE), null);
+                if (isNotEmpty(userListWithID)) {
+                    memberObject.put(SCIMConstants.RoleSchemaConstants.DISPLAY, userListWithID.get(0).getUsername());
+                    memberOperation.setValues(memberObject);
+                }
+            }
+
+            if (memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY) == null) {
+                throw new BadRequestException("User can't be resolved from the given user Id.");
+            }
+
+            List<String> roleList = Arrays.asList(userStoreManager.
+                    getRoleListOfUser(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY)));
+
+            if (StringUtils.equals(memberOperation.getOperation(), SCIMConstants.OperationalConstants.ADD) &&
+                    !roleList.contains(currentRoleName)) {
+                removedMembers.remove(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
+                addedMembers.add(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
+                newlyAddedMemberIds.add(memberObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+            } else if (StringUtils.equals(memberOperation.getOperation(),
+                    SCIMConstants.OperationalConstants.REMOVE)) {
+                addedMembers.remove(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
+                removedMembers.add(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
+            }
+        } catch (UserStoreException e) {
+            throw new CharonException("Error occurred while retrieving the user list for role.");
+        }
+    }
+
+    private void prepareReplacedGroupLists(List<GroupBasicInfo> groupListOfRole, Set<String> addedGroupIds,
+                                           Set<String> removedGroupsIds, Set<String> replacedGroupsIds) {
+
+        if (replacedGroupsIds.isEmpty()) {
+            return;
+        }
+
+        if (!groupListOfRole.isEmpty()) {
+            for (GroupBasicInfo groupBasicInfo : groupListOfRole) {
+                if (!replacedGroupsIds.contains(groupBasicInfo.getId())) {
+                    removedGroupsIds.add(groupBasicInfo.getId());
+                } else {
+                    replacedGroupsIds.remove(groupBasicInfo.getId());
+                }
+            }
+        }
+        addedGroupIds.addAll(replacedGroupsIds);
+    }
+
+    private void doUpdateGroups(String roleId, Set<String> newGroupIDList, Set<String> deleteGroupIDList)
+            throws CharonException, BadRequestException {
+
+        // Update the role with added users and deleted users.
+        if (isNotEmpty(newGroupIDList) || isNotEmpty(deleteGroupIDList)) {
+            try {
+                roleManagementService.updateGroupListOfRole(roleId, new ArrayList<>(newGroupIDList),
+                        new ArrayList<>(deleteGroupIDList), tenantDomain);
+            } catch (IdentityRoleManagementException e) {
+                if (INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage());
+                }
+                throw new CharonException(
+                        String.format("Error occurred while updating groups in the role: %s", roleId), e);
+            }
+        }
+    }
+
+    private List<String> getUserIDList(List<String> userList, String tenantDomain) throws CharonException {
+
+        List<String> userIDList = new ArrayList<>();
+        for (String user : userList) {
+            try {
+                userIDList.add(getUserIDByName(user, tenantDomain));
+            } catch (IdentityRoleManagementException e) {
+                throw new CharonException(String.format("Error occurred while getting the user id " +
+                        "of the user: %s", user), e);
+            }
+        }
+        return userIDList;
+    }
+
+    private void validateUserIds(List<String> newUserIDList, Set<Object> newlyAddedMemberIds) throws
+            BadRequestException {
+
+        for (Object addedUserId : newlyAddedMemberIds) {
+            if (!newUserIDList.contains(addedUserId.toString())) {
+                throw new BadRequestException(String.format("Provided SCIM user Id: %s doesn't match with the "
+                        + "userID obtained from user-store for the provided username.", addedUserId.toString()),
+                        ResponseCodeConstants.INVALID_VALUE);
+            }
+        }
+    }
+
+    private boolean isGroupExist(String groupId, List<GroupBasicInfo> groupListOfRole) {
+
+        for (GroupBasicInfo group : groupListOfRole) {
+            if (StringUtils.equals(groupId, group.getId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String getUserIDByName(String name, String tenantDomain) throws IdentityRoleManagementException {
+
+        return userIDResolver.getIDByName(name, tenantDomain);
+    }
+
+    private boolean isInternalRole(String roleName) {
+
+        return StringUtils.isNotBlank(IdentityUtil.extractDomainFromName(roleName));
+    }
+
+    private String addInternalDomain(String roleName) {
+
+        if (StringUtils.isNotBlank(IdentityUtil.extractDomainFromName(roleName))) {
+            return UserCoreConstants.INTERNAL_DOMAIN + UserCoreConstants.DOMAIN_SEPARATOR + roleName;
+        }
+        return roleName;
+    }
+
+    private List<String> getNewRolePermissions(List<PatchOperation> permissionOperations) {
+
+        for (PatchOperation permissionOperation : permissionOperations) {
+            if ((SCIMConstants.OperationalConstants.REPLACE).equals(permissionOperation.getOperation())) {
+                if (permissionOperation.getValues() instanceof List) {
+                    return (List<String>) permissionOperation.getValues();
+                }
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    private boolean isUsersAttributeRequired(Map<String, Boolean> requiredAttributes) {
+
+        if (requiredAttributes == null || MapUtils.isEmpty(requiredAttributes)) {
+            return true;
+        }
+        for (String attribute : requiredAttributes.keySet()) {
+            if (attribute.startsWith(SCIMConstants.RoleSchemaConstants.USERS_URI)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
