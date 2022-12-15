@@ -1882,9 +1882,14 @@ public class SCIMUserManager implements UserManager {
         // Sorting the secondary user stores to maintain an order fo domains so that pagination is consistent.
         Collections.sort(domainsOfUserStores);
 
+        String primaryUSDomain = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.
+                RealmConfig.PROPERTY_DOMAIN_NAME);
+        if (StringUtils.isEmpty(primaryUSDomain)) {
+            primaryUSDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+        }
         // Append the primary domain name to the front of the domain list since the first iteration of multiple
         // domain filtering should happen for the primary user store.
-        domainsOfUserStores.add(0, UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+        domainsOfUserStores.add(0, primaryUSDomain);
         return domainsOfUserStores.toArray(new String[0]);
     }
 
@@ -2045,9 +2050,15 @@ public class SCIMUserManager implements UserManager {
 
         int givenMax = UserCoreConstants.MAX_USER_ROLE_LIST;
         if (StringUtils.isEmpty(domainName)) {
-            domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+            domainName = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.RealmConfig.
+                    PROPERTY_DOMAIN_NAME);
+            if (StringUtils.isEmpty(domainName)) {
+                domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Primary user store DomainName picked as " + domainName);
+            }
         }
-
         if (carbonUM.getSecondaryUserStoreManager(domainName).getRealmConfiguration()
                 .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_USER_LIST) != null) {
             givenMax = Integer.parseInt(carbonUM.getSecondaryUserStoreManager(domainName).getRealmConfiguration()
