@@ -2255,7 +2255,14 @@ public class SCIMUserManager implements UserManager {
 
         try {
             if (StringUtils.isEmpty(domainName)) {
-                domainName = "PRIMARY";
+                domainName = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.RealmConfig.
+                        PROPERTY_DOMAIN_NAME);
+                if (StringUtils.isEmpty(domainName)) {
+                    domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("Primary user store DomainName picked as " + domainName);
+                }
             }
             Map<String, String> attributes = getAllAttributes(domainName);
             if (log.isDebugEnabled()) {
