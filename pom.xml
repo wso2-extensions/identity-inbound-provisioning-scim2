@@ -107,6 +107,11 @@
                 <artifactId>org.wso2.carbon.identity.password.policy</artifactId>
                 <version>${identity.governance.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.governance</groupId>
+                <artifactId>org.wso2.carbon.identity.recovery</artifactId>
+                <version>${identity.governance.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
@@ -256,7 +261,7 @@
         <identity.framework.version>5.25.48</identity.framework.version>
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
-        <identity.governance.version>1.3.11</identity.governance.version>
+        <identity.governance.version>1.8.12</identity.governance.version>
         <charon.version>4.0.5</charon.version>
 
         <!--Maven Plugin Version-->
