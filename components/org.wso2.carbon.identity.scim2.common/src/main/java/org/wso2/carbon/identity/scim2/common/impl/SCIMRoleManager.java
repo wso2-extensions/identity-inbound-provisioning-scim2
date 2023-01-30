@@ -857,15 +857,14 @@ public class SCIMRoleManager implements RoleManager {
         }
     }
 
-    private List<String> getUserIDList(List<String> userList, String tenantDomain) throws CharonException {
+    private List<String> getUserIDList(List<String> userList, String tenantDomain) throws BadRequestException {
 
         List<String> userIDList = new ArrayList<>();
         for (String user : userList) {
             try {
                 userIDList.add(getUserIDByName(user, tenantDomain));
             } catch (IdentityRoleManagementException e) {
-                throw new CharonException(String.format("Error occurred while getting the user id " +
-                        "of the user: %s", user), e);
+                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
         }
         return userIDList;
