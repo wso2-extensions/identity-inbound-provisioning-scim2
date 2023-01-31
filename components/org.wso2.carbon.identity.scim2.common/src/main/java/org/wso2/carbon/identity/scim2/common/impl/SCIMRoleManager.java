@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.RoleBasicInfo;
+import org.wso2.carbon.identity.role.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.mgt.core.UserBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
@@ -821,8 +822,8 @@ public class SCIMRoleManager implements RoleManager {
                 removedMembers.add(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
             }
         } catch (UserStoreException e) {
-            if(e.getMessage().equals("Invalid Domain Name")) {
-                throw new BadRequestException("Invalid user store name", ResponseCodeConstants.INVALID_VALUE);
+            if("Invalid Domain Name".equals(e.getMessage())) {
+                throw new BadRequestException("Invalid userstore name", ResponseCodeConstants.INVALID_VALUE);
             }
             throw new CharonException("Error occurred while retrieving the user list for role.");
         }
@@ -865,14 +866,19 @@ public class SCIMRoleManager implements RoleManager {
         }
     }
 
-    private List<String> getUserIDList(List<String> userList, String tenantDomain) throws BadRequestException {
+    private List<String> getUserIDList(List<String> userList, String tenantDomain) throws CharonException,
+            BadRequestException {
 
         List<String> userIDList = new ArrayList<>();
         for (String user : userList) {
             try {
                 userIDList.add(getUserIDByName(user, tenantDomain));
             } catch (IdentityRoleManagementException e) {
-                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                }
+                throw new CharonException(String.format("Error occurred while getting the user id " +
+                        "of the user: %s", user), e);
             }
         }
         return userIDList;
