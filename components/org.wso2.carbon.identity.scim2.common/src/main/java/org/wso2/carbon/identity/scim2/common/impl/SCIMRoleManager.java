@@ -793,7 +793,12 @@ public class SCIMRoleManager implements RoleManager {
                         userStoreManager.getUserListWithID(SCIMConstants.CommonSchemaConstants.ID_URI,
                                 memberObject.get(SCIMConstants.CommonSchemaConstants.VALUE), null);
                 if (isNotEmpty(userListWithID)) {
-                    memberObject.put(SCIMConstants.RoleSchemaConstants.DISPLAY, userListWithID.get(0).getUsername());
+                    String tempDisplay = userListWithID.get(0).getUsername();
+                    if(StringUtils.isNotBlank(userListWithID.get(0).getUserStoreDomain())) {
+                        tempDisplay =
+                                userListWithID.get(0).getUserStoreDomain() + "/" + userListWithID.get(0).getUsername();
+                    }
+                    memberObject.put(SCIMConstants.RoleSchemaConstants.DISPLAY, tempDisplay);
                     memberOperation.setValues(memberObject);
                 }
             }
@@ -816,6 +821,9 @@ public class SCIMRoleManager implements RoleManager {
                 removedMembers.add(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
             }
         } catch (UserStoreException e) {
+            if(e.getMessage().equals("Invalid Domain Name")) {
+                throw new BadRequestException("Invalid user store name", ResponseCodeConstants.INVALID_VALUE);
+            }
             throw new CharonException("Error occurred while retrieving the user list for role.");
         }
     }
