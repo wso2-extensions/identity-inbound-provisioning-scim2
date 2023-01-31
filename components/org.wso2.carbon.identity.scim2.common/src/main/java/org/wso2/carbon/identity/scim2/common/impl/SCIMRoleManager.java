@@ -796,8 +796,7 @@ public class SCIMRoleManager implements RoleManager {
                 if (isNotEmpty(userListWithID)) {
                     String tempDisplay = userListWithID.get(0).getUsername();
                     if(StringUtils.isNotBlank(userListWithID.get(0).getUserStoreDomain())) {
-                        tempDisplay =
-                                userListWithID.get(0).getUserStoreDomain() + "/" + tempDisplay;
+                        tempDisplay = userListWithID.get(0).getUserStoreDomain() + "/" + tempDisplay;
                     }
                     memberObject.put(SCIMConstants.RoleSchemaConstants.DISPLAY, tempDisplay);
                     memberOperation.setValues(memberObject);
