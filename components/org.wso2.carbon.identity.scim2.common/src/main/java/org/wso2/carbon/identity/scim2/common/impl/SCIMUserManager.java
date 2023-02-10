@@ -5542,7 +5542,7 @@ public class SCIMUserManager implements UserManager {
 
         String name = scimClaim.getClaimURI();
         String claimDielectURI = scimClaim.getClaimDialectURI();
-        boolean isCustomScemaAttr = claimDielectURI.equalsIgnoreCase(getCustomSchemaURI());
+        boolean isCustomScemaAttr = StringUtils.equalsIgnoreCase(claimDielectURI,getCustomSchemaURI());
         if (name.startsWith(scimClaim.getClaimDialectURI())) {
             name = name.substring(scimClaim.getClaimDialectURI().length() + 1);
         }
