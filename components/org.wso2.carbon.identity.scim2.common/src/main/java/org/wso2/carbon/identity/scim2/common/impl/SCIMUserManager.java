@@ -5548,7 +5548,7 @@ public class SCIMUserManager implements UserManager {
         }
 
         AbstractAttribute attribute;
-        if (isComplexAttribute(name, isCustomSchemaAttr)) {
+        if (isComplexAttribute(name) && !isCustomSchemaAttr) {
             attribute = new ComplexAttribute(name);
         } else {
             attribute = new SimpleAttribute(name, null);
@@ -5559,11 +5559,7 @@ public class SCIMUserManager implements UserManager {
         return attribute;
     }
 
-    private boolean isComplexAttribute(String name, boolean isCustomSchemaAttr) {
-
-        if (isCustomSchemaAttr) {
-            return false;
-        }
+    private boolean isComplexAttribute(String name) {
 
         switch (name) {
             case "manager":
@@ -5583,19 +5579,12 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private boolean isBooleanAttribute(String name, boolean isCustomSchemaAttr) {
+    private boolean isBooleanAttribute(String name) {
 
-        if (isCustomSchemaAttr) {
-            return false;
-        }
         return "active".equals(name);
     }
 
-    private boolean isMultivaluedAttribute(String name, boolean isCustomSchemaAttr) {
-
-        if (isCustomSchemaAttr) {
-            return false;
-        }
+    private boolean isMultivaluedAttribute(String name) {
 
         switch (name) {
             case "emails":
@@ -5649,13 +5638,13 @@ public class SCIMUserManager implements UserManager {
                 attribute.setType(SCIMDefinitions.DataType.STRING);
             }
 
-        } else if (isBooleanAttribute(attribute.getName(), isCustomSchemaAttr)) {
+        } else if (isBooleanAttribute(attribute.getName()) && !isCustomSchemaAttr) {
             attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
         } else {
             attribute.setType(SCIMDefinitions.DataType.STRING);
         }
 
-        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName(), isCustomSchemaAttr));
+        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName()) && !isCustomSchemaAttr);
         attribute.setReturned(SCIMDefinitions.Returned.DEFAULT);
         attribute.setUniqueness(SCIMDefinitions.Uniqueness.NONE);
 
