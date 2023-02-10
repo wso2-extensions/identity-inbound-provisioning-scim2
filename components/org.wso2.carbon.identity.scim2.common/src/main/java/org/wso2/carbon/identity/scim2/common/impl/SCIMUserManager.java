@@ -5542,26 +5542,26 @@ public class SCIMUserManager implements UserManager {
 
         String name = scimClaim.getClaimURI();
         String claimDielectURI = scimClaim.getClaimDialectURI();
-        boolean isCustomScemaAttr = StringUtils.equalsIgnoreCase(claimDielectURI,getCustomSchemaURI());
+        boolean isCustomSchemaAttr = StringUtils.equalsIgnoreCase(claimDielectURI,getCustomSchemaURI());
         if (name.startsWith(scimClaim.getClaimDialectURI())) {
             name = name.substring(scimClaim.getClaimDialectURI().length() + 1);
         }
 
         AbstractAttribute attribute;
-        if (isComplexAttribute(name, isCustomScemaAttr)) {
+        if (isComplexAttribute(name, isCustomSchemaAttr)) {
             attribute = new ComplexAttribute(name);
         } else {
             attribute = new SimpleAttribute(name, null);
         }
 
-        populateBasicAttributes(mappedLocalClaim, attribute, isExtensionAttr, isCustomScemaAttr);
+        populateBasicAttributes(mappedLocalClaim, attribute, isExtensionAttr, isCustomSchemaAttr);
 
         return attribute;
     }
 
-    private boolean isComplexAttribute(String name, boolean isCustomScemaAttr) {
+    private boolean isComplexAttribute(String name, boolean isCustomSchemaAttr) {
 
-        if (isCustomScemaAttr) {
+        if (isCustomSchemaAttr) {
             return false;
         }
 
@@ -5583,17 +5583,17 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private boolean isBooleanAttribute(String name, boolean isCustomScemaAttr) {
+    private boolean isBooleanAttribute(String name, boolean isCustomSchemaAttr) {
 
-        if (isCustomScemaAttr) {
+        if (isCustomSchemaAttr) {
             return false;
         }
         return "active".equals(name);
     }
 
-    private boolean isMultivaluedAttribute(String name, boolean isCustomScemaAttr) {
+    private boolean isMultivaluedAttribute(String name, boolean isCustomSchemaAttr) {
 
-        if (isCustomScemaAttr) {
+        if (isCustomSchemaAttr) {
             return false;
         }
 
@@ -5620,7 +5620,7 @@ public class SCIMUserManager implements UserManager {
      * @param attribute
      */
     private void populateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute, boolean
-            isEnterpriseExtensionAttr, boolean isCustomScemaAttr) {
+            isEnterpriseExtensionAttr, boolean isCustomSchemaAttr) {
 
         if (mappedLocalClaim != null) {
             attribute.setDescription(mappedLocalClaim.getClaimProperty(ClaimConstants.DESCRIPTION_PROPERTY));
@@ -5649,13 +5649,13 @@ public class SCIMUserManager implements UserManager {
                 attribute.setType(SCIMDefinitions.DataType.STRING);
             }
 
-        } else if (isBooleanAttribute(attribute.getName(), isCustomScemaAttr)) {
+        } else if (isBooleanAttribute(attribute.getName(), isCustomSchemaAttr)) {
             attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
         } else {
             attribute.setType(SCIMDefinitions.DataType.STRING);
         }
 
-        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName(), isCustomScemaAttr));
+        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName(), isCustomSchemaAttr));
         attribute.setReturned(SCIMDefinitions.Returned.DEFAULT);
         attribute.setUniqueness(SCIMDefinitions.Uniqueness.NONE);
 
