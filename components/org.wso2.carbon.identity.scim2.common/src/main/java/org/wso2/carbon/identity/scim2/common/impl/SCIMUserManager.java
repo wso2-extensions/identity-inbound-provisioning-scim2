@@ -5541,23 +5541,29 @@ public class SCIMUserManager implements UserManager {
                                           boolean isExtensionAttr) {
 
         String name = scimClaim.getClaimURI();
+        String claimDielectURI = scimClaim.getClaimDialectURI();
+        boolean isCustomScemaAttr = claimDielectURI.equalsIgnoreCase(getCustomSchemaURI());
         if (name.startsWith(scimClaim.getClaimDialectURI())) {
             name = name.substring(scimClaim.getClaimDialectURI().length() + 1);
         }
 
         AbstractAttribute attribute;
-        if (isComplexAttribute(name)) {
+        if (isComplexAttribute(name, isCustomScemaAttr)) {
             attribute = new ComplexAttribute(name);
         } else {
             attribute = new SimpleAttribute(name, null);
         }
 
-        populateBasicAttributes(mappedLocalClaim, attribute, isExtensionAttr);
+        populateBasicAttributes(mappedLocalClaim, attribute, isExtensionAttr, isCustomScemaAttr);
 
         return attribute;
     }
 
-    private boolean isComplexAttribute(String name) {
+    private boolean isComplexAttribute(String name, boolean isCustomScemaAttr) {
+
+        if (isCustomScemaAttr) {
+            return false;
+        }
 
         switch (name) {
             case "manager":
@@ -5577,12 +5583,19 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private boolean isBooleanAttribute(String name) {
+    private boolean isBooleanAttribute(String name, boolean isCustomScemaAttr) {
 
+        if (isCustomScemaAttr) {
+            return false;
+        }
         return "active".equals(name);
     }
 
-    private boolean isMultivaluedAttribute(String name) {
+    private boolean isMultivaluedAttribute(String name, boolean isCustomScemaAttr) {
+
+        if (isCustomScemaAttr) {
+            return false;
+        }
 
         switch (name) {
             case "emails":
@@ -5607,7 +5620,7 @@ public class SCIMUserManager implements UserManager {
      * @param attribute
      */
     private void populateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute, boolean
-            isEnterpriseExtensionAttr) {
+            isEnterpriseExtensionAttr, boolean isCustomScemaAttr) {
 
         if (mappedLocalClaim != null) {
             attribute.setDescription(mappedLocalClaim.getClaimProperty(ClaimConstants.DESCRIPTION_PROPERTY));
@@ -5636,13 +5649,13 @@ public class SCIMUserManager implements UserManager {
                 attribute.setType(SCIMDefinitions.DataType.STRING);
             }
 
-        } else if (isBooleanAttribute(attribute.getName())) {
+        } else if (isBooleanAttribute(attribute.getName(), isCustomScemaAttr)) {
             attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
         } else {
             attribute.setType(SCIMDefinitions.DataType.STRING);
         }
 
-        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName()));
+        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName(), isCustomScemaAttr));
         attribute.setReturned(SCIMDefinitions.Returned.DEFAULT);
         attribute.setUniqueness(SCIMDefinitions.Uniqueness.NONE);
 
@@ -5739,7 +5752,7 @@ public class SCIMUserManager implements UserManager {
 
         if (parentAttribute == null) {
             parentAttribute = new ComplexAttribute(parentAttributeName);
-            populateBasicAttributes(null, parentAttribute, isEnterpriseExtensionAttr);
+            populateBasicAttributes(null, parentAttribute, isEnterpriseExtensionAttr, false);
             complexAttributeMap.put(parentAttributeName, parentAttribute);
         }
 
