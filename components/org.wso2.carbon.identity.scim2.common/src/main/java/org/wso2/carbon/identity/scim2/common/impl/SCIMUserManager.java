@@ -76,6 +76,7 @@ import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.ComplexAttribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
+import org.wso2.charon3.core.config.SCIMConfigConstants;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -5543,12 +5544,23 @@ public class SCIMUserManager implements UserManager {
         String name = scimClaim.getClaimURI();
         String claimDielectURI = scimClaim.getClaimDialectURI();
         boolean isCustomSchemaAttr = StringUtils.equalsIgnoreCase(claimDielectURI,getCustomSchemaURI());
+        boolean isComplexInAdditionalProp = false;
+        if (mappedLocalClaim != null && mappedLocalClaim.getClaimProperties() != null) {
+            for (Map.Entry<String, String> claimProperty : mappedLocalClaim.getClaimProperties().entrySet()) {
+                if (StringUtils.equalsIgnoreCase(claimProperty.getKey(), SCIMConfigConstants.DATA_TYPE)) {
+                    isComplexInAdditionalProp = StringUtils.equalsIgnoreCase(claimProperty.getValue(),
+                            SCIMDefinitions.DataType.COMPLEX.name());
+                    break;
+                }
+            }
+        }
+
         if (name.startsWith(scimClaim.getClaimDialectURI())) {
             name = name.substring(scimClaim.getClaimDialectURI().length() + 1);
         }
 
         AbstractAttribute attribute;
-        if (isComplexAttribute(name) && !isCustomSchemaAttr) {
+        if (isComplexInAdditionalProp || (isComplexAttribute(name) && !isCustomSchemaAttr)) {
             attribute = new ComplexAttribute(name);
         } else {
             attribute = new SimpleAttribute(name, null);
@@ -5611,7 +5623,22 @@ public class SCIMUserManager implements UserManager {
     private void populateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute, boolean
             isEnterpriseExtensionAttr, boolean isCustomSchemaAttr) {
 
+        boolean isMultivaluedInAdditionalProp = false;
+        boolean isBooleanInAdditionalProp = false;
+
         if (mappedLocalClaim != null) {
+            if (mappedLocalClaim.getClaimProperties() != null) {
+                for (Map.Entry<String, String> claimProperty : mappedLocalClaim.getClaimProperties().entrySet()) {
+                    if (StringUtils.equalsIgnoreCase(claimProperty.getKey(), SCIMConfigConstants.MULTIVALUED)) {
+                        isMultivaluedInAdditionalProp = StringUtils.equalsIgnoreCase(claimProperty.getValue(), "true");
+                    }
+                    if (StringUtils.equalsIgnoreCase(claimProperty.getKey(), SCIMConfigConstants.DATA_TYPE)) {
+                        isBooleanInAdditionalProp = StringUtils.equalsIgnoreCase(claimProperty.getValue(),
+                                SCIMDefinitions.DataType.BOOLEAN.name());
+                    }
+                }
+            }
+
             attribute.setDescription(mappedLocalClaim.getClaimProperty(ClaimConstants.DESCRIPTION_PROPERTY));
 
             attribute.setRequired(Boolean.parseBoolean(mappedLocalClaim.
@@ -5638,13 +5665,14 @@ public class SCIMUserManager implements UserManager {
                 attribute.setType(SCIMDefinitions.DataType.STRING);
             }
 
-        } else if (isBooleanAttribute(attribute.getName()) && !isCustomSchemaAttr) {
+        } else if (isBooleanInAdditionalProp || (isBooleanAttribute(attribute.getName()) && !isCustomSchemaAttr)) {
             attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
         } else {
             attribute.setType(SCIMDefinitions.DataType.STRING);
         }
 
-        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName()) && !isCustomSchemaAttr);
+        attribute.setMultiValued(isMultivaluedInAdditionalProp ||
+                (isMultivaluedAttribute(attribute.getName()) && !isCustomSchemaAttr));
         attribute.setReturned(SCIMDefinitions.Returned.DEFAULT);
         attribute.setUniqueness(SCIMDefinitions.Uniqueness.NONE);
 
