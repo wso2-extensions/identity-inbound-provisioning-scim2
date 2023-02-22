@@ -100,7 +100,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             }
             // Validate claim value against the regex if user claim input regex validation configuration is enabled.
             if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
-                validateClaimValue(claims, userStoreManager);
+                String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+                validateClaimValue(claims, tenantDomain);
             }
             this.populateSCIMAttributes(userID, claims);
             return true;
@@ -190,7 +191,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
         // Validate claim value against the regex if user claim input regex validation configuration is enabled.
         if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
-            validateClaimValue(claimURI, claimValue, userStoreManager);
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+            validateClaimValue(claimURI, claimValue, tenantDomain);
         }
         // Validate if the groups are updated.
         validateUserGroupClaim(userID, claimURI, claimValue, userStoreManager);
@@ -203,13 +205,12 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
      *
      * @param claimURI         Claim URI.
      * @param claimValue       Claim value.
-     * @param userStoreManager Userstore manager.
+     * @param tenantDomain     Tenant domain.
      * @throws UserStoreException When claim value doesn't match with regex.
      */
-    private void validateClaimValue(String claimURI, String claimValue, UserStoreManager userStoreManager)
+    private void validateClaimValue(String claimURI, String claimValue, String tenantDomain)
             throws UserStoreException {
 
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
         switch (claimURI) {
             case DATE_OF_BIRTH_LOCAL_CLAIM:
                 validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DATE_OF_BIRTH_REGEX,
