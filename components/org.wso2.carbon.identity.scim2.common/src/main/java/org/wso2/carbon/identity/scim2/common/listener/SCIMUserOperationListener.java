@@ -492,7 +492,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             }
             return;
         }
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        
         for (Map.Entry<String, String> claim : claims.entrySet()) {
             if (StringUtils.isBlank(claim.getKey())) {
                 return;
