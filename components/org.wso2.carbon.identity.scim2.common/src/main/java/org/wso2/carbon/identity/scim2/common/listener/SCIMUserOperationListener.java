@@ -321,7 +321,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
         // Validate claim value against the regex if user claim input regex validation configuration is enabled.
         if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
-            validateClaimValue(claims, userStoreManager);
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+            validateClaimValue(claims, tenantDomain);
         }
         // Validate if the groups are updated.
         validateUserGroups(userID, claims, userStoreManager);
@@ -479,10 +480,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
      * This method can be removed once https://github.com/wso2/product-is/issues/9816 is fixed.
      *
      * @param claims           List of claims.
-     * @param userStoreManager Userstore manager.
+     * @param tenantDomain     Tenant domain.
      * @throws UserStoreException When regex validation fails.
      */
-    private void validateClaimValue(Map<String, String> claims, UserStoreManager userStoreManager)
+    private void validateClaimValue(Map<String, String> claims, String tenantDomain)
             throws UserStoreException {
 
         if (MapUtils.isEmpty(claims)) {
