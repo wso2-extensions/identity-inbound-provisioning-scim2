@@ -257,7 +257,7 @@
         <cxf-bundle.version>3.3.7</cxf-bundle.version>
         <inbound.auth.oauth.version>6.5.3</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
-        <carbon.kernel.version>4.9.0</carbon.kernel.version>
+        <carbon.kernel.version>4.9.1</carbon.kernel.version>
         <identity.framework.version>5.25.90</identity.framework.version>
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
@@ -284,7 +284,7 @@
         <commons-httpclient.wso2.osgi.version>[3.1.0,4.0.0)</commons-httpclient.wso2.osgi.version>
         <osgi.framework.imp.pkg.version.range>[1.7.0, 2.0.0)</osgi.framework.imp.pkg.version.range>
         <osgi.service.component.imp.pkg.version.range>[1.2.0, 2.0.0)</osgi.service.component.imp.pkg.version.range>
-        <carbon.kernel.package.import.version.range>[4.5.0, 5.0.0)</carbon.kernel.package.import.version.range>
+        <carbon.kernel.package.import.version.range>[4.9.1, 5.0.0)</carbon.kernel.package.import.version.range>
         <carbon.base.imp.pkg.version.range>[1.0.0, 2.0.0)</carbon.base.imp.pkg.version.range>
         <carbon.user.api.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.user.api.imp.pkg.version.range>
         <axis2.osgi.version.range>[.6.1-wso2v37, 2.0.0)</axis2.osgi.version.range>
