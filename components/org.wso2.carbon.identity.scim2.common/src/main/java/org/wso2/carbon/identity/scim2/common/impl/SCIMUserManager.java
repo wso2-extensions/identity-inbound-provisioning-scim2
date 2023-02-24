@@ -5619,22 +5619,24 @@ public class SCIMUserManager implements UserManager {
 
     private SCIMDefinitions.DataType getCustomAttrDataType(String dataType) {
 
-        if (SCIMDefinitions.DataType.BOOLEAN.name().equalsIgnoreCase(dataType)) {
-            return SCIMDefinitions.DataType.BOOLEAN;
-        } else if (SCIMDefinitions.DataType.DECIMAL.name().equalsIgnoreCase(dataType)) {
-            return SCIMDefinitions.DataType.DECIMAL;
-        } else if (SCIMDefinitions.DataType.INTEGER.name().equalsIgnoreCase(dataType)) {
-            return SCIMDefinitions.DataType.INTEGER;
-        } else if (SCIMDefinitions.DataType.DATE_TIME.name().equalsIgnoreCase(dataType)) {
-            return SCIMDefinitions.DataType.DATE_TIME;
-        } else if (SCIMDefinitions.DataType.BINARY.name().equalsIgnoreCase(dataType)) {
-            return SCIMDefinitions.DataType.BINARY;
-        } else if (SCIMDefinitions.DataType.REFERENCE.name().equalsIgnoreCase(dataType)) {
-            return SCIMDefinitions.DataType.REFERENCE;
-        } else if (SCIMDefinitions.DataType.COMPLEX.name().equalsIgnoreCase(dataType)) {
-            return SCIMDefinitions.DataType.COMPLEX;
-        } else {
-            return SCIMDefinitions.DataType.STRING;
+        dataType = dataType.toUpperCase();
+        switch (dataType) {
+            case SCIMDefinitions.DataType.BOOLEAN.name():
+                return SCIMDefinitions.DataType.BOOLEAN;
+            case SCIMDefinitions.DataType.DECIMAL.name():
+                return SCIMDefinitions.DataType.DECIMAL;
+            case SCIMDefinitions.DataType.INTEGER.name():
+                return SCIMDefinitions.DataType.INTEGER;
+            case SCIMDefinitions.DataType.DATE_TIME.name():
+                return SCIMDefinitions.DataType.DATE_TIME;
+            case SCIMDefinitions.DataType.BINARY.name():
+                return SCIMDefinitions.DataType.BINARY;
+            case SCIMDefinitions.DataType.REFERENCE.name():
+                return SCIMDefinitions.DataType.REFERENCE;
+            case SCIMDefinitions.DataType.COMPLEX.name():
+                return SCIMDefinitions.DataType.COMPLEX;
+            default:
+                return SCIMDefinitions.DataType.STRING;
         }
     }
 
@@ -5688,7 +5690,7 @@ public class SCIMUserManager implements UserManager {
                 attribute.setType(SCIMDefinitions.DataType.STRING);
             }
 
-        } else if (isCustomSchemaAttr) {
+        } else if (customAttrDataType != null) {
             attribute.setType(getCustomAttrDataType(customAttrDataType));
         } else if (isBooleanAttribute(attribute.getName())) {
             attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
