@@ -5620,20 +5620,20 @@ public class SCIMUserManager implements UserManager {
     private SCIMDefinitions.DataType getCustomAttrDataType(String dataType) {
 
         dataType = dataType.toUpperCase();
-        switch (dataType) {
-            case SCIMDefinitions.DataType.BOOLEAN.name():
+        switch (SCIMDefinitions.DataType.valueOf(dataType)) {
+            case BOOLEAN:
                 return SCIMDefinitions.DataType.BOOLEAN;
-            case SCIMDefinitions.DataType.DECIMAL.name():
+            case DECIMAL:
                 return SCIMDefinitions.DataType.DECIMAL;
-            case SCIMDefinitions.DataType.INTEGER.name():
+            case INTEGER:
                 return SCIMDefinitions.DataType.INTEGER;
-            case SCIMDefinitions.DataType.DATE_TIME.name():
+            case DATE_TIME:
                 return SCIMDefinitions.DataType.DATE_TIME;
-            case SCIMDefinitions.DataType.BINARY.name():
+            case BINARY:
                 return SCIMDefinitions.DataType.BINARY;
-            case SCIMDefinitions.DataType.REFERENCE.name():
+            case REFERENCE:
                 return SCIMDefinitions.DataType.REFERENCE;
-            case SCIMDefinitions.DataType.COMPLEX.name():
+            case COMPLEX:
                 return SCIMDefinitions.DataType.COMPLEX;
             default:
                 return SCIMDefinitions.DataType.STRING;
