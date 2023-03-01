@@ -5635,8 +5635,8 @@ public class SCIMUserManager implements UserManager {
                 return SCIMDefinitions.DataType.REFERENCE;
             case COMPLEX:
                 return SCIMDefinitions.DataType.COMPLEX;
-            case DUMMYPR:
-                return SCIMDefinitions.DataType.COMPLEX;
+//            case DUMMYPR:
+//                return SCIMDefinitions.DataType.COMPLEX;
             default:
                 return SCIMDefinitions.DataType.STRING;
         }
