@@ -76,6 +76,7 @@ import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.ComplexAttribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
+import org.wso2.charon3.core.config.SCIMConfigConstants;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -5541,18 +5542,34 @@ public class SCIMUserManager implements UserManager {
                                           boolean isExtensionAttr) {
 
         String name = scimClaim.getClaimURI();
+        String claimDielectURI = scimClaim.getClaimDialectURI();
+        boolean isCustomSchemaAttr = false;
+        boolean isComplexCustomAttr = false;
+        if (getCustomSchemaURI() != null) {
+            isCustomSchemaAttr = getCustomSchemaURI().equalsIgnoreCase(claimDielectURI);
+        }
+        if (mappedLocalClaim != null && mappedLocalClaim.getClaimProperties() != null) {
+            for (Map.Entry<String, String> claimProperty : mappedLocalClaim.getClaimProperties().entrySet()) {
+                if (SCIMConfigConstants.DATA_TYPE.equalsIgnoreCase(claimProperty.getKey())) {
+                    isComplexCustomAttr = SCIMDefinitions.DataType.COMPLEX.name().equalsIgnoreCase(
+                            claimProperty.getValue());
+                    break;
+                }
+            }
+        }
+
         if (name.startsWith(scimClaim.getClaimDialectURI())) {
             name = name.substring(scimClaim.getClaimDialectURI().length() + 1);
         }
 
         AbstractAttribute attribute;
-        if (isComplexAttribute(name)) {
+        if (isComplexCustomAttr || (isComplexAttribute(name) && !isCustomSchemaAttr)) {
             attribute = new ComplexAttribute(name);
         } else {
             attribute = new SimpleAttribute(name, null);
         }
 
-        populateBasicAttributes(mappedLocalClaim, attribute, isExtensionAttr);
+        populateBasicAttributes(mappedLocalClaim, attribute, isExtensionAttr, isCustomSchemaAttr);
 
         return attribute;
     }
@@ -5600,6 +5617,29 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    private SCIMDefinitions.DataType getCustomAttrDataType(String dataType) {
+
+        dataType = dataType.toUpperCase();
+        switch (SCIMDefinitions.DataType.valueOf(dataType)) {
+            case BOOLEAN:
+                return SCIMDefinitions.DataType.BOOLEAN;
+            case DECIMAL:
+                return SCIMDefinitions.DataType.DECIMAL;
+            case INTEGER:
+                return SCIMDefinitions.DataType.INTEGER;
+            case DATE_TIME:
+                return SCIMDefinitions.DataType.DATE_TIME;
+            case BINARY:
+                return SCIMDefinitions.DataType.BINARY;
+            case REFERENCE:
+                return SCIMDefinitions.DataType.REFERENCE;
+            case COMPLEX:
+                return SCIMDefinitions.DataType.COMPLEX;
+            default:
+                return SCIMDefinitions.DataType.STRING;
+        }
+    }
+
     /**
      * Populates basic Charon Attributes details using the claim metadata.
      *
@@ -5607,9 +5647,23 @@ public class SCIMUserManager implements UserManager {
      * @param attribute
      */
     private void populateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute, boolean
-            isEnterpriseExtensionAttr) {
+            isEnterpriseExtensionAttr, boolean isCustomSchemaAttr) {
+
+        boolean isMultivaluedCustomAttr = false;
+        String customAttrDataType = null;
 
         if (mappedLocalClaim != null) {
+            if (mappedLocalClaim.getClaimProperties() != null) {
+                for (Map.Entry<String, String> claimProperty : mappedLocalClaim.getClaimProperties().entrySet()) {
+                    if (SCIMConfigConstants.MULTIVALUED.equalsIgnoreCase(claimProperty.getKey())) {
+                        isMultivaluedCustomAttr = "true".equalsIgnoreCase(claimProperty.getValue());
+                    }
+                    if (SCIMConfigConstants.DATA_TYPE.equalsIgnoreCase(claimProperty.getKey())) {
+                        customAttrDataType = claimProperty.getValue();
+                    }
+                }
+            }
+
             attribute.setDescription(mappedLocalClaim.getClaimProperty(ClaimConstants.DESCRIPTION_PROPERTY));
 
             attribute.setRequired(Boolean.parseBoolean(mappedLocalClaim.
@@ -5627,6 +5681,8 @@ public class SCIMUserManager implements UserManager {
         attribute.setCaseExact(false);
         if (attribute instanceof ComplexAttribute) {
             attribute.setType(SCIMDefinitions.DataType.COMPLEX);
+        } else if (customAttrDataType != null) {
+            attribute.setType(getCustomAttrDataType(customAttrDataType));
         } else if (isEnterpriseExtensionAttr) {
             AttributeSchema attributeSchema = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
                     .getSubAttributeSchema(attribute.getName());
@@ -5642,7 +5698,8 @@ public class SCIMUserManager implements UserManager {
             attribute.setType(SCIMDefinitions.DataType.STRING);
         }
 
-        attribute.setMultiValued(isMultivaluedAttribute(attribute.getName()));
+        attribute.setMultiValued(isMultivaluedCustomAttr ||
+                (isMultivaluedAttribute(attribute.getName()) && !isCustomSchemaAttr));
         attribute.setReturned(SCIMDefinitions.Returned.DEFAULT);
         attribute.setUniqueness(SCIMDefinitions.Uniqueness.NONE);
 
@@ -5739,7 +5796,7 @@ public class SCIMUserManager implements UserManager {
 
         if (parentAttribute == null) {
             parentAttribute = new ComplexAttribute(parentAttributeName);
-            populateBasicAttributes(null, parentAttribute, isEnterpriseExtensionAttr);
+            populateBasicAttributes(null, parentAttribute, isEnterpriseExtensionAttr, false);
             complexAttributeMap.put(parentAttributeName, parentAttribute);
         }
 
