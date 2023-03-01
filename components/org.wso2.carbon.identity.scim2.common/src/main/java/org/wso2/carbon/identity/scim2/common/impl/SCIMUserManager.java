@@ -5681,6 +5681,8 @@ public class SCIMUserManager implements UserManager {
         attribute.setCaseExact(false);
         if (attribute instanceof ComplexAttribute) {
             attribute.setType(SCIMDefinitions.DataType.COMPLEX);
+        } else if (customAttrDataType != null) {
+            attribute.setType(getCustomAttrDataType(customAttrDataType));
         } else if (isEnterpriseExtensionAttr) {
             AttributeSchema attributeSchema = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
                     .getSubAttributeSchema(attribute.getName());
@@ -5690,8 +5692,6 @@ public class SCIMUserManager implements UserManager {
                 attribute.setType(SCIMDefinitions.DataType.STRING);
             }
 
-        } else if (customAttrDataType != null) {
-            attribute.setType(getCustomAttrDataType(customAttrDataType));
         } else if (isBooleanAttribute(attribute.getName())) {
             attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
         } else {
