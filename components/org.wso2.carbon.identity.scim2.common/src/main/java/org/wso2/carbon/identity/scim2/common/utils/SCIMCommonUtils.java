@@ -128,23 +128,16 @@ public class SCIMCommonUtils {
 
         String scimURL;
         try {
-            String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
-            if (organizationRoutingSupported && StringUtils.isNotBlank(organizationId)) {
-                String serverUrl = ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath();
-                scimURL = serverUrl + SCIMCommonConstants.ORGANIZATION_PATH_PARAM + organizationId +
-                        SCIMCommonConstants.SCIM2_ENDPOINT;
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                scimURL = ServiceURLBuilder.create().addPath(SCIMCommonConstants.SCIM2_ENDPOINT).build()
+                        .getAbsolutePublicURL();
             } else {
-                if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                    scimURL = ServiceURLBuilder.create().addPath(SCIMCommonConstants.SCIM2_ENDPOINT).build()
-                            .getAbsolutePublicURL();
+                String serverUrl = ServiceURLBuilder.create().build().getAbsolutePublicURL();
+                String tenantDomain = getTenantDomainFromContext();
+                if (isNotASuperTenantFlow(tenantDomain)) {
+                    scimURL = serverUrl + "/t/" + tenantDomain + SCIMCommonConstants.SCIM2_ENDPOINT;
                 } else {
-                    String serverUrl = ServiceURLBuilder.create().build().getAbsolutePublicURL();
-                    String tenantDomain = getTenantDomainFromContext();
-                    if (isNotASuperTenantFlow(tenantDomain)) {
-                        scimURL = serverUrl + "/t/" + tenantDomain + SCIMCommonConstants.SCIM2_ENDPOINT;
-                    } else {
-                        scimURL = serverUrl + SCIMCommonConstants.SCIM2_ENDPOINT;
-                    }
+                    scimURL = serverUrl + SCIMCommonConstants.SCIM2_ENDPOINT;
                 }
             }
             return scimURL;
