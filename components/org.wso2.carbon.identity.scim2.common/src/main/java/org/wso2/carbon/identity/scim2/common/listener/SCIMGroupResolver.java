@@ -215,7 +215,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         try {
             groupName = groupDAO.getGroupNameById(tenantId, groupID);
             if (StringUtils.isBlank(groupName)) {
-                log.error(String.format("No group found with id: %s in tenant: %s", groupID, tenantId));
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("No group found with id: %s in tenant: %s", groupID, tenantId));
+                }
                 return true;
             }
         } catch (IdentitySCIMException e) {
@@ -261,7 +263,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         try {
             groupName = groupDAO.getGroupNameById(tenantId, groupID);
             if (StringUtils.isBlank(groupName)) {
-                log.error(String.format("No group found with id: %s in tenant: %s", groupID, tenantId));
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("No group found with id: %s in tenant: %s", groupID, tenantId));
+                }
                 return true;
             }
             attributes = groupDAO.getSCIMGroupAttributes(tenantId, groupName);
