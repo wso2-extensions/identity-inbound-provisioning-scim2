@@ -225,6 +225,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 break;
             default:
                 validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DEFAULT_REGEX, null);
+                validateLength(claimURI, claimValue, tenantDomain);
                 break;
         }
     }
@@ -267,19 +268,29 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 }
                 throw new UserStoreClientException(regexError, ERROR_CODE_REGEX_VIOLATION.getCode());
             }
-            validateLength(claimProperties, claimValue);
         }
     }
 
     /**
      * Validate attribute values against length limits.
      *
-     * @param claimProperties   Configured claim properties.
-     * @param value             Claim value.
+     * @param claimURI      Claim URI.
+     * @param value         Claim value.
+     * @param tenantDomain  Tenant domain name..
      * @throws UserStoreClientException If an error occurred in validating claim.
      */
-    private void validateLength(Map<String, String> claimProperties, String value) throws UserStoreClientException {
+    private void validateLength(String claimURI, String value, String tenantDomain) throws UserStoreClientException {
 
+        if (StringUtils.isBlank(claimURI)) {
+            if (log.isDebugEnabled()) {
+                log.debug("The claim URI is empty.");
+            }
+            return;
+        }
+        Map<String, String> claimProperties = getClaimProperties(tenantDomain, claimURI);
+        if (MapUtils.isEmpty(claimProperties)) {
+            return;
+        }
         String minLength = claimProperties.get(MIN_LENGTH);
         String maxLength = claimProperties.get(MAX_LENGTH);
         boolean required = Boolean.parseBoolean(claimProperties.get(REQUIRED));
@@ -535,6 +546,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                     break;
                 default:
                     validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, DEFAULT_REGEX, null);
+                    validateLength(claim.getKey(), claim.getValue(), tenantDomain);
             }
         }
     }
