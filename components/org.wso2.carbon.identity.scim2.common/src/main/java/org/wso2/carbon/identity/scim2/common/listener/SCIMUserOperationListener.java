@@ -68,6 +68,10 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.CO
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.GROUPS_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_DISPLAYNAME;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MAX_LENGTH;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MIN_LENGTH;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.REQUIRED;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_LENGTH_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
 
 /**
@@ -263,6 +267,31 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 }
                 throw new UserStoreClientException(regexError, ERROR_CODE_REGEX_VIOLATION.getCode());
             }
+            validateLength(claimProperties, claimValue);
+        }
+    }
+
+    /**
+     * Validate attribute values against length limits.
+     *
+     * @param claimProperties   Configured claim properties.
+     * @param value             Claim value.
+     * @throws UserStoreClientException If an error occurred in validating claim.
+     */
+    private void validateLength(Map<String, String> claimProperties, String value) throws UserStoreClientException {
+
+        String minLength = claimProperties.get(MIN_LENGTH);
+        String maxLength = claimProperties.get(MAX_LENGTH);
+        boolean required = Boolean.parseBoolean(claimProperties.get(REQUIRED));
+
+        if (!required && StringUtils.isBlank(value)) {
+            return;
+        }
+        if ((StringUtils.isNotEmpty(minLength) && Integer.parseInt(minLength) > value.length()) ||
+                (StringUtils.isNotEmpty(maxLength) && Integer.parseInt(maxLength) < value.length())) {
+            throw new UserStoreClientException(String.format(ERROR_CODE_LENGTH_VIOLATION.getDescription(),
+                    claimProperties.get(PROP_DISPLAYNAME), StringUtils.isNotEmpty(minLength) ? minLength : 0,
+                    StringUtils.isNotEmpty(maxLength) ? maxLength : 1024), ERROR_CODE_LENGTH_VIOLATION.getCode());
         }
     }
 

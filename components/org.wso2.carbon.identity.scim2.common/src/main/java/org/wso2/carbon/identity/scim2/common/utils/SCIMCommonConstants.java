@@ -138,6 +138,10 @@ public class SCIMCommonConstants {
             "^\\s*(?:\\+?(\\d{1,3}))?[-. (]*(\\d{3})?[-. )]*(\\d{3})?[-. ]*(\\d{4,6})(?: *x(\\d+))?\\s*$";
     public static final String ERROR_CODE_RESOURCE_LIMIT_REACHED = "ATS-10001";
     public static final String DEFAULT_REGEX = "[^<>`\"]+";
+    public static final String MIN_LENGTH = "minLength";
+    public static final String MAX_LENGTH = "maxLength";
+    public static final String REQUIRED = "required";
+
 
     private static final Map<String, String> groupAttributeSchemaMap = new HashMap<>();
 
@@ -171,7 +175,9 @@ public class SCIMCommonConstants {
                 "The user: %s has been JIT provisioned from federated IDP: %s. " +
                         "Hence provisioned user attributes are not allowed to update"),
         ERROR_CODE_REGEX_VIOLATION("SUO-10001", "Regex validation error",
-                "%s attribute value doesn't match with %s regex pattern");
+                "%s attribute value doesn't match with %s regex pattern"),
+        ERROR_CODE_LENGTH_VIOLATION("SUO-10002", "Length validation error",
+                                            "%s attribute should be between %s and %s characters");
 
         private final String code;
         private final String message;
