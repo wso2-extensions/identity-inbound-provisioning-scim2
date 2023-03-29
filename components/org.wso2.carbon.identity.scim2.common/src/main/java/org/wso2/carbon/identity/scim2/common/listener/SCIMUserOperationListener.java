@@ -298,8 +298,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         if (!required && StringUtils.isBlank(value)) {
             return;
         }
-        if ((StringUtils.isNotEmpty(minLength) && Integer.parseInt(minLength) > value.length()) ||
-                (StringUtils.isNotEmpty(maxLength) && Integer.parseInt(maxLength) < value.length())) {
+        if ((StringUtils.isNotBlank(minLength) && Integer.parseInt(minLength) > value.length()) ||
+                (StringUtils.isNotBlank(maxLength) && Integer.parseInt(maxLength) < value.length())) {
             throw new UserStoreClientException(String.format(ERROR_CODE_LENGTH_VIOLATION.getDescription(),
                     claimProperties.get(PROP_DISPLAYNAME), StringUtils.isNotEmpty(minLength) ? minLength : 0,
                     StringUtils.isNotEmpty(maxLength) ? maxLength : 1024), ERROR_CODE_LENGTH_VIOLATION.getCode());
