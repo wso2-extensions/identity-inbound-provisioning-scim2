@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCustomSchemaProcessor;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
@@ -71,19 +72,11 @@ import org.wso2.carbon.user.core.model.OperationalOperation;
 import org.wso2.carbon.user.core.model.UniqueIDUserClaimSearchEntry;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.user.mgt.RolePermissionException;
-import org.wso2.charon3.core.attributes.AbstractAttribute;
-import org.wso2.charon3.core.attributes.Attribute;
-import org.wso2.charon3.core.attributes.ComplexAttribute;
-import org.wso2.charon3.core.attributes.MultiValuedAttribute;
-import org.wso2.charon3.core.attributes.SimpleAttribute;
+import org.wso2.charon3.core.attributes.*;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
+import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
-import org.wso2.charon3.core.exceptions.BadRequestException;
-import org.wso2.charon3.core.exceptions.CharonException;
-import org.wso2.charon3.core.exceptions.ConflictException;
-import org.wso2.charon3.core.exceptions.ForbiddenException;
-import org.wso2.charon3.core.exceptions.NotFoundException;
-import org.wso2.charon3.core.exceptions.NotImplementedException;
+import org.wso2.charon3.core.exceptions.*;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
@@ -6075,11 +6068,26 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException
      */
     @Override
-    public AttributeSchema getCustomUserSchemaExtension() {
+    public AttributeSchema getCustomUserSchemaExtension() throws CharonException {
 
         if (tenantDomain != null) {
-            return SCIMCustomAttributeSchemaCache.getInstance().
+            AttributeSchema schema = SCIMCustomAttributeSchemaCache.getInstance().
                     getSCIMCustomAttributeSchemaByTenant(IdentityTenantUtil.getTenantId(tenantDomain));
+            if (schema != null) {
+                return schema;
+            }
+            try {
+                SCIMCustomSchemaProcessor scimCustomSchemaProcessor = new SCIMCustomSchemaProcessor();
+                List<SCIMCustomAttribute> attributes =
+                        scimCustomSchemaProcessor.getCustomAttributes(IdentityTenantUtil.getTenantDomain(carbonUM.getTenantId()),
+                                getCustomSchemaURI());
+                AttributeSchema attributeSchema = SCIMCustomSchemaExtensionBuilder.getInstance()
+                        .buildUserCustomSchemaExtension(attributes);
+                SCIMCustomAttributeSchemaCache.getInstance().addSCIMCustomAttributeSchema(carbonUM.getTenantId(), attributeSchema);
+                return attributeSchema;
+            } catch (InternalErrorException | UserStoreException | IdentitySCIMException e) {
+                throw new CharonException("Error while building scim custom schema", e);
+            }
         }
         return null;
     }
