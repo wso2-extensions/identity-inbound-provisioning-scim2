@@ -35,13 +35,19 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
+import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
+import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.InternalErrorException;
+import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.text.SimpleDateFormat;
@@ -752,5 +758,31 @@ public class SCIMCommonUtils {
 
         return Boolean.parseBoolean(IdentityUtil
                 .getProperty(SCIMCommonConstants.ENABLE_REGEX_VALIDATION_FOR_USER_CLAIM_INPUTS));
+    }
+
+    /**
+     * Returns SCIM2 custom AttributeSchema of the tenant.
+     *
+     * @param tenantId  Tenant ID.
+     * @return Returns scim2 custom schema
+     * @throws CharonException IF an error occurred in retrieving custom schema.
+     */
+    public static AttributeSchema buildCustomSchema(int tenantId) throws CharonException {
+
+        if (!SCIMCommonUtils.isCustomSchemaEnabled()) {
+            return null;
+        }
+        try {
+            SCIMCustomSchemaProcessor scimCustomSchemaProcessor = new SCIMCustomSchemaProcessor();
+            List<SCIMCustomAttribute> attributes =
+                    scimCustomSchemaProcessor.getCustomAttributes(IdentityTenantUtil.getTenantDomain(tenantId),
+                            getCustomSchemaURI());
+            AttributeSchema attributeSchema = SCIMCustomSchemaExtensionBuilder.getInstance()
+                    .buildUserCustomSchemaExtension(attributes);
+            SCIMCustomAttributeSchemaCache.getInstance().addSCIMCustomAttributeSchema(tenantId, attributeSchema);
+            return attributeSchema;
+        } catch (InternalErrorException | IdentitySCIMException e) {
+            throw new CharonException("Error while building scim custom schema", e);
+        }
     }
 }

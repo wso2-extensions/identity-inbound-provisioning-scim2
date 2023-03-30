@@ -119,15 +119,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
-        .isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilteringEnhancementsEnabled;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isNotifyUserstoreStatusEnabled;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForGroupNamesInGroupsResponse;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
-        .mandateDomainForUsernamesAndGroupNamesInResponse;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.*;
 import static org.wso2.carbon.user.core.UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI;
 import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_ROLES_CLAIM;
 
@@ -6077,15 +6069,8 @@ public class SCIMUserManager implements UserManager {
                 return schema;
             }
             try {
-                SCIMCustomSchemaProcessor scimCustomSchemaProcessor = new SCIMCustomSchemaProcessor();
-                List<SCIMCustomAttribute> attributes =
-                        scimCustomSchemaProcessor.getCustomAttributes(IdentityTenantUtil.getTenantDomain(carbonUM.getTenantId()),
-                                getCustomSchemaURI());
-                AttributeSchema attributeSchema = SCIMCustomSchemaExtensionBuilder.getInstance()
-                        .buildUserCustomSchemaExtension(attributes);
-                SCIMCustomAttributeSchemaCache.getInstance().addSCIMCustomAttributeSchema(carbonUM.getTenantId(), attributeSchema);
-                return attributeSchema;
-            } catch (InternalErrorException | UserStoreException | IdentitySCIMException e) {
+                buildCustomSchema(carbonUM.getTenantId());
+            } catch (UserStoreException e) {
                 throw new CharonException("Error while building scim custom schema", e);
             }
         }
