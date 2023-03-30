@@ -68,6 +68,10 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.CO
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.GROUPS_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_DISPLAYNAME;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MAX_LENGTH;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MIN_LENGTH;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.REQUIRED;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_LENGTH_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
 
 /**
@@ -221,6 +225,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 break;
             default:
                 validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DEFAULT_REGEX, null);
+                validateLength(claimURI, claimValue, tenantDomain);
                 break;
         }
     }
@@ -263,6 +268,44 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 }
                 throw new UserStoreClientException(regexError, ERROR_CODE_REGEX_VIOLATION.getCode());
             }
+        }
+    }
+
+    /**
+     * Validate attribute values against length limits.
+     *
+     * @param claimURI      Claim URI.
+     * @param value         Claim value.
+     * @param tenantDomain  Tenant domain name..
+     * @throws UserStoreClientException If an error occurred in validating claim.
+     */
+    private void validateLength(String claimURI, String value, String tenantDomain) throws UserStoreClientException {
+
+        if (StringUtils.isBlank(claimURI)) {
+            if (log.isDebugEnabled()) {
+                log.debug("The claim URI is empty.");
+            }
+            return;
+        }
+        Map<String, String> claimProperties = getClaimProperties(tenantDomain, claimURI);
+        if (MapUtils.isEmpty(claimProperties)) {
+            return;
+        }
+        String minLength = claimProperties.get(MIN_LENGTH);
+        String maxLength = claimProperties.get(MAX_LENGTH);
+        boolean required = false;
+        if (StringUtils.isNotBlank(claimProperties.get(REQUIRED))) {
+            required = Boolean.parseBoolean(claimProperties.get(REQUIRED));
+        }
+
+        if (!required && StringUtils.isBlank(value)) {
+            return;
+        }
+        if ((StringUtils.isNotBlank(minLength) && Integer.parseInt(minLength) > value.length()) ||
+                (StringUtils.isNotBlank(maxLength) && Integer.parseInt(maxLength) < value.length())) {
+            throw new UserStoreClientException(String.format(ERROR_CODE_LENGTH_VIOLATION.getDescription(),
+                    claimProperties.get(PROP_DISPLAYNAME), StringUtils.isNotEmpty(minLength) ? minLength : 0,
+                    StringUtils.isNotEmpty(maxLength) ? maxLength : 1024), ERROR_CODE_LENGTH_VIOLATION.getCode());
         }
     }
 
@@ -506,6 +549,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                     break;
                 default:
                     validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, DEFAULT_REGEX, null);
+                    validateLength(claim.getKey(), claim.getValue(), tenantDomain);
             }
         }
     }

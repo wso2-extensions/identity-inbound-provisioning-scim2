@@ -5711,6 +5711,15 @@ public class SCIMUserManager implements UserManager {
                     mappedLocalClaim.getClaimProperty(ClaimConstants.DISPLAY_ORDER_PROPERTY));
             attribute.addAttributeProperty(REGULAR_EXPRESSION_PROPERTY,
                     mappedLocalClaim.getClaimProperty(ClaimConstants.REGULAR_EXPRESSION_PROPERTY));
+            // Set length properties.
+            if (mappedLocalClaim.getClaimProperty(ClaimConstants.MIN_LENGTH) != null) {
+                attribute.addAttributeProperty(ClaimConstants.MIN_LENGTH,
+                        mappedLocalClaim.getClaimProperty(ClaimConstants.MIN_LENGTH));
+            }
+            if (mappedLocalClaim.getClaimProperty(ClaimConstants.MAX_LENGTH) != null) {
+                attribute.addAttributeProperty(ClaimConstants.MAX_LENGTH,
+                        mappedLocalClaim.getClaimProperty(ClaimConstants.MAX_LENGTH));
+            }
         }
     }
 
