@@ -764,8 +764,8 @@ public class SCIMCommonUtils {
      * Returns SCIM2 custom AttributeSchema of the tenant.
      *
      * @param tenantId  Tenant ID.
-     * @return Returns scim2 custom schema
-     * @throws CharonException IF an error occurred in retrieving custom schema.
+     * @return scim2 custom schema
+     * @throws CharonException If an error occurred in retrieving custom schema.
      */
     public static AttributeSchema buildCustomSchema(int tenantId) throws CharonException {
 
