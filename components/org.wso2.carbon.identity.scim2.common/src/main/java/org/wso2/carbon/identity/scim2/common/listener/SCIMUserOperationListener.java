@@ -293,7 +293,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
         String minLength = claimProperties.get(MIN_LENGTH);
         String maxLength = claimProperties.get(MAX_LENGTH);
-        boolean required = Boolean.parseBoolean(claimProperties.get(REQUIRED));
+        boolean required = false;
+        if (StringUtils.isNotBlank(claimProperties.get(REQUIRED))) {
+            required = Boolean.parseBoolean(claimProperties.get(REQUIRED));
+        }
 
         if (!required && StringUtils.isBlank(value)) {
             return;
