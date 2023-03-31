@@ -138,9 +138,6 @@ public class SupportUtils {
             log.debug("Building scim2 custom attribute schema for tenant with Id: " + tenantId);
         }
 
-        if (!SCIMCommonUtils.isCustomSchemaEnabled()) {
-            return;
-        }
         try {
             if (userManager.getCustomUserSchemaExtension() != null) {
                 if (log.isDebugEnabled()) {
@@ -150,18 +147,8 @@ public class SupportUtils {
                 return;
             }
 
-            try {
-                SCIMCustomSchemaProcessor scimCustomSchemaProcessor = new SCIMCustomSchemaProcessor();
-                List<SCIMCustomAttribute> attributes =
-                        scimCustomSchemaProcessor.getCustomAttributes(IdentityTenantUtil.getTenantDomain(tenantId),
-                                getCustomSchemaURI());
-                AttributeSchema attributeSchema = SCIMCustomSchemaExtensionBuilder.getInstance()
-                        .buildUserCustomSchemaExtension(attributes);
-                SCIMCustomAttributeSchemaCache.getInstance().addSCIMCustomAttributeSchema(tenantId, attributeSchema);
-            } catch (InternalErrorException e) {
-                throw new CharonException("Error while building scim custom schema", e);
-            }
-        } catch (NotImplementedException | BadRequestException | IdentitySCIMException e) {
+            SCIMCommonUtils.buildCustomSchema(tenantId);
+        } catch (NotImplementedException | BadRequestException e) {
             throw new CharonException("Error while building scim custom schema", e);
         }
     }

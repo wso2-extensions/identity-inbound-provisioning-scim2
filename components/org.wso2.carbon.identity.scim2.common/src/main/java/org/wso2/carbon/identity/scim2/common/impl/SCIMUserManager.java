@@ -126,6 +126,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
         .isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
@@ -6084,11 +6085,19 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException
      */
     @Override
-    public AttributeSchema getCustomUserSchemaExtension() {
+    public AttributeSchema getCustomUserSchemaExtension() throws CharonException {
 
         if (tenantDomain != null) {
-            return SCIMCustomAttributeSchemaCache.getInstance().
+            AttributeSchema schema = SCIMCustomAttributeSchemaCache.getInstance().
                     getSCIMCustomAttributeSchemaByTenant(IdentityTenantUtil.getTenantId(tenantDomain));
+            if (schema != null) {
+                return schema;
+            }
+            try {
+                return buildCustomSchema(carbonUM.getTenantId());
+            } catch (UserStoreException e) {
+                throw new CharonException("Error while building scim custom schema", e);
+            }
         }
         return null;
     }
