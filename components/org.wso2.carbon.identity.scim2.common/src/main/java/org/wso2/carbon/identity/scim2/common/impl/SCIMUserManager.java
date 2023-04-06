@@ -3367,6 +3367,7 @@ public class SCIMUserManager implements UserManager {
             // Validate the memberIds sent in the update request against the Ids retrieved from the user store.
             if (isNotEmpty(addedMembers)) {
                 validateUserIds(addedMemberIdsFromUserstore, newlyAddedMemberIds);
+                removeAlreadyExistingUsersFromTheSet(groupId, addedMemberIdsFromUserstore);
             }
 
             if (isNotEmpty(deletedMemberIds)) {
@@ -3403,6 +3404,22 @@ public class SCIMUserManager implements UserManager {
         }
 
         return getGroup(groupId, requiredAttributes);
+    }
+
+    /**
+     * Check whther the users in the set are already existing in the group.
+     *
+     * @param groupId                       Group Id.
+     * @param addedMemberIdsFromUserstore   Set of user ids.
+     */
+    private void removeAlreadyExistingUsersFromTheSet(String groupId, Set<String> addedMemberIdsFromUserstore) throws
+            CharonException, UserStoreException, IdentitySCIMException, BadRequestException {
+
+        Group group = getGroupWithIdWithMemberUsernameOnly(groupId);
+        if (group != null) {
+            addedMemberIdsFromUserstore.removeIf(member -> group.getMembers() != null &&
+                    group.getMembers().contains(member));
+        }
     }
 
     private void prepareAddedRemovedMemberLists(Set<String> addedMembers, Set<String> removedMembers,
