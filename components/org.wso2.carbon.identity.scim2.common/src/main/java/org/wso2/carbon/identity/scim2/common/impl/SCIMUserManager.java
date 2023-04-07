@@ -145,6 +145,7 @@ public class SCIMUserManager implements UserManager {
     private static final String SQL_FILTERING_DELIMITER = "%";
     private static final String ERROR_CODE_INVALID_USERNAME = "31301";
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
+    private static final String ERROR_CODE_NON_EXISTING_USER = "30007";
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
     private static final String ERROR_CODE_INVALID_ROLE_NAME = "30011";
@@ -422,6 +423,15 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
+    private void throwUserNotFoundError(String userId) throws NotFoundException {
+
+        // Resource with given id not found
+        if (log.isDebugEnabled()) {
+            log.debug("User with id: " + userId + " not found.");
+        }
+        throw new NotFoundException();
+    }
+
     @Override
     public User getUser(String userId, Map<String, Boolean> requiredAttributes) throws CharonException {
 
@@ -488,14 +498,7 @@ public class SCIMUserManager implements UserManager {
                     .CommonSchemaConstants.ID_URI);
 
             if (StringUtils.isNotBlank(userIdLocalClaim)) {
-                // We cannot use getUserWithID because it throws exception when the user cannot be found.
-                // (Generic user store exception). If we can send a specific user not found exception in user core level
-                // we can use that method.
-                List<org.wso2.carbon.user.core.common.User> coreUsers = carbonUM.getUserListWithID(userIdLocalClaim,
-                        userId, UserCoreConstants.DEFAULT_PROFILE);
-                if (coreUsers.size() > 0) {
-                    coreUser = coreUsers.get(0);
-                }
+                coreUser = carbonUM.getUserWithID(userId, null, UserCoreConstants.DEFAULT_PROFILE);
             }
 
             String userStoreDomainFromSP = null;
@@ -507,10 +510,7 @@ public class SCIMUserManager implements UserManager {
 
             if (coreUser == null) {
                 // Resource with given id not found
-                if (log.isDebugEnabled()) {
-                    log.debug("User with id: " + userId + " not found.");
-                }
-                throw new NotFoundException();
+                throwUserNotFoundError(userId);
             } else if (userStoreDomainFromSP != null &&
                     !(userStoreDomainFromSP
                             .equalsIgnoreCase(coreUser.getUserStoreDomain()))) {
@@ -542,6 +542,9 @@ public class SCIMUserManager implements UserManager {
             }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            if (e.getMessage().contains(ERROR_CODE_NON_EXISTING_USER)) {
+                throwUserNotFoundError(userId);
+            }
             String errorMessage;
             if (isNotifyUserstoreStatusEnabled()) {
                 errorMessage = String.format("Error occurred while deleting user with ID: %s. %s",
