@@ -138,6 +138,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
 import static org.wso2.carbon.user.core.UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI;
 import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_ROLES_CLAIM;
+import static org.wso2.carbon.user.core.constants.UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER;
 
 public class SCIMUserManager implements UserManager {
 
@@ -145,7 +146,6 @@ public class SCIMUserManager implements UserManager {
     private static final String SQL_FILTERING_DELIMITER = "%";
     private static final String ERROR_CODE_INVALID_USERNAME = "31301";
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
-    private static final String ERROR_CODE_NON_EXISTING_USER = "30007";
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
     private static final String ERROR_CODE_INVALID_ROLE_NAME = "30011";
@@ -542,7 +542,7 @@ public class SCIMUserManager implements UserManager {
             }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            if (e.getMessage().contains(ERROR_CODE_NON_EXISTING_USER)) {
+            if (e.getMessage().contains(ERROR_CODE_NON_EXISTING_USER.getMessage())) {
                 throwUserNotFoundError(userId);
             }
             String errorMessage;
