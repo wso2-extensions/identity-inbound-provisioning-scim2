@@ -542,7 +542,7 @@ public class SCIMUserManager implements UserManager {
             }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            if (e.getMessage().contains(ERROR_CODE_NON_EXISTING_USER.getMessage())) {
+            if (e.getMessage().contains(ERROR_CODE_NON_EXISTING_USER.getCode())) {
                 throwUserNotFoundError(userId);
             }
             String errorMessage;
