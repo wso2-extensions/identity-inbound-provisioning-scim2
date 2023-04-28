@@ -1494,13 +1494,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         coreUser.setUserID(userId);
         coreUser.setUsername("coreUser");
         coreUser.setUserStoreDomain("DomainName");
-        List<org.wso2.carbon.user.core.common.User> coreUsers = new ArrayList<>();
-        coreUsers.add(coreUser);
 
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         AbstractUserStoreManager mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
-        when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(coreUsers);
+        when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(coreUser);
         when(mockedUserStoreManager.getSecondaryUserStoreManager("DomainName")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(false);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
@@ -1521,13 +1519,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         coreUser.setUserID(userId);
         coreUser.setUsername("coreUser");
         coreUser.setUserStoreDomain("PRIMARY");
-        List<org.wso2.carbon.user.core.common.User> coreUsers = new ArrayList<>();
-        coreUsers.add(coreUser);
 
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         AbstractUserStoreManager mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
-        when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(coreUsers);
+        when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(coreUser);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         InboundProvisioningConfig inboundProvisioningConfig = new InboundProvisioningConfig();
