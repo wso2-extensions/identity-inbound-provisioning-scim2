@@ -22,6 +22,8 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.core.util.CryptoException;
+import org.wso2.carbon.core.util.CryptoUtil;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -47,6 +49,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -106,6 +109,20 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
                 validateClaimValue(claims, userStoreManager);
             }
+
+            for (Map.Entry<String,String> entry : claims.entrySet()) {
+                String claimURI = entry.getKey();
+                String claimValue = entry.getValue();
+                if (checkEnableEncryption(claimURI, userStoreManager)) {
+                    try {
+                        claimValue = encryptClaimValue(claimValue);
+                    } catch (CryptoException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                claims.put(claimURI, claimValue);
+            }
+
             this.populateSCIMAttributes(userID, claims);
             return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -196,6 +213,13 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
             validateClaimValue(claimURI, claimValue, userStoreManager);
         }
+        if (checkEnableEncryption(claimURI, userStoreManager)) {
+            try {
+                claimValue = encryptClaimValue(claimValue);
+            } catch (CryptoException e) {
+                throw new RuntimeException(e);
+            }
+        }
         // Validate if the groups are updated.
         validateUserGroupClaim(userID, claimURI, claimValue, userStoreManager);
         return true;
@@ -228,6 +252,23 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 validateLength(claimURI, claimValue, tenantDomain);
                 break;
         }
+    }
+
+    private String encryptClaimValue(String plainText) throws CryptoException {
+
+        return CryptoUtil.getDefaultCryptoUtil().encryptAndBase64Encode(plainText.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private boolean checkEnableEncryption(String claimURI, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        Map<String, String> claimProperties = getClaimProperties(tenantDomain, claimURI);
+        String enableEncryption = "false";
+        if (MapUtils.isNotEmpty(claimProperties)) {
+            enableEncryption = claimProperties.get("enableEncryption");
+        }
+        return Boolean.parseBoolean(enableEncryption);
     }
 
     /**
@@ -365,6 +406,20 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         if (SCIMCommonUtils.isRegexValidationForUserClaimEnabled()) {
             validateClaimValue(claims, userStoreManager);
         }
+
+        for (Map.Entry<String,String> entry : claims.entrySet()) {
+            String claimURI = entry.getKey();
+            String claimValue = entry.getValue();
+            if (checkEnableEncryption(claimURI, userStoreManager)) {
+                try {
+                    claimValue = encryptClaimValue(claimValue);
+                } catch (CryptoException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            claims.put(claimURI, claimValue);
+        }
+
         // Validate if the groups are updated.
         validateUserGroups(userID, claims, userStoreManager);
         return true;
@@ -378,6 +433,20 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             // Validate whether claim update request is for a JIT provisioned user.
             validateClaimUpdate(userName);
         }
+
+        for (Map.Entry<String,String> entry : claims.entrySet()) {
+            String claimURI = entry.getKey();
+            String claimValue = entry.getValue();
+            if (checkEnableEncryption(claimURI, userStoreManager)) {
+                try {
+                    claimValue = encryptClaimValue(claimValue);
+                } catch (CryptoException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            claims.put(claimURI, claimValue);
+        }
+
         // Validate if the groups are updated.
         validateUserGroups(userName, claims, userStoreManager);
         return true;
@@ -390,6 +459,15 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 && !isIdentityClaimUpdate(claimURI)) {
             validateClaimUpdate(userName);
         }
+
+        if (checkEnableEncryption(claimURI, userStoreManager)) {
+            try {
+                claimValue = encryptClaimValue(claimValue);
+            } catch (CryptoException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         // Validate if the groups are updated.
         validateUserGroupClaim(userName, claimURI, claimValue, userStoreManager);
         return true;
