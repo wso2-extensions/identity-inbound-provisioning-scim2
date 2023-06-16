@@ -416,7 +416,8 @@ public class SCIMUserManager implements UserManager {
             }
             if ((e instanceof IdentityEventException) && StringUtils
                     .equals(ERROR_CODE_PASSWORD_HISTORY_VIOLATION, ((IdentityEventException) e).getErrorCode())) {
-                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                throw new BadRequestException(ERROR_CODE_PASSWORD_HISTORY_VIOLATION + " - " +e.getMessage(),
+                        ResponseCodeConstants.INVALID_VALUE);
             }
             e = e.getCause();
             i++;
