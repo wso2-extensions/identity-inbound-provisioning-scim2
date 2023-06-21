@@ -3283,9 +3283,23 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
+    public void patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations)
+            throws NotImplementedException, BadRequestException, CharonException, NotFoundException {
+
+        doPatchGroup(groupId, currentGroupName, patchOperations);
+    }
+
+    @Override
     public Group patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations,
                             Map<String, Boolean> requiredAttributes) throws NotImplementedException,
             BadRequestException, CharonException, NotFoundException {
+
+        doPatchGroup(groupId, currentGroupName, patchOperations);
+        return getGroup(groupId, requiredAttributes);
+    }
+
+    private void doPatchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations) throws
+            NotImplementedException, BadRequestException, CharonException, NotFoundException {
 
         if (log.isDebugEnabled()) {
             log.debug("Updating group: " + currentGroupName);
@@ -3407,8 +3421,6 @@ public class SCIMUserManager implements UserManager {
         } catch (BadRequestException e) {
             throw new CharonException("Error in updating the group", e);
         }
-
-        return getGroup(groupId, requiredAttributes);
     }
 
     /**
