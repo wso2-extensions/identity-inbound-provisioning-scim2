@@ -41,6 +41,7 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
+import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.RoleManager;
@@ -545,7 +546,7 @@ public class SCIMRoleManager implements RoleManager {
 
     @Override
     public Role patchRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException {
+            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
         String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
 
@@ -604,7 +605,7 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     private void updateUsers(String roleId, String currentRoleName, List<PatchOperation> memberOperations)
-            throws BadRequestException, CharonException {
+            throws BadRequestException, CharonException, ForbiddenException {
 
         Collections.sort(memberOperations);
         Set<String> addedUsers = new HashSet<>();
@@ -686,7 +687,7 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     private void doUpdateUsers(Set<String> newUserList, Set<String> deletedUserList, Set<Object> newlyAddedMemberIds,
-                               String roleId) throws CharonException, BadRequestException {
+                               String roleId) throws CharonException, BadRequestException, ForbiddenException {
 
         // Update the role with added users and deleted users.
         List<String> newUserIDList = getUserIDList(new ArrayList<>(newUserList), tenantDomain);
@@ -703,6 +704,9 @@ public class SCIMRoleManager implements RoleManager {
             } catch (IdentityRoleManagementException e) {
                 if (INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
+                }
+                if (OPERATION_FORBIDDEN.getCode().equals(e.getErrorCode())) {
+                    throw new ForbiddenException(e.getMessage());
                 }
                 throw new CharonException(
                         String.format("Error occurred while updating users in the role: %s", roleId), e);
