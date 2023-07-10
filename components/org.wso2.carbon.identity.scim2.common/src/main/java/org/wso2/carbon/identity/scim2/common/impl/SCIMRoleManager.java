@@ -546,7 +546,7 @@ public class SCIMRoleManager implements RoleManager {
 
     @Override
     public Role patchRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException {
+            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
         String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
 
@@ -605,7 +605,7 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     private void updateUsers(String roleId, String currentRoleName, List<PatchOperation> memberOperations)
-            throws BadRequestException, CharonException {
+            throws BadRequestException, CharonException, ForbiddenException {
 
         Collections.sort(memberOperations);
         Set<String> addedUsers = new HashSet<>();
@@ -687,7 +687,7 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     private void doUpdateUsers(Set<String> newUserList, Set<String> deletedUserList, Set<Object> newlyAddedMemberIds,
-                               String roleId) throws CharonException, BadRequestException {
+                               String roleId) throws CharonException, BadRequestException, ForbiddenException {
 
         // Update the role with added users and deleted users.
         List<String> newUserIDList = getUserIDList(new ArrayList<>(newUserList), tenantDomain);
@@ -706,8 +706,7 @@ public class SCIMRoleManager implements RoleManager {
                     throw new BadRequestException(e.getMessage());
                 }
                 if (OPERATION_FORBIDDEN.getCode().equals(e.getErrorCode())) {
-                    throw new CharonException(String.format("%d--%s",
-                            ResponseCodeConstants.CODE_FORBIDDEN, e.getMessage()));
+                    throw new ForbiddenException(e.getMessage());
                 }
                 throw new CharonException(
                         String.format("Error occurred while updating users in the role: %s", roleId), e);
