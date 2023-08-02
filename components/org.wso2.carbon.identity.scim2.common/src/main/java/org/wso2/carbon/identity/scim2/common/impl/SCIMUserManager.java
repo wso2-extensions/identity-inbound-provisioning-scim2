@@ -3367,14 +3367,14 @@ public class SCIMUserManager implements UserManager {
                 temporaryMembers.clear();
 
                 for (String member : deletedMembers) {
-                    if (addedMembers.isEmpty() && (member == null || member.isEmpty())) {
+                    if (addedMembers.isEmpty() && StringUtils.isBlank(member)) {
                         throw new BadRequestException(ResponseCodeConstants.INVALID_VALUE);
-                    } else if (!addedMembers.isEmpty() && (member == null || member.isEmpty()) )  {
-                        continue;
                     }
-                    String username = UserCoreUtil.addDomainToName(UserCoreUtil.removeDomainFromName(member),
-                            userStoreDomainForGroup);
-                    temporaryMembers.add(username);
+                    if (StringUtils.isNotBlank(member)) {
+                        String username = UserCoreUtil.addDomainToName(UserCoreUtil.removeDomainFromName(member),
+                                userStoreDomainForGroup);
+                        temporaryMembers.add(username);
+                    }
                 }
 
                 deletedMembers.clear();
