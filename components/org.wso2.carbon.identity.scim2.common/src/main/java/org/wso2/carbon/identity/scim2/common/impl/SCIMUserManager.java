@@ -2628,7 +2628,11 @@ public class SCIMUserManager implements UserManager {
                 // Add other scim attributes in the identity DB since user store doesn't support some attributes.
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
                 scimGroupHandler.createSCIMAttributes(group);
-                carbonUM.addRoleWithID(group.getDisplayName(), members.toArray(new String[0]), null, false);
+//                carbonUM.addRoleWithID(group.getDisplayName(), members.toArray(new String[0]), null, false);
+                org.wso2.carbon.user.core.common.Group coreGroup =
+                        carbonUM.addRoleWithRoleID(group.getDisplayName(), members.toArray(new String[0]), null, false);
+                group.getAttributeList().remove(SCIMConstants.CommonSchemaConstants.ID);
+                group.setId(coreGroup.getGroupID());
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
                 }
