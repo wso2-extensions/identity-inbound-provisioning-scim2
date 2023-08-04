@@ -24,7 +24,6 @@
         <version>3.4.27-SNAPSHOT</version>
     </parent>
 
-    <version>3.4.22</version>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>org.wso2.carbon.identity.scim2.common</artifactId>
     <name>WSO2 Carbon - SCIM 2.0 - Common Component</name>
