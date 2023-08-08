@@ -2588,6 +2588,7 @@ public class SCIMUserManager implements UserManager {
             // If members are sent when creating the group, check whether users already exist in the user store.
             List<Object> userIds = group.getMembers();
             List<String> userDisplayNames = group.getMembersWithDisplayName();
+            org.wso2.carbon.user.core.common.Group coreGroup = null;
             if (isNotEmpty(userIds)) {
                 List<String> members = new ArrayList<>();
                 for (Object userId : userIds) {
@@ -2629,10 +2630,7 @@ public class SCIMUserManager implements UserManager {
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
                 scimGroupHandler.createSCIMAttributes(group);
 //                carbonUM.addRoleWithID(group.getDisplayName(), members.toArray(new String[0]), null, false);
-                org.wso2.carbon.user.core.common.Group coreGroup =
-                        carbonUM.addRoleWithRoleID(group.getDisplayName(), members.toArray(new String[0]), null, false);
-                group.getAttributeList().remove(SCIMConstants.CommonSchemaConstants.ID);
-                group.setId(coreGroup.getGroupID());
+                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), members.toArray(new String[0]), null, false);
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
                 }
@@ -2640,10 +2638,16 @@ public class SCIMUserManager implements UserManager {
                 // Add other scim attributes in the identity DB since user store doesn't support some attributes.
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
                 scimGroupHandler.createSCIMAttributes(group);
-                carbonUM.addRoleWithID(group.getDisplayName(), null, null, false);
+//                carbonUM.addRoleWithID(group.getDisplayName(), null, null, false);
+                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), null, null, false);
+
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
                 }
+            }
+            group.getAttributeList().remove(SCIMConstants.CommonSchemaConstants.ID);
+            if (coreGroup != null) {
+                group.setId(coreGroup.getGroupID());
             }
         } catch (UserStoreException e) {
             try {
