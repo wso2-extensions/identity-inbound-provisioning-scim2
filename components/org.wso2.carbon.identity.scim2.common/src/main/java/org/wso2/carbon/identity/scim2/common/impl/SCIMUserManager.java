@@ -719,6 +719,28 @@ public class SCIMUserManager implements UserManager {
         return totalUsers;
     }
 
+    private long getTotalUsers(ExpressionNode node, String domainName) throws CharonException {
+
+        long totalUsers = 0;
+        AbstractUserStoreManager secondaryUserStoreManager = null;
+        if (StringUtils.isNotBlank(domainName)) {
+            secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
+                    .getSecondaryUserStoreManager(domainName);
+        }
+        try {
+            if (secondaryUserStoreManager instanceof JDBCUserStoreManager) {
+                if (node != null && node.getOperation() != null && SCIMCommonConstants.EQ.equals(node.getOperation())) {
+                    totalUsers = secondaryUserStoreManager.countUsersWithClaims(node.getValue(), node.getOperation());
+                } else {
+                    totalUsers = secondaryUserStoreManager.countUsersWithClaims(USERNAME_CLAIM, SCIMCommonConstants.ANY);
+                }
+            }
+        } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            throw resolveError(e, "Error while getting total user count in domain: " + domainName);
+        }
+        return totalUsers;
+    }
+
     /**
      * Method to decide whether to paginate based on the offset and the limit in the request.
      *
@@ -1394,7 +1416,7 @@ public class SCIMUserManager implements UserManager {
                         boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
                         if (canCountTotalUserCount) {
                             for (String userStoreDomainName : userStoreDomainNames) {
-                                maxLimit += getTotalUsers(userStoreDomainName);
+                                maxLimit += getTotalUsers(node, userStoreDomainName);
                             }
                         }
                     } else {
