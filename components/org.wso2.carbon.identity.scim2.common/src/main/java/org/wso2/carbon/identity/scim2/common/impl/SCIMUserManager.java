@@ -2781,8 +2781,10 @@ public class SCIMUserManager implements UserManager {
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
 
             // Get group name by id.
-            SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-            String groupName = groupHandler.getGroupName(groupId);
+//            SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+//            String groupName = groupHandler.getGroupName(groupId);
+
+            String groupName = carbonUM.getGroupNameByGroupId(groupId);
 
             if (groupName != null) {
                 String userStoreDomainFromSP = null;
@@ -2806,7 +2808,8 @@ public class SCIMUserManager implements UserManager {
                 }
 
                 //delete group in carbon UM
-                carbonUM.deleteRole(groupName);
+//                carbonUM.deleteRole(groupName);
+                carbonUM.deleteGroupWithID(groupId);
                 carbonUM.removeGroupRoleMappingByGroupName(groupName);
 
                 //we do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
@@ -2822,9 +2825,10 @@ public class SCIMUserManager implements UserManager {
             }
         } catch (UserStoreException e) {
             throw resolveError(e, "Error occurred while deleting group " + groupId);
-        } catch (IdentitySCIMException e) {
-            throw new CharonException("Error occurred while deleting group " + groupId, e);
         }
+//        catch (IdentitySCIMException e) {
+//            throw new CharonException("Error occurred while deleting group " + groupId, e);
+//        }
 
     }
 
