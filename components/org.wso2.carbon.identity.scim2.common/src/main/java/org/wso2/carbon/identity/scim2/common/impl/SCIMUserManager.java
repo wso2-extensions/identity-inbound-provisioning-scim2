@@ -61,6 +61,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
+import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 import org.wso2.carbon.user.core.jdbc.JDBCUserStoreManager;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionAttribute;
@@ -3366,9 +3367,14 @@ public class SCIMUserManager implements UserManager {
                 temporaryMembers.clear();
 
                 for (String member : deletedMembers) {
-                    String username = UserCoreUtil.addDomainToName(UserCoreUtil.removeDomainFromName(member),
-                            userStoreDomainForGroup);
-                    temporaryMembers.add(username);
+                    if (addedMembers.isEmpty() && StringUtils.isBlank(member)) {
+                        throw new BadRequestException(ResponseCodeConstants.INVALID_VALUE);
+                    }
+                    if (StringUtils.isNotBlank(member)) {
+                        String username = UserCoreUtil.addDomainToName(UserCoreUtil.removeDomainFromName(member),
+                                userStoreDomainForGroup);
+                        temporaryMembers.add(username);
+                    }
                 }
 
                 deletedMembers.clear();
@@ -3413,13 +3419,17 @@ public class SCIMUserManager implements UserManager {
             carbonUM.updateGroupName(currentGroupName, newGroupName);
 
         } catch (UserStoreException e) {
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
+                    .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getCode(),
+                            ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode())) {
+                log.error(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getMessage(), e);
+                throw new BadRequestException(ResponseCodeConstants.INVALID_VALUE);
+            }
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
             throw new CharonException(e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
             throw new CharonException("Error retrieving User Store name. ", e);
-        } catch (BadRequestException e) {
-            throw new CharonException("Error in updating the group", e);
         }
     }
 
@@ -3462,10 +3472,6 @@ public class SCIMUserManager implements UserManager {
                 SCIMConstants.OperationalConstants.REMOVE)) {
             addedMembers.remove(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
             removedMembers.add(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
-            String value = memberObject.get(SCIMConstants.GroupSchemaConstants.VALUE);
-            if (StringUtils.isNotBlank(value)) {
-                deletedMemberIds.add(value);
-            }
         }
     }
 
@@ -3660,7 +3666,7 @@ public class SCIMUserManager implements UserManager {
             if (StringUtils.isEmpty(userId)) {
                 String error = "User: " + userName + " doesn't exist in the user store. Hence can not update the " +
                         "group: " + displayName;
-                throw new BadRequestException(error);
+                throw new BadRequestException(error, ResponseCodeConstants.INVALID_VALUE);
             }
             memberUserIds.add(userId);
         }
