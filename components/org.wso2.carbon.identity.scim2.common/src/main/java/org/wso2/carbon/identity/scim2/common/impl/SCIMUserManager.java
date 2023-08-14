@@ -2627,19 +2627,23 @@ public class SCIMUserManager implements UserManager {
                     }
                 }
                 // Add other scim attributes in the identity DB since user store doesn't support some attributes.
-                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-                scimGroupHandler.createSCIMAttributes(group);
+                // Commented by Lakshi as we don't need to save this in the identity DB if there is ID support
+                // enabled in user store level.
+//                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+//                scimGroupHandler.createSCIMAttributes(group);
 //                carbonUM.addRoleWithID(group.getDisplayName(), members.toArray(new String[0]), null, false);
-                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), members.toArray(new String[0]), null, false);
+                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), members.toArray(new String[0]));
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
                 }
             } else {
                 // Add other scim attributes in the identity DB since user store doesn't support some attributes.
-                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-                scimGroupHandler.createSCIMAttributes(group);
+                // Commented by Lakshi as we don't need to save this in the identity DB if there is ID support
+                // enabled in user store level.
+//                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+//                scimGroupHandler.createSCIMAttributes(group);
 //                carbonUM.addRoleWithID(group.getDisplayName(), null, null, false);
-                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), null, null, false);
+                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), null);
 
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
@@ -2650,13 +2654,15 @@ public class SCIMUserManager implements UserManager {
                 group.setId(coreGroup.getGroupID());
             }
         } catch (UserStoreException e) {
-            try {
-                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-                scimGroupHandler.deleteGroupAttributes(group.getDisplayName());
-            } catch (UserStoreException | IdentitySCIMException ex) {
-                throw resolveError(e, "Error occurred while doing rollback operation of the SCIM " +
-                        "table entry for role: " + group.getDisplayName());
-            }
+            // Commented by Lakshi as we don't need to save this in the identity DB if there is ID support
+            // enabled in user store level.
+//            try {
+//                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+//                scimGroupHandler.deleteGroupAttributes(group.getDisplayName());
+//            } catch (UserStoreException | IdentitySCIMException ex) {
+//                throw resolveError(e, "Error occurred while doing rollback operation of the SCIM " +
+//                        "table entry for role: " + group.getDisplayName());
+//            }
             handleErrorsOnRoleNamePolicy(e);
             throw resolveError(e, "Error occurred while adding role : " + group.getDisplayName());
         } catch (IdentitySCIMException | BadRequestException e) {
