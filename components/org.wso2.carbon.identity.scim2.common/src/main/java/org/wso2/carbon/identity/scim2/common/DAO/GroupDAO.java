@@ -390,7 +390,7 @@ public class GroupDAO {
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rSet, prepStmt);
         }
-        // Verify whether the roleName is not empty, and it's not contain any prefix Application/Internal
+        // Verify whether the roleName is not empty and does not contain any prefix of 'Application' or 'Internal'
         if (StringUtils.isNotEmpty(roleName) && !SCIMCommonUtils.isHybridRole(roleName)) {
             return SCIMCommonUtils.getPrimaryFreeGroupName(roleName);
         }
