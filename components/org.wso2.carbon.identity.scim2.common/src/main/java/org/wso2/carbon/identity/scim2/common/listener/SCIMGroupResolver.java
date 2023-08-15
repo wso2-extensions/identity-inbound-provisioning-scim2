@@ -646,4 +646,23 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
                     "group: %s in tenant: %s", displayName, tenantId), e);
         }
     }
+
+    @Override
+    public void deleteGroup(String groupName, int tenantId) throws UserStoreException {
+
+        try {
+            GroupDAO groupDAO = new GroupDAO();
+            if (groupDAO.isExistingGroup(groupName, tenantId)) {
+                groupDAO.removeSCIMGroup(tenantId, groupName);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Information for the group: " + groupName +
+                            " doesn't contain in the identity scim table.");
+                }
+            }
+        } catch (IdentitySCIMException e) {
+            throw new UserStoreException(String.format("Error occurred while deleting the " +
+                    "group: %s in tenant: %s", groupName, tenantId), e);
+        }
+    }
 }
