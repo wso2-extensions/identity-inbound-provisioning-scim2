@@ -42,8 +42,14 @@ import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionCondition;
 import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.utils.AttributeUtil;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -618,6 +624,26 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             }
         } else {
             return delimiter + attributeValue;
+        }
+    }
+
+    @Override
+    public void addGroup(String groupID, Date createdDate, Date lastModifiedDate, String location,
+                         String displayName, int tenantId) throws UserStoreException {
+
+        try {
+            Map<String, String> attributes = new HashMap<>();
+            attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, groupID);
+            attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, AttributeUtil.formatDateTime(
+                    createdDate.toInstant()));
+            attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, AttributeUtil.formatDateTime(
+                    lastModifiedDate.toInstant()));
+            attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, location);
+            GroupDAO groupDAO = new GroupDAO();
+            groupDAO.addSCIMGroupAttributes(tenantId, displayName, attributes);
+        } catch (IdentitySCIMException e) {
+            throw new UserStoreException(String.format("Error occurred while saving the " +
+                    "group: %s in tenant: %s", displayName, tenantId), e);
         }
     }
 }

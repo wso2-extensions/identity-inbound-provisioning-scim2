@@ -2632,7 +2632,11 @@ public class SCIMUserManager implements UserManager {
 //                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
 //                scimGroupHandler.createSCIMAttributes(group);
 //                carbonUM.addRoleWithID(group.getDisplayName(), members.toArray(new String[0]), null, false);
-                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), members.toArray(new String[0]));
+//                                public org.wso2.carbon.user.core.common.Group addGroupWithID(String groupName, String[] userIDList, String displayName, String groupID, Date createdDate,
+//                        Date lastModifiedDate, String location, int tenantId) throws
+//                org.wso2.carbon.user.core.UserStoreException {
+                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), members.toArray(new String[0]), group.getDisplayName(),
+                        group.getId(), group.getCreatedDate(), group.getLastModified(), group.getLocation());
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
                 }
@@ -2643,7 +2647,8 @@ public class SCIMUserManager implements UserManager {
 //                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
 //                scimGroupHandler.createSCIMAttributes(group);
 //                carbonUM.addRoleWithID(group.getDisplayName(), null, null, false);
-                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), null);
+                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), null, group.getDisplayName(),
+                        group.getId(), group.getCreatedDate(), group.getLastModified(), group.getLocation());
 
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
