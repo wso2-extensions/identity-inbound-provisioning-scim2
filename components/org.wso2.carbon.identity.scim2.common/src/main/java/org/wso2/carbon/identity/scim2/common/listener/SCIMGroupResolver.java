@@ -48,6 +48,7 @@ import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -628,27 +629,30 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
     }
 
     @Override
-    public void addGroup(String groupID, Date createdDate, Date lastModifiedDate, String location,
-                         String displayName, int tenantId) throws UserStoreException {
+    public boolean addGroup(String displayName, String groupID, LocalDateTime createdDate,
+                            LocalDateTime lastModifiedDate, String location, int tenantId) throws UserStoreException {
+
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, groupID);
+        attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, AttributeUtil.formatDateTime(
+                createdDate.toInstant(ZoneOffset.UTC)));
+        attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, AttributeUtil.formatDateTime(
+                lastModifiedDate.toInstant(ZoneOffset.UTC)));
+        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, location);
 
         try {
-            Map<String, String> attributes = new HashMap<>();
-            attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, groupID);
-            attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, AttributeUtil.formatDateTime(
-                    createdDate.toInstant()));
-            attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, AttributeUtil.formatDateTime(
-                    lastModifiedDate.toInstant()));
-            attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, location);
             GroupDAO groupDAO = new GroupDAO();
             groupDAO.addSCIMGroupAttributes(tenantId, displayName, attributes);
         } catch (IdentitySCIMException e) {
             throw new UserStoreException(String.format("Error occurred while saving the " +
                     "group: %s in tenant: %s", displayName, tenantId), e);
         }
+
+        return true;
     }
 
     @Override
-    public void deleteGroup(String groupName, int tenantId) throws UserStoreException {
+    public boolean deleteGroup(String groupName, int tenantId) throws UserStoreException {
 
         try {
             GroupDAO groupDAO = new GroupDAO();
@@ -664,5 +668,6 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             throw new UserStoreException(String.format("Error occurred while deleting the " +
                     "group: %s in tenant: %s", groupName, tenantId), e);
         }
+        return true;
     }
 }

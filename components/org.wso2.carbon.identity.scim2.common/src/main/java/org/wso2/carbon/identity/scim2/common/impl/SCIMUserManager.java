@@ -2626,26 +2626,15 @@ public class SCIMUserManager implements UserManager {
                         }
                     }
                 }
-                // Add other scim attributes in the identity DB since user store doesn't support some attributes.
-                // Commented by Lakshi as we don't need to save this in the identity DB if there is ID support
-                // enabled in user store level.
-//                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-//                scimGroupHandler.createSCIMAttributes(group);
-//                carbonUM.addRoleWithID(group.getDisplayName(), members.toArray(new String[0]), null, false);
-                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), members.toArray(new String[0]), group.getDisplayName(),
-                        group.getId(), group.getCreatedDate(), group.getLastModified(), group.getLocation());
+                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), group.getId(),
+                        members.toArray(new String[0]), group.getCreatedDateTime(), group.getLastModifiedDateTime(),
+                        group.getLocation());
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
                 }
             } else {
-                // Add other scim attributes in the identity DB since user store doesn't support some attributes.
-                // Commented by Lakshi as we don't need to save this in the identity DB if there is ID support
-                // enabled in user store level.
-//                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-//                scimGroupHandler.createSCIMAttributes(group);
-//                carbonUM.addRoleWithID(group.getDisplayName(), null, null, false);
-                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), null, group.getDisplayName(),
-                        group.getId(), group.getCreatedDate(), group.getLastModified(), group.getLocation());
+                coreGroup = carbonUM.addGroupWithID(group.getDisplayName(), group.getId(), null,
+                        group.getCreatedDateTime(), group.getLastModifiedDateTime(), group.getLocation());
 
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
@@ -2656,15 +2645,6 @@ public class SCIMUserManager implements UserManager {
                 group.setId(coreGroup.getGroupID());
             }
         } catch (UserStoreException e) {
-            // Commented by Lakshi as we don't need to save this in the identity DB if there is ID support
-            // enabled in user store level.
-//            try {
-//                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-//                scimGroupHandler.deleteGroupAttributes(group.getDisplayName());
-//            } catch (UserStoreException | IdentitySCIMException ex) {
-//                throw resolveError(e, "Error occurred while doing rollback operation of the SCIM " +
-//                        "table entry for role: " + group.getDisplayName());
-//            }
             handleErrorsOnRoleNamePolicy(e);
             throw resolveError(e, "Error occurred while adding role : " + group.getDisplayName());
         } catch (IdentitySCIMException | BadRequestException e) {
@@ -2787,11 +2767,6 @@ public class SCIMUserManager implements UserManager {
             // Set thread local property to signal the downstream SCIMUserOperationListener
             // about the provisioning route.
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
-
-            // Get group name by id.
-//            SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-//            String groupName = groupHandler.getGroupName(groupId);
-
             String groupName = carbonUM.getGroupNameByGroupId(groupId);
 
             if (groupName != null) {
@@ -2816,11 +2791,9 @@ public class SCIMUserManager implements UserManager {
                 }
 
                 //delete group in carbon UM
-//                carbonUM.deleteRole(groupName);
                 carbonUM.deleteGroupWithID(groupId);
                 carbonUM.removeGroupRoleMappingByGroupName(groupName);
 
-                //we do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + groupName + " is deleted through SCIM.");
                 }
@@ -2834,10 +2807,6 @@ public class SCIMUserManager implements UserManager {
         } catch (UserStoreException e) {
             throw resolveError(e, "Error occurred while deleting group " + groupId);
         }
-//        catch (IdentitySCIMException e) {
-//            throw new CharonException("Error occurred while deleting group " + groupId, e);
-//        }
-
     }
 
     @Override
