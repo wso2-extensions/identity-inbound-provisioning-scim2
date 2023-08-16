@@ -2807,6 +2807,7 @@ public class SCIMUserManager implements UserManager {
         } catch (UserStoreException e) {
             throw resolveError(e, "Error occurred while deleting group " + groupId);
         }
+
     }
 
     @Override
