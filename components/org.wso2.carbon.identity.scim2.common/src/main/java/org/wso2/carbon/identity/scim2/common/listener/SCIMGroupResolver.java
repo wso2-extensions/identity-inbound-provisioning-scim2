@@ -42,14 +42,11 @@ import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionCondition;
 import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
-import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -647,7 +644,6 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             throw new UserStoreException(String.format("Error occurred while saving the " +
                     "group: %s in tenant: %s", displayName, tenantId), e);
         }
-
         return true;
     }
 
