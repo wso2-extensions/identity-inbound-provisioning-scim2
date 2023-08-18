@@ -2576,7 +2576,7 @@ public class SCIMUserManager implements UserManager {
             }
             group.setDisplayName(roleNameWithDomain);
             //check if the group already exists
-            if (carbonUM.isExistingRole(group.getDisplayName(), false)) {
+            if (carbonUM.isExistingGroup(group.getDisplayName())) {
                 String error = "Group with name: " + group.getDisplayName() + " already exists in the system.";
                 throw new ConflictException(error);
             }
