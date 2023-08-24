@@ -666,4 +666,22 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         }
         return true;
     }
+
+    @Override
+    public boolean updateGroupName(String oldGroupName, String newGroupName, int tenantID) throws UserStoreException {
+
+        try {
+            GroupDAO groupDAO = new GroupDAO();
+            if (groupDAO.isExistingGroup(oldGroupName, tenantID)) {
+                groupDAO.updateGroupName(tenantID, oldGroupName, newGroupName);
+            } else {
+                log.warn("Non-existent group: " + oldGroupName + " is trying to be updated..");
+            }
+
+        } catch (IdentitySCIMException e) {
+            throw new UserStoreException(String.format("Error occurred while updating the " +
+                    "group: %s in tenant: %s", oldGroupName, tenantID), e);
+        }
+        return true;
+    }
 }

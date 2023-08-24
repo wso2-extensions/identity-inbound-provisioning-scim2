@@ -548,4 +548,32 @@ public class GroupDAO {
             return roleName;
         }
     }
+
+    public void updateGroupName(int tenantId, String oldGroupName, String newGroupName)
+            throws IdentitySCIMException {
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+
+        if (isExistingGroup(SCIMCommonUtils.getGroupNameWithDomain(oldGroupName), tenantId)) {
+            try {
+                prepStmt = connection.prepareStatement(SQLQueries.UPDATE_GROUP_NAME_SQL);
+
+                prepStmt.setString(1, SCIMCommonUtils.getGroupNameWithDomain(newGroupName));
+                prepStmt.setInt(2, tenantId);
+                prepStmt.setString(3, SCIMCommonUtils.getGroupNameWithDomain(oldGroupName));
+
+                int count = prepStmt.executeUpdate();
+                if (log.isDebugEnabled()) {
+                    log.debug("No. of records updated for updating SCIM Group : " + count);
+                }
+                connection.commit();
+            } catch (SQLException e) {
+                throw new IdentitySCIMException("Error updating the SCIM Group Attributes", e);
+            } finally {
+                IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+            }
+        } else {
+            throw new IdentitySCIMException("Error when updating group name of the group: " + oldGroupName);
+        }
+    }
 }
