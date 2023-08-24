@@ -28,6 +28,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.application.role.mgt.ApplicationRoleManager;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -267,6 +268,36 @@ public class SCIMCommonComponent {
     }
 
     /**
+     * Set application role manager implementation.
+     *
+     * @param applicationRoleManager ApplicationRoleManager
+     */
+    @Reference(
+            name = "identity.application.role.mgt.component",
+            service = org.wso2.carbon.identity.application.role.mgt.ApplicationRoleManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationRoleManager")
+    protected void setApplicationRoleManager(ApplicationRoleManager applicationRoleManager) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("ApplicationRoleManager set in SCIMCommonComponent bundle.");
+        }
+        SCIMCommonComponentHolder.setApplicationRoleManager(applicationRoleManager);
+    }
+
+    /**
+     * Unset application role manager implementation.
+     */
+    protected void unsetApplicationRoleManager(ApplicationRoleManager applicationRoleManager) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("ApplicationRoleManager unset in SCIMCommonComponent bundle.");
+        }
+        SCIMCommonComponentHolder.setApplicationRoleManager(null);
+    }
+
+    /**
      * Set SCIMUserStoreErrorResolver implementation
      *
      * @param scimUserStoreErrorResolver SCIMUserStoreErrorResolver
@@ -286,6 +317,7 @@ public class SCIMCommonComponent {
 
         SCIMCommonComponentHolder.removeScimUserStoreErrorResolver(scimUserStoreErrorResolver);
     }
+
 
     @Deactivate
     protected void deactivate(ComponentContext context) {

@@ -32,6 +32,8 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.role.mgt.exceptions.ApplicationRoleManagementException;
+import org.wso2.carbon.identity.application.role.mgt.model.ApplicationRole;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
@@ -48,6 +50,7 @@ import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponent;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -127,6 +130,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APP_ROLE_TYPE;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_ROLE_TYPE;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
@@ -4232,7 +4237,21 @@ public class SCIMUserManager implements UserManager {
             role.setId(groupObject.getId());
             String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
             role.setLocation(location);
-            scimUser.setRole(role);
+            scimUser.setRole(role, DEFAULT_ROLE_TYPE);
+        }
+
+        // Add application roles of the user
+        try {
+            List<ApplicationRole> applicationRoles = SCIMCommonComponentHolder.getApplicationRoleManager()
+                    .getApplicationRolesByUserId(scimUser.getId());
+            for(ApplicationRole applicationRole: applicationRoles) {
+                Role role = new Role();
+                role.setDisplayName(applicationRole.getRoleName());
+                role.setId(applicationRole.getRoleId());
+                scimUser.setRole(role, APP_ROLE_TYPE);
+            }
+        } catch (ApplicationRoleManagementException e) {
+            throw new IdentitySCIMException("Error while getting application roles", e);
         }
     }
 
@@ -4458,7 +4477,21 @@ public class SCIMUserManager implements UserManager {
             role.setId(groupObject.getId());
             String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
             role.setLocation(location);
-            group.setRole(role);
+            group.setRole(role, DEFAULT_ROLE_TYPE);
+        }
+
+        // Add application roles of the group
+        try {
+            List<ApplicationRole> applicationRoles = SCIMCommonComponentHolder.getApplicationRoleManager()
+                    .getApplicationRolesByGroupId(group.getId());
+            for(ApplicationRole applicationRole: applicationRoles) {
+                Role role = new Role();
+                role.setDisplayName(applicationRole.getRoleName());
+                role.setId(applicationRole.getRoleId());
+                group.setRole(role, APP_ROLE_TYPE);
+            }
+        } catch (ApplicationRoleManagementException e) {
+            throw new IdentitySCIMException("Error while getting application roles", e);
         }
     }
 

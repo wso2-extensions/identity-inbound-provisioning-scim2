@@ -141,6 +141,8 @@ public class SCIMCommonConstants {
     public static final String MIN_LENGTH = "minLength";
     public static final String MAX_LENGTH = "maxLength";
     public static final String REQUIRED = "required";
+    public static final String DEFAULT_ROLE_TYPE = "default";
+    public static final String APP_ROLE_TYPE = "default";
 
 
     private static final Map<String, String> groupAttributeSchemaMap = new HashMap<>();

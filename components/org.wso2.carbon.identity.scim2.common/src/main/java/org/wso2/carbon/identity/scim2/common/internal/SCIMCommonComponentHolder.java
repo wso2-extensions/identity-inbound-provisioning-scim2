@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.internal;
 
+import org.wso2.carbon.identity.application.role.mgt.ApplicationRoleManager;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -38,6 +39,7 @@ public class SCIMCommonComponentHolder {
     private static ClaimMetadataManagementService claimManagementService;
     private static RolePermissionManagementService rolePermissionManagementService;
     private static RoleManagementService roleManagementService;
+    private static ApplicationRoleManager applicationRoleManager;
     private static final List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
 
     /**
@@ -118,6 +120,26 @@ public class SCIMCommonComponentHolder {
     public static RoleManagementService getRoleManagementService() {
 
         return roleManagementService;
+    }
+
+    /**
+     * Set application role management service.
+     *
+     * @param applicationRoleManager ApplicationRoleManager.
+     */
+    public static void setApplicationRoleManager(ApplicationRoleManager applicationRoleManager) {
+
+        SCIMCommonComponentHolder.applicationRoleManager = applicationRoleManager;
+    }
+
+    /**
+     * Get role management service.
+     *
+     * @return RoleManagementService.
+     */
+    public static ApplicationRoleManager getApplicationRoleManager() {
+
+        return applicationRoleManager;
     }
 
     public static List<SCIMUserStoreErrorResolver> getScimUserStoreErrorResolverList() {
