@@ -3400,7 +3400,7 @@ public class SCIMUserManager implements UserManager {
             Update the group with added members and deleted members.
             */
             if (isNotEmpty(addedMembers) || isNotEmpty(deletedMembers)) {
-                carbonUM.updateUserListOfRoleWithID(newGroupName,
+                carbonUM.updateUserIDListOfGroup(newGroupName,
                         deletedMemberIdsFromUserstore.toArray(new String[0]),
                         addedMemberIdsFromUserstore.toArray(new String[0]));
             }
@@ -3498,7 +3498,7 @@ public class SCIMUserManager implements UserManager {
 
         if (!StringUtils.equals(oldGroupName, newGroupName)) {
             // Update group name in carbon UM.
-            carbonUM.updateNameOfGroup(oldGroupName, newGroupName);
+            carbonUM.updateGroupDisplayName(oldGroupName, newGroupName);
         }
     }
 
@@ -3583,13 +3583,13 @@ public class SCIMUserManager implements UserManager {
         boolean updated = false;
         if (isGroupDisplayNameChanged(oldGroupDisplayName, newGroupDisplayName)) {
             // Update group name in carbon UM
-            carbonUM.updateRoleName(oldGroupDisplayName, newGroupDisplayName);
+            carbonUM.updateGroupDisplayName(oldGroupDisplayName, newGroupDisplayName);
             updated = true;
         }
 
         // Update the group with added members and deleted members.
         if (isNotEmpty(addedMembers) || isNotEmpty(deletedMembers)) {
-            carbonUM.updateUserListOfRoleWithID(newGroupDisplayName,
+            carbonUM.updateUserIDListOfGroup(newGroupDisplayName,
                     deletedMemberIdsFromUserstore.toArray(new String[0]),
                     addedMemberIdsFromUserstore.toArray(new String[0]));
             updated = true;
