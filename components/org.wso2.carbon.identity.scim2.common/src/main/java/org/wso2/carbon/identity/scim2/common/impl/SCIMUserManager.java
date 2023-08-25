@@ -4243,7 +4243,7 @@ public class SCIMUserManager implements UserManager {
         // Add application roles of the user
         try {
             List<ApplicationRole> applicationRoles = SCIMCommonComponentHolder.getApplicationRoleManager()
-                    .getApplicationRolesByUserId(scimUser.getId());
+                    .getApplicationRolesByUserId(scimUser.getId(), tenantDomain);
             for(ApplicationRole applicationRole: applicationRoles) {
                 Role role = new Role();
                 role.setDisplayName(applicationRole.getRoleName());
@@ -4483,7 +4483,7 @@ public class SCIMUserManager implements UserManager {
         // Add application roles of the group
         try {
             List<ApplicationRole> applicationRoles = SCIMCommonComponentHolder.getApplicationRoleManager()
-                    .getApplicationRolesByGroupId(group.getId());
+                    .getApplicationRolesByGroupId(group.getId(), tenantDomain);
             for(ApplicationRole applicationRole: applicationRoles) {
                 Role role = new Role();
                 role.setDisplayName(applicationRole.getRoleName());
