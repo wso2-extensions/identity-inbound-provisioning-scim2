@@ -3467,7 +3467,9 @@ public class SCIMUserManager implements UserManager {
         if (StringUtils.equals(memberOperation.getOperation(), SCIMConstants.OperationalConstants.ADD)) {
             removedMembers.remove(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
             addedMembers.add(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
-            newlyAddedMemberIds.add(memberObject.get(SCIMConstants.GroupSchemaConstants.VALUE));
+            if (StringUtils.isNotBlank(memberObject.get(SCIMConstants.GroupSchemaConstants.VALUE))) {
+                newlyAddedMemberIds.add(memberObject.get(SCIMConstants.GroupSchemaConstants.VALUE));
+            }
         } else if (StringUtils.equals(memberOperation.getOperation(),
                 SCIMConstants.OperationalConstants.REMOVE)) {
             addedMembers.remove(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
