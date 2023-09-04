@@ -36,6 +36,7 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.role.mgt.ApplicationRoleManager;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.AttributeMapping;
@@ -195,6 +196,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
     @Mock
     private RolePermissionManagementService mockedRolePermissionManagementService;
 
+    @Mock
+    private ApplicationRoleManager mockApplicationRoleManager;
+
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -314,6 +318,11 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
         when(mockedUserStoreManager.getGroup(groupId, null)).
                 thenReturn(buildUserCoreGroupResponse(roleName, groupId, userStoreDomain));
+        mockStatic(SCIMCommonComponentHolder.class);
+        when(SCIMCommonComponentHolder.getApplicationRoleManager())
+                .thenReturn(mockApplicationRoleManager);
+        when(mockApplicationRoleManager.getApplicationRolesByGroupId(anyString(), anyString()))
+                .thenReturn(new ArrayList<>());
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
@@ -399,6 +408,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedGroupDAO.isExistingGroup("testRole", 0)).thenReturn(true);
         when(mockedGroupDAO.getSCIMGroupAttributes(0, "testRole")).thenReturn(attributes);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
+
+        mockStatic(SCIMCommonComponentHolder.class);
+        when(SCIMCommonComponentHolder.getApplicationRoleManager())
+                .thenReturn(mockApplicationRoleManager);
+        when(mockApplicationRoleManager.getApplicationRolesByGroupId(anyString(), anyString()))
+                .thenReturn(new ArrayList<>());
 
         mockedUserStoreManager = PowerMockito.mock(AbstractUserStoreManager.class);
 
@@ -956,6 +971,13 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
             when(abstractUserStoreManager.getGroupByGroupName(role, null)).
                     thenReturn(buildUserCoreGroupResponse(role, "123456789", null));
         }
+
+        mockStatic(SCIMCommonComponentHolder.class);
+        when(SCIMCommonComponentHolder.getApplicationRoleManager())
+                .thenReturn(mockApplicationRoleManager);
+        when(mockApplicationRoleManager.getApplicationRolesByGroupId(anyString(), anyString()))
+                .thenReturn(new ArrayList<>());
+
         whenNew(GroupDAO.class).withAnyArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(true);
         when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
@@ -1020,6 +1042,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
+
+        mockStatic(SCIMCommonComponentHolder.class);
+        when(SCIMCommonComponentHolder.getApplicationRoleManager())
+                .thenReturn(mockApplicationRoleManager);
+        when(mockApplicationRoleManager.getApplicationRolesByGroupId(anyString(), anyString()))
+                .thenReturn(new ArrayList<>());
 
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
         GroupsGetResponse groupsResponse = scimUserManager
@@ -1369,6 +1397,12 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 .thenReturn(USERNAME_LOCAL_CLAIM);
         when(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS)).thenReturn(enableLoginIdentifiers);
         when(IdentityUtil.extractDomainFromName(anyString())).thenReturn("Internal");
+
+        mockStatic(SCIMCommonComponentHolder.class);
+        when(SCIMCommonComponentHolder.getApplicationRoleManager())
+                .thenReturn(mockApplicationRoleManager);
+        when(mockApplicationRoleManager.getApplicationRolesByGroupId(anyString(), anyString()))
+                .thenReturn(new ArrayList<>());
 
         PowerMockito.whenNew(SCIMGroupHandler.class).withArguments(anyInt()).thenReturn(mockedSCIMGroupHandler);
         when(mockedSCIMGroupHandler.listSCIMRoles()).thenReturn(scimRoles);
