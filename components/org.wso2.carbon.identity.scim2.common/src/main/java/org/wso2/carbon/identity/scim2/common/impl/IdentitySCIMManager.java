@@ -151,6 +151,17 @@ public class IdentitySCIMManager {
     }
 
     /**
+     * Obtain the RoleV2 manager.
+     *
+     * @return RoleV2Manager.
+     */
+    public RoleManager getRoleV2Manager() {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        return new SCIMRoleManagerV2(SCIMCommonComponentHolder.getRoleManagementService(), tenantDomain);
+    }
+
+    /**
      * Resgister endpoint URLs in AbstractResourceEndpoint.
      */
     private void registerEndpointURLs() {
