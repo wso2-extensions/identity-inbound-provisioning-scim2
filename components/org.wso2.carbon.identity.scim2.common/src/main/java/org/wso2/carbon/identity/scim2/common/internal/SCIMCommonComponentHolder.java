@@ -38,6 +38,7 @@ public class SCIMCommonComponentHolder {
     private static ClaimMetadataManagementService claimManagementService;
     private static RolePermissionManagementService rolePermissionManagementService;
     private static RoleManagementService roleManagementService;
+    private static org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementServiceV2;
     private static final List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
 
     /**
@@ -118,6 +119,27 @@ public class SCIMCommonComponentHolder {
     public static RoleManagementService getRoleManagementService() {
 
         return roleManagementService;
+    }
+
+    /**
+     * Set role management service V2.
+     *
+     * @param roleManagementService RoleManagementServiceV2.
+     */
+    public static void setRoleManagementServiceV2(
+            org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+
+        SCIMCommonComponentHolder.roleManagementServiceV2 = roleManagementService;
+    }
+
+    /**
+     * Get role management service V2.
+     *
+     * @return RoleManagementServiceV2.
+     */
+    public static org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService getRoleManagementServiceV2() {
+
+        return roleManagementServiceV2;
     }
 
     public static List<SCIMUserStoreErrorResolver> getScimUserStoreErrorResolverList() {

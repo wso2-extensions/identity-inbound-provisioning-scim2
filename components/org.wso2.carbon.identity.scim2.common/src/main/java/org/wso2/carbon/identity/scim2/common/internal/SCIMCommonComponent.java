@@ -267,6 +267,32 @@ public class SCIMCommonComponent {
     }
 
     /**
+     * Set role management service V2 implementation.
+     *
+     * @param roleManagementService RoleManagementServiceV2.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService",
+            service = org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRoleManagementServiceV2")
+    protected void setRoleManagementServiceV2(org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+
+        SCIMCommonComponentHolder.setRoleManagementServiceV2(roleManagementService);
+        logger.debug("RoleManagementServiceV2 set in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Unset role management service V2 implementation.
+     */
+    protected void unsetRoleManagementServiceV2(org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+
+        SCIMCommonComponentHolder.setRoleManagementServiceV2(null);
+        logger.debug("RoleManagementServiceV2 unset in SCIMCommonComponent bundle.");
+    }
+
+    /**
      * Set SCIMUserStoreErrorResolver implementation
      *
      * @param scimUserStoreErrorResolver SCIMUserStoreErrorResolver

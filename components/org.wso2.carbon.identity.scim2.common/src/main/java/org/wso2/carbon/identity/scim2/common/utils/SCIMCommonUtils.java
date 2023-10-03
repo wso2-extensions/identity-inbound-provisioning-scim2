@@ -97,6 +97,11 @@ public class SCIMCommonUtils {
         return StringUtils.isNotBlank(id) ? getSCIMRoleURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
     }
 
+    public static String getSCIMRoleV2URL(String id) {
+
+        return StringUtils.isNotBlank(id) ? getSCIMRoleV2URL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+    }
+
     public static String getSCIMServiceProviderConfigURL(String id) {
         return getSCIMServiceProviderConfigURL() ;
     }
@@ -119,6 +124,12 @@ public class SCIMCommonUtils {
 
         String scimURL = getSCIMURL(false);
         return scimURL + SCIMCommonConstants.ROLES;
+    }
+
+    public static String getSCIMRoleV2URL() {
+
+        String scimURL = getSCIMURL(false);
+        return scimURL + SCIMCommonConstants.ROLES_V2;
     }
 
     public static String getTenantDomainFromContext() {

@@ -35,6 +35,7 @@ import org.wso2.charon3.core.config.CharonConfiguration;
 import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.extensions.RoleManager;
+import org.wso2.charon3.core.extensions.RoleV2Manager;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -155,10 +156,10 @@ public class IdentitySCIMManager {
      *
      * @return RoleV2Manager.
      */
-    public RoleManager getRoleV2Manager() {
+    public RoleV2Manager getRoleV2Manager() {
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        return new SCIMRoleManagerV2(SCIMCommonComponentHolder.getRoleManagementService(), tenantDomain);
+        return new SCIMRoleManagerV2(SCIMCommonComponentHolder.getRoleManagementServiceV2(), tenantDomain);
     }
 
     /**

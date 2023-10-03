@@ -24,7 +24,7 @@ import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
-import org.wso2.charon3.core.extensions.RoleManager;
+import org.wso2.charon3.core.extensions.RoleV2Manager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.RoleResourceV2Manager;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -61,7 +61,7 @@ public class RoleResourceV2 extends AbstractResource {
                 throw new FormatNotSupportedException(error);
             }
             // Obtain the role manager.
-            RoleManager roleManager = IdentitySCIMManager.getInstance().getRoleManager();
+            RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse scimResponse = roleResourceManager.getRole(id, roleManager, attribute, excludedAttributes);
@@ -96,7 +96,7 @@ public class RoleResourceV2 extends AbstractResource {
                 throw new FormatNotSupportedException(error);
             }
             // Obtain the role manager.
-            RoleManager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
+            RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse scimResponse = roleResourceManager.listWithPOSTRole(resourceString, roleManager);
@@ -128,7 +128,7 @@ public class RoleResourceV2 extends AbstractResource {
                 throw new FormatNotSupportedException(error);
             }
             // Obtain the role manager.
-            RoleManager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
+            RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse response = roleResourceManager.createRole(resourceString, roleManager);
@@ -158,7 +158,7 @@ public class RoleResourceV2 extends AbstractResource {
                 throw new FormatNotSupportedException(error);
             }
             // Obtain the role manager.
-            RoleManager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
+            RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse scimResponse = roleResourceManager
@@ -186,7 +186,7 @@ public class RoleResourceV2 extends AbstractResource {
                 throw new FormatNotSupportedException(error);
             }
             // Obtain the role manager.
-            RoleManager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
+            RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse scimResponse = roleResourceManager.deleteRole(id, roleManager);
@@ -221,7 +221,7 @@ public class RoleResourceV2 extends AbstractResource {
                 throw new FormatNotSupportedException(error);
             }
             // Obtain the role manager.
-            RoleManager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
+            RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse response = roleResourceManager.updateWithPUTRole(id, resourceString, roleManager);
@@ -255,7 +255,7 @@ public class RoleResourceV2 extends AbstractResource {
                 throw new FormatNotSupportedException(error);
             }
             // Obtain the role manager.
-            RoleManager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
+            RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse response = roleResourceManager.updateWithPATCHRole(id, resourceString, roleManager);
