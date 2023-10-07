@@ -91,6 +91,7 @@ public class IdentitySCIMManager {
         endpointURLs.put(SCIMConstants.USER_ENDPOINT, SCIMCommonUtils.getSCIMUserURL());
         endpointURLs.put(SCIMConstants.GROUP_ENDPOINT, SCIMCommonUtils.getSCIMGroupURL());
         endpointURLs.put(SCIMConstants.ROLE_ENDPOINT, SCIMCommonUtils.getSCIMRoleURL());
+        endpointURLs.put(SCIMConstants.ROLE_V2_ENDPOINT, SCIMCommonUtils.getSCIMRoleV2URL());
         endpointURLs.put(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT, SCIMCommonUtils
                 .getSCIMServiceProviderConfigURL());
         endpointURLs.put(SCIMConstants.RESOURCE_TYPE_ENDPOINT, SCIMCommonUtils.getSCIMResourceTypeURL());

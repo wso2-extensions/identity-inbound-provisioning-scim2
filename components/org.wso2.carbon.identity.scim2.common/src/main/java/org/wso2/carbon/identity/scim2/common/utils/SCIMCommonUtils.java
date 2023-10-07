@@ -128,7 +128,7 @@ public class SCIMCommonUtils {
 
     public static String getSCIMRoleV2URL() {
 
-        String scimURL = getSCIMURL(false);
+        String scimURL = getSCIMURL(true);
         return scimURL + SCIMCommonConstants.ROLES_V2;
     }
 
