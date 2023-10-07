@@ -132,6 +132,33 @@ public class SCIMCommonUtils {
         return scimURL + SCIMCommonConstants.ROLES_V2;
     }
 
+    public static String getApplicationRefURL(String id) {
+
+        String applicationURL;
+        String path = "/api/server/v1/applications";
+        try {
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                applicationURL = ServiceURLBuilder.create().addPath("/api/server/v1/applications").build()
+                        .getAbsolutePublicURL();
+            } else {
+                String serverUrl = ServiceURLBuilder.create().build().getAbsolutePublicURL();
+                String tenantDomain = getTenantDomainFromContext();
+                if (isNotASuperTenantFlow(tenantDomain)) {
+                    applicationURL = serverUrl + "/t/" + tenantDomain + path;
+                } else {
+                    applicationURL = serverUrl + path;
+                }
+            }
+            return StringUtils.isNotBlank(id) ? applicationURL + SCIMCommonConstants.URL_SEPERATOR + id : null;
+        } catch (URLBuilderException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while building the application endpoint with tenant/organization " +
+                        "qualified URL.", e);
+            }
+            return null;
+        }
+    }
+
     public static String getTenantDomainFromContext() {
 
         String tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();

@@ -23,17 +23,19 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.role.mgt.core.RoleConstants;
-import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
+import org.wso2.carbon.identity.role.v2.mgt.core.AssociatedApplication;
 import org.wso2.carbon.identity.role.v2.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.UserBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -70,8 +72,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
-import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
@@ -104,9 +106,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     public RoleV2 createRole(RoleV2 role)
             throws CharonException, ConflictException, NotImplementedException, BadRequestException {
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Creating role: " + role.getDisplayName());
-        }
         try {
             // Check if the role already exists.
             if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
@@ -122,9 +121,19 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     permissionList.add(permission);
                 }
             }
+            String audienceType = role.getAudienceType();
+            String audienceValue = role.getAudienceValue();
+            if (LOG.isDebugEnabled()) {
+                if (StringUtils.isNotBlank(audienceType) && StringUtils.isNotBlank(audienceValue)) {
+                    LOG.debug("Creating role: " + role.getDisplayName() + " for " + audienceType + " with id: " +
+                            audienceValue + " audience.");
+                } else {
+                    LOG.debug("Creating role: " + role.getDisplayName() + " for organization.");
+                }
+            }
             RoleBasicInfo roleBasicInfo =
                     roleManagementService.addRole(role.getDisplayName(), role.getUsers(), role.getGroups(),
-                            permissionList, role.getAudienceType(), role.getAudienceValue(), tenantDomain);
+                            permissionList, audienceType, role.getAudienceValue(), tenantDomain);
 
             RoleV2 createdRole = new RoleV2();
             createdRole.setId(roleBasicInfo.getId());
@@ -134,7 +143,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             createdRole.setSchemas();
             createdRole.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
                     roleBasicInfo.getAudience());
-
             return createdRole;
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
@@ -154,13 +162,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         try {
             Role role;
-//            if (isUsersAttributeRequired(requiredAttributes)) {
-//                role = roleManagementService.getRole(roleID, tenantDomain);
-//            } else  {
-//                role = roleManagementService.getRoleWithoutUsers(roleID, tenantDomain);
-//            }
-            role = roleManagementService.getRole(roleID, tenantDomain);
-
+            if (isUsersAttributeRequired(requiredAttributes)) {
+                role = roleManagementService.getRole(roleID, tenantDomain);
+            } else {
+                role = roleManagementService.getRoleWithoutUsers(roleID, tenantDomain);
+            }
             RoleV2 scimRole = new RoleV2();
             scimRole.setId(role.getId());
             scimRole.setDisplayName(role.getName());
@@ -171,20 +177,16 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             if (systemRoles.contains(role.getName())) {
                 scimRole.setSystemRole(true);
             }
-            List<Permission> permissions = role.getPermissions();
-            List<MultiValuedComplexType> permissionValues = new ArrayList<>();
-            if (permissions != null) {
-                for (Permission permission : permissions) {
-                    MultiValuedComplexType permissionComplexObj = new MultiValuedComplexType();
-                    permissionComplexObj.setValue(permission.getName());
-                    permissionComplexObj.setDisplay(permission.getDisplayName());
-                    permissionValues.add(permissionComplexObj);
-                }
-            }
-            scimRole.setPermissions(permissionValues);
+            // Set permissions.
+            List<MultiValuedComplexType> permissions =
+                    convertPermissionsToMultiValuedComplexType(role.getPermissions());
+            scimRole.setPermissions(permissions);
 
-            if (CollectionUtils.isNotEmpty(role.getUsers())) {
-                for (UserBasicInfo userInfo : role.getUsers()) {
+            // Set role's assigned users.
+            List<UserBasicInfo> assignedUsers = role.getUsers();
+            if (assignedUsers != null) {
+                for (UserBasicInfo userInfo : assignedUsers) {
+                    userInfo.getId();
                     String userLocationURI = SCIMCommonUtils.getSCIMUserURL(userInfo.getId());
                     User user = new User();
                     user.setUserName(userInfo.getName());
@@ -193,8 +195,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     scimRole.setUser(user);
                 }
             }
-            if (CollectionUtils.isNotEmpty(role.getGroups())) {
-                for (GroupBasicInfo groupInfo : role.getGroups()) {
+
+            // Set role's assigned groups.
+            List<GroupBasicInfo> assignedGroups = role.getGroups();
+            if (assignedGroups != null) {
+                for (GroupBasicInfo groupInfo : assignedGroups) {
+                    groupInfo.getId();
                     String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupInfo.getId());
                     Group group = new Group();
                     group.setDisplayName(groupInfo.getName());
@@ -203,6 +209,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     scimRole.setGroup(group);
                 }
             }
+
+            // Set associated applications.
+            List<MultiValuedComplexType> associatedApps =
+                    convertAssociatedAppsToMultivaluedComplexType(role.getAssociatedApplications());
+            scimRole.setAssociatedApplications(associatedApps);
             return scimRole;
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
@@ -210,6 +221,39 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             }
             throw new CharonException(String.format("Error occurred while getting the role: %s", roleID), e);
         }
+    }
+
+    private List<MultiValuedComplexType> convertAssociatedAppsToMultivaluedComplexType(
+            List<AssociatedApplication> associatedApplications) {
+
+        List<MultiValuedComplexType> associatedApplicationsList = new ArrayList<>();
+        if (associatedApplications != null) {
+            for (AssociatedApplication associatedApplication : associatedApplications) {
+                String appId = associatedApplication.getId();
+                String appName = associatedApplication.getName();
+                MultiValuedComplexType applicationComplexObject = new MultiValuedComplexType();
+                String applicationLocationURI = SCIMCommonUtils.getApplicationRefURL(appId);
+                applicationComplexObject.setValue(appId);
+                applicationComplexObject.setDisplay(appName);
+                applicationComplexObject.setReference(applicationLocationURI);
+                associatedApplicationsList.add(applicationComplexObject);
+            }
+        }
+        return associatedApplicationsList;
+    }
+
+    private List<MultiValuedComplexType> convertPermissionsToMultiValuedComplexType(List<Permission> permissions) {
+
+        List<MultiValuedComplexType> permissionValues = new ArrayList<>();
+        if (permissions != null) {
+            for (Permission permission : permissions) {
+                MultiValuedComplexType permissionComplexObject = new MultiValuedComplexType();
+                permissionComplexObject.setValue(permission.getName());
+                permissionComplexObject.setDisplay(permission.getDisplayName());
+                permissionValues.add(permissionComplexObject);
+            }
+        }
+        return permissionValues;
     }
 
     public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
@@ -235,9 +279,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         } else if (count != null && count == 0) {
             return new RolesV2GetResponse(0, Collections.emptyList());
         } else if (rootNode != null) {
-            return filterRoles(rootNode, count, startIndex, sortBy, sortOrder);
+            return filterRoles(rootNode, count, startIndex, null, null);
         } else {
-            return listRoles(count, startIndex, sortBy, sortOrder);
+            return listRoles(count, startIndex, null, null);
         }
     }
 
@@ -249,6 +293,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 searchRequest.getSortBy(), searchRequest.getSortOder());
     }
 
+    @Override
     public RoleV2 updateRole(RoleV2 oldRole, RoleV2 newRole)
             throws BadRequestException, CharonException, ConflictException, NotFoundException {
 
@@ -262,15 +307,17 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         role.setId(oldRole.getId());
         role.setSchemas();
         role.setLocation(oldRole.getLocation());
+        role.setAudience(oldRole.getAudienceValue(), oldRole.getAudienceDisplayName(), oldRole.getAudienceType());
         return role;
     }
 
+    @Override
     public RoleV2 patchRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
         String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Updating Role: " + currentRoleName);
+            LOG.debug("Updating Role: " + roleId);
         }
 
         List<PatchOperation> displayNameOperations = new ArrayList<>();
@@ -279,7 +326,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         List<PatchOperation> permissionOperations = new ArrayList<>();
 
         if (MapUtils.isEmpty(patchOperations)) {
-            throw new CharonException("Patch operation can't be null or empty");
+            throw new CharonException("Patch operation can't be null or empty.");
         }
         for (List<PatchOperation> patchOperationList : patchOperations.values()) {
             for (PatchOperation patchOperation : patchOperationList) {
@@ -304,15 +351,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             String newRoleName = (String) displayNameOperations.get(displayNameOperations.size() - 1).getValues();
             updateRoleName(roleId, currentRoleName, newRoleName);
         }
-
         if (CollectionUtils.isNotEmpty(permissionOperations)) {
             updatePermissions(roleId, permissionOperations);
         }
-
         if (CollectionUtils.isNotEmpty(groupOperations)) {
             updateGroups(roleId, groupOperations);
         }
-
         if (CollectionUtils.isNotEmpty(memberOperations)) {
             updateUsers(roleId, currentRoleName, memberOperations);
         }
@@ -341,7 +385,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         if (node instanceof ExpressionNode) {
             return filterRolesBySingleAttribute((ExpressionNode) node, count, startIndex, sortBy, sortOrder);
         } else if (node instanceof OperationNode) {
-            String error = "Complex filters are not supported yet";
+            String error = "Complex filters are not supported yet.";
             throw new NotImplementedException(error);
         } else {
             throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
@@ -399,10 +443,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @param count      Results count value.
      * @param sortBy     SortBy.
      * @param sortOrder  Sorting order.
-     * @return List of roles.
-     * @throws CharonException Error while listing users
+     * @return List of roles matching to the criteria.
+     * @throws CharonException Error while listing users.
      */
-    private RolesV2GetResponse listRoles(Integer count, Integer startIndex, String sortBy, String sortOrder)
+    private RolesV2GetResponse listRoles(Integer startIndex, Integer count, String sortBy, String sortOrder)
             throws CharonException, BadRequestException {
 
         List<RoleV2> rolesList = new ArrayList<>();
@@ -411,7 +455,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             List<RoleBasicInfo> roles = roleManagementService
                     .getRoles(count, startIndex, sortBy, sortOrder, tenantDomain);
             List<RoleV2> scimRoles = getScimRolesList(roles);
-
             rolesCount = roleManagementService.getRolesCount(tenantDomain);
             // Set total number of results to 0th index.
             if (rolesCount == 0) {
@@ -482,15 +525,15 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private void doUpdateRoleName(RoleV2 oldRole, RoleV2 newRole)
             throws CharonException, ConflictException, NotFoundException, BadRequestException {
 
+        String oldRoleDisplayName = oldRole.getDisplayName();
+        String newRoleDisplayName = newRole.getDisplayName();
+        String roleId = oldRole.getId();
         if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Updating name of role %s to %s.", oldRole.getDisplayName(),
-                    newRole.getDisplayName()));
+            LOG.debug(String.format("Updating role name from %s to %s of role with id: %s.", oldRoleDisplayName,
+                    newRoleDisplayName, roleId));
         }
 
         // Update name if it is changed.
-        String oldRoleDisplayName = oldRole.getDisplayName();
-        String newRoleDisplayName = newRole.getDisplayName();
-
         if (!StringUtils.equals(oldRoleDisplayName, newRoleDisplayName)) {
             // Update role name.
             try {
@@ -504,8 +547,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
-                        String.format("Error occurred while updating role name from: %s to %s", oldRoleDisplayName,
-                                newRoleDisplayName), e);
+                        String.format("Error occurred while updating role %s's name from: %s to %s", roleId,
+                                oldRoleDisplayName, newRoleDisplayName), e);
             }
         }
     }
@@ -544,18 +587,15 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private void doUpdateUsers(RoleV2 oldRole, RoleV2 newRole) throws CharonException, BadRequestException {
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Updating users of role: " + oldRole.getDisplayName());
+            LOG.debug("Updating users of role with ID: " + oldRole.getId());
         }
 
         Set<String> userIDsInOldRole = new HashSet<>(oldRole.getUsers());
         Set<String> userIDsInNewRole = new HashSet<>(newRole.getUsers());
-
         // Check for deleted users.
         Set<String> deletedUserIDList = getRemovedIDList(userIDsInOldRole, userIDsInNewRole);
-
         // Check for added users.
         Set<String> newUserIDList = getAddedIDList(userIDsInOldRole, userIDsInNewRole);
-
         // Update the role with added users and deleted users.
         if (isNotEmpty(newUserIDList) || isNotEmpty(deletedUserIDList)) {
             try {
@@ -567,7 +607,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
-                        String.format("Error occurred while updating users in the role: %s", newRole.getDisplayName()),
+                        String.format("Error occurred while updating users in the role with ID: %s", oldRole.getId()),
                         e);
             }
         }
@@ -576,18 +616,15 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private void doUpdateGroups(RoleV2 oldRole, RoleV2 newRole) throws CharonException, BadRequestException {
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Updating groups of role: " + oldRole.getDisplayName());
+            LOG.debug("Updating groups of role with ID: " + oldRole.getId());
         }
 
         Set<String> groupIDsInOldRole = new HashSet<>(oldRole.getGroups());
         Set<String> groupIDsInNewRole = new HashSet<>(newRole.getGroups());
-
         // Check for deleted groups.
         Set<String> deleteGroupIDList = getRemovedIDList(groupIDsInOldRole, groupIDsInNewRole);
-
         // Check for added groups.
         Set<String> newGroupIDList = getAddedIDList(groupIDsInOldRole, groupIDsInNewRole);
-
         // Update the role with added users and deleted users.
         if (isNotEmpty(newGroupIDList) || isNotEmpty(deleteGroupIDList)) {
             try {
@@ -599,7 +636,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
-                        String.format("Error occurred while updating groups in the role: %s", newRole.getDisplayName()),
+                        String.format("Error occurred while updating groups in the role with ID: %s", oldRole.getId()),
                         e);
             }
         }
@@ -611,20 +648,26 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             LOG.debug("Updating permissions of role: " + oldRole.getDisplayName());
         }
 
-        List<String> oldRolePermissions = oldRole.getPermissionValues();
-        List<String> newRolePermissions = newRole.getPermissionValues();
+        Set<String> oldRolePermissions = new HashSet<>(oldRole.getPermissionValues());
+        Set<String> newRolePermissions = new HashSet<>(newRole.getPermissionValues());
+        // Check for deleted permissions.
+        Set<String> deletePermissionValuesList = getRemovedIDList(oldRolePermissions, newRolePermissions);
+        // Check for added permissions.
+        Set<String> addedPermissionValuesList = getAddedIDList(oldRolePermissions, newRolePermissions);
 
-        // Update the role with specified permissions.
-        if (hasPermissionsChanged(oldRolePermissions, newRolePermissions)) {
+        // Update the role with added permissions and deleted permissions.
+        if (isNotEmpty(deletePermissionValuesList) || isNotEmpty(addedPermissionValuesList)) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Permissions have changed. Updating permissions of role: " + oldRole.getDisplayName());
+                LOG.debug("Permissions have changed. Updating permissions of role with ID: " + oldRole.getId());
             }
             try {
-                // TODO update the permission patch instead of replacing
-//                roleManagementService.setPermissionsForRole(oldRole.getId(), newRolePermissions, tenantDomain);
-                List<Permission> addedPermissions = new ArrayList<>();
-                List<Permission> removedPermisions = new ArrayList<>();
-                roleManagementService.updatePermissionListOfRole(oldRole.getId(), addedPermissions, removedPermisions,
+                List<Permission> addedPermissions = addedPermissionValuesList.stream()
+                        .map(Permission::new)
+                        .collect(Collectors.toList());
+                List<Permission> removedPermissions = deletePermissionValuesList.stream()
+                        .map(Permission::new)
+                        .collect(Collectors.toList());
+                roleManagementService.updatePermissionListOfRole(oldRole.getId(), addedPermissions, removedPermissions,
                         tenantDomain);
             } catch (IdentityRoleManagementException e) {
                 if (StringUtils.equals(RoleConstants.Error.INVALID_REQUEST.getCode(), e.getErrorCode())) {
@@ -633,8 +676,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
-                        String.format("Error occurred while updating permissions for role: %s",
-                                newRole.getDisplayName()), e);
+                        String.format("Error occurred while updating permissions for role with ID: %s",
+                                oldRole.getId()), e);
             }
         }
     }
@@ -689,38 +732,81 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private void updatePermissions(String roleId, List<PatchOperation> permissionOperations)
             throws BadRequestException, CharonException {
 
-        List<Permission> oldRolePermissions;
-        List<String> newRolePermissions = getNewRolePermissions(permissionOperations);
         try {
-            oldRolePermissions = roleManagementService.getPermissionListOfRole(roleId, tenantDomain);
+            Collections.sort(permissionOperations);
+            Set<String> addedPermissions = new HashSet<>();
+            Set<String> deletedPermissions = new HashSet<>();
+            Set<String> replacedPermissions = new HashSet<>();
+
+            List<Permission> permissionListOfRole = roleManagementService.getPermissionListOfRole(roleId, tenantDomain);
+
+            for (PatchOperation permissionOperation : permissionOperations) {
+                if (permissionOperation.getValues() instanceof Map) {
+                    Map<String, String> permissionObject = (Map<String, String>) permissionOperation.getValues();
+                    prepareAddedRemovedPermissionLists(addedPermissions, deletedPermissions, replacedPermissions,
+                            permissionOperation, permissionObject, permissionListOfRole);
+                } else if (permissionOperation.getValues() instanceof List) {
+                    List<Map<String, String>> permissionOperationValues =
+                            (List<Map<String, String>>) permissionOperation.getValues();
+                    for (Map<String, String> permissionObject : permissionOperationValues) {
+                        prepareAddedRemovedPermissionLists(addedPermissions, deletedPermissions, replacedPermissions,
+                                permissionOperation, permissionObject, permissionListOfRole);
+                    }
+                }
+                prepareReplacedPermissionLists(permissionListOfRole, addedPermissions, deletedPermissions,
+                        replacedPermissions);
+            }
+            if (isNotEmpty(addedPermissions) || isNotEmpty(deletedPermissions)) {
+                doUpdatePermissions(roleId, addedPermissions, deletedPermissions);
+            }
         } catch (IdentityRoleManagementException e) {
             throw new CharonException(
-                    String.format("Error occurred while retrieving the permissions for role: %s", roleId), e);
-        }
-
-        List<String> oldPermissionValues = oldRolePermissions.stream()
-                .map(Permission::getName)
-                .collect(Collectors.toList());
-
-        // Update the role with specified permissions.
-        if (hasPermissionsChanged(oldPermissionValues, newRolePermissions)) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Permissions have changed. Updating permissions of role: " + roleId);
-            }
-            try {
-                // TODO update;
-                List<Permission> addedPermissions = new ArrayList<>();
-                List<Permission> removedPermissions = new ArrayList<>();
-                roleManagementService.updatePermissionListOfRole(roleId, addedPermissions, removedPermissions, tenantDomain);
-            } catch (IdentityRoleManagementException e) {
-                if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
-                    throw new BadRequestException(e.getMessage());
-                }
-                throw new CharonException(
-                        String.format("Error occurred while updating permissions for role: %s", roleId), e);
-            }
+                    String.format("Error occurred while updating permissions for role with ID: %s", roleId), e);
         }
     }
+
+    private void prepareAddedRemovedPermissionLists(Set<String> addedPermissions, Set<String> deletedPermissions,
+                                                    Set<String> replacedPermissions, PatchOperation permissionOperation,
+                                                    Map<String, String> permissionObject,
+                                                    List<Permission> permissionListOfRole) {
+
+        switch (permissionOperation.getOperation()) {
+            case (SCIMConstants.OperationalConstants.ADD):
+                deletedPermissions.remove(permissionObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                if (!isPermissionExist(permissionObject.get(SCIMConstants.CommonSchemaConstants.VALUE),
+                        permissionListOfRole)) {
+                    addedPermissions.add(permissionObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                }
+                break;
+            case (SCIMConstants.OperationalConstants.REMOVE):
+                addedPermissions.remove(permissionObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                deletedPermissions.add(permissionObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                break;
+            case (SCIMConstants.OperationalConstants.REPLACE):
+                replacedPermissions.add(permissionObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                break;
+        }
+    }
+
+    private void prepareReplacedPermissionLists(List<Permission> permissionsOfRole, Set<String> addedPermissions,
+                                                Set<String> removedPermissions, Set<String> replacedPermissions) {
+
+        if (replacedPermissions.isEmpty()) {
+            return;
+        }
+
+        if (!permissionsOfRole.isEmpty()) {
+            for (Permission permission : permissionsOfRole) {
+                if (!replacedPermissions.contains(permission.getName())) {
+                    removedPermissions.add(permission.getName());
+                } else {
+                    replacedPermissions.remove(permission.getName());
+                }
+            }
+        }
+        addedPermissions.addAll(replacedPermissions);
+    }
+
 
     private void updateGroups(String roleId, List<PatchOperation> groupOperations)
             throws CharonException, BadRequestException {
@@ -739,9 +825,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     prepareAddedRemovedGroupLists(addedGroupIds, deletedGroupIds, replaceGroupsIds,
                             groupOperation, groupObject, groupListOfRole);
                 } else if (groupOperation.getValues() instanceof List) {
-                    List<Map<String, String>> memberOperationValues =
+                    List<Map<String, String>> groupOperationValues =
                             (List<Map<String, String>>) groupOperation.getValues();
-                    for (Map<String, String> groupObject : memberOperationValues) {
+                    for (Map<String, String> groupObject : groupOperationValues) {
                         prepareAddedRemovedGroupLists(addedGroupIds, deletedGroupIds, replaceGroupsIds,
                                 groupOperation, groupObject, groupListOfRole);
                     }
@@ -754,7 +840,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             }
         } catch (IdentityRoleManagementException e) {
             throw new CharonException(
-                    String.format("Error occurred while retrieving the group list for role: %s", roleId), e);
+                    String.format("Error occurred while retrieving the group list for role with ID: %s", roleId), e);
         }
     }
 
@@ -786,10 +872,36 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
     }
 
+    private void doUpdatePermissions(String roleId, Set<String> addedPermissions, Set<String> removedPermissions)
+            throws CharonException, BadRequestException {
+
+        // Update the role with added permissions and deleted permissions.
+        if (isNotEmpty(addedPermissions) || isNotEmpty(removedPermissions)) {
+            List<Permission> addedPermissionsList = addedPermissions.stream()
+                    .map(Permission::new)
+                    .collect(Collectors.toList());
+            List<Permission> removedPermissionsList = removedPermissions.stream()
+                    .map(Permission::new)
+                    .collect(Collectors.toList());
+            try {
+                roleManagementService.updatePermissionListOfRole(roleId, addedPermissionsList, removedPermissionsList,
+                        tenantDomain);
+            } catch (IdentityRoleManagementException e) {
+                if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage());
+                } else if (RoleConstants.Error.INVALID_PERMISSION.getCode().equals("RMA-" + e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage());
+                }
+                throw new CharonException(
+                        String.format("Error occurred while updating permissions of the role with ID: %s", roleId), e);
+            }
+        }
+    }
+
     private void doUpdateGroups(String roleId, Set<String> newGroupIDList, Set<String> deleteGroupIDList)
             throws CharonException, BadRequestException {
 
-        // Update the role with added users and deleted users.
+        // Update the role with added groups and deleted groups.
         if (isNotEmpty(newGroupIDList) || isNotEmpty(deleteGroupIDList)) {
             try {
                 roleManagementService.updateGroupListOfRole(roleId, new ArrayList<>(newGroupIDList),
@@ -799,7 +911,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
-                        String.format("Error occurred while updating groups in the role: %s", roleId), e);
+                        String.format("Error occurred while updating groups in the role with ID: %s", roleId), e);
             }
         }
     }
@@ -822,12 +934,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             } catch (IdentityRoleManagementException e) {
                 if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
-                }
-                if (OPERATION_FORBIDDEN.getCode().equals(e.getErrorCode())) {
+                } else if (OPERATION_FORBIDDEN.getCode().equals(e.getErrorCode())) {
                     throw new ForbiddenException(e.getMessage());
                 }
                 throw new CharonException(
-                        String.format("Error occurred while updating users in the role: %s", roleId), e);
+                        String.format("Error occurred while updating users in the role with ID: %s", roleId), e);
             }
         }
     }
@@ -838,14 +949,13 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         for (Object addedUserId : newlyAddedMemberIds) {
             if (!newUserIDList.contains(addedUserId.toString())) {
                 throw new BadRequestException(String.format("Provided SCIM user Id: %s doesn't match with the "
-                        + "userID obtained from user-store for the provided username.", addedUserId.toString()),
+                        + "userID obtained from user-store for the provided username.", addedUserId),
                         ResponseCodeConstants.INVALID_VALUE);
             }
         }
     }
 
-    private String getUserIDByName(String name, String tenantDomain) throws
-            org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException {
+    private String getUserIDByName(String name, String tenantDomain) throws IdentityRoleManagementException {
 
         return userIDResolver.getIDByName(name, tenantDomain);
     }
@@ -857,7 +967,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         for (String user : userList) {
             try {
                 userIDList.add(getUserIDByName(user, tenantDomain));
-            } catch (org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException e) {
+            } catch (IdentityRoleManagementException e) {
                 if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
                 }
@@ -905,7 +1015,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 if (isNotEmpty(userListWithID)) {
                     String tempDisplay = userListWithID.get(0).getUsername();
                     if(StringUtils.isNotBlank(userListWithID.get(0).getUserStoreDomain())) {
-                        tempDisplay = userListWithID.get(0).getUserStoreDomain() + "/" + tempDisplay;
+                        tempDisplay = userListWithID.get(0).getUserStoreDomain() + CarbonConstants.DOMAIN_SEPARATOR +
+                                tempDisplay;
                     }
                     memberObject.put(SCIMConstants.RoleSchemaConstants.DISPLAY, tempDisplay);
                     memberOperation.setValues(memberObject);
@@ -919,13 +1030,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             List<String> roleList = Arrays.asList(userStoreManager.
                     getRoleListOfUser(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY)));
 
-            if (StringUtils.equals(memberOperation.getOperation(), SCIMConstants.OperationalConstants.ADD) &&
+            if (SCIMConstants.OperationalConstants.ADD.equals(memberOperation.getOperation()) &&
                     !roleList.contains(currentRoleName)) {
                 removedMembers.remove(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
                 addedMembers.add(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
                 newlyAddedMemberIds.add(memberObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-            } else if (StringUtils.equals(memberOperation.getOperation(),
-                    SCIMConstants.OperationalConstants.REMOVE)) {
+            } else if (SCIMConstants.OperationalConstants.REMOVE.equals(memberOperation.getOperation())) {
                 addedMembers.remove(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
                 removedMembers.add(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
             }
@@ -958,23 +1068,28 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
     private boolean isGroupExist(String groupId, List<GroupBasicInfo> groupListOfRole) {
 
-        for (GroupBasicInfo group : groupListOfRole) {
-            if (StringUtils.equals(groupId, group.getId())) {
+        return groupListOfRole != null &&
+                groupListOfRole.stream()
+                        .anyMatch(groupBasicInfo -> groupBasicInfo.getId().equals(groupId));
+    }
+
+    private boolean isPermissionExist(String permissionValue, List<Permission> permissionsOfRole) {
+
+        return permissionsOfRole != null &&
+                permissionsOfRole.stream()
+                        .anyMatch(permission -> permission.getName().equals(permissionValue));
+    }
+
+    private boolean isUsersAttributeRequired(Map<String, Boolean> requiredAttributes) {
+
+        if (requiredAttributes == null) {
+            return true;
+        }
+        for (String attribute : requiredAttributes.keySet()) {
+            if (attribute.startsWith(SCIMConstants.RoleSchemaConstants.USERS_URI)) {
                 return true;
             }
         }
         return false;
-    }
-
-    private List<String> getNewRolePermissions(List<PatchOperation> permissionOperations) {
-
-        for (PatchOperation permissionOperation : permissionOperations) {
-            if ((SCIMConstants.OperationalConstants.REPLACE).equals(permissionOperation.getOperation())) {
-                if (permissionOperation.getValues() instanceof List) {
-                    return (List<String>) permissionOperation.getValues();
-                }
-            }
-        }
-        return Collections.emptyList();
     }
 }
