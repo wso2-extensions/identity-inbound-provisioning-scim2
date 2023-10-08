@@ -285,6 +285,8 @@ public class SCIMCommonComponent {
 
     /**
      * Unset role management service V2 implementation.
+     *
+     * @param roleManagementService RoleManagementServiceV2
      */
     protected void unsetRoleManagementServiceV2(org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
 
