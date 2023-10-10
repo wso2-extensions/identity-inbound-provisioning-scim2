@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getTenantDomainFromContext;
 
 /**
  * This class contains the common utils used at HTTP level
@@ -161,7 +162,7 @@ public class SupportUtils {
     public static String getTenantDomain() {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            return IdentityTenantUtil.getTenantDomainFromContext();
+            return getTenantDomainFromContext();
         }
         return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
     }
