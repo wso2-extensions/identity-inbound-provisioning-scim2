@@ -88,7 +88,9 @@ import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE
 public class SCIMRoleManagerV2 implements RoleV2Manager {
 
     private static final Log LOG = LogFactory.getLog(SCIMRoleManagerV2.class);
-    private static final String FILTERING_DELIMITER = "*";
+    private static final String ROLE_NAME_FILTER_ATTRIBUTE = "name";
+    private static final String ROLE_AUDIENCE_TYPE_FILTER_ATTRIBUTE = "audience";
+    private static final String ROLE_AUDIENCE_ID_FILTER_ATTRIBUTE = "audienceId";
 
     // TODO change to new Role manager Service.
     private RoleManagementService roleManagementService;
@@ -439,9 +441,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throw new BadRequestException(errorMessage);
         }
 
-        String searchFilter = getSearchFilter(filterOperation, attributeValue);
+        String searchFilter = getSearchFilter(attributeName, filterOperation, attributeValue);
         if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Filtering roleNames from search filter: %s", searchFilter));
+            LOG.debug(String.format("Filtering roles from search filter: %s", searchFilter));
         }
         List<RoleBasicInfo> roles;
         try {
@@ -458,21 +460,21 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     /**
      * Method to list roles.
      *
-     * @param startIndex Starting index of the results.
      * @param count      Results count value.
+     * @param startIndex Starting index of the results.
      * @param sortBy     SortBy.
      * @param sortOrder  Sorting order.
      * @return List of roles matching to the criteria.
      * @throws CharonException Error while listing users.
      */
-    private RolesV2GetResponse listRoles(Integer startIndex, Integer count, String sortBy, String sortOrder)
+    private RolesV2GetResponse listRoles(Integer count, Integer startIndex, String sortBy, String sortOrder)
             throws CharonException, BadRequestException {
 
         List<RoleV2> rolesList = new ArrayList<>();
         int rolesCount;
         try {
-            List<RoleBasicInfo> roles = roleManagementService
-                    .getRoles(count, startIndex, sortBy, sortOrder, tenantDomain);
+            List<RoleBasicInfo> roles =
+                    roleManagementService.getRoles(count, startIndex, sortBy, sortOrder, tenantDomain);
             List<RoleV2> scimRoles = getScimRolesList(roles);
             rolesCount = roleManagementService.getRolesCount(tenantDomain);
             // Set total number of results to 0th index.
@@ -503,24 +505,31 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     /**
      * Get the search filter.
      *
+     * @param attributeName   Attribute name.
      * @param filterOperation Operator value.
      * @param attributeValue  Search value.
      * @return Search filter.
+     * @throws BadRequestException Error in building the search filter.
      */
-    private String getSearchFilter(String filterOperation, String attributeValue) {
+    private String getSearchFilter(String attributeName, String filterOperation, String attributeValue)
+            throws BadRequestException {
 
-        String searchAttribute = null;
-        if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
-            searchAttribute =
-                    SCIMRoleManagerV2.FILTERING_DELIMITER + attributeValue + SCIMRoleManagerV2.FILTERING_DELIMITER;
-        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
-            searchAttribute = attributeValue + SCIMRoleManagerV2.FILTERING_DELIMITER;
-        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
-            searchAttribute = SCIMRoleManagerV2.FILTERING_DELIMITER + attributeValue;
-        } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
-            searchAttribute = attributeValue;
+        String searchFilter;
+        switch (attributeName) {
+            case SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI:
+                searchFilter = ROLE_NAME_FILTER_ATTRIBUTE + " " + filterOperation + " " + attributeValue;
+                break;
+            case SCIMConstants.RoleSchemaConstants.AUDIENCE_VALUE_URI:
+                searchFilter = ROLE_AUDIENCE_ID_FILTER_ATTRIBUTE + " " + filterOperation + " " + attributeValue;
+                break;
+            case SCIMConstants.RoleSchemaConstants.AUDIENCE_TYPE_URI:
+                searchFilter = ROLE_AUDIENCE_TYPE_FILTER_ATTRIBUTE + " " + filterOperation + " " + attributeValue;
+                break;
+            default:
+                String errorMessage = "Filtering based on attribute: " + attributeName + " is not supported.";
+                throw new BadRequestException(errorMessage);
         }
-        return searchAttribute;
+        return searchFilter;
     }
 
     private List<RoleV2> getScimRolesList(List<RoleBasicInfo> roles) throws BadRequestException, CharonException {
@@ -833,7 +842,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
         addedPermissions.addAll(replacedPermissions);
     }
-
 
     private void updateGroups(String roleId, List<PatchOperation> groupOperations)
             throws CharonException, BadRequestException {
