@@ -167,6 +167,11 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
+                <version>${org.wso2.carbon.identity.organization.management.core.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.testutil</artifactId>
                 <scope>test</scope>
@@ -268,7 +273,7 @@
         <inbound.auth.oauth.version>6.5.3</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.9.4</carbon.kernel.version>
-        <identity.framework.version>5.25.336</identity.framework.version>
+        <identity.framework.version>5.25.374</identity.framework.version>
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.8.12</identity.governance.version>
@@ -303,8 +308,6 @@
         <scim.common.imp.pkg.version.range>[5.0.0, 6.0.0)</scim.common.imp.pkg.version.range>
         <carbon.identity.framework.imp.pkg.version.range>[5.20.118, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
-        <org.wso2.carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
-        </org.wso2.carbon.identity.organization.management.core.version.range>
 
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
         <testng.version>6.9.10</testng.version>
