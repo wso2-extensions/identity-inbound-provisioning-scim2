@@ -91,15 +91,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private static final String ROLE_NAME_FILTER_ATTRIBUTE = "name";
     private static final String ROLE_AUDIENCE_TYPE_FILTER_ATTRIBUTE = "audience";
     private static final String ROLE_AUDIENCE_ID_FILTER_ATTRIBUTE = "audienceId";
-
-    // TODO change to new Role manager Service.
     private RoleManagementService roleManagementService;
     private String tenantDomain;
     // TODO check whether can we change this in V2.
     private Set<String> systemRoles;
     private UserIDResolver userIDResolver = new UserIDResolver();
 
-    // TODO change to new Role manager Service.
     public SCIMRoleManagerV2(RoleManagementService roleManagementService, String tenantDomain) {
 
         this.roleManagementService = roleManagementService;
