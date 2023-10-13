@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
@@ -109,7 +110,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, ConflictException, NotImplementedException, BadRequestException {
 
         try {
-            if (!isTenantRepresentPrimaryOrg(tenantDomain)) {
+            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
                 throw new BadRequestException("Role creation is not allowed for sub-organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
@@ -265,7 +266,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
 
         try {
-            if (!isTenantRepresentPrimaryOrg(tenantDomain)) {
+            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
                 throw new BadRequestException("Role deletion is not allowed for sub-organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
@@ -358,7 +359,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
 
         if (CollectionUtils.isNotEmpty(displayNameOperations)) {
-            if (!isTenantRepresentPrimaryOrg(tenantDomain)) {
+            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
                 throw new BadRequestException("Role name modification is not allowed for sub-organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
@@ -366,7 +367,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             updateRoleName(roleId, currentRoleName, newRoleName);
         }
         if (CollectionUtils.isNotEmpty(permissionOperations)) {
-            if (!isTenantRepresentPrimaryOrg(tenantDomain)) {
+            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
                 throw new BadRequestException("Role's permission change is not allowed for sub-organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
@@ -562,7 +563,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         if (!StringUtils.equals(oldRoleDisplayName, newRoleDisplayName)) {
             // Update role name.
             try {
-                if (!isTenantRepresentPrimaryOrg(tenantDomain)) {
+                if (!isRoleModificationAllowedForTenant(tenantDomain)) {
                     throw new BadRequestException("Role name update is not allowed for sub-organizations.",
                             ResponseCodeConstants.INVALID_VALUE);
                 }
@@ -686,7 +687,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         // Update the role with added permissions and deleted permissions.
         if (isNotEmpty(deletePermissionValuesList) || isNotEmpty(addedPermissionValuesList)) {
-            if (!isTenantRepresentPrimaryOrg(tenantDomain)) {
+            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
                 throw new BadRequestException("Role's permission modification is not allowed for sub-organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
@@ -1125,9 +1126,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return false;
     }
 
-    private boolean isTenantRepresentPrimaryOrg(String tenantDomain) throws CharonException {
+    private boolean isRoleModificationAllowedForTenant(String tenantDomain) throws CharonException {
 
         try {
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                return true;
+            }
             String organizationId = getOrganizationManager().resolveOrganizationId(tenantDomain);
             if (StringUtils.isBlank(organizationId)) {
                 // There couldn't be any sub-org without an org id. Therefore, returning true.
