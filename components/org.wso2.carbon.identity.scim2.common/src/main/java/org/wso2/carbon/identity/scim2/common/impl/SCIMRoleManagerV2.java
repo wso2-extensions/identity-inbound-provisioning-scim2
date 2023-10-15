@@ -77,6 +77,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_PERMISSION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
@@ -156,7 +157,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 throw new ConflictException(e.getMessage());
             } else if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
                 throw new BadRequestException(e.getMessage());
-            } else if (INVALID_AUDIENCE.getCode().equals(e.getErrorCode())) {
+            } else if (INVALID_AUDIENCE.getCode().equals(e.getErrorCode()) ||
+                    INVALID_PERMISSION.getCode().equals(e.getErrorCode())) {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             throw new CharonException(
