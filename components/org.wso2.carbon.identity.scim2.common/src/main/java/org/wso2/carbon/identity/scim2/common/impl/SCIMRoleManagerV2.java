@@ -222,7 +222,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             // Set associated applications.
             List<MultiValuedComplexType> associatedApps =
                     convertAssociatedAppsToMultivaluedComplexType(role.getAssociatedApplications());
-            scimRole.setAssociatedApplications(associatedApps);
+            if (CollectionUtils.isNotEmpty(associatedApps)) {
+                scimRole.setAssociatedApplications(associatedApps);
+            }
             return scimRole;
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
