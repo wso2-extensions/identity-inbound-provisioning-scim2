@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -4247,18 +4248,18 @@ public class SCIMUserManager implements UserManager {
                 role.setId(groupObject.getId());
                 String location = SCIMCommonUtils.getSCIMRoleV2URL(groupObject.getId());
                 role.setLocation(location);
-                org.wso2.carbon.identity.role.v2.mgt.core.Role roleWithAudience = null;
                 try {
-                    roleWithAudience = SCIMCommonComponentHolder.getRoleManagementServiceV2()
-                            .getRole(groupObject.getId(), tenantDomain);
+                    org.wso2.carbon.identity.role.v2.mgt.core.RoleBasicInfo roleBasicInfo =
+                            SCIMCommonComponentHolder.getRoleManagementServiceV2()
+                                    .getRoleBasicInfoById(groupObject.getId(), tenantDomain);
+                    role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
+                            roleBasicInfo.getAudience());
                 } catch (IdentityRoleManagementException e) {
                     if (log.isDebugEnabled()) {
                         log.debug("Failed to resolve the audience for role id: " + groupObject.getId(), e);
                     }
                     return;
                 }
-                role.setAudience(roleWithAudience.getAudienceId(), roleWithAudience.getAudienceName(),
-                        roleWithAudience.getAudience());
                 scimUser.setRoleV2(role);
             } else {
                 Role role = new Role();
@@ -4496,18 +4497,17 @@ public class SCIMUserManager implements UserManager {
                 role.setId(groupObject.getId());
                 String location = SCIMCommonUtils.getSCIMRoleV2URL(groupObject.getId());
                 role.setLocation(location);
-                org.wso2.carbon.identity.role.v2.mgt.core.Role roleWithAudience = null;
                 try {
-                    roleWithAudience = SCIMCommonComponentHolder.getRoleManagementServiceV2()
-                            .getRole(groupObject.getId(), tenantDomain);
+                    RoleBasicInfo roleBasicInfo = SCIMCommonComponentHolder.getRoleManagementServiceV2()
+                            .getRoleBasicInfoById(groupObject.getId(), tenantDomain);
+                    role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
+                            roleBasicInfo.getAudience());
                 } catch (IdentityRoleManagementException e) {
                     if (log.isDebugEnabled()) {
                         log.debug("Failed to resolve the audience for role id: " + groupObject.getId(), e);
                     }
                     return;
                 }
-                role.setAudience(roleWithAudience.getAudienceId(), roleWithAudience.getAudienceName(),
-                        roleWithAudience.getAudience());
                 group.setRoleV2(role);
             } else {
                 Role role = new Role();
