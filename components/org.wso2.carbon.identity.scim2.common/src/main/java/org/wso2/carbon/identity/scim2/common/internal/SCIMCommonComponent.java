@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
-import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.handlers.SCIMClaimOperationEventHandler;
@@ -314,21 +313,6 @@ public class SCIMCommonComponent {
     protected void unsetScimUserStoreErrorResolver(SCIMUserStoreErrorResolver scimUserStoreErrorResolver) {
 
         SCIMCommonComponentHolder.removeScimUserStoreErrorResolver(scimUserStoreErrorResolver);
-    }
-
-    @Reference(name = "identity.organization.management.component",
-            service = OrganizationManager.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetOrganizationManager")
-    protected void setOrganizationManager(OrganizationManager organizationManager) {
-
-        SCIMCommonComponentHolder.setOrganizationManager(organizationManager);
-    }
-
-    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
-
-        SCIMCommonComponentHolder.setOrganizationManager(null);
     }
 
     @Deactivate

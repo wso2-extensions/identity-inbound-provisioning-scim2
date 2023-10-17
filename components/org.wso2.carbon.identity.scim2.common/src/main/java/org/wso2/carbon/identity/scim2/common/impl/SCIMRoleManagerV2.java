@@ -26,8 +26,8 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.AssociatedApplication;
 import org.wso2.carbon.identity.role.v2.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.IdentityRoleManagementException;
@@ -38,13 +38,11 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.UserBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.UserIDResolver;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
@@ -76,7 +74,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_PERMISSION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
@@ -112,7 +109,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         try {
             if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role creation is not allowed for sub-organizations.",
+                throw new BadRequestException("Role creation is not allowed for organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             // Check if the role already exists.
@@ -271,7 +268,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         try {
             if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role deletion is not allowed for sub-organizations.",
+                throw new BadRequestException("Role deletion is not allowed for organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             roleManagementService.deleteRole(roleID, tenantDomain);
@@ -364,7 +361,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         if (CollectionUtils.isNotEmpty(displayNameOperations)) {
             if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role name modification is not allowed for sub-organizations.",
+                throw new BadRequestException("Role name modification is not allowed for organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             String newRoleName = (String) displayNameOperations.get(displayNameOperations.size() - 1).getValues();
@@ -372,7 +369,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
         if (CollectionUtils.isNotEmpty(permissionOperations)) {
             if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role's permission change is not allowed for sub-organizations.",
+                throw new BadRequestException("Role's permission change is not allowed for organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             updatePermissions(roleId, permissionOperations);
@@ -568,7 +565,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             // Update role name.
             try {
                 if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                    throw new BadRequestException("Role name update is not allowed for sub-organizations.",
+                    throw new BadRequestException("Role name update is not allowed for organizations.",
                             ResponseCodeConstants.INVALID_VALUE);
                 }
                 roleManagementService.updateRoleName(oldRole.getId(), newRoleDisplayName, tenantDomain);
@@ -692,7 +689,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         // Update the role with added permissions and deleted permissions.
         if (isNotEmpty(deletePermissionValuesList) || isNotEmpty(addedPermissionValuesList)) {
             if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role's permission modification is not allowed for sub-organizations.",
+                throw new BadRequestException("Role's permission modification is not allowed for organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             if (LOG.isDebugEnabled()) {
@@ -1133,29 +1130,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private boolean isRoleModificationAllowedForTenant(String tenantDomain) throws CharonException {
 
         try {
-            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                return true;
-            }
-            String organizationId = getOrganizationManager().resolveOrganizationId(tenantDomain);
-            if (StringUtils.isBlank(organizationId)) {
-                // There couldn't be any sub-org without an org id. Therefore, returning true.
-                return true;
-            }
-            return getOrganizationManager().isPrimaryOrganization(organizationId);
+            return !OrganizationManagementUtil.isOrganization(tenantDomain);
         } catch (OrganizationManagementException e) {
-            if (ERROR_CODE_ORGANIZATION_NOT_FOUND_FOR_TENANT.getCode().equals(e.getErrorCode())) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Organization not found for the tenant: " + tenantDomain);
-                }
-                // There couldn't be any sub-org without an org id. Therefore, returning true.
-                return true;
-            }
-            throw new CharonException("Error while checking whether the organization is primary.", e);
+            throw new CharonException("Error while checking whether the tenant is an organization.", e);
         }
-    }
-
-    private static OrganizationManager getOrganizationManager() {
-
-        return SCIMCommonComponentHolder.getOrganizationManager();
     }
 }
