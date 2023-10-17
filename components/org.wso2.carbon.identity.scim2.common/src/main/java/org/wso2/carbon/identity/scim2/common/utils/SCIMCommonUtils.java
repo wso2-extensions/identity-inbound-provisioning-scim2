@@ -385,7 +385,7 @@ public class SCIMCommonUtils {
 
         String tenantDomain;
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
+            tenantDomain = getTenantDomainFromContext();
         } else {
             tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         }

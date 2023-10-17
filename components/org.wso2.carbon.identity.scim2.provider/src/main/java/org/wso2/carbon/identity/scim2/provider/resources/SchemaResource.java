@@ -37,6 +37,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getTenantDomainFromContext;
+
 public class SchemaResource extends AbstractResource {
 
     private static final Log logger = LogFactory.getLog(SchemaResource.class);
@@ -68,7 +70,7 @@ public class SchemaResource extends AbstractResource {
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
             if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                String tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
+                String tenantDomain = getTenantDomainFromContext();
             }
 
             // create charon-SCIM schemas endpoint and hand-over the request.
