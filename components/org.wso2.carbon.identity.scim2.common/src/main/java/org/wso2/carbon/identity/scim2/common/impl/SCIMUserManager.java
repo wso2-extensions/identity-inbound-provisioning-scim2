@@ -150,6 +150,8 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
     private static final String ERROR_CODE_INVALID_ROLE_NAME = "30011";
+    private static final String ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION = "ORG-60090";
+    private static final String ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION = "ORG-60091";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
@@ -419,6 +421,14 @@ public class SCIMUserManager implements UserManager {
                     .equals(ERROR_CODE_PASSWORD_HISTORY_VIOLATION, ((IdentityEventException) e).getErrorCode())) {
                 throw new BadRequestException(ERROR_CODE_PASSWORD_HISTORY_VIOLATION + " - " + e.getMessage(),
                         ResponseCodeConstants.INVALID_VALUE);
+            }
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException) {
+                String errorCode = ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode();
+                if (StringUtils.equals(errorCode,
+                        (ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION)) ||
+                        StringUtils.equals(errorCode, ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION)) {
+                    throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                }
             }
             e = e.getCause();
             i++;
