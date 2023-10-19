@@ -53,7 +53,6 @@ import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
-import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
 import java.util.Arrays;
 import java.util.Collections;
