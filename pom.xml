@@ -166,7 +166,11 @@
                 <scope>test</scope>
                 <version>${identity.framework.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
+                <version>${org.wso2.carbon.identity.organization.management.core.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
                 <artifactId>org.wso2.carbon.identity.scim2.common</artifactId>
@@ -263,6 +267,8 @@
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.8.12</identity.governance.version>
         <charon.version>4.0.10</charon.version>
+        <org.wso2.carbon.identity.organization.management.core.version>1.0.70
+        </org.wso2.carbon.identity.organization.management.core.version>
 
         <!--Maven Plugin Version-->
         <maven.compiler.plugin.version>2.3.1</maven.compiler.plugin.version>
@@ -291,6 +297,8 @@
         <scim.common.imp.pkg.version.range>[5.0.0, 6.0.0)</scim.common.imp.pkg.version.range>
         <carbon.identity.framework.imp.pkg.version.range>[5.20.118, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
+        <org.wso2.carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
+        </org.wso2.carbon.identity.organization.management.core.version.range>
 
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
         <testng.version>6.9.10</testng.version>
