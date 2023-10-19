@@ -26,6 +26,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementClientException;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
@@ -51,6 +53,7 @@ import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -85,7 +88,7 @@ import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.UNEXPEC
 /**
  * Contains the unit test cases for SCIMRoleManager.
  */
-@PrepareForTest({SCIMCommonUtils.class})
+@PrepareForTest({SCIMCommonUtils.class, OrganizationManagementUtil.class})
 public class SCIMRoleManagerTest extends PowerMockTestCase {
 
     private static final String SAMPLE_TENANT_DOMAIN = "carbon.super";
@@ -129,6 +132,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     public void setUpMethod() {
 
         mockStatic(SCIMCommonUtils.class);
+        mockStatic(OrganizationManagementUtil.class);
         when(SCIMCommonUtils.getSCIMRoleURL(nullable(String.class))).thenReturn(DUMMY_SCIM_URL);
         when(mockRoleManagementService.getSystemRoles()).thenReturn(SYSTEM_ROLES);
     }
@@ -144,30 +148,35 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
     @Test(dataProvider = "dataProviderForCreateRoleExistingRole")
     public void testCreateRoleExistingRole(String roleId, String roleDisplayName)
-            throws IdentityRoleManagementException, BadRequestException, CharonException {
+            throws IdentityRoleManagementException, BadRequestException, CharonException,
+            OrganizationManagementException {
 
         Role role = getDummyRole(roleId, roleDisplayName);
         when(mockRoleManagementService.isExistingRole(anyString(), anyString())).thenReturn(true);
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN2);
         assertThrows(ConflictException.class, () -> scimRoleManager.createRole(role));
     }
 
     @Test
     public void testCreateRoleAddRoleExistingRoleName()
-            throws BadRequestException, CharonException, IdentityRoleManagementException {
+            throws BadRequestException, CharonException, IdentityRoleManagementException,
+            OrganizationManagementException {
 
         Role role = getDummyRole(SAMPLE_VALID_ROLE_ID2, SAMPLE_EXISTING_ROLE_NAME);
         when(mockRoleManagementService.addRole(anyString(), anyListOf(String.class), anyListOf(String.class),
                 anyListOf(String.class), anyString())).thenThrow(
                 new IdentityRoleManagementException(ROLE_ALREADY_EXISTS.getCode(),
                         "Role already exist for the role name: " + SAMPLE_EXISTING_ROLE_NAME));
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN);
         assertThrows(ConflictException.class, () -> scimRoleManager.createRole(role));
     }
 
     @Test
     public void testCreateRoleAddRoleInvalidRoleName()
-            throws BadRequestException, CharonException, IdentityRoleManagementException {
+            throws BadRequestException, CharonException, IdentityRoleManagementException,
+            OrganizationManagementException {
 
         Role role = getDummyRole(SAMPLE_VALID_ROLE_ID, SAMPLE_INVALID_ROLE_NAME);
 
@@ -177,6 +186,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                         String.format("Invalid role name: %s. Role names with the prefix: %s, is not allowed"
                                         + " to be created from externally in the system.", SAMPLE_INVALID_ROLE_NAME,
                                 UserCoreConstants.INTERNAL_SYSTEM_ROLE_PREFIX)));
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN);
         assertThrows(BadRequestException.class, () -> scimRoleManager.createRole(role));
     }
@@ -193,13 +203,15 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     @Test(dataProvider = "dataProviderForCreateRoleUnexpectedServerError")
     public void testCreateRoleUnexpectedServerError(String roleId, String roleDisplayName, String tenantDomain,
                                                     String sError)
-            throws BadRequestException, CharonException, IdentityRoleManagementException {
+            throws BadRequestException, CharonException, IdentityRoleManagementException,
+            OrganizationManagementException {
 
         Role role = getDummyRole(roleId, roleDisplayName);
         when(mockRoleManagementService.addRole(anyString(), anyListOf(String.class), anyListOf(String.class),
                 anyListOf(String.class), anyString())).
                 thenThrow(unExpectedErrorThrower(tenantDomain, sError,
                         "Error while creating the role: %s in the tenantDomain: %s", roleDisplayName));
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         assertThrows(CharonException.class, () -> scimRoleManager.createRole(role));
     }
@@ -220,11 +232,13 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
     @Test(dataProvider = "dataProviderForCreateRolePositive")
     public void testCreateRolePositive(String roleId, String roleDisplayName, String tenantDomain)
-            throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException {
+            throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
+            OrganizationManagementException {
 
         Role role = getDummyRole(roleId, roleDisplayName);
         when(mockRoleManagementService.addRole(nullable(String.class), anyListOf(String.class), anyListOf(String.class),
                 anyListOf(String.class), anyString())).thenReturn(new RoleBasicInfo(roleId, roleDisplayName));
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         Role createdRole = scimRoleManager.createRole(role);
         assertEquals(createdRole.getDisplayName(), roleDisplayName);
