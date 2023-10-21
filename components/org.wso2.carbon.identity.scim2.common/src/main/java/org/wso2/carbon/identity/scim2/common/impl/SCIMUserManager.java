@@ -127,6 +127,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
@@ -150,8 +152,6 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
     private static final String ERROR_CODE_INVALID_ROLE_NAME = "30011";
-    private static final String ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION = "ORG-60090";
-    private static final String ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION = "ORG-60091";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
@@ -425,8 +425,8 @@ public class SCIMUserManager implements UserManager {
             if (e instanceof org.wso2.carbon.user.core.UserStoreException) {
                 String errorCode = ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode();
                 if (StringUtils.equals(errorCode,
-                        (ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION)) ||
-                        StringUtils.equals(errorCode, ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION)) {
+                        (ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION.getCode())) ||
+                        StringUtils.equals(errorCode, ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION.getCode())) {
                     throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
                 }
             }
