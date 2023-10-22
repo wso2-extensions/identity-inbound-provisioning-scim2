@@ -432,7 +432,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         String attributeValue = node.getValue();
         if (LOG.isDebugEnabled()) {
             LOG.debug(
-                    "Filtering roles with filter: " + attributeName + " + " + filterOperation + " + " + attributeValue);
+                    "Filtering roles with attributeName: " + attributeName + " , filterOperation: " + filterOperation +
+                            " , attributeValue: " + attributeValue);
         }
         // Check whether the filter operation is supported for filtering in roles.
         if (isFilteringNotSupported(filterOperation)) {
