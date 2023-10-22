@@ -4223,8 +4223,6 @@ public class SCIMUserManager implements UserManager {
                                 User scimUser) throws org.wso2.carbon.user.core.UserStoreException, CharonException,
             IdentitySCIMException, BadRequestException {
 
-        // TODO: Read from config whether v1 roles ot v2 roles are used
-        boolean useRoleV2 = true;
         // Add roles of user.
         for (String roleName : rolesOfUser) {
             if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
@@ -4242,7 +4240,14 @@ public class SCIMUserManager implements UserManager {
                 groupMetaAttributesCache.put(roleName, groupObject);
             }
 
-            if (useRoleV2) {
+            if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                Role role = new Role();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
+                role.setLocation(location);
+                scimUser.setRole(role);
+            } else {
                 RoleV2 role = new RoleV2();
                 role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
                 role.setId(groupObject.getId());
@@ -4261,13 +4266,6 @@ public class SCIMUserManager implements UserManager {
                     return;
                 }
                 scimUser.setRoleV2(role);
-            } else {
-                Role role = new Role();
-                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
-                role.setId(groupObject.getId());
-                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
-                role.setLocation(location);
-                scimUser.setRole(role);
             }
         }
     }
@@ -4472,8 +4470,6 @@ public class SCIMUserManager implements UserManager {
         List<String> rolesOfGroup = carbonUM.getHybridRoleListOfGroup(UserCoreUtil.removeDomainFromName(groupName),
                 UserCoreUtil.extractDomainFromName(groupName));
 
-        // TODO: read from config.
-        boolean useV2Roles =  true;
         // Add roles of group.
         for (String roleName : rolesOfGroup) {
             if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
@@ -4491,7 +4487,14 @@ public class SCIMUserManager implements UserManager {
                 groupMetaAttributesCache.put(roleName, groupObject);
             }
 
-            if (useV2Roles) {
+            if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                Role role = new Role();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
+                role.setLocation(location);
+                group.setRole(role);
+            } else {
                 RoleV2 role = new RoleV2();
                 role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
                 role.setId(groupObject.getId());
@@ -4509,13 +4512,6 @@ public class SCIMUserManager implements UserManager {
                     return;
                 }
                 group.setRoleV2(role);
-            } else {
-                Role role = new Role();
-                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
-                role.setId(groupObject.getId());
-                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
-                role.setLocation(location);
-                group.setRole(role);
             }
         }
     }

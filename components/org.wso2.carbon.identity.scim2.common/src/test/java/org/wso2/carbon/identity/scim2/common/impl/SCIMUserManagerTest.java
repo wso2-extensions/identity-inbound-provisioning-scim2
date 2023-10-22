@@ -32,6 +32,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -125,7 +126,7 @@ import static org.testng.Assert.assertTrue;
         SCIMAttributeSchema.class, AttributeMapper.class, ClaimMetadataHandler.class, SCIMCommonUtils.class,
         IdentityTenantUtil.class, AbstractUserStoreManager.class, Group.class, UserCoreUtil.class,
         ApplicationManagementService.class, RolePermissionManagementService.class, SCIMCommonComponentHolder.class,
-        SCIMUserManager.class})
+        SCIMUserManager.class, CarbonConstants.class})
 @PowerMockIgnore({"java.sql.*","javax.xml.*","org.w3c.dom.*","org.xml.sax.*"})
 public class SCIMUserManagerTest extends PowerMockTestCase {
 
@@ -316,6 +317,10 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 thenReturn(buildUserCoreGroupResponse(roleName, groupId, userStoreDomain));
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
+
+        mockStatic(CarbonConstants.class);
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
         Group result = scimUserManager.getGroup(groupId, new HashMap<>());
         String actual = null;
@@ -424,6 +429,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockRealmConfig.getEveryOneRoleName()).thenReturn("admin");
 
         when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("value");
+
+        mockStatic(CarbonConstants.class);
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
 
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName",
@@ -1021,6 +1029,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/scim2/Groups");
 
+        mockStatic(CarbonConstants.class);
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+
         SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
         GroupsGetResponse groupsResponse = scimUserManager
                 .listGroupsWithGET(node, 1, null, null, null, "Application", requiredAttributes);
@@ -1328,6 +1339,9 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
                 thenReturn(mandateDomainForUsernamesAndGroupNamesInResponse);
         when(SCIMCommonUtils.prependDomain(anyString())).thenCallRealMethod();
         when(SCIMCommonUtils.isHybridRole(anyString())).thenCallRealMethod();
+
+        mockStatic(CarbonConstants.class);
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
 
         org.wso2.carbon.user.core.common.User user = mock(org.wso2.carbon.user.core.common.User.class);
         when(user.getUserStoreDomain()).thenReturn(userStoreDomainName);
