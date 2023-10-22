@@ -42,8 +42,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
-import org.wso2.carbon.identity.role.v2.mgt.core.IdentityRoleManagementException;
-import org.wso2.carbon.identity.role.v2.mgt.core.RoleBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -4254,7 +4254,7 @@ public class SCIMUserManager implements UserManager {
                 String location = SCIMCommonUtils.getSCIMRoleV2URL(groupObject.getId());
                 role.setLocation(location);
                 try {
-                    org.wso2.carbon.identity.role.v2.mgt.core.RoleBasicInfo roleBasicInfo =
+                    org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo roleBasicInfo =
                             SCIMCommonComponentHolder.getRoleManagementServiceV2()
                                     .getRoleBasicInfoById(groupObject.getId(), tenantDomain);
                     role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
