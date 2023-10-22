@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -38,6 +38,7 @@ public class SCIMCommonComponentHolder {
     private static ClaimMetadataManagementService claimManagementService;
     private static RolePermissionManagementService rolePermissionManagementService;
     private static RoleManagementService roleManagementService;
+    private static org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementServiceV2;
     private static final List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
 
     /**
@@ -118,6 +119,27 @@ public class SCIMCommonComponentHolder {
     public static RoleManagementService getRoleManagementService() {
 
         return roleManagementService;
+    }
+
+    /**
+     * Set role management service V2.
+     *
+     * @param roleManagementService RoleManagementServiceV2.
+     */
+    public static void setRoleManagementServiceV2(
+            org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+
+        SCIMCommonComponentHolder.roleManagementServiceV2 = roleManagementService;
+    }
+
+    /**
+     * Get role management service V2.
+     *
+     * @return RoleManagementServiceV2.
+     */
+    public static org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService getRoleManagementServiceV2() {
+
+        return roleManagementServiceV2;
     }
 
     public static List<SCIMUserStoreErrorResolver> getScimUserStoreErrorResolverList() {

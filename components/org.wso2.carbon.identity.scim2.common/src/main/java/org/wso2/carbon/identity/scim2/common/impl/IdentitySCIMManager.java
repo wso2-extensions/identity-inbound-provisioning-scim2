@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -35,6 +35,7 @@ import org.wso2.charon3.core.config.CharonConfiguration;
 import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.extensions.RoleManager;
+import org.wso2.charon3.core.extensions.RoleV2Manager;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -90,6 +91,7 @@ public class IdentitySCIMManager {
         endpointURLs.put(SCIMConstants.USER_ENDPOINT, SCIMCommonUtils.getSCIMUserURL());
         endpointURLs.put(SCIMConstants.GROUP_ENDPOINT, SCIMCommonUtils.getSCIMGroupURL());
         endpointURLs.put(SCIMConstants.ROLE_ENDPOINT, SCIMCommonUtils.getSCIMRoleURL());
+        endpointURLs.put(SCIMConstants.ROLE_V2_ENDPOINT, SCIMCommonUtils.getSCIMRoleV2URL());
         endpointURLs.put(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT, SCIMCommonUtils
                 .getSCIMServiceProviderConfigURL());
         endpointURLs.put(SCIMConstants.RESOURCE_TYPE_ENDPOINT, SCIMCommonUtils.getSCIMResourceTypeURL());
@@ -148,6 +150,17 @@ public class IdentitySCIMManager {
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(SCIMCommonComponentHolder.getRoleManagementService(),
                 tenantDomain);
         return scimRoleManager;
+    }
+
+    /**
+     * Obtain the RoleV2 manager.
+     *
+     * @return RoleV2Manager.
+     */
+    public RoleV2Manager getRoleV2Manager() {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        return new SCIMRoleManagerV2(SCIMCommonComponentHolder.getRoleManagementServiceV2(), tenantDomain);
     }
 
     /**

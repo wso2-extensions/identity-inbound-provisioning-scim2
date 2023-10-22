@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -42,6 +42,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -88,6 +90,7 @@ import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
+import org.wso2.charon3.core.objects.RoleV2;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
 import org.wso2.charon3.core.objects.plainobjects.GroupsGetResponse;
@@ -3982,7 +3985,7 @@ public class SCIMUserManager implements UserManager {
                 }
             }
 
-            // Set the roles attribute if the the role and group separation feature is enabled.
+            // Set the roles attribute if the role and group separation feature is enabled.
             if (carbonUM.isRoleAndGroupSeparationEnabled()) {
                 setRolesOfUser(rolesList, groupMetaAttributesCache, coreUser, scimUser);
             }
@@ -4237,12 +4240,33 @@ public class SCIMUserManager implements UserManager {
                 groupMetaAttributesCache.put(roleName, groupObject);
             }
 
-            Role role = new Role();
-            role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
-            role.setId(groupObject.getId());
-            String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
-            role.setLocation(location);
-            scimUser.setRole(role);
+            if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                Role role = new Role();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
+                role.setLocation(location);
+                scimUser.setRole(role);
+            } else {
+                RoleV2 role = new RoleV2();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleV2URL(groupObject.getId());
+                role.setLocation(location);
+                try {
+                    org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo roleBasicInfo =
+                            SCIMCommonComponentHolder.getRoleManagementServiceV2()
+                                    .getRoleBasicInfoById(groupObject.getId(), tenantDomain);
+                    role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
+                            roleBasicInfo.getAudience());
+                } catch (IdentityRoleManagementException e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Failed to resolve the audience for role id: " + groupObject.getId(), e);
+                    }
+                    return;
+                }
+                scimUser.setRoleV2(role);
+            }
         }
     }
 
@@ -4463,12 +4487,32 @@ public class SCIMUserManager implements UserManager {
                 groupMetaAttributesCache.put(roleName, groupObject);
             }
 
-            Role role = new Role();
-            role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
-            role.setId(groupObject.getId());
-            String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
-            role.setLocation(location);
-            group.setRole(role);
+            if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                Role role = new Role();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
+                role.setLocation(location);
+                group.setRole(role);
+            } else {
+                RoleV2 role = new RoleV2();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleV2URL(groupObject.getId());
+                role.setLocation(location);
+                try {
+                    RoleBasicInfo roleBasicInfo = SCIMCommonComponentHolder.getRoleManagementServiceV2()
+                            .getRoleBasicInfoById(groupObject.getId(), tenantDomain);
+                    role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
+                            roleBasicInfo.getAudience());
+                } catch (IdentityRoleManagementException e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Failed to resolve the audience for role id: " + groupObject.getId(), e);
+                    }
+                    return;
+                }
+                group.setRoleV2(role);
+            }
         }
     }
 

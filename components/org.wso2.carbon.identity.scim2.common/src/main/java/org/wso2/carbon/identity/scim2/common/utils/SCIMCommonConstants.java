@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -35,6 +35,7 @@ public class SCIMCommonConstants {
     public static final String USERS = "/Users";
     public static final String GROUPS = "/Groups";
     public static final String ROLES = "/Roles";
+    public static final String ROLES_V2 = "/v2/Roles";
     public static final String SERVICE_PROVIDER_CONFIG = "/ServiceProviderConfig";
     public static final String RESOURCE_TYPE = "/ResourceTypes";
     public static final String DEFAULT = "default";

@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -97,6 +97,11 @@ public class SCIMCommonUtils {
         return StringUtils.isNotBlank(id) ? getSCIMRoleURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
     }
 
+    public static String getSCIMRoleV2URL(String id) {
+
+        return StringUtils.isNotBlank(id) ? getSCIMRoleV2URL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+    }
+
     public static String getSCIMServiceProviderConfigURL(String id) {
         return getSCIMServiceProviderConfigURL() ;
     }
@@ -119,6 +124,67 @@ public class SCIMCommonUtils {
 
         String scimURL = getSCIMURL(false);
         return scimURL + SCIMCommonConstants.ROLES;
+    }
+
+    public static String getSCIMRoleV2URL() {
+
+        String scimURL = getSCIMURL(true);
+        return scimURL + SCIMCommonConstants.ROLES_V2;
+    }
+
+    public static String getApplicationRefURL(String id) {
+
+        String applicationURL;
+        String path = "/api/server/v1/applications";
+        try {
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                applicationURL = ServiceURLBuilder.create().addPath(path).build()
+                        .getAbsolutePublicURL();
+            } else {
+                applicationURL = getURLIfTenantQualifiedURLDisabled(path);
+            }
+            return StringUtils.isNotBlank(id) ? applicationURL + SCIMCommonConstants.URL_SEPERATOR + id : null;
+        } catch (URLBuilderException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while building the application endpoint with tenant/organization " +
+                        "qualified URL.", e);
+            }
+            return null;
+        }
+    }
+
+    public static String getPermissionRefURL(String apiId, String permissionName) {
+
+        String apiResourceURL;
+        String apiResourcePath = "/api/server/v1/api-resources";
+        try {
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                apiResourceURL = ServiceURLBuilder.create().addPath(apiResourcePath).build()
+                        .getAbsolutePublicURL();
+            } else {
+                apiResourceURL = getURLIfTenantQualifiedURLDisabled(apiResourcePath);
+            }
+            return StringUtils.isNotBlank(apiId) && StringUtils.isNotBlank(permissionName) ?
+                    new StringBuilder().append(apiResourceURL).append(SCIMCommonConstants.URL_SEPERATOR).append(apiId)
+                            .append(SCIMCommonConstants.URL_SEPERATOR).append("scopes")
+                            .append(SCIMCommonConstants.URL_SEPERATOR).append(permissionName).toString() : null;
+        } catch (URLBuilderException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while building the application endpoint with tenant/organization " +
+                        "qualified URL.", e);
+            }
+            return null;
+        }
+    }
+
+    private static String getURLIfTenantQualifiedURLDisabled(String resourcePath) throws URLBuilderException {
+
+        String serverUrl = ServiceURLBuilder.create().build().getAbsolutePublicURL();
+        String tenantDomain = getTenantDomainFromContext();
+        if (isNotASuperTenantFlow(tenantDomain)) {
+            return serverUrl + "/t/" + tenantDomain + resourcePath;
+        }
+        return serverUrl + resourcePath;
     }
 
     public static String getTenantDomainFromContext() {
