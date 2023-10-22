@@ -127,6 +127,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
@@ -419,6 +421,14 @@ public class SCIMUserManager implements UserManager {
                     .equals(ERROR_CODE_PASSWORD_HISTORY_VIOLATION, ((IdentityEventException) e).getErrorCode())) {
                 throw new BadRequestException(ERROR_CODE_PASSWORD_HISTORY_VIOLATION + " - " + e.getMessage(),
                         ResponseCodeConstants.INVALID_VALUE);
+            }
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException) {
+                String errorCode = ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode();
+                if (StringUtils.equals(errorCode,
+                        (ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION.getCode())) ||
+                        StringUtils.equals(errorCode, ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION.getCode())) {
+                    throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                }
             }
             e = e.getCause();
             i++;

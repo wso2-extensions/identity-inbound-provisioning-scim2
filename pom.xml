@@ -267,7 +267,7 @@
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.8.12</identity.governance.version>
         <charon.version>4.0.10</charon.version>
-        <org.wso2.carbon.identity.organization.management.core.version>1.0.70
+        <org.wso2.carbon.identity.organization.management.core.version>1.0.76
         </org.wso2.carbon.identity.organization.management.core.version>
 
         <!--Maven Plugin Version-->
