@@ -92,7 +92,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private static final String ROLE_AUDIENCE_ID_FILTER_ATTRIBUTE = "audienceId";
     private RoleManagementService roleManagementService;
     private String tenantDomain;
-    // TODO check whether can we change this in V2.
     private Set<String> systemRoles;
     private UserIDResolver userIDResolver = new UserIDResolver();
 
@@ -114,7 +113,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             }
             // Check if the role already exists.
             if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
-                String error = "Role with name: " + role.getDisplayName() + " already exists in the tenantDomain: "
+                String error = "Role with id: " + role.getId() + " already exists in the tenantDomain: "
                         + tenantDomain;
                 throw new ConflictException(error);
             }
@@ -240,10 +239,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 String appId = associatedApplication.getId();
                 String appName = associatedApplication.getName();
                 MultiValuedComplexType applicationComplexObject = new MultiValuedComplexType();
-                String applicationLocationURI = SCIMCommonUtils.getApplicationRefURL(appId);
                 applicationComplexObject.setValue(appId);
                 applicationComplexObject.setDisplay(appName);
-                applicationComplexObject.setReference(applicationLocationURI);
+                applicationComplexObject.setReference(SCIMCommonUtils.getApplicationRefURL(appId));
                 associatedApplicationsList.add(applicationComplexObject);
             }
         }
@@ -258,6 +256,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 MultiValuedComplexType permissionComplexObject = new MultiValuedComplexType();
                 permissionComplexObject.setValue(permission.getName());
                 permissionComplexObject.setDisplay(permission.getDisplayName());
+                permissionComplexObject.setReference(
+                        SCIMCommonUtils.getPermissionRefURL(permission.getApiId().get(), permission.getName()));
                 permissionValues.add(permissionComplexObject);
             }
         }
