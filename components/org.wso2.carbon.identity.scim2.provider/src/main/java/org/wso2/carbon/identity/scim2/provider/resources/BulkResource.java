@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.extensions.RoleManager;
+import org.wso2.charon3.core.extensions.RoleV2Manager;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.BulkResourceManager;
@@ -48,25 +49,28 @@ public class BulkResource extends AbstractResource {
                 throw new FormatNotSupportedException(error);
             }
 
-            if(!isValidInputFormat(inputFormat)){
+            if (!isValidInputFormat(inputFormat)) {
                 String error = inputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
 
-            if(!isValidOutputFormat(outputFormat)){
+            if (!isValidOutputFormat(outputFormat)) {
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
 
-            // obtain the user store manager
+            // Obtain the user store manager.
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
             // Obtain the role manager.
             RoleManager roleManager = IdentitySCIMManager.getInstance().getRoleManager();
+            // Obtain the role v2 manager.
+            RoleV2Manager roleV2Manager = IdentitySCIMManager.getInstance().getRoleV2Manager();
 
             // create charon-SCIM bulk endpoint and hand-over the request.
             BulkResourceManager bulkResourceManager = new BulkResourceManager();
             // Call for process bulk data.
-            SCIMResponse scimResponse = bulkResourceManager.processBulkData(resourceString, userManager, roleManager);
+            SCIMResponse scimResponse =
+                    bulkResourceManager.processBulkData(resourceString, userManager, roleManager, roleV2Manager);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
             return SupportUtils.buildResponse(scimResponse);
