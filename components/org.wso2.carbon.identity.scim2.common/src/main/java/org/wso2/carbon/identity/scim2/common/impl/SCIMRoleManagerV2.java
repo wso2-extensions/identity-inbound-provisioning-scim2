@@ -404,7 +404,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         if (node instanceof ExpressionNode || node instanceof OperationNode) {
             return filterRolesByAttributes(node, count, startIndex, sortBy, sortOrder);
         }
-
         throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
     }
 
@@ -450,7 +449,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             String rightFilter = buildSearchFilter(operationNode.getRightNode());
             return combineFilters(operationNode, leftFilter, rightFilter);
         }
-
         throw new BadRequestException("Unknown operation.");
     }
 
@@ -465,7 +463,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             String errorMessage = "Filter operation: " + filterOperation + " is not supported for role filtering.";
             throw new BadRequestException(errorMessage);
         }
-
         return getSearchFilter(attributeName, filterOperation, attributeValue);
     }
 
@@ -476,7 +473,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             String errorMessage = "Filter operator: " + operator + " is not supported for role filtering.";
             throw new BadRequestException(errorMessage);
         }
-
         return String.format("%s %s %s", leftFilter, operator, rightFilter);
     }
 
