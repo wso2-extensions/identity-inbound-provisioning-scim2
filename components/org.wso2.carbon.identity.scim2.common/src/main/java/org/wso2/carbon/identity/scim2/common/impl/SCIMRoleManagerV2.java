@@ -74,12 +74,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_PERMISSION;
-import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
-import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_MANAGEMENT_ERROR_CODE_PREFIX;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_REQUEST;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
 
 /**
  * Implementation of the {@link RoleV2Manager} interface to manage RoleResourceV2.
@@ -277,6 +278,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 throw new NotFoundException(e.getMessage());
             } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
                 throw new BadRequestException(e.getMessage());
+            } else if (INVALID_REQUEST.getCode().equals(ROLE_MANAGEMENT_ERROR_CODE_PREFIX + e.getErrorCode())) {
+                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             throw new CharonException(String.format("Error occurred while deleting the role: %s", roleID), e);
         }
@@ -943,7 +946,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             } catch (IdentityRoleManagementException e) {
                 if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
-                } else if (RoleConstants.Error.INVALID_PERMISSION.getCode().equals("RMA-" + e.getErrorCode())) {
+                } else if (RoleConstants.Error.INVALID_PERMISSION.getCode()
+                        .equals(ROLE_MANAGEMENT_ERROR_CODE_PREFIX + e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
