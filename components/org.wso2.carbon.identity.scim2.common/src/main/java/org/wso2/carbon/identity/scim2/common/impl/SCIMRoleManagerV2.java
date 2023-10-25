@@ -278,7 +278,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 throw new NotFoundException(e.getMessage());
             } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
                 throw new BadRequestException(e.getMessage());
-            } else if (INVALID_REQUEST.getCode().equals(ROLE_MANAGEMENT_ERROR_CODE_PREFIX + e.getErrorCode())) {
+            } else if (INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             throw new CharonException(String.format("Error occurred while deleting the role: %s", roleID), e);
