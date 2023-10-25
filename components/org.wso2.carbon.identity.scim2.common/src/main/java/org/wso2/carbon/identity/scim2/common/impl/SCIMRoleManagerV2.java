@@ -74,12 +74,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_PERMISSION;
-import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
-import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_PERMISSION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_REQUEST;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 
 /**
  * Implementation of the {@link RoleV2Manager} interface to manage RoleResourceV2.
@@ -401,21 +401,16 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                                            String sortOrder)
             throws CharonException, NotImplementedException, BadRequestException {
 
-        // Handle single attribute search.
-        if (node instanceof ExpressionNode) {
-            return filterRolesBySingleAttribute((ExpressionNode) node, count, startIndex, sortBy, sortOrder);
-        } else if (node instanceof OperationNode) {
-            String error = "Complex filters are not supported yet.";
-            throw new NotImplementedException(error);
-        } else {
-            throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
+        if (node instanceof ExpressionNode || node instanceof OperationNode) {
+            return filterRolesByAttributes(node, count, startIndex, sortBy, sortOrder);
         }
+        throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
     }
 
     /**
      * Get the list of roles based on the filter.
      *
-     * @param node       Expression node.
+     * @param node       Filter node.
      * @param startIndex Starting index.
      * @param count      Number of results required.
      * @param sortBy     SortBy.
@@ -423,25 +418,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @return Filtered roles.
      * @throws CharonException Error filtering the roles.
      */
-    private RolesV2GetResponse filterRolesBySingleAttribute(ExpressionNode node, Integer count, Integer startIndex,
+    private RolesV2GetResponse filterRolesByAttributes(Node node, Integer count, Integer startIndex,
                                                             String sortBy, String sortOrder)
             throws CharonException, BadRequestException {
 
-        String attributeName = node.getAttributeValue();
-        String filterOperation = node.getOperation();
-        String attributeValue = node.getValue();
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                    "Filtering roles with attributeName: " + attributeName + " , filterOperation: " + filterOperation +
-                            " , attributeValue: " + attributeValue);
-        }
-        // Check whether the filter operation is supported for filtering in roles.
-        if (isFilteringNotSupported(filterOperation)) {
-            String errorMessage = "Filter operation: " + filterOperation + " is not supported for role filtering.";
-            throw new BadRequestException(errorMessage);
-        }
-
-        String searchFilter = getSearchFilter(attributeName, filterOperation, attributeValue);
+        String searchFilter = buildSearchFilter(node);
         if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("Filtering roles from search filter: %s", searchFilter));
         }
@@ -455,6 +436,44 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
         List<RoleV2> scimRoles = getScimRolesList(roles);
         return new RolesV2GetResponse(scimRoles.size(), scimRoles);
+    }
+
+    private String buildSearchFilter(Node node) throws BadRequestException {
+
+        if (node instanceof ExpressionNode) {
+            ExpressionNode expressionNode = (ExpressionNode) node;
+            return createFilter(expressionNode);
+        } else if (node instanceof OperationNode) {
+            OperationNode operationNode = (OperationNode) node;
+            String leftFilter = buildSearchFilter(operationNode.getLeftNode());
+            String rightFilter = buildSearchFilter(operationNode.getRightNode());
+            return combineFilters(operationNode, leftFilter, rightFilter);
+        }
+        throw new BadRequestException("Unknown operation.");
+    }
+
+    private String createFilter(ExpressionNode expressionNode) throws BadRequestException {
+
+        String attributeName = expressionNode.getAttributeValue();
+        String filterOperation = expressionNode.getOperation();
+        String attributeValue = expressionNode.getValue();
+
+        // Check whether the filter operation is supported for filtering in roles.
+        if (isFilteringNotSupported(filterOperation)) {
+            String errorMessage = "Filter operation: " + filterOperation + " is not supported for role filtering.";
+            throw new BadRequestException(errorMessage);
+        }
+        return getSearchFilter(attributeName, filterOperation, attributeValue);
+    }
+
+    private String combineFilters(OperationNode operationNode, String leftFilter, String rightFilter) throws BadRequestException {
+
+        String operator = operationNode.getOperation();
+        if (SCIMConstants.OperationalConstants.OR.equalsIgnoreCase(operator)) {
+            String errorMessage = "Filter operator: " + operator + " is not supported for role filtering.";
+            throw new BadRequestException(errorMessage);
+        }
+        return String.format("%s %s %s", leftFilter, operator, rightFilter);
     }
 
     /**
