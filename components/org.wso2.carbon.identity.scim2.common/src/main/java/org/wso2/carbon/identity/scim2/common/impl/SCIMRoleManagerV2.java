@@ -849,10 +849,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private void prepareReplacedPermissionLists(List<Permission> permissionsOfRole, Set<String> addedPermissions,
                                                 Set<String> removedPermissions, Set<String> replacedPermissions) {
 
-        if (replacedPermissions.isEmpty()) {
-            return;
-        }
-
         if (!permissionsOfRole.isEmpty()) {
             for (Permission permission : permissionsOfRole) {
                 if (!replacedPermissions.contains(permission.getName())) {
