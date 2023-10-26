@@ -134,7 +134,7 @@ public class AdminAttributeUtil {
                             log.debug(
                                     "Group does not exist, setting scim attribute group value: " + roleNameWithDomain);
                         }
-                        scimGroupHandler.addMandatoryAttributes(roleNameWithDomain);
+                        scimGroupHandler.addAdminRoleMandatoryAttributes(roleNameWithDomain);
                     }
 
                     // Adding the SCIM attributes for admin group

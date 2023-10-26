@@ -152,7 +152,7 @@ public class AdminAttributeUtilTest extends PowerMockTestCase {
 
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         adminAttributeUtil.updateAdminGroup(1);
-        verify(scimGroupHandler).addMandatoryAttributes(argument.capture());
+        verify(scimGroupHandler).addAdminRoleMandatoryAttributes(argument.capture());
 
         assertEquals(argument.getValue(), roleNameWithDomain);
     }
