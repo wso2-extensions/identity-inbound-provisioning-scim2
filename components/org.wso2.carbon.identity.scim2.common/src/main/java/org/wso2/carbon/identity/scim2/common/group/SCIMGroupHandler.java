@@ -89,8 +89,7 @@ public class SCIMGroupHandler {
      * @param roleName Role name.
      * @throws IdentitySCIMException if any error occurs while adding admin role attributes.
      */
-    public void addAdminRoleMandatoryAttributes(String roleName)
-            throws IdentitySCIMException {
+    public void addAdminRoleMandatoryAttributes(String roleName) throws IdentitySCIMException {
 
         Map<String, String> attributes = new HashMap<>();
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
