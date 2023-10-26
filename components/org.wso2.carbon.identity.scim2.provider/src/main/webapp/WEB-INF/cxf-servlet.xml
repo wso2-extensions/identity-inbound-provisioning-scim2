@@ -33,9 +33,23 @@
 
     </jaxrs:server>
 
+    <jaxrs:server id="userResourceOrgPerspective" address="/o/Users">
+        <jaxrs:serviceBeans>
+            <ref bean="userBean"/>
+        </jaxrs:serviceBeans>
+
+    </jaxrs:server>
+
     <bean id="userBean" class="org.wso2.carbon.identity.scim2.provider.resources.UserResource"/>
 
     <jaxrs:server id="groupResource" address="/Groups">
+        <jaxrs:serviceBeans>
+            <ref bean="groupBean"/>
+        </jaxrs:serviceBeans>
+
+    </jaxrs:server>
+
+    <jaxrs:server id="groupResourceOrgPerspective" address="/o/Groups">
         <jaxrs:serviceBeans>
             <ref bean="groupBean"/>
         </jaxrs:serviceBeans>
@@ -69,6 +83,13 @@
 
     </jaxrs:server>
 
+    <jaxrs:server id="resourceTypesOrgPerspective" address="/o/ResourceTypes">
+        <jaxrs:serviceBeans>
+            <ref bean="ResourceTypesBean"/>
+        </jaxrs:serviceBeans>
+
+    </jaxrs:server>
+
     <bean id="ResourceTypesBean" class="org.wso2.carbon.identity.scim2.provider.resources.ResourceTypesResource"/>
 
     <jaxrs:server id="bulkResource" address="/Bulk">
@@ -78,9 +99,23 @@
 
     </jaxrs:server>
 
+    <jaxrs:server id="bulkResourceOrgPerspective" address="/o/Bulk">
+        <jaxrs:serviceBeans>
+            <ref bean="BulkBean"/>
+        </jaxrs:serviceBeans>
+
+    </jaxrs:server>
+
     <bean id="BulkBean" class="org.wso2.carbon.identity.scim2.provider.resources.BulkResource"/>
 
     <jaxrs:server id="schemasResource" address="/Schemas">
+        <jaxrs:serviceBeans>
+            <ref bean="schemasBean"/>
+        </jaxrs:serviceBeans>
+
+    </jaxrs:server>
+
+    <jaxrs:server id="schemasResourceOrgPerspective" address="/o/Schemas">
         <jaxrs:serviceBeans>
             <ref bean="schemasBean"/>
         </jaxrs:serviceBeans>
@@ -99,6 +134,13 @@
     <bean id="roleBean" class="org.wso2.carbon.identity.scim2.provider.resources.RoleResource"/>
 
     <jaxrs:server id="RoleResourceV2" address="/v2/Roles">
+        <jaxrs:serviceBeans>
+            <ref bean="roleV2Bean"/>
+        </jaxrs:serviceBeans>
+
+    </jaxrs:server>
+
+    <jaxrs:server id="RoleResourceV2OrgPerspective" address="/o/v2/Roles">
         <jaxrs:serviceBeans>
             <ref bean="roleV2Bean"/>
         </jaxrs:serviceBeans>
