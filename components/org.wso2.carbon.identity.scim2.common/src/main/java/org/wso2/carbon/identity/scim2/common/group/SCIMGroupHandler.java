@@ -91,8 +91,9 @@ public class SCIMGroupHandler {
      */
     public void addAdminRoleMandatoryAttributes(String roleName)
             throws IdentitySCIMException {
+
         Map<String, String> attributes = new HashMap<>();
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(1);
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         String id;
         try {
             id = SCIMCommonComponentHolder.getRoleManagementServiceV2().getRoleIdByName(
