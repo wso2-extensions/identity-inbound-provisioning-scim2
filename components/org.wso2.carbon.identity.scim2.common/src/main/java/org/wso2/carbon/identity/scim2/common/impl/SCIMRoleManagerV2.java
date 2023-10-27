@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.AssociatedApplication;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.IdpGroup;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
@@ -136,10 +137,16 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     LOG.debug("Creating role: " + role.getDisplayName() + " for organization.");
                 }
             }
+            // TODO: separate the groups into idp groups and userstore groups, and pass them separately.
             RoleBasicInfo roleBasicInfo =
                     roleManagementService.addRole(role.getDisplayName(), role.getUsers(), role.getGroups(),
                             permissionList, audienceType, role.getAudienceValue(), tenantDomain);
-
+            // Set added groups as idp groups list.
+            List<IdpGroup> idpGroupList = role.getGroups().stream()
+                    .map(IdpGroup::new)
+                    .collect(Collectors.toList());
+            roleManagementService.updateIdpGroupListOfRole(roleBasicInfo.getId(), idpGroupList, new ArrayList<>(),
+                    tenantDomain);
             RoleV2 createdRole = new RoleV2();
             createdRole.setId(roleBasicInfo.getId());
             String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
@@ -202,16 +209,30 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 }
             }
 
-            // Set role's assigned groups.
-            List<GroupBasicInfo> assignedGroups = role.getGroups();
-            if (assignedGroups != null) {
-                for (GroupBasicInfo groupInfo : assignedGroups) {
-                    groupInfo.getId();
-                    String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupInfo.getId());
+            // Set role's assigned userstore groups.
+            List<GroupBasicInfo> assignedUserstoreGroups = role.getGroups();
+            if (assignedUserstoreGroups != null) {
+                for (GroupBasicInfo groupInfo : assignedUserstoreGroups) {
+                    String groupId = groupInfo.getId();
+                    String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupId);
                     Group group = new Group();
                     group.setDisplayName(groupInfo.getName());
-                    group.setId(groupInfo.getId());
+                    group.setId(groupId);
                     group.setLocation(groupLocationURI);
+                    scimRole.setGroup(group);
+                }
+            }
+
+            // Set role's assigned idp groups.
+            List<IdpGroup> assignedIdpGroups = role.getIdpGroups();
+            if (assignedIdpGroups != null) {
+                for (IdpGroup idpGroup : assignedIdpGroups) {
+                    String idpGroupId = idpGroup.getGroupId();
+                    String idpGroupLocationURI = SCIMCommonUtils.getIdpGroupURL(idpGroup.getIdpId(), idpGroupId);
+                    Group group = new Group();
+                    group.setDisplayName(idpGroup.getGroupName());
+                    group.setId(idpGroupId);
+                    group.setLocation(idpGroupLocationURI);
                     scimRole.setGroup(group);
                 }
             }
@@ -875,7 +896,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             Set<String> replaceGroupsIds = new HashSet<>();
 
             List<GroupBasicInfo> groupListOfRole = roleManagementService.getGroupListOfRole(roleId, tenantDomain);
-
+            List<IdpGroup> idpGroupListOfRole = roleManagementService.getIdpGroupListOfRole(roleId, tenantDomain);
             for (PatchOperation groupOperation : groupOperations) {
                 if (groupOperation.getValues() instanceof Map) {
                     Map<String, String> groupObject = (Map<String, String>) groupOperation.getValues();
