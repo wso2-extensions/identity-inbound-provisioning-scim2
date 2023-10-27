@@ -22,8 +22,12 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.AbstractIdentityTenantMgtListener;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.stratos.common.exception.StratosException;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -50,12 +54,16 @@ public class SCIMTenantMgtListener extends AbstractIdentityTenantMgtListener {
         try {
             Tenant tenant = realmService.getTenantManager().getTenant(tenantId);
             /*
-            If the tenant has an associated organization id, that tenant is created during an organization creation.
-            Therefore, no tenant admin is created inside the tenant. No need to update such admin claims.
+            If the tenant has an associated organization id, and if the org id satisfies isOrganization() check, that
+            organization creator is not inside the same organization. No need to update such admin claims.
              */
             String organizationID = tenant.getAssociatedOrganizationUUID();
             if (StringUtils.isNotBlank(organizationID)) {
-                return;
+                OrganizationManager organizationManager = SCIMCommonComponentHolder.getOrganizationManager();
+                int organizationDepth = organizationManager.getOrganizationDepthInHierarchy(organizationID);
+                if (organizationDepth >= Utils.getSubOrgStartLevel()) {
+                    return;
+                }
             }
             if (log.isDebugEnabled()) {
                 log.debug("SCIMTenantMgtListener is fired for Tenant ID : " + tenantId);
@@ -64,7 +72,9 @@ public class SCIMTenantMgtListener extends AbstractIdentityTenantMgtListener {
             AdminAttributeUtil.updateAdminUser(tenantId, false);
             // Update admin group attributes.
             AdminAttributeUtil.updateAdminGroup(tenantId);
-        } catch (UserStoreException e) {
+            // Update meta data of everyone role.
+            SCIMCommonUtils.updateEveryOneRoleV2MetaData(tenantId);
+        } catch (UserStoreException | OrganizationManagementException e) {
             log.error(e);
         }
     }

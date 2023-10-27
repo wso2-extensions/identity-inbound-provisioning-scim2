@@ -24,8 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.application.common.model.ThreadLocalProvisioningServiceProvider;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
@@ -37,9 +35,11 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
+import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
@@ -849,6 +849,25 @@ public class SCIMCommonUtils {
             return attributeSchema;
         } catch (InternalErrorException | IdentitySCIMException e) {
             throw new CharonException("Error while building scim custom schema", e);
+        }
+    }
+
+    public static void updateEveryOneRoleV2MetaData(int tenantId) {
+
+        // Handle everyone role creation also here if legacy runtime is disabled.
+        if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            try {
+                UserStoreManager userStoreManager = (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
+                        getTenantUserRealm(tenantId).getUserStoreManager();
+                String domainName = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
+                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
+                String everyoneRoleName = userStoreManager.getRealmConfiguration().getEveryOneRoleName();
+                String everyoneRoleNameWithDomain =
+                        UserCoreUtil.addDomainToName(everyoneRoleName, domainName);
+                scimGroupHandler.addRoleV2MandatoryAttributes(everyoneRoleNameWithDomain);
+            } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
+                log.error(e);
+            }
         }
     }
 }

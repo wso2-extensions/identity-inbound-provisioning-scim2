@@ -124,7 +124,7 @@ public class SCIMCommonComponent {
             //Update super tenant user/group attributes.
             AdminAttributeUtil.updateAdminUser(MultitenantConstants.SUPER_TENANT_ID, true);
             AdminAttributeUtil.updateAdminGroup(MultitenantConstants.SUPER_TENANT_ID);
-
+            SCIMCommonUtils.updateEveryOneRoleV2MetaData(MultitenantConstants.SUPER_TENANT_ID);
             if (logger.isDebugEnabled()) {
                 logger.debug("SCIM Common component activated successfully.");
             }
