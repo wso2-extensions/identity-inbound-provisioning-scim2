@@ -22,6 +22,7 @@ package org.wso2.carbon.identity.scim2.common.utils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -134,7 +135,18 @@ public class AdminAttributeUtil {
                             log.debug(
                                     "Group does not exist, setting scim attribute group value: " + roleNameWithDomain);
                         }
-                        scimGroupHandler.addAdminRoleMandatoryAttributes(roleNameWithDomain);
+                        if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                            scimGroupHandler.addMandatoryAttributes(roleNameWithDomain);
+                        } else {
+                            scimGroupHandler.addRoleV2MandatoryAttributes(roleNameWithDomain);
+
+                            // Add everyone role scim attributes.
+                            String everyoneRoleName = userStoreManager.getRealmConfiguration().getEveryOneRoleName();
+                            String everyoneRoleNameWithDomain = UserCoreUtil.addDomainToName(everyoneRoleName,
+                                    domainName);
+                            scimGroupHandler.addRoleV2MandatoryAttributes(everyoneRoleNameWithDomain);
+                        }
+
                     }
 
                     // Adding the SCIM attributes for admin group

@@ -2986,7 +2986,9 @@ public class SCIMUserManager implements UserManager {
             Set<String> scimRoles = groupHandler.listSCIMRoles();
             List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(roleNames, scimRoles);
             if (!scimDisabledHybridRoles.isEmpty()) {
-                createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
+                if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                    createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
+                }
                 roleNames.addAll(scimDisabledHybridRoles);
             }
             return roleNames;
