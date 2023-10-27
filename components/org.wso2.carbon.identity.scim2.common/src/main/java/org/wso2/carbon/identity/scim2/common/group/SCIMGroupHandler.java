@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
@@ -84,25 +85,30 @@ public class SCIMGroupHandler {
     }
 
     /**
-     * Add admin role attributes.
+     * Add role v2 attributes.
      *
      * @param roleName Role name.
      * @throws IdentitySCIMException if any error occurs while adding admin role attributes.
      */
-    public void addAdminRoleMandatoryAttributes(String roleName) throws IdentitySCIMException {
+    public void addRoleV2MandatoryAttributes(String roleName) throws IdentitySCIMException {
 
         Map<String, String> attributes = new HashMap<>();
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        String orgId  = getOrganizationId(tenantDomain);
         String id;
+        int roleAudienceRefId;
         try {
             id = SCIMCommonComponentHolder.getRoleManagementServiceV2().getRoleIdByName(
-                    UserCoreUtil.removeDomainFromName(roleName), RoleConstants.ORGANIZATION,
-                    getOrganizationId(tenantDomain), tenantDomain);
+                    UserCoreUtil.removeDomainFromName(roleName), RoleConstants.ORGANIZATION, orgId, tenantDomain);
+            roleAudienceRefId = RoleManagementUtils.resolveAudienceRefId(RoleConstants.ORGANIZATION, orgId);
         } catch (IdentityRoleManagementException e) {
-            throw new IdentitySCIMException("Error while resolving admin role id", e);
+            throw new IdentitySCIMException("Error while resolving role : " + roleName + " id", e);
         }
         if (StringUtils.isBlank(id)) {
-            id = UUID.randomUUID().toString();
+            throw new IdentitySCIMException("Role : " + roleName + " id not found");
+        }
+        if (roleAudienceRefId == -1) {
+            throw new IdentitySCIMException("Role : " + roleName + " audience id not found");
         }
         attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
 
@@ -112,7 +118,7 @@ public class SCIMGroupHandler {
         attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
         attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, SCIMCommonUtils.getSCIMGroupURL(id));
         GroupDAO groupDAO = new GroupDAO();
-        groupDAO.addSCIMGroupAttributes(tenantId, roleName, attributes);
+        groupDAO.addSCIMRoleV2Attributes(tenantId, roleName, roleAudienceRefId, attributes);
     }
 
     /**

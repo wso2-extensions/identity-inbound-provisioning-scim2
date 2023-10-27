@@ -142,6 +142,34 @@ public class GroupDAO {
         return isExistingGroup;
     }
 
+    private boolean isExistingRoleV2Attribute(String attributeName, String roleName, int audienceRefId, int tenantId)
+            throws IdentitySCIMException {
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement prepStmt = null;
+        ResultSet rSet = null;
+        boolean isExistingAttribute = false;
+
+        try {
+            prepStmt = connection.prepareStatement(SQLQueries.CHECK_EXISTING_ATTRIBUTE_WITH_AUDIENCE_SQL);
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, roleName);
+            prepStmt.setString(3, attributeName);
+            prepStmt.setInt(4, audienceRefId);
+
+            rSet = prepStmt.executeQuery();
+            if (rSet.next()) {
+                isExistingAttribute = true;
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when reading the group attribute information from " +
+                    "the persistence store.", e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, rSet, prepStmt);
+        }
+        return isExistingAttribute;
+    }
+
     private boolean isExistingAttribute(String attributeName, String groupName, int tenantId)
             throws IdentitySCIMException {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
@@ -205,6 +233,35 @@ public class GroupDAO {
         } else {
             throw new IdentitySCIMException("Error when adding SCIM Attributes for the group: "
                     + roleName + " A Group with the same name already exists.");
+        }
+    }
+
+    public void addSCIMRoleV2Attributes(int tenantId, String roleName, int audienceRefId, Map<String,
+            String> attributes)
+            throws IdentitySCIMException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.ADD_ATTRIBUTES_WITH_AUDIENCE_SQL)) {
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, roleName);
+            prepStmt.setInt(3, audienceRefId);
+
+            for (Map.Entry<String, String> entry : attributes.entrySet()) {
+                if (!isExistingRoleV2Attribute(entry.getKey(), roleName, audienceRefId, tenantId)) {
+                    prepStmt.setString(4, entry.getKey());
+                    prepStmt.setString(5, entry.getValue());
+                    prepStmt.addBatch();
+
+                } else {
+                    throw new IdentitySCIMException("Error when adding SCIM Attribute: "
+                            + entry.getKey()
+                            + " An attribute with the same name already exists.");
+                }
+            }
+            prepStmt.execute();
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when adding SCIM attributes for the admin : "
+                    + roleName, e);
         }
     }
 
