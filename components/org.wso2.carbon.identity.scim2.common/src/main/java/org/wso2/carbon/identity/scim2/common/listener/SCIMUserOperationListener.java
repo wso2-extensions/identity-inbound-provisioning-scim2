@@ -22,6 +22,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -58,6 +59,7 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATT
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.INTERNAL_DOMAIN;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_LOCAL_CLAIM;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX_VALIDATION_DEFAULT_ERROR;
@@ -604,7 +606,17 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 if (!scimGroupHandler.isGroupExisting(roleNameWithDomain)) {
                     // If no attributes - i.e: group added via mgt console, not via SCIM endpoint.
                     // Add META.
-                    scimGroupHandler.addMandatoryAttributes(roleNameWithDomain);
+                    /*
+                     Extracting the domain name here, because resolved domainName is userstore based domains.
+                     If the roleName passed to the method with Internal domain that will be remain as same in
+                     roleNameWithDomain.
+                     */
+                    if (INTERNAL_DOMAIN.equalsIgnoreCase(UserCoreUtil.extractDomainFromName(roleNameWithDomain)) &&
+                            !CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                        scimGroupHandler.addRoleV2MandatoryAttributes(roleNameWithDomain);
+                    } else {
+                        scimGroupHandler.addMandatoryAttributes(roleNameWithDomain);
+                    }
                 }
             } catch (IdentitySCIMException e) {
                 throw new UserStoreException("Error retrieving group information from SCIM Tables.", e);

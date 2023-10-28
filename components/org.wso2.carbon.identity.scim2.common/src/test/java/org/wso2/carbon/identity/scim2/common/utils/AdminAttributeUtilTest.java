@@ -25,6 +25,7 @@ import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -151,8 +152,9 @@ public class AdminAttributeUtilTest extends PowerMockTestCase {
         whenNew(SCIMGroupHandler.class).withAnyArguments().thenReturn(scimGroupHandler);
 
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
         adminAttributeUtil.updateAdminGroup(1);
-        verify(scimGroupHandler).addAdminRoleMandatoryAttributes(argument.capture());
+        verify(scimGroupHandler).addMandatoryAttributes(argument.capture());
 
         assertEquals(argument.getValue(), roleNameWithDomain);
     }
