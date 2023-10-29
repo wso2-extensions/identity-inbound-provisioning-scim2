@@ -183,6 +183,12 @@
                 <version>${org.wso2.carbon.identity.organization.management.core.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.wso2.carbon.identity.event.handler.accountlock</groupId>
+                <artifactId>org.wso2.carbon.identity.handler.event.account.lock</artifactId>
+                <version>${org.wso2.carbon.identity.handler.event.account.lock.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
                 <artifactId>org.wso2.carbon.identity.scim2.common</artifactId>
                 <version>${project.version}</version>
@@ -280,6 +286,8 @@
         <charon.version>4.0.14</charon.version>
         <org.wso2.carbon.identity.organization.management.core.version>1.0.76
         </org.wso2.carbon.identity.organization.management.core.version>
+        <org.wso2.carbon.identity.handler.event.account.lock.version>1.8.13
+        </org.wso2.carbon.identity.handler.event.account.lock.version>
 
         <!--Maven Plugin Version-->
         <maven.compiler.plugin.version>2.3.1</maven.compiler.plugin.version>
@@ -310,6 +318,8 @@
         </carbon.identity.framework.imp.pkg.version.range>
         <org.wso2.carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
         </org.wso2.carbon.identity.organization.management.core.version.range>
+        <carbon.identity.account.lock.handler.imp.pkg.version.range>[1.1.12, 2.0.0)
+        </carbon.identity.account.lock.handler.imp.pkg.version.range>
 
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
         <testng.version>6.9.10</testng.version>

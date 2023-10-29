@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.handler.event.account.lock.constants.AccountConstants;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
@@ -865,6 +866,29 @@ public class SCIMCommonUtils {
                 String everyoneRoleNameWithDomain =
                         UserCoreUtil.addDomainToName(everyoneRoleName, domainName);
                 scimGroupHandler.addRoleV2MandatoryAttributes(everyoneRoleNameWithDomain);
+            } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
+                log.error(e);
+            }
+        }
+    }
+
+    /**
+     * Update system role meta data.
+     *
+     * @param tenantId Tenant Id.
+     */
+    public static void updateSystemRoleV2MetaData(int tenantId) {
+
+        // Handle system role creation also here if legacy runtime is disabled.
+        if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            try {
+                UserStoreManager userStoreManager = (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
+                        getTenantUserRealm(tenantId).getUserStoreManager();
+                String domainName = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
+                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
+                String systemRoleNameWithDomain =
+                        UserCoreUtil.addDomainToName(AccountConstants.ACCOUNT_LOCK_BYPASS_ROLE, domainName);
+                scimGroupHandler.addRoleV2MandatoryAttributes(systemRoleNameWithDomain);
             } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
                 log.error(e);
             }
