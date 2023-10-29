@@ -860,12 +860,9 @@ public class SCIMCommonUtils {
             try {
                 UserStoreManager userStoreManager = (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
                         getTenantUserRealm(tenantId).getUserStoreManager();
-                String domainName = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
                 String everyoneRoleName = userStoreManager.getRealmConfiguration().getEveryOneRoleName();
-                String everyoneRoleNameWithDomain =
-                        UserCoreUtil.addDomainToName(everyoneRoleName, domainName);
-                scimGroupHandler.addRoleV2MandatoryAttributes(everyoneRoleNameWithDomain);
+                scimGroupHandler.addRoleV2MandatoryAttributes(everyoneRoleName);
             } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
                 log.error(e);
             }
@@ -884,11 +881,8 @@ public class SCIMCommonUtils {
             try {
                 UserStoreManager userStoreManager = (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
                         getTenantUserRealm(tenantId).getUserStoreManager();
-                String domainName = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
-                String systemRoleNameWithDomain =
-                        UserCoreUtil.addDomainToName(AccountConstants.ACCOUNT_LOCK_BYPASS_ROLE, domainName);
-                scimGroupHandler.addRoleV2MandatoryAttributes(systemRoleNameWithDomain);
+                scimGroupHandler.addRoleV2MandatoryAttributes(AccountConstants.ACCOUNT_LOCK_BYPASS_ROLE);
             } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
                 log.error(e);
             }
