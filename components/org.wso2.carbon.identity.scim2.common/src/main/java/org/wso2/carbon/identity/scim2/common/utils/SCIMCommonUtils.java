@@ -862,7 +862,9 @@ public class SCIMCommonUtils {
                         getTenantUserRealm(tenantId).getUserStoreManager();
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
                 String everyoneRoleName = userStoreManager.getRealmConfiguration().getEveryOneRoleName();
-                scimGroupHandler.addRoleV2MandatoryAttributes(everyoneRoleName);
+                if (!scimGroupHandler.isGroupExisting(everyoneRoleName)) {
+                    scimGroupHandler.addRoleV2MandatoryAttributes(everyoneRoleName);
+                }
             } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
                 log.error(e);
             }
@@ -882,7 +884,9 @@ public class SCIMCommonUtils {
                 UserStoreManager userStoreManager = (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
                         getTenantUserRealm(tenantId).getUserStoreManager();
                 SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
-                scimGroupHandler.addRoleV2MandatoryAttributes(AccountConstants.ACCOUNT_LOCK_BYPASS_ROLE);
+                if (!scimGroupHandler.isGroupExisting(AccountConstants.ACCOUNT_LOCK_BYPASS_ROLE)) {
+                    scimGroupHandler.addRoleV2MandatoryAttributes(AccountConstants.ACCOUNT_LOCK_BYPASS_ROLE);
+                }
             } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
                 log.error(e);
             }
