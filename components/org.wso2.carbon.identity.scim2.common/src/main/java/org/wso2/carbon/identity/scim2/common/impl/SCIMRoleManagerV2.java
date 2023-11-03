@@ -942,9 +942,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             } catch (IdentityRoleManagementException e) {
                 if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
-                } else if (RoleConstants.Error.INVALID_PERMISSION.getCode()
-                        .equals(ROLE_MANAGEMENT_ERROR_CODE_PREFIX + e.getErrorCode())) {
-                    throw new BadRequestException(e.getMessage());
+                } else if (RoleConstants.Error.INVALID_PERMISSION.getCode().equals(e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
                 }
                 throw new CharonException(
                         String.format("Error occurred while updating permissions of the role with ID: %s", roleId), e);
