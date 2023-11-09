@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.model.IdPGroup;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -33,13 +34,16 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.AssociatedApplication;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.IdpGroup;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.UserIDResolver;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -71,6 +75,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
@@ -136,10 +141,26 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     LOG.debug("Creating role: " + role.getDisplayName() + " for organization.");
                 }
             }
-            RoleBasicInfo roleBasicInfo =
-                    roleManagementService.addRole(role.getDisplayName(), role.getUsers(), role.getGroups(),
-                            permissionList, audienceType, role.getAudienceValue(), tenantDomain);
 
+            List<String> groupIds = role.getGroups();
+            // Get valid IdP groups from the given group IDs.
+            List<IdPGroup> idpGroups = SCIMCommonComponentHolder.getIdpManagerService().getValidIdPGroupsByIdPGroupIds(
+                    groupIds, tenantDomain);
+            List<IdpGroup> idpGroupList = idpGroups.stream()
+                    .map(this::convertToIdpGroup)
+                    .collect(Collectors.toList());
+            List<String> validIdpGroupIds = idpGroupList.stream()
+                    .map(IdpGroup::getGroupId)
+                    .collect(Collectors.toList());
+            // Exclude the valid Idp groups from the given group IDs for role creation.
+            List<String> localGroupIds = groupIds.stream()
+                    .filter(groupId -> !validIdpGroupIds.contains(groupId))
+                    .collect(Collectors.toList());
+            RoleBasicInfo roleBasicInfo =
+                    roleManagementService.addRole(role.getDisplayName(), role.getUsers(), localGroupIds,
+                            permissionList, audienceType, role.getAudienceValue(), tenantDomain);
+            roleManagementService.updateIdpGroupListOfRole(roleBasicInfo.getId(), idpGroupList, new ArrayList<>(),
+                    tenantDomain);
             RoleV2 createdRole = new RoleV2();
             createdRole.setId(roleBasicInfo.getId());
             String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
@@ -160,6 +181,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             }
             throw new CharonException(
                     String.format("Error occurred while adding a new role: %s", role.getDisplayName()), e);
+        } catch (IdentityProviderManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while retrieving IdP groups for role: %s", role.getDisplayName()),
+                    e);
         }
     }
 
@@ -202,16 +227,30 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 }
             }
 
-            // Set role's assigned groups.
-            List<GroupBasicInfo> assignedGroups = role.getGroups();
-            if (assignedGroups != null) {
-                for (GroupBasicInfo groupInfo : assignedGroups) {
-                    groupInfo.getId();
-                    String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupInfo.getId());
+            // Set role's assigned userstore groups.
+            List<GroupBasicInfo> assignedUserstoreGroups = role.getGroups();
+            if (assignedUserstoreGroups != null) {
+                for (GroupBasicInfo groupInfo : assignedUserstoreGroups) {
+                    String groupId = groupInfo.getId();
+                    String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupId);
                     Group group = new Group();
                     group.setDisplayName(groupInfo.getName());
-                    group.setId(groupInfo.getId());
+                    group.setId(groupId);
                     group.setLocation(groupLocationURI);
+                    scimRole.setGroup(group);
+                }
+            }
+
+            // Set role's assigned idp groups.
+            List<IdpGroup> assignedIdpGroups = role.getIdpGroups();
+            if (assignedIdpGroups != null) {
+                for (IdpGroup idpGroup : assignedIdpGroups) {
+                    String idpGroupId = idpGroup.getGroupId();
+                    String idpGroupLocationURI = SCIMCommonUtils.getIdpGroupURL(idpGroup.getIdpId(), idpGroupId);
+                    Group group = new Group();
+                    group.setDisplayName(idpGroup.getGroupName());
+                    group.setId(idpGroupId);
+                    group.setLocation(idpGroupLocationURI);
                     scimRole.setGroup(group);
                 }
             }
@@ -866,17 +905,25 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         try {
             Collections.sort(groupOperations);
+
+            Set<String> givenAddedGroupIds = new HashSet<>();
+            Set<String> givenDeletedGroupIds = new HashSet<>();
+            Set<String> givenReplaceGroupsIds = new HashSet<>();
+
             Set<String> addedGroupIds = new HashSet<>();
             Set<String> deletedGroupIds = new HashSet<>();
-            Set<String> replaceGroupsIds = new HashSet<>();
+            Set<String> replaceGroupIds = new HashSet<>();
+
+            Set<String> addedIdpGroupIds = new HashSet<>();
+            Set<String> deletedIdpGroupIds = new HashSet<>();
+            Set<String> replaceIdpGroupIds = new HashSet<>();
 
             List<GroupBasicInfo> groupListOfRole = roleManagementService.getGroupListOfRole(roleId, tenantDomain);
-
             for (PatchOperation groupOperation : groupOperations) {
                 if (groupOperation.getValues() instanceof Map) {
                     Map<String, String> groupObject = (Map<String, String>) groupOperation.getValues();
-                    prepareAddedRemovedGroupLists(addedGroupIds, deletedGroupIds, replaceGroupsIds,
-                            groupOperation, groupObject, groupListOfRole);
+                    prepareInitialGroupLists(givenAddedGroupIds, givenDeletedGroupIds, givenReplaceGroupsIds,
+                            groupOperation, groupObject);
                 } else if (groupOperation.getValues() instanceof List) {
                     List<Map<String, String>> groupOperationValues =
                             (List<Map<String, String>>) groupOperation.getValues();
@@ -886,19 +933,58 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                                 collect(Collectors.toList()));
                     }
                     for (Map<String, String> groupObject : groupOperationValues) {
-                        prepareAddedRemovedGroupLists(addedGroupIds, deletedGroupIds, replaceGroupsIds,
-                                groupOperation, groupObject, groupListOfRole);
+                        prepareInitialGroupLists(givenAddedGroupIds, givenDeletedGroupIds, givenReplaceGroupsIds,
+                                groupOperation, groupObject);
                     }
                 }
-                prepareReplacedGroupLists(groupListOfRole, addedGroupIds, deletedGroupIds, replaceGroupsIds);
             }
+
+            Set<String> givenUniqueGroupIds = new HashSet<>();
+            givenUniqueGroupIds.addAll(givenAddedGroupIds);
+            givenUniqueGroupIds.addAll(givenDeletedGroupIds);
+            givenUniqueGroupIds.addAll(givenReplaceGroupsIds);
+
+            List<IdPGroup> idpGroups = SCIMCommonComponentHolder.getIdpManagerService().getValidIdPGroupsByIdPGroupIds(
+                    new ArrayList<>(givenUniqueGroupIds), tenantDomain);
+            Set<String> idpGroupIds = idpGroups.stream().map(IdPGroup::getIdpGroupId).collect(Collectors.toSet());
+            
+            Set<String> groupIdListOfRole =
+                    groupListOfRole.stream().map(GroupBasicInfo::getId).collect(Collectors.toSet());
+            List<IdpGroup> idpGroupListOfRole = roleManagementService.getIdpGroupListOfRole(roleId, tenantDomain);
+            Set<String> idpGroupIdListOfRole =
+                    idpGroupListOfRole.stream().map(IdpGroup::getGroupId).collect(Collectors.toSet());
+
+            seperatedAddedGroupLists(givenAddedGroupIds, idpGroupIds, idpGroupIdListOfRole, groupIdListOfRole,
+                    addedIdpGroupIds, addedGroupIds);
+            seperateRemovedGroupLists(givenDeletedGroupIds, idpGroupIds, deletedIdpGroupIds, deletedGroupIds);
+
+            seperateReplacedGroupLists(givenReplaceGroupsIds, idpGroupIds, replaceIdpGroupIds, replaceGroupIds);
+            prepareReplacedGroupLists(groupListOfRole, addedGroupIds, deletedGroupIds, replaceGroupIds);
+            prepareReplacedIdPGroupLists(idpGroupListOfRole, addedIdpGroupIds, deletedIdpGroupIds, replaceIdpGroupIds);
 
             if (isNotEmpty(addedGroupIds) || isNotEmpty(deletedGroupIds)) {
                 doUpdateGroups(roleId, addedGroupIds, deletedGroupIds);
             }
+            if (isNotEmpty(addedIdpGroupIds) || isNotEmpty(deletedIdpGroupIds)) {
+                Map<String, IdPGroup> idpGroupMap = idpGroups.stream()
+                        .collect(Collectors.toMap(IdPGroup::getIdpGroupId, Function.identity()));
+                List<IdpGroup> addedIdpGroups = addedIdpGroupIds.stream()
+                        .map(idpGroupMap::get)
+                        .map(this::convertToIdpGroup)
+                        .collect(Collectors.toList());
+                List<IdpGroup> deletedIdpGroups = deletedIdpGroupIds.stream()
+                        .map(idpGroupMap::get)
+                        .map(this::convertToIdpGroup)
+                        .collect(Collectors.toList());
+                doUpdateIdPGroups(roleId, addedIdpGroups, deletedIdpGroups);
+            }
         } catch (IdentityRoleManagementException e) {
             throw new CharonException(
                     String.format("Error occurred while retrieving the group list for role with ID: %s", roleId), e);
+        } catch (IdentityProviderManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while retrieving the IDP group list for role with ID: %s", roleId),
+                    e);
         }
     }
 
@@ -974,6 +1060,23 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
     }
 
+    private void doUpdateIdPGroups(String roleId, List<IdpGroup> newGroupIDList, List<IdpGroup> deleteGroupIDList)
+            throws CharonException, BadRequestException {
+
+        // Update the role with added groups and deleted groups.
+        if (isNotEmpty(newGroupIDList) || isNotEmpty(deleteGroupIDList)) {
+            try {
+                roleManagementService.updateIdpGroupListOfRole(roleId, newGroupIDList, deleteGroupIDList, tenantDomain);
+            } catch (IdentityRoleManagementException e) {
+                if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage());
+                }
+                throw new CharonException(
+                        String.format("Error occurred while updating groups in the role with ID: %s", roleId), e);
+            }
+        }
+    }
+
     private void doUpdateUsers(Set<String> newUserList, Set<String> deletedUserList, Set<Object> newlyAddedMemberIds,
                                String roleId) throws CharonException, BadRequestException, ForbiddenException {
 
@@ -1036,24 +1139,61 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return userIDList;
     }
 
-    private void prepareAddedRemovedGroupLists(Set<String> addedGroupsIds, Set<String> removedGroupsIds,
-                                               Set<String> replacedGroupsIds, PatchOperation groupOperation,
-                                               Map<String, String> groupObject, List<GroupBasicInfo> groupListOfRole) {
+    private void prepareInitialGroupLists(Set<String> givenAddedGroupsIds, Set<String> givenRemovedGroupsIds,
+                                          Set<String> givenReplacedGroupsIds, PatchOperation groupOperation,
+                                          Map<String, String> groupObject) {
 
         switch (groupOperation.getOperation()) {
             case (SCIMConstants.OperationalConstants.ADD):
-                removedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                if (!isGroupExist(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE), groupListOfRole)) {
-                    addedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                }
+                givenRemovedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                givenAddedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
                 break;
             case (SCIMConstants.OperationalConstants.REMOVE):
-                addedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                removedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                givenAddedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                givenRemovedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
                 break;
             case (SCIMConstants.OperationalConstants.REPLACE):
-                replacedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                givenReplacedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
                 break;
+            default:
+                break;
+        }
+    }
+
+    private void seperatedAddedGroupLists(Set<String> givenAddedGroupIds, Set<String> idpGroupIds,
+                                          Set<String> idpGroupIdListOfRole,Set<String> groupIdListOfRole,
+                                          Set<String> addedIdpGroupIds, Set<String> addedGroupIds) {
+
+        for (String groupId : givenAddedGroupIds) {
+            if (idpGroupIds.contains(groupId) && !idpGroupIdListOfRole.contains(groupId)) {
+                addedIdpGroupIds.add(groupId);
+            } else if (!groupIdListOfRole.contains(groupId)) {
+                addedGroupIds.add(groupId);
+            }
+        }
+    }
+
+    private void seperateRemovedGroupLists(Set<String> givenDeletedGroupIds, Set<String> idpGroupIds,
+                                           Set<String> deletedIdpGroupIds, Set<String> deletedGroupIds) {
+
+        for (String groupId : givenDeletedGroupIds) {
+            if (idpGroupIds.contains(groupId)) {
+                deletedIdpGroupIds.add(groupId);
+            } else {
+                deletedGroupIds.add(groupId);
+            }
+        }
+    }
+
+    private void seperateReplacedGroupLists(Set<String> givenReplaceGroupsIds, Set<String> idpGroupIds,
+                                            Set<String> replaceIdpGroupIds, Set<String> replaceGroupIds) {
+
+        for (String groupId : givenReplaceGroupsIds) {
+            if (idpGroupIds.contains(groupId)) {
+                replaceIdpGroupIds.add(groupId);
+            } else {
+                replaceGroupIds.add(groupId);
+            }
         }
     }
 
@@ -1124,6 +1264,25 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         addedGroupIds.addAll(replacedGroupsIds);
     }
 
+    private void prepareReplacedIdPGroupLists(List<IdpGroup> idpGroupListOfRole, Set<String> addedGroupIds,
+                                           Set<String> removedGroupsIds, Set<String> replacedGroupsIds) {
+
+        if (replacedGroupsIds.isEmpty()) {
+            return;
+        }
+
+        if (!idpGroupListOfRole.isEmpty()) {
+            for (IdpGroup idpGroupInfo : idpGroupListOfRole) {
+                if (!replacedGroupsIds.contains(idpGroupInfo.getGroupId())) {
+                    removedGroupsIds.add(idpGroupInfo.getGroupId());
+                } else {
+                    replacedGroupsIds.remove(idpGroupInfo.getGroupId());
+                }
+            }
+        }
+        addedGroupIds.addAll(replacedGroupsIds);
+    }
+
     private boolean isGroupExist(String groupId, List<GroupBasicInfo> groupListOfRole) {
 
         return groupListOfRole != null &&
@@ -1158,5 +1317,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         } catch (OrganizationManagementException e) {
             throw new CharonException("Error while checking whether the tenant is an organization.", e);
         }
+    }
+
+    private IdpGroup convertToIdpGroup(IdPGroup idpGroup) {
+
+        IdpGroup convertedGroup = new IdpGroup(idpGroup.getIdpGroupId(), idpGroup.getIdpId());
+        convertedGroup.setGroupName(idpGroup.getIdpGroupName());
+        return convertedGroup;
     }
 }

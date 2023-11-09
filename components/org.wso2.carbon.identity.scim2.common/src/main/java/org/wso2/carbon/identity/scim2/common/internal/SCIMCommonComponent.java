@@ -56,6 +56,7 @@ import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
+import org.wso2.carbon.idp.mgt.IdpManager;
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;
@@ -294,6 +295,34 @@ public class SCIMCommonComponent {
 
         SCIMCommonComponentHolder.setRoleManagementServiceV2(null);
         logger.debug("RoleManagementServiceV2 unset in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Set idp manager service implementation.
+     *
+     * @param idpManager Idp manager service.
+     */
+    @Reference(
+            name = "org.wso2.carbon.idp.mgt.IdpManager",
+            service = org.wso2.carbon.idp.mgt.IdpManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdPManagerService")
+    protected void setIdPManagerService(IdpManager idpManager) {
+
+        SCIMCommonComponentHolder.setIdpManagerService(idpManager);
+        logger.debug("IdPManagerService set in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Unset idp manager service implementation.
+     *
+     * @param idpManager Idp manager service.
+     */
+    protected void unsetIdPManagerService(IdpManager idpManager) {
+
+        SCIMCommonComponentHolder.setIdpManagerService(null);
+        logger.debug("IdPManagerService unset in SCIMCommonComponent bundle.");
     }
 
     /**

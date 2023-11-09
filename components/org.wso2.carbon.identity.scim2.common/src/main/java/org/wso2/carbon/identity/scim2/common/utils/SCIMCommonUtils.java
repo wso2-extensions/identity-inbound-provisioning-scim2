@@ -154,6 +154,29 @@ public class SCIMCommonUtils {
         }
     }
 
+    public static String getIdpGroupURL(String idpId, String groupId) {
+
+        String idpGroupURL;
+        String path = "/api/server/v1/identity-providers";
+        try {
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                idpGroupURL = ServiceURLBuilder.create().addPath(path).build()
+                        .getAbsolutePublicURL();
+            } else {
+                idpGroupURL = getURLIfTenantQualifiedURLDisabled(path);
+            }
+            return StringUtils.isNotBlank(idpId) && StringUtils.isNotBlank(groupId) ?
+                    new StringBuilder().append(idpGroupURL).append(SCIMCommonConstants.URL_SEPERATOR).append(idpId)
+                            .append(SCIMCommonConstants.URL_SEPERATOR).append(groupId).toString() : null;
+        } catch (URLBuilderException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while building the identity provider's group endpoint with " +
+                                "tenant/organization qualified URL.", e);
+            }
+            return null;
+        }
+    }
+
     public static String getPermissionRefURL(String apiId, String permissionName) {
 
         String apiResourceURL;
