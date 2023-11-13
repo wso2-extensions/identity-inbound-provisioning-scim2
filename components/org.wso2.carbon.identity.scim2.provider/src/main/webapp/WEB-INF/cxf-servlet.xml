@@ -31,6 +31,10 @@
             <ref bean="userBean"/>
         </jaxrs:serviceBeans>
 
+        <jaxrs:properties>
+            <entry key="org.apache.cxf.jaxrs.allow.http.method.override" value="true"/>
+        </jaxrs:properties>
+
     </jaxrs:server>
 
     <jaxrs:server id="userResourceOrgPerspective" address="/o/Users">
