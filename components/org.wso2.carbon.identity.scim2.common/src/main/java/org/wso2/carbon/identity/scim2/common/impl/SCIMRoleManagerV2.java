@@ -880,6 +880,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 } else if (groupOperation.getValues() instanceof List) {
                     List<Map<String, String>> groupOperationValues =
                             (List<Map<String, String>>) groupOperation.getValues();
+                    if (groupOperationValues.isEmpty()
+                            && SCIMConstants.OperationalConstants.REPLACE.equals(groupOperation.getOperation())) {
+                        deletedGroupIds.addAll(groupListOfRole.stream().map(GroupBasicInfo::getId).
+                                collect(Collectors.toList()));
+                    }
                     for (Map<String, String> groupObject : groupOperationValues) {
                         prepareAddedRemovedGroupLists(addedGroupIds, deletedGroupIds, replaceGroupsIds,
                                 groupOperation, groupObject, groupListOfRole);
