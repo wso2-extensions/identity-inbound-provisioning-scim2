@@ -420,7 +420,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             updateGroups(roleId, groupOperations);
         }
         if (CollectionUtils.isNotEmpty(memberOperations)) {
-            updateUsers(roleId, currentRoleName, memberOperations);
+            updateUsers(roleId, memberOperations);
         }
 
         HashMap<String, Boolean> requiredAttributes = new HashMap<>();
@@ -988,7 +988,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
     }
 
-    private void updateUsers(String roleId, String currentRoleName, List<PatchOperation> memberOperations)
+    private void updateUsers(String roleId, List<PatchOperation> memberOperations)
             throws BadRequestException, CharonException, ForbiddenException {
 
         Collections.sort(memberOperations);
@@ -1000,13 +1000,13 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             if (memberOperation.getValues() instanceof Map) {
                 Map<String, String> memberObject = (Map<String, String>) memberOperation.getValues();
                 prepareAddedRemovedUserLists(addedUsers, deletedUsers, newlyAddedUsersIds,
-                        memberOperation, memberObject, currentRoleName);
+                        memberOperation, memberObject, roleId);
             } else if (memberOperation.getValues() instanceof List) {
                 List<Map<String, String>> memberOperationValues =
                         (List<Map<String, String>>) memberOperation.getValues();
                 for (Map<String, String> memberObject : memberOperationValues) {
                     prepareAddedRemovedUserLists(addedUsers, deletedUsers, newlyAddedUsersIds,
-                            memberOperation, memberObject, currentRoleName);
+                            memberOperation, memberObject, roleId);
                 }
             }
         }
@@ -1199,7 +1199,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
     private void prepareAddedRemovedUserLists(Set<String> addedMembers, Set<String> removedMembers,
                                               Set<Object> newlyAddedMemberIds, PatchOperation memberOperation,
-                                              Map<String, String> memberObject, String currentRoleName)
+                                              Map<String, String> memberObject, String roleId)
             throws BadRequestException, CharonException {
 
         try {
@@ -1225,11 +1225,16 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 throw new BadRequestException("User can't be resolved from the given user Id.");
             }
 
-            List<String> roleList = Arrays.asList(userStoreManager.
-                    getRoleListOfUser(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY)));
+            List<String> roleList;
+            try {
+                roleList = roleManagementService.getRoleIdListOfUser(
+                        memberObject.get(SCIMConstants.RoleSchemaConstants.VALUE), tenantDomain);
+            } catch (IdentityRoleManagementException e) {
+                throw new CharonException("Error occurred while retrieving the role list of user.");
+            }
 
             if (SCIMConstants.OperationalConstants.ADD.equals(memberOperation.getOperation()) &&
-                    !roleList.contains(currentRoleName)) {
+                    !roleList.contains(roleId)) {
                 removedMembers.remove(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
                 addedMembers.add(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
                 newlyAddedMemberIds.add(memberObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
