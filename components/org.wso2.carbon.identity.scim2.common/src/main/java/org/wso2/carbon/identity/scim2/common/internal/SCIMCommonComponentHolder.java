@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.scim2.common.internal;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
@@ -41,6 +42,7 @@ public class SCIMCommonComponentHolder {
     private static RoleManagementService roleManagementService;
     private static org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementServiceV2;
     private static OrganizationManager organizationManager;
+    private static IdpManager idpManager;
     private static final List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
 
     /**
@@ -168,6 +170,26 @@ public class SCIMCommonComponentHolder {
     public static List<SCIMUserStoreErrorResolver> getScimUserStoreErrorResolverList() {
 
         return scimUserStoreErrorResolvers;
+    }
+
+    /**
+     * Set IdpManager service.
+     *
+     * @param idpManager Idp Manager.
+     */
+    public static void setIdpManagerService(IdpManager idpManager) {
+
+        SCIMCommonComponentHolder.idpManager = idpManager;
+    }
+
+    /**
+     * Get IdpManager service.
+     *
+     * @return Idp Manager.
+     */
+    public static IdpManager getIdpManagerService() {
+
+        return idpManager;
     }
 
     public static void addScimUserStoreErrorResolver(SCIMUserStoreErrorResolver scimUserStoreErrorResolver) {
