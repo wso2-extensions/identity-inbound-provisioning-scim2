@@ -4471,51 +4471,53 @@ public class SCIMUserManager implements UserManager {
 
         String groupName = group.getDisplayName();
         Map<String, Group> groupMetaAttributesCache = new HashMap<>();
-        List<String> rolesOfGroup = carbonUM.getHybridRoleListOfGroup(UserCoreUtil.removeDomainFromName(groupName),
-                UserCoreUtil.extractDomainFromName(groupName));
+        if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            List<String> rolesOfGroup = carbonUM.getHybridRoleListOfGroup(UserCoreUtil.removeDomainFromName(groupName),
+                    UserCoreUtil.extractDomainFromName(groupName));
+            // Add roles of group.
+            for (String roleName : rolesOfGroup) {
+                if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
+                    // Carbon specific roles do not possess SCIM info, hence skipping them.
+                    continue;
+                }
 
-        // Add roles of group.
-        for (String roleName : rolesOfGroup) {
-            if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
-                // Carbon specific roles do not possess SCIM info, hence skipping them.
-                continue;
-            }
+                Group groupObject = groupMetaAttributesCache.get(roleName);
+                if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
+                    /*
+                     * Here getGroupOnlyWithMetaAttributes used to get role names. Group attributes will be retrieved
+                     * from the userstore.
+                     */
+                    groupObject = getGroupOnlyWithMetaAttributes(roleName);
+                    groupMetaAttributesCache.put(roleName, groupObject);
+                }
 
-            Group groupObject = groupMetaAttributesCache.get(roleName);
-            if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
-                /*
-                 * Here getGroupOnlyWithMetaAttributes used to get role names. Group attributes will be retrieved
-                 * from the userstore.
-                 */
-                groupObject = getGroupOnlyWithMetaAttributes(roleName);
-                groupMetaAttributesCache.put(roleName, groupObject);
-            }
-
-            if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
                 Role role = new Role();
                 role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
                 role.setId(groupObject.getId());
                 String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
                 role.setLocation(location);
                 group.setRole(role);
-            } else {
-                RoleV2 role = new RoleV2();
-                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
-                role.setId(groupObject.getId());
-                String location = SCIMCommonUtils.getSCIMRoleV2URL(groupObject.getId());
-                role.setLocation(location);
-                try {
-                    RoleBasicInfo roleBasicInfo = SCIMCommonComponentHolder.getRoleManagementServiceV2()
-                            .getRoleBasicInfoById(groupObject.getId(), tenantDomain);
+            }
+        } else {
+            try {
+                List<String> groups = new ArrayList<>();
+                groups.add(group.getId());
+                List<RoleBasicInfo> roles = SCIMCommonComponentHolder.getRoleManagementServiceV2()
+                        .getRoleListOfGroups(groups, tenantDomain);
+                for (RoleBasicInfo roleBasicInfo : roles) {
+                    RoleV2 role = new RoleV2();
+                    role.setDisplayName(roleBasicInfo.getName());
+                    role.setId(roleBasicInfo.getId());
+                    String location = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
+                    role.setLocation(location);
                     role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
                             roleBasicInfo.getAudience());
-                } catch (IdentityRoleManagementException e) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Failed to resolve the audience for role id: " + groupObject.getId(), e);
-                    }
-                    return;
+                    group.setRoleV2(role);
                 }
-                group.setRoleV2(role);
+            } catch (IdentityRoleManagementException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Failed to retrieve roles for group : " + group.getId(), e);
+                }
             }
         }
     }
