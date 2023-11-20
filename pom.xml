@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
- ~ Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+  ~ Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
   ~
-  ~ WSO2 Inc. licenses this file to you under the Apache License,
+  ~ WSO2 LLC. licenses this file to you under the Apache License,
   ~ Version 2.0 (the "License"); you may not use this file except
   ~ in compliance with the License.
   ~ You may obtain a copy of the License at
@@ -28,7 +28,7 @@
     <artifactId>identity-inbound-provisioning-scim2</artifactId>
     <packaging>pom</packaging>
     <modelVersion>4.0.0</modelVersion>
-    <version>3.4.24-SNAPSHOT</version>
+    <version>3.4.48-SNAPSHOT</version>
     <name>WSO2 Carbon - SCIM Provisioning Module</name>
     <description>
         SCIM 2.0 Implementation for C4
@@ -162,11 +162,38 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.role.v2.mgt.core</artifactId>
+                <version>${identity.framework.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.idp.mgt</artifactId>
+                <version>${identity.framework.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
+                <version>${org.wso2.carbon.identity.organization.management.core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.testutil</artifactId>
                 <scope>test</scope>
                 <version>${identity.framework.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
+                <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
+                <version>${org.wso2.carbon.identity.organization.management.core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.event.handler.accountlock</groupId>
+                <artifactId>org.wso2.carbon.identity.handler.event.account.lock</artifactId>
+                <version>${org.wso2.carbon.identity.handler.event.account.lock.version}</version>
+                <scope>provided</scope>
+            </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
                 <artifactId>org.wso2.carbon.identity.scim2.common</artifactId>
@@ -257,12 +284,16 @@
         <cxf-bundle.version>3.3.7</cxf-bundle.version>
         <inbound.auth.oauth.version>6.5.3</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
-        <carbon.kernel.version>4.9.18</carbon.kernel.version>
+        <carbon.kernel.version>4.9.15</carbon.kernel.version>
         <identity.framework.version>5.25.509</identity.framework.version>
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.8.12</identity.governance.version>
-        <charon.version>4.0.9</charon.version>
+        <charon.version>4.0.14</charon.version>
+        <org.wso2.carbon.identity.organization.management.core.version>1.0.76
+        </org.wso2.carbon.identity.organization.management.core.version>
+        <org.wso2.carbon.identity.handler.event.account.lock.version>1.8.13
+        </org.wso2.carbon.identity.handler.event.account.lock.version>
 
         <!--Maven Plugin Version-->
         <maven.compiler.plugin.version>2.3.1</maven.compiler.plugin.version>
@@ -291,6 +322,10 @@
         <scim.common.imp.pkg.version.range>[5.0.0, 6.0.0)</scim.common.imp.pkg.version.range>
         <carbon.identity.framework.imp.pkg.version.range>[5.20.118, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
+        <org.wso2.carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
+        </org.wso2.carbon.identity.organization.management.core.version.range>
+        <carbon.identity.account.lock.handler.imp.pkg.version.range>[1.1.12, 2.0.0)
+        </carbon.identity.account.lock.handler.imp.pkg.version.range>
 
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
         <testng.version>6.9.10</testng.version>

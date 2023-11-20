@@ -208,6 +208,53 @@ public class GroupDAO {
         }
     }
 
+    public void addSCIMRoleV2Attributes(int tenantId, String roleName, int roleAudienceRefId,
+                                        Map<String, String> attributes) throws IdentitySCIMException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.ADD_ATTRIBUTES_WITH_AUDIENCE_SQL)) {
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, roleName);
+            prepStmt.setInt(3, roleAudienceRefId);
+
+            for (Map.Entry<String, String> entry : attributes.entrySet()) {
+                if (!isExistingRoleV2Attribute(entry.getKey(), roleName, roleAudienceRefId, tenantId)) {
+                    prepStmt.setString(4, entry.getKey());
+                    prepStmt.setString(5, entry.getValue());
+                    prepStmt.addBatch();
+                } else {
+                    throw new IdentitySCIMException("Error when adding SCIM Attribute: " + entry.getKey() +
+                            ". An attribute with the same name already exists.");
+                }
+            }
+            prepStmt.executeBatch();
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when adding SCIM meta data for the role : " + roleName, e);
+        }
+    }
+
+    private boolean isExistingRoleV2Attribute(String attributeName, String roleName, int audienceRefId, int tenantId)
+            throws IdentitySCIMException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt = connection.prepareStatement(
+                     SQLQueries.CHECK_EXISTING_ATTRIBUTE_WITH_AUDIENCE_SQL)) {
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, roleName);
+            prepStmt.setString(3, attributeName);
+            prepStmt.setInt(4, audienceRefId);
+
+            ResultSet resultSet = prepStmt.executeQuery();
+            if (resultSet.next()) {
+                return true;
+            }
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when reading the RoleV2 SCIM meta data from the persistence store.",
+                    e);
+        }
+        return false;
+    }
+
     /**
      * Add SCIM attributes to hybrid roles created while SCIM was disabled in the user store.
      *

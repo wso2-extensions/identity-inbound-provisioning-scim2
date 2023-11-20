@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.handlers.SCIMClaimOperationEventHandler;
@@ -55,6 +56,7 @@ import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
+import org.wso2.carbon.idp.mgt.IdpManager;
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;
@@ -123,7 +125,8 @@ public class SCIMCommonComponent {
             //Update super tenant user/group attributes.
             AdminAttributeUtil.updateAdminUser(MultitenantConstants.SUPER_TENANT_ID, true);
             AdminAttributeUtil.updateAdminGroup(MultitenantConstants.SUPER_TENANT_ID);
-
+            SCIMCommonUtils.updateEveryOneRoleV2MetaData(MultitenantConstants.SUPER_TENANT_ID);
+            SCIMCommonUtils.updateSystemRoleV2MetaData(MultitenantConstants.SUPER_TENANT_ID);
             if (logger.isDebugEnabled()) {
                 logger.debug("SCIM Common component activated successfully.");
             }
@@ -267,6 +270,62 @@ public class SCIMCommonComponent {
     }
 
     /**
+     * Set role management service V2 implementation.
+     *
+     * @param roleManagementService RoleManagementServiceV2.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService",
+            service = org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRoleManagementServiceV2")
+    protected void setRoleManagementServiceV2(org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+
+        SCIMCommonComponentHolder.setRoleManagementServiceV2(roleManagementService);
+        logger.debug("RoleManagementServiceV2 set in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Unset role management service V2 implementation.
+     *
+     * @param roleManagementService RoleManagementServiceV2
+     */
+    protected void unsetRoleManagementServiceV2(org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+
+        SCIMCommonComponentHolder.setRoleManagementServiceV2(null);
+        logger.debug("RoleManagementServiceV2 unset in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Set idp manager service implementation.
+     *
+     * @param idpManager Idp manager service.
+     */
+    @Reference(
+            name = "org.wso2.carbon.idp.mgt.IdpManager",
+            service = org.wso2.carbon.idp.mgt.IdpManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdPManagerService")
+    protected void setIdPManagerService(IdpManager idpManager) {
+
+        SCIMCommonComponentHolder.setIdpManagerService(idpManager);
+        logger.debug("IdPManagerService set in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Unset idp manager service implementation.
+     *
+     * @param idpManager Idp manager service.
+     */
+    protected void unsetIdPManagerService(IdpManager idpManager) {
+
+        SCIMCommonComponentHolder.setIdpManagerService(null);
+        logger.debug("IdPManagerService unset in SCIMCommonComponent bundle.");
+    }
+
+    /**
      * Set SCIMUserStoreErrorResolver implementation
      *
      * @param scimUserStoreErrorResolver SCIMUserStoreErrorResolver
@@ -285,6 +344,21 @@ public class SCIMCommonComponent {
     protected void unsetScimUserStoreErrorResolver(SCIMUserStoreErrorResolver scimUserStoreErrorResolver) {
 
         SCIMCommonComponentHolder.removeScimUserStoreErrorResolver(scimUserStoreErrorResolver);
+    }
+
+    @Reference(name = "identity.organization.management.component",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManager")
+    protected void setOrganizationManager(OrganizationManager organizationManager) {
+
+        SCIMCommonComponentHolder.setOrganizationManager(organizationManager);
+    }
+
+    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
+
+        SCIMCommonComponentHolder.setOrganizationManager(null);
     }
 
     @Deactivate

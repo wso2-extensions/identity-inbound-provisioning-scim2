@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -42,6 +42,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -61,6 +63,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
+import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 import org.wso2.carbon.user.core.jdbc.JDBCUserStoreManager;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionAttribute;
@@ -87,6 +90,7 @@ import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
+import org.wso2.charon3.core.objects.RoleV2;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
 import org.wso2.charon3.core.objects.plainobjects.GroupsGetResponse;
@@ -126,6 +130,8 @@ import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
@@ -418,6 +424,14 @@ public class SCIMUserManager implements UserManager {
                     .equals(ERROR_CODE_PASSWORD_HISTORY_VIOLATION, ((IdentityEventException) e).getErrorCode())) {
                 throw new BadRequestException(ERROR_CODE_PASSWORD_HISTORY_VIOLATION + " - " + e.getMessage(),
                         ResponseCodeConstants.INVALID_VALUE);
+            }
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException) {
+                String errorCode = ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode();
+                if (StringUtils.equals(errorCode,
+                        (ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION.getCode())) ||
+                        StringUtils.equals(errorCode, ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION.getCode())) {
+                    throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                }
             }
             e = e.getCause();
             i++;
@@ -2994,7 +3008,9 @@ public class SCIMUserManager implements UserManager {
             Set<String> scimRoles = groupHandler.listSCIMRoles();
             List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(roleNames, scimRoles);
             if (!scimDisabledHybridRoles.isEmpty()) {
-                createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
+                if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                    createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
+                }
                 roleNames.addAll(scimDisabledHybridRoles);
             }
             return roleNames;
@@ -3016,7 +3032,9 @@ public class SCIMUserManager implements UserManager {
             Set<String> scimRoles = groupHandler.listSCIMRoles();
             List<String> scimDisabledHybridRoles = getSCIMDisabledHybridRoleList(roleNames, scimRoles);
             if (!scimDisabledHybridRoles.isEmpty()) {
-                createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
+                if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                    createSCIMAttributesForSCIMDisabledHybridRoles(scimDisabledHybridRoles);
+                }
                 roleNames.addAll(scimDisabledHybridRoles);
             }
             return roleNames;
@@ -3388,9 +3406,14 @@ public class SCIMUserManager implements UserManager {
                 temporaryMembers.clear();
 
                 for (String member : deletedMembers) {
-                    String username = UserCoreUtil.addDomainToName(UserCoreUtil.removeDomainFromName(member),
-                            userStoreDomainForGroup);
-                    temporaryMembers.add(username);
+                    if (addedMembers.isEmpty() && StringUtils.isBlank(member)) {
+                        throw new BadRequestException(ResponseCodeConstants.INVALID_VALUE);
+                    }
+                    if (StringUtils.isNotBlank(member)) {
+                        String username = UserCoreUtil.addDomainToName(UserCoreUtil.removeDomainFromName(member),
+                                userStoreDomainForGroup);
+                        temporaryMembers.add(username);
+                    }
                 }
 
                 deletedMembers.clear();
@@ -3435,13 +3458,17 @@ public class SCIMUserManager implements UserManager {
             carbonUM.updateGroupName(currentGroupName, newGroupName);
 
         } catch (UserStoreException e) {
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
+                    .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getCode(),
+                            ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode())) {
+                log.error(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getMessage(), e);
+                throw new BadRequestException(ResponseCodeConstants.INVALID_VALUE);
+            }
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
             throw new CharonException(e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
             throw new CharonException("Error retrieving User Store name. ", e);
-        } catch (BadRequestException e) {
-            throw new CharonException("Error in updating the group", e);
         }
     }
 
@@ -3484,10 +3511,6 @@ public class SCIMUserManager implements UserManager {
                 SCIMConstants.OperationalConstants.REMOVE)) {
             addedMembers.remove(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
             removedMembers.add(memberObject.get(SCIMConstants.GroupSchemaConstants.DISPLAY));
-            String value = memberObject.get(SCIMConstants.GroupSchemaConstants.VALUE);
-            if (StringUtils.isNotBlank(value)) {
-                deletedMemberIds.add(value);
-            }
         }
     }
 
@@ -3682,7 +3705,7 @@ public class SCIMUserManager implements UserManager {
             if (StringUtils.isEmpty(userId)) {
                 String error = "User: " + userName + " doesn't exist in the user store. Hence can not update the " +
                         "group: " + displayName;
-                throw new BadRequestException(error);
+                throw new BadRequestException(error, ResponseCodeConstants.INVALID_VALUE);
             }
             memberUserIds.add(userId);
         }
@@ -3988,7 +4011,7 @@ public class SCIMUserManager implements UserManager {
                 }
             }
 
-            // Set the roles attribute if the the role and group separation feature is enabled.
+            // Set the roles attribute if the role and group separation feature is enabled.
             if (carbonUM.isRoleAndGroupSeparationEnabled()) {
                 setRolesOfUser(rolesList, groupMetaAttributesCache, coreUser, scimUser);
             }
@@ -4243,12 +4266,33 @@ public class SCIMUserManager implements UserManager {
                 groupMetaAttributesCache.put(roleName, groupObject);
             }
 
-            Role role = new Role();
-            role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
-            role.setId(groupObject.getId());
-            String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
-            role.setLocation(location);
-            scimUser.setRole(role);
+            if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                Role role = new Role();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
+                role.setLocation(location);
+                scimUser.setRole(role);
+            } else {
+                RoleV2 role = new RoleV2();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleV2URL(groupObject.getId());
+                role.setLocation(location);
+                try {
+                    org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo roleBasicInfo =
+                            SCIMCommonComponentHolder.getRoleManagementServiceV2()
+                                    .getRoleBasicInfoById(groupObject.getId(), tenantDomain);
+                    role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
+                            roleBasicInfo.getAudience());
+                } catch (IdentityRoleManagementException e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Failed to resolve the audience for role id: " + groupObject.getId(), e);
+                    }
+                    return;
+                }
+                scimUser.setRoleV2(role);
+            }
         }
     }
 
@@ -4449,32 +4493,54 @@ public class SCIMUserManager implements UserManager {
 
         String groupName = group.getDisplayName();
         Map<String, Group> groupMetaAttributesCache = new HashMap<>();
-        List<String> rolesOfGroup = carbonUM.getHybridRoleListOfGroup(UserCoreUtil.removeDomainFromName(groupName),
-                UserCoreUtil.extractDomainFromName(groupName));
+        if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            List<String> rolesOfGroup = carbonUM.getHybridRoleListOfGroup(UserCoreUtil.removeDomainFromName(groupName),
+                    UserCoreUtil.extractDomainFromName(groupName));
+            // Add roles of group.
+            for (String roleName : rolesOfGroup) {
+                if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
+                    // Carbon specific roles do not possess SCIM info, hence skipping them.
+                    continue;
+                }
 
-        // Add roles of group.
-        for (String roleName : rolesOfGroup) {
-            if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
-                // Carbon specific roles do not possess SCIM info, hence skipping them.
-                continue;
+                Group groupObject = groupMetaAttributesCache.get(roleName);
+                if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
+                    /*
+                     * Here getGroupOnlyWithMetaAttributes used to get role names. Group attributes will be retrieved
+                     * from the userstore.
+                     */
+                    groupObject = getGroupOnlyWithMetaAttributes(roleName);
+                    groupMetaAttributesCache.put(roleName, groupObject);
+                }
+
+                Role role = new Role();
+                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
+                role.setId(groupObject.getId());
+                String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
+                role.setLocation(location);
+                group.setRole(role);
             }
-
-            Group groupObject = groupMetaAttributesCache.get(roleName);
-            if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
-                /*
-                 * Here getGroupOnlyWithMetaAttributes used to get role names. Group attributes will be retrieved
-                 * from the userstore.
-                 */
-                groupObject = getGroupOnlyWithMetaAttributes(roleName);
-                groupMetaAttributesCache.put(roleName, groupObject);
+        } else {
+            try {
+                List<String> groups = new ArrayList<>();
+                groups.add(group.getId());
+                List<RoleBasicInfo> roles = SCIMCommonComponentHolder.getRoleManagementServiceV2()
+                        .getRoleListOfGroups(groups, tenantDomain);
+                for (RoleBasicInfo roleBasicInfo : roles) {
+                    RoleV2 role = new RoleV2();
+                    role.setDisplayName(roleBasicInfo.getName());
+                    role.setId(roleBasicInfo.getId());
+                    String location = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
+                    role.setLocation(location);
+                    role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
+                            roleBasicInfo.getAudience());
+                    group.setRoleV2(role);
+                }
+            } catch (IdentityRoleManagementException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Failed to retrieve roles for group : " + group.getId(), e);
+                }
             }
-
-            Role role = new Role();
-            role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
-            role.setId(groupObject.getId());
-            String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
-            role.setLocation(location);
-            group.setRole(role);
         }
     }
 

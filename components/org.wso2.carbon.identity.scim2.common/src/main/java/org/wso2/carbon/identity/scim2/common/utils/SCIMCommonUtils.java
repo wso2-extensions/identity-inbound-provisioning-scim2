@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -24,8 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.application.common.model.ThreadLocalProvisioningServiceProvider;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
@@ -35,11 +33,14 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.handler.event.account.lock.constants.AccountConstants;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
+import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
@@ -97,6 +98,11 @@ public class SCIMCommonUtils {
         return StringUtils.isNotBlank(id) ? getSCIMRoleURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
     }
 
+    public static String getSCIMRoleV2URL(String id) {
+
+        return StringUtils.isNotBlank(id) ? getSCIMRoleV2URL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+    }
+
     public static String getSCIMServiceProviderConfigURL(String id) {
         return getSCIMServiceProviderConfigURL() ;
     }
@@ -119,6 +125,90 @@ public class SCIMCommonUtils {
 
         String scimURL = getSCIMURL(false);
         return scimURL + SCIMCommonConstants.ROLES;
+    }
+
+    public static String getSCIMRoleV2URL() {
+
+        String scimURL = getSCIMURL(true);
+        return scimURL + SCIMCommonConstants.ROLES_V2;
+    }
+
+    public static String getApplicationRefURL(String id) {
+
+        String applicationURL;
+        String path = "/api/server/v1/applications";
+        try {
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                applicationURL = ServiceURLBuilder.create().addPath(path).build()
+                        .getAbsolutePublicURL();
+            } else {
+                applicationURL = getURLIfTenantQualifiedURLDisabled(path);
+            }
+            return StringUtils.isNotBlank(id) ? applicationURL + SCIMCommonConstants.URL_SEPERATOR + id : null;
+        } catch (URLBuilderException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while building the application endpoint with tenant/organization " +
+                        "qualified URL.", e);
+            }
+            return null;
+        }
+    }
+
+    public static String getIdpGroupURL(String idpId, String groupId) {
+
+        String idpGroupURL;
+        String path = "/api/server/v1/identity-providers";
+        try {
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                idpGroupURL = ServiceURLBuilder.create().addPath(path).build()
+                        .getAbsolutePublicURL();
+            } else {
+                idpGroupURL = getURLIfTenantQualifiedURLDisabled(path);
+            }
+            return StringUtils.isNotBlank(idpId) && StringUtils.isNotBlank(groupId) ?
+                    new StringBuilder().append(idpGroupURL).append(SCIMCommonConstants.URL_SEPERATOR).append(idpId)
+                            .append(SCIMCommonConstants.URL_SEPERATOR).append(groupId).toString() : null;
+        } catch (URLBuilderException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while building the identity provider's group endpoint with " +
+                                "tenant/organization qualified URL.", e);
+            }
+            return null;
+        }
+    }
+
+    public static String getPermissionRefURL(String apiId, String permissionName) {
+
+        String apiResourceURL;
+        String apiResourcePath = "/api/server/v1/api-resources";
+        try {
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                apiResourceURL = ServiceURLBuilder.create().addPath(apiResourcePath).build()
+                        .getAbsolutePublicURL();
+            } else {
+                apiResourceURL = getURLIfTenantQualifiedURLDisabled(apiResourcePath);
+            }
+            return StringUtils.isNotBlank(apiId) && StringUtils.isNotBlank(permissionName) ?
+                    new StringBuilder().append(apiResourceURL).append(SCIMCommonConstants.URL_SEPERATOR).append(apiId)
+                            .append(SCIMCommonConstants.URL_SEPERATOR).append("scopes")
+                            .append(SCIMCommonConstants.URL_SEPERATOR).append(permissionName).toString() : null;
+        } catch (URLBuilderException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while building the application endpoint with tenant/organization " +
+                        "qualified URL.", e);
+            }
+            return null;
+        }
+    }
+
+    private static String getURLIfTenantQualifiedURLDisabled(String resourcePath) throws URLBuilderException {
+
+        String serverUrl = ServiceURLBuilder.create().build().getAbsolutePublicURL();
+        String tenantDomain = getTenantDomainFromContext();
+        if (isNotASuperTenantFlow(tenantDomain)) {
+            return serverUrl + "/t/" + tenantDomain + resourcePath;
+        }
+        return serverUrl + resourcePath;
     }
 
     public static String getTenantDomainFromContext() {
@@ -385,7 +475,7 @@ public class SCIMCommonUtils {
 
         String tenantDomain;
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
+            tenantDomain = getTenantDomainFromContext();
         } else {
             tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         }
@@ -783,6 +873,46 @@ public class SCIMCommonUtils {
             return attributeSchema;
         } catch (InternalErrorException | IdentitySCIMException e) {
             throw new CharonException("Error while building scim custom schema", e);
+        }
+    }
+
+    public static void updateEveryOneRoleV2MetaData(int tenantId) {
+
+        // Handle everyone role creation also here if legacy runtime is disabled.
+        if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            try {
+                UserStoreManager userStoreManager = (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
+                        getTenantUserRealm(tenantId).getUserStoreManager();
+                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
+                String everyoneRoleName = userStoreManager.getRealmConfiguration().getEveryOneRoleName();
+                if (!scimGroupHandler.isGroupExisting(everyoneRoleName)) {
+                    scimGroupHandler.addRoleV2MandatoryAttributes(everyoneRoleName);
+                }
+            } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
+                log.error(e);
+            }
+        }
+    }
+
+    /**
+     * Update system role meta data.
+     *
+     * @param tenantId Tenant Id.
+     */
+    public static void updateSystemRoleV2MetaData(int tenantId) {
+
+        // Handle system role creation also here if legacy runtime is disabled.
+        if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            try {
+                UserStoreManager userStoreManager = (UserStoreManager) SCIMCommonComponentHolder.getRealmService().
+                        getTenantUserRealm(tenantId).getUserStoreManager();
+                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
+                if (!scimGroupHandler.isGroupExisting(AccountConstants.ACCOUNT_LOCK_BYPASS_ROLE)) {
+                    scimGroupHandler.addRoleV2MandatoryAttributes(AccountConstants.ACCOUNT_LOCK_BYPASS_ROLE);
+                }
+            } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
+                log.error(e);
+            }
         }
     }
 }

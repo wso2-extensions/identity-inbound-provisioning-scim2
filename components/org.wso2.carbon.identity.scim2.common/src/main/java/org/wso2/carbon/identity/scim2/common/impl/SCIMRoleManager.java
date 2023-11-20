@@ -20,12 +20,13 @@ package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.RoleBasicInfo;
@@ -99,6 +100,11 @@ public class SCIMRoleManager implements RoleManager {
             log.debug("Creating role: " + role.getDisplayName());
         }
         try {
+            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
+                throw new BadRequestException("Role creation is not allowed for organizations.",
+                        ResponseCodeConstants.INVALID_VALUE);
+            }
+
             // Check if the role already exists.
             if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
                 String error = "Role with name: " + role.getDisplayName() + " already exists in the tenantDomain: "
@@ -950,5 +956,14 @@ public class SCIMRoleManager implements RoleManager {
             }
         }
         return false;
+    }
+
+    private boolean isRoleModificationAllowedForTenant(String tenantDomain) throws CharonException {
+
+        try {
+            return !OrganizationManagementUtil.isOrganization(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new CharonException("Error while checking whether the tenant is an organization.", e);
+        }
     }
 }
