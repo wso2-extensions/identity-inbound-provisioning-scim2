@@ -3905,8 +3905,10 @@ public class SCIMUserManager implements UserManager {
                 groupsList = addDomainToNames(userStoreDomainName, groupsList);
 
                 // Get user roles from attributes.
-                rolesList = getMultiValuedAttributeList(userStoreDomainName, attributes,
-                        SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT);
+                if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                    rolesList = getMultiValuedAttributeList(userStoreDomainName, attributes,
+                            SCIMConstants.UserSchemaConstants.ROLES_URI + "." + SCIMConstants.DEFAULT);
+                }
 
                 // Skip groups and roles claims because they are handled separately.
                 filterAttributes(attributes, Arrays.asList(SCIMConstants.UserSchemaConstants.ROLES_URI, SCIMConstants.
@@ -4228,48 +4230,48 @@ public class SCIMUserManager implements UserManager {
             IdentitySCIMException, BadRequestException {
 
         // Add roles of user.
-        for (String roleName : rolesOfUser) {
-            if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
-                // Carbon specific roles do not possess SCIM info, hence skipping them.
-                continue;
-            }
+        if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            for (String roleName : rolesOfUser) {
+                if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equalsIgnoreCase(roleName)) {
+                    // Carbon specific roles do not possess SCIM info, hence skipping them.
+                    continue;
+                }
 
-            Group groupObject = groupMetaAttributesCache.get(roleName);
-            if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
-                /*
-                 * Here getGroupOnlyWithMetaAttributes used to get role names. Group attributes will be retrieved
-                 * from the userstore.
-                 */
-                groupObject = getGroupOnlyWithMetaAttributes(roleName);
-                groupMetaAttributesCache.put(roleName, groupObject);
-            }
+                Group groupObject = groupMetaAttributesCache.get(roleName);
+                if (groupObject == null && !groupMetaAttributesCache.containsKey(roleName)) {
+                    /*
+                     * Here getGroupOnlyWithMetaAttributes used to get role names. Group attributes will be retrieved
+                     * from the userstore.
+                     */
+                    groupObject = getGroupOnlyWithMetaAttributes(roleName);
+                    groupMetaAttributesCache.put(roleName, groupObject);
+                }
 
-            if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
                 Role role = new Role();
                 role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
                 role.setId(groupObject.getId());
                 String location = SCIMCommonUtils.getSCIMRoleURL(groupObject.getId());
                 role.setLocation(location);
                 scimUser.setRole(role);
-            } else {
-                RoleV2 role = new RoleV2();
-                role.setDisplayName(removeInternalDomain(groupObject.getDisplayName()));
-                role.setId(groupObject.getId());
-                String location = SCIMCommonUtils.getSCIMRoleV2URL(groupObject.getId());
-                role.setLocation(location);
-                try {
-                    org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo roleBasicInfo =
-                            SCIMCommonComponentHolder.getRoleManagementServiceV2()
-                                    .getRoleBasicInfoById(groupObject.getId(), tenantDomain);
+            }
+        } else {
+            try {
+                List<RoleBasicInfo> roles = SCIMCommonComponentHolder.getRoleManagementServiceV2()
+                        .getRoleListOfUser(user.getUserID(), tenantDomain);
+                for (RoleBasicInfo roleBasicInfo : roles) {
+                    RoleV2 role = new RoleV2();
+                    role.setDisplayName(roleBasicInfo.getName());
+                    role.setId(roleBasicInfo.getId());
+                    String location = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
+                    role.setLocation(location);
                     role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
                             roleBasicInfo.getAudience());
-                } catch (IdentityRoleManagementException e) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Failed to resolve the audience for role id: " + groupObject.getId(), e);
-                    }
-                    return;
+                    scimUser.setRoleV2(role);
                 }
-                scimUser.setRoleV2(role);
+            } catch (IdentityRoleManagementException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Failed to retrieve roles for user : " + user.getUserID(), e);
+                }
             }
         }
     }
