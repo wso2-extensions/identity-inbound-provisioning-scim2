@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.scim2.common.impl;
 
-import java.util.Objects;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.collections.MapUtils;
