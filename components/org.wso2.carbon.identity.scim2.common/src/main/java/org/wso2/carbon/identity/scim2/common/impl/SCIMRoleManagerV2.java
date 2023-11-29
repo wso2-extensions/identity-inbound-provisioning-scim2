@@ -769,6 +769,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             } catch (IdentityRoleManagementException e) {
                 if (StringUtils.equals(RoleConstants.Error.INVALID_REQUEST.getCode(), e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
+                } else if (RoleConstants.Error.INVALID_PERMISSION.getCode().equals(e.getErrorCode())) {
+                    throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
                 } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
