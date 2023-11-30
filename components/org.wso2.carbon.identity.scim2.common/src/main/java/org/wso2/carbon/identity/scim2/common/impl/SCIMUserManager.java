@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.impl;
 
+import java.util.Objects;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.collections.MapUtils;
@@ -2394,8 +2395,9 @@ public class SCIMUserManager implements UserManager {
             for (ExpressionCondition expressionCondition : expressionConditions) {
                 List<LocalClaim> mappedClaim =
                         claimMapping1.stream()
-                                .filter(mapping -> mapping.getMappedAttributes().get(0).getAttributeName() ==
-                                        expressionCondition.getAttributeName()).collect(Collectors.toList());
+                                .filter(mapping -> Objects.equals(
+                                        mapping.getMappedAttributes().get(0).getAttributeName(),
+                                        expressionCondition.getAttributeName())).collect(Collectors.toList());
                 //Obtaining relevant URI for the mapped attribute.
                 if (mappedClaim.size() == 1) {
                     String tempClaimURI = mappedClaim.get(0).getClaimURI();
