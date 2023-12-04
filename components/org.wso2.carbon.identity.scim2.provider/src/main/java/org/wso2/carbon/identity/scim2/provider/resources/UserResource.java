@@ -18,13 +18,12 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
+import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
-import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.extensions.UserManager;
@@ -36,29 +35,25 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.buildCustomSchema;
+import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.getTenantId;
+
 @Path("/")
 public class UserResource extends AbstractResource {
-    private static final Log logger = LogFactory.getLog(UserResource.class);
 
     @GET
     @Path("{id}")
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
     public Response getUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                            @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String  excludedAttributes) {
 
-        JSONEncoder encoder = null;
         try {
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
             if(!isValidOutputFormat(outputFormat)){
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
@@ -66,32 +61,29 @@ public class UserResource extends AbstractResource {
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
 
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
+
             SCIMResponse scimResponse = userResourceManager.get(id, userManager,attribute, excludedAttributes);
             // needs to check the code of the response and return 200 0k or other error codes
             // appropriately.
             return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            return handleCharonException(e,encoder);
+            return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }
     }
 
     @POST
-    public Response createUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+    public Response createUser(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String  excludedAttributes,
                                String resourceString) {
 
-
-        JSONEncoder encoder = null;
         try {
-            // obtain default charon manager
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -108,37 +100,40 @@ public class UserResource extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
+
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
+
+            // To initialize a thread local to get confirmation code of the user for ask password flow if notification
+            // mange by client application.
+            initializeAskPasswordConfirmationCodeThreadLocal(resourceString);
 
             SCIMResponse response = userResourceManager.create(resourceString, userManager,
                     attribute, excludedAttributes);
 
-            return SupportUtils.buildResponse(response);
+            return SupportUtils.buildCreateUserResponse(response);
 
         } catch (CharonException e) {
-            return handleCharonException(e, encoder);
+            return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            removeAskPasswordConfirmationCodeThreadLocal();
         }
     }
 
     @DELETE
     @Path("{id}")
     public Response deleteUser(@PathParam(SCIMProviderConstants.ID) String id,
-                               @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
 
-        JSONEncoder encoder = null;
         try {
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
             // defaults to application/scim+json.
             if (format == null) {
                 format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
@@ -147,9 +142,6 @@ public class UserResource extends AbstractResource {
                 String error = format + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
-
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
@@ -162,7 +154,7 @@ public class UserResource extends AbstractResource {
             return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            return handleCharonException(e, encoder);
+            return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }
@@ -170,8 +162,7 @@ public class UserResource extends AbstractResource {
 
     @GET
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
-    public Response getUser(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format,
+    public Response getUser(@HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format,
                             @QueryParam (SCIMProviderConstants.ATTRIBUTES) String attribute,
                             @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                             @QueryParam (SCIMProviderConstants.FILTER) String filter,
@@ -181,10 +172,7 @@ public class UserResource extends AbstractResource {
                             @QueryParam (SCIMProviderConstants.SORT_ORDER) String sortOrder,
                             @QueryParam (SCIMProviderConstants.DOMAIN) String domainName) {
 
-        JSONEncoder encoder = null;
         try {
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
             // defaults to application/scim+json.
             if (format == null) {
                 format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
@@ -193,11 +181,12 @@ public class UserResource extends AbstractResource {
                 String error = format + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             // create charon-SCIM user resource manager and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
@@ -206,10 +195,9 @@ public class UserResource extends AbstractResource {
 
             scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
                     sortBy, sortOrder, domainName, attribute, excludedAttributes);
-
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
-            return handleCharonException(e, encoder);
+            return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }
@@ -218,15 +206,11 @@ public class UserResource extends AbstractResource {
     @POST
     @Path("/.search")
     @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
-    public Response getUsersByPost(@HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
-                                   @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+    public Response getUsersByPost(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                    @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                    String resourceString) {
 
-        JSONEncoder encoder = null;
         try {
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -243,11 +227,12 @@ public class UserResource extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             // create charon-SCIM user resource manager and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
@@ -259,7 +244,7 @@ public class UserResource extends AbstractResource {
             return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
-            return handleCharonException(e, encoder);
+            return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }
@@ -268,18 +253,13 @@ public class UserResource extends AbstractResource {
     @PUT
     @Path("{id}")
     public Response updateUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                               @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                                @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                @QueryParam (SCIMProviderConstants.ATTRIBUTES) String attribute,
                                @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
-        JSONEncoder encoder = null;
         try {
-            // obtain default charon manager
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -296,11 +276,12 @@ public class UserResource extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceEndpoint = new UserResourceManager();
@@ -311,7 +292,7 @@ public class UserResource extends AbstractResource {
             return SupportUtils.buildResponse(response);
 
         } catch (CharonException e) {
-            return handleCharonException(e, encoder);
+            return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }
@@ -320,7 +301,6 @@ public class UserResource extends AbstractResource {
     @PATCH
     @Path("{id}")
     public Response patchUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                              @HeaderParam(SCIMProviderConstants.AUTHORIZATION) String authorizationHeader,
                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                               @QueryParam (SCIMProviderConstants.ATTRIBUTES) String attribute,
@@ -328,11 +308,7 @@ public class UserResource extends AbstractResource {
                               String resourceString) {
 
 
-        JSONEncoder encoder = null;
         try {
-            // obtain default charon manager
-            IdentitySCIMManager identitySCIMManager = IdentitySCIMManager.getInstance();
-
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -349,11 +325,11 @@ public class UserResource extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-            // obtain the encoder at this layer in case exceptions needs to be encoded.
-            encoder = identitySCIMManager.getEncoder();
-
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            // Build Custom schema
+            buildCustomSchema(userManager, getTenantId());
 
             // create charon-SCIM user endpoint and hand-over the request.
             UserResourceManager userResourceEndpoint = new UserResourceManager();
@@ -364,10 +340,32 @@ public class UserResource extends AbstractResource {
             return SupportUtils.buildResponse(response);
 
         } catch (CharonException e) {
-            return handleCharonException(e, encoder);
+            return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }
     }
 
+    /**
+     * To initialize the Ask password confirmation code thread local if the ask password is true.
+     *
+     * @param resourceString Resource body.
+     */
+    private void initializeAskPasswordConfirmationCodeThreadLocal(String resourceString) {
+
+        if (SupportUtils.isAskPasswordFlow(resourceString)) {
+            IdentityUtil.threadLocalProperties.get()
+                    .put(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY,
+                            IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_INITIAL_VALUE);
+        }
+    }
+
+    /**
+     * Remove the ask password confirmation code thread local.
+     */
+    private void removeAskPasswordConfirmationCodeThreadLocal() {
+
+        IdentityUtil.threadLocalProperties.get()
+                .remove(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY);
+    }
 }

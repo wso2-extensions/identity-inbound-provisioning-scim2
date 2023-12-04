@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.mockito.Mock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
@@ -50,9 +51,13 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 
+/**
+ * Contains the unit test cases for IdentitySCIMManager.
+ */
 @PrepareForTest({SCIMCommonUtils.class, PrivilegedCarbonContext.class, SCIMCommonComponentHolder.class,CharonConfiguration.class})
-
+@PowerMockIgnore({"javax.xml.*","org.w3c.dom.*","org.xml.sax.*"})
 public class IdentitySCIMManagerTest extends PowerMockTestCase {
+
     @Mock
     RealmService realmService;
 
@@ -73,6 +78,7 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUp() throws Exception {
+
         mockStatic(SCIMCommonUtils.class);
         when(SCIMCommonUtils.getSCIMUserURL()).thenReturn("http://scimUserUrl:9443");
 
@@ -98,22 +104,26 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
+
         return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
     @Test
     public void testGetInstance() throws Exception {
+
         assertNotNull(identitySCIMManager, "Returning a null");
         assertNotNull(identitySCIMManager, "Returning a null");
     }
 
     @Test
     public void testGetEncoder() throws Exception {
+
         assertNotNull(identitySCIMManager.getEncoder());
     }
 
     @Test
     public void testGetUserManager() throws Exception {
+
         when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
         UserManager userManager = identitySCIMManager.getUserManager();
         assertNotNull(userManager);
@@ -121,6 +131,7 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
 
     @Test
     public void testGetUserManagerWithException() throws Exception {
+
         try {
             when(SCIMCommonComponentHolder.getRealmService()).thenReturn(null);
             identitySCIMManager.getUserManager();
@@ -132,6 +143,7 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
 
     @Test
     public void testGetUserManagerWithException2() throws Exception {
+
         try {
             when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
             when(mockedTenantManager.getTenantId(anyString())).thenThrow(new UserStoreException());

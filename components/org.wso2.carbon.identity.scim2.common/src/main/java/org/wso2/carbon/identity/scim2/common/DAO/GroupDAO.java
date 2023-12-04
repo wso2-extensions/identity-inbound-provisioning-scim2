@@ -208,6 +208,53 @@ public class GroupDAO {
         }
     }
 
+    public void addSCIMRoleV2Attributes(int tenantId, String roleName, int roleAudienceRefId,
+                                        Map<String, String> attributes) throws IdentitySCIMException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.ADD_ATTRIBUTES_WITH_AUDIENCE_SQL)) {
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, roleName);
+            prepStmt.setInt(3, roleAudienceRefId);
+
+            for (Map.Entry<String, String> entry : attributes.entrySet()) {
+                if (!isExistingRoleV2Attribute(entry.getKey(), roleName, roleAudienceRefId, tenantId)) {
+                    prepStmt.setString(4, entry.getKey());
+                    prepStmt.setString(5, entry.getValue());
+                    prepStmt.addBatch();
+                } else {
+                    throw new IdentitySCIMException("Error when adding SCIM Attribute: " + entry.getKey() +
+                            ". An attribute with the same name already exists.");
+                }
+            }
+            prepStmt.executeBatch();
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when adding SCIM meta data for the role : " + roleName, e);
+        }
+    }
+
+    private boolean isExistingRoleV2Attribute(String attributeName, String roleName, int audienceRefId, int tenantId)
+            throws IdentitySCIMException {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt = connection.prepareStatement(
+                     SQLQueries.CHECK_EXISTING_ATTRIBUTE_WITH_AUDIENCE_SQL)) {
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, roleName);
+            prepStmt.setString(3, attributeName);
+            prepStmt.setInt(4, audienceRefId);
+
+            ResultSet resultSet = prepStmt.executeQuery();
+            if (resultSet.next()) {
+                return true;
+            }
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when reading the RoleV2 SCIM meta data from the persistence store.",
+                    e);
+        }
+        return false;
+    }
+
     /**
      * Add SCIM attributes to hybrid roles created while SCIM was disabled in the user store.
      *
@@ -335,7 +382,40 @@ public class GroupDAO {
         return attributes;
     }
 
+    /**
+     * Get the id of the group with the given name.
+     *
+     * @param tenantId  Tenant id.
+     * @param groupName Name of the group.
+     * @return Id of the group with the given name.
+     * @throws IdentitySCIMException If an error occurred while getting the group id.
+     */
+    public String getGroupIdByName(int tenantId, String groupName) throws IdentitySCIMException {
+
+        String groupId = null;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
+             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.GET_GROUP_ID_BY_NAME_SQL)) {
+            prepStmt.setInt(1, tenantId);
+            prepStmt.setString(2, SCIMCommonUtils.getGroupNameWithDomain(groupName));
+            prepStmt.setString(3, SCIMConstants.CommonSchemaConstants.ID_URI);
+            try (ResultSet rs = prepStmt.executeQuery()) {
+                while (rs.next()) {
+                    groupId = rs.getString(1);
+                }
+            } catch (SQLException e) {
+                throw new IdentitySCIMException(String.format("Error when getting the SCIM Group information " +
+                        "from the persistence store for group: %s in tenant: %s", groupName, tenantId), e);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            throw new IdentitySCIMException(String.format("Error when getting the SCIM Group information from the " +
+                    "persistence store for group: %s in tenant: %s", groupName, tenantId), e);
+        }
+        return groupId;
+    }
+
     public String getGroupNameById(int tenantId, String id) throws IdentitySCIMException {
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         ResultSet rSet = null;
@@ -357,7 +437,8 @@ public class GroupDAO {
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rSet, prepStmt);
         }
-        if (StringUtils.isNotEmpty(roleName)) {
+        // Verify whether the roleName is not empty, and it's not contain any prefix Application/Internal
+        if (StringUtils.isNotEmpty(roleName) && !SCIMCommonUtils.isHybridRole(roleName)) {
             return SCIMCommonUtils.getPrimaryFreeGroupName(roleName);
         }
         return null;

@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
-import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
@@ -32,7 +31,6 @@ import javax.ws.rs.core.Response;
 
 public class AbstractResource {
     private static final Log logger = LogFactory.getLog(AbstractResource.class);
-    private JSONEncoder defaultEncoder = new JSONEncoder();
 
     //identify the output format
     public boolean isValidOutputFormat(String format) {
@@ -97,14 +95,12 @@ public class AbstractResource {
     }
 
     /**
-     * Build an error message for a Charon exception. We go with the
-     * JSON encoder as default if not specified.
+     * Build an error message for a Charon exception.
      *
      * @param e CharonException
-     * @param encoder
      * @return
      */
-    protected Response handleCharonException(CharonException e, JSONEncoder encoder) {
+    protected Response handleCharonException(CharonException e) {
         if (logger.isDebugEnabled()) {
             logger.debug(e.getMessage(), e);
         }
@@ -114,18 +110,11 @@ public class AbstractResource {
             logger.error("Server error while handling the request.", e);
         }
 
-        // if the encoder is null we go with the JSON encoder as the default encoder.
-        if (encoder == null) {
-            logger.error("No encoder found. Sending error response using default JSON encoder");
-            encoder = defaultEncoder;
-        }
-
         return SupportUtils.buildResponse(AbstractResourceManager.encodeSCIMException(e));
     }
 
     /**
-     * Build the error response if the requested input or output format is not supported. We go with JSON encoder as
-     * the encoder for the error response.
+     * Build the error response if the requested input or output format is not supported.
      * @param e
      * @return
      */

@@ -1,5 +1,7 @@
 {
   "scim2.enable_schema_extension": true,
+  "scim2.enable_custom_schema_extension": true,
+  "scim2.custom_user_schema_uri": "urn:scim:wso2:schema",
   "scim2.max_bulk_operations": "1000",
   "scim2.max_bulk_payload": "1048576",
   "scim2.documentation_uri": "https://docs.wso2.com/display/IS580/Using+the+SCIM+2.0+REST+APIs",

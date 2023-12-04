@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.IObjectFactory;
@@ -32,15 +32,15 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.internal.DefaultServiceURLBuilder;
+import org.wso2.carbon.identity.core.DefaultServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -49,6 +49,7 @@ import static org.testng.Assert.assertNull;
 
 
 @PrepareForTest({IdentityUtil.class, UserCoreUtil.class, IdentityTenantUtil.class, ServiceURLBuilder.class})
+@PowerMockIgnore({"javax.xml.*","org.w3c.dom.*","org.xml.sax.*"})
 public class SCIMCommonUtilsTest extends PowerMockTestCase {
 
     private static final String ID = "8a439cf6-3c6b-47d2-94bf-34d072495af3";

@@ -33,6 +33,8 @@ import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
+import org.wso2.charon3.core.exceptions.NotImplementedException;
+import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.AbstractSCIMObject;
 import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.SCIMObject;
@@ -245,16 +247,9 @@ public class AttributeMapper {
 
     }
 
-    /**
-     * Construct the SCIM Object given the attribute URIs and attribute values of the object.
-     *
-     * @param attributes
-     * @param scimObjectType
-     * @return
-     */
-    public static SCIMObject constructSCIMObjectFromAttributes(Map<String, String> attributes,
-                                                               int scimObjectType)
-            throws CharonException, NotFoundException, BadRequestException {
+    public static SCIMObject constructSCIMObjectFromAttributes(UserManager userManager, Map<String, String> attributes,
+                                                               int scimObjectType) throws CharonException,
+            NotFoundException, BadRequestException{
 
         SCIMObject scimObject = null;
         switch (scimObjectType) {
@@ -287,33 +282,36 @@ public class AttributeMapper {
                 attributeNames = attributeNameString.split("\\.");
             } else {
                 ArrayList<String> tempAttributeNames = new ArrayList<>();
-                String extensionURI = "";
+                StringBuilder extensionURI = new StringBuilder();
                 String[] attributeURIParts = attributeURI.split(":");
                 for (int i = 0; i < attributeURIParts.length - 1; i++) {
-                    extensionURI = extensionURI + ":" + attributeURIParts[i];
+                    extensionURI.append(":").append(attributeURIParts[i]);
                 }
                 String attributeNameString = attributeURIParts[attributeURIParts.length - 1];
                 attributeNames = attributeNameString.split("\\.");
                 tempAttributeNames.add(extensionURI.substring(1));
 
-                for (int i = 0; i < attributeNames.length; i++) {
-                    tempAttributeNames.add(attributeNames[i]);
-                }
+                tempAttributeNames.addAll(Arrays.asList(attributeNames));
                 attributeNames = tempAttributeNames.toArray(attributeNames);
             }
+            try {
+                if (attributeNames.length == 1) {
 
-            if (attributeNames.length == 1) {
+                    constructSCIMObjectFromAttributesOfLevelOne(userManager, attributeEntry, scimObject, attributeNames,
+                            scimObjectType);
 
-                constructSCIMObjectFromAttributesOfLevelOne(attributeEntry, scimObject, attributeNames, scimObjectType);
+                } else if (attributeNames.length == 2) {
 
-            } else if (attributeNames.length == 2) {
+                    constructSCIMObjectFromAttributesOfLevelTwo(userManager, attributeEntry, scimObject, attributeNames,
+                            scimObjectType);
 
-                constructSCIMObjectFromAttributesOfLevelTwo(attributeEntry, scimObject, attributeNames, scimObjectType);
+                } else if (attributeNames.length == 3) {
 
-            } else if (attributeNames.length == 3) {
-
-                constructSCIMObjectFromAttributesOfLevelThree(attributeEntry, scimObject,
-                        attributeNames, scimObjectType);
+                    constructSCIMObjectFromAttributesOfLevelThree(userManager, attributeEntry, scimObject,
+                            attributeNames, scimObjectType);
+                }
+            } catch (CharonException e) {
+                log.error(e);
             }
         }
         return scimObject;
@@ -329,12 +327,14 @@ public class AttributeMapper {
      * @throws BadRequestException
      * @throws CharonException
      */
-    public static void constructSCIMObjectFromAttributesOfLevelOne(Map.Entry<String, String> attributeEntry,
+    public static void constructSCIMObjectFromAttributesOfLevelOne(UserManager userManager,
+                                                                   Map.Entry<String, String> attributeEntry,
                                                                    SCIMObject scimObject, String[] attributeNames,
-                                                                   int scimObjectType)
-            throws BadRequestException, CharonException, NotFoundException {
+                                                                   int scimObjectType) throws BadRequestException,
+            CharonException, NotFoundException {
+
         //get attribute schema
-        AttributeSchema attributeSchema = getAttributeSchema(attributeEntry.getKey(), scimObjectType);
+        AttributeSchema attributeSchema = getAttributeSchema(userManager, attributeEntry.getKey(), scimObjectType);
         if (attributeSchema != null) {
             //either simple valued or multi-valued with simple attributes
             if (attributeSchema.getMultiValued()) {
@@ -372,10 +372,41 @@ public class AttributeMapper {
             }
         }
     }
+    /**
+     * Construct the SCIM Object given the attribute URIs and attribute values of the object.
+     *
+     * @param attributes
+     * @param scimObjectType
+     * @return
+     */
+    public static SCIMObject constructSCIMObjectFromAttributes(Map<String, String> attributes,
+                                                               int scimObjectType)
+            throws CharonException, NotFoundException, BadRequestException {
+
+        return constructSCIMObjectFromAttributes(null, attributes, scimObjectType);
+    }
+
+    /**
+     * construct the level one attributes like nickName.
+     *
+     * @param attributeEntry
+     * @param scimObject
+     * @param attributeNames
+     * @param scimObjectType
+     * @throws BadRequestException
+     * @throws CharonException
+     */
+    public static void constructSCIMObjectFromAttributesOfLevelOne(Map.Entry<String, String> attributeEntry,
+                                                                   SCIMObject scimObject, String[] attributeNames,
+                                                                   int scimObjectType)
+            throws BadRequestException, CharonException, NotFoundException {
+        constructSCIMObjectFromAttributesOfLevelOne(null, attributeEntry, scimObject, attributeNames, scimObjectType);
+    }
 
     /**
      * construct the level two attributes like emails.value.
      *
+     * @param userManager
      * @param attributeEntry
      * @param scimObject
      * @param attributeNames
@@ -384,7 +415,7 @@ public class AttributeMapper {
      * @throws CharonException
      * @throws NotFoundException
      */
-    public static void constructSCIMObjectFromAttributesOfLevelTwo(Map.Entry<String, String> attributeEntry,
+    public static void constructSCIMObjectFromAttributesOfLevelTwo(UserManager userManager, Map.Entry<String, String> attributeEntry,
                                                                    SCIMObject scimObject, String[] attributeNames,
                                                                    int scimObjectType)
             throws BadRequestException, CharonException, NotFoundException {
@@ -401,7 +432,7 @@ public class AttributeMapper {
                 (ADVANCED_ATTRIBUTE_IDENTIFIER)) {
             String[] parentAttributeNames = parentAttributeURI.split(ADVANCED_ATTRIBUTE_IDENTIFIER);
             parentAttributeName = parentAttributeNames[0];
-            AttributeSchema parentAttributeSchema = getAttributeSchema(parentAttributeName, scimObjectType);
+            AttributeSchema parentAttributeSchema = getAttributeSchema(userManager, parentAttributeName, scimObjectType);
 
             if (parentAttributeSchema == null) {
                 if (log.isDebugEnabled()) {
@@ -417,7 +448,7 @@ public class AttributeMapper {
                     parentType);
 
             String typeAttributeURI = parentAttributeName + "." + SCIMConstants.CommonSchemaConstants.TYPE;
-            AttributeSchema typeAttributeSchema = getAttributeSchema(typeAttributeURI, scimObjectType);
+            AttributeSchema typeAttributeSchema = getAttributeSchema(userManager, typeAttributeURI, scimObjectType);
             if (typeAttributeSchema == null) {
                 if (log.isDebugEnabled()) {
                     log.debug("No Type attribute schema found :" + typeAttributeURI);
@@ -427,7 +458,7 @@ public class AttributeMapper {
             DefaultAttributeFactory.createAttribute(typeAttributeSchema, typeSimpleAttribute);
 
             String valueAttributeURI = parentAttributeName + "." + attributeName;
-            AttributeSchema valueSubAttributeSchema = getAttributeSchema(valueAttributeURI, scimObjectType);
+            AttributeSchema valueSubAttributeSchema = getAttributeSchema(userManager, valueAttributeURI, scimObjectType);
 
             if (valueSubAttributeSchema == null) {
                 if (log.isDebugEnabled()) {
@@ -474,7 +505,7 @@ public class AttributeMapper {
             if (parentAttributeURI.equals(attributeEntry.getKey())) {
                 parentAttributeURI = attributeEntry.getKey().replace(":" + attributeNames[1], "");
             }
-            AttributeSchema parentAttributeSchema = getAttributeSchema(parentAttributeURI, scimObjectType);
+            AttributeSchema parentAttributeSchema = getAttributeSchema(userManager, parentAttributeURI, scimObjectType);
 
             if (parentAttributeSchema == null) {
                 if (log.isDebugEnabled()) {
@@ -490,10 +521,10 @@ public class AttributeMapper {
                 AttributeSchema valueSubAttributeSchema = null;
                 if (valueAttributeURI.equals(SCIMConstants.UserSchemaConstants.ADDRESSES_URI)) {
                     valueAttributeURI = valueAttributeURI + ".formatted";
-                    valueSubAttributeSchema = getAttributeSchema(valueAttributeURI, scimObjectType);
+                    valueSubAttributeSchema = getAttributeSchema(userManager, valueAttributeURI, scimObjectType);
                 } else {
                     valueAttributeURI = valueAttributeURI + ".value";
-                    valueSubAttributeSchema = getAttributeSchema(valueAttributeURI, scimObjectType);
+                    valueSubAttributeSchema = getAttributeSchema(userManager, valueAttributeURI, scimObjectType);
                 }
                 //create map with complex value
                 SimpleAttribute typeSimpleAttribute = new SimpleAttribute(SCIMConstants.CommonSchemaConstants.TYPE,
@@ -501,9 +532,9 @@ public class AttributeMapper {
 
                 String typeAttributeURI = attributeEntry.getKey().replace("." + attributeNames[1], "");
                 typeAttributeURI = typeAttributeURI + ".type";
-                AttributeSchema typeAttributeSchema = getAttributeSchema(typeAttributeURI, scimObjectType);
+                AttributeSchema typeAttributeSchema = getAttributeSchema(userManager, typeAttributeURI, scimObjectType);
                 DefaultAttributeFactory.createAttribute(typeAttributeSchema, typeSimpleAttribute);
-                SimpleAttribute valueSimpleAttribute = new SimpleAttribute(SCIMConstants.CommonSchemaConstants.VALUE,
+                SimpleAttribute valueSimpleAttribute = new SimpleAttribute(valueSubAttributeSchema.getName(),
                         AttributeUtil.getAttributeValueFromString(attributeEntry.getValue(),
                                 valueSubAttributeSchema.getType()));
                 DefaultAttributeFactory.createAttribute(valueSubAttributeSchema, valueSimpleAttribute);
@@ -548,7 +579,7 @@ public class AttributeMapper {
                 }
             } else {
                 // Sub attribute of a complex attribute.
-                AttributeSchema subAttributeSchema = getAttributeSchema(attributeEntry.getKey(), scimObjectType);
+                AttributeSchema subAttributeSchema = getAttributeSchema(userManager, attributeEntry.getKey(), scimObjectType);
                 AbstractAttribute attribute;
 
                 if (subAttributeSchema.getMultiValued()) {
@@ -588,6 +619,25 @@ public class AttributeMapper {
         }
     }
 
+    /**
+     * construct the level two attributes like emails.value.
+     *
+     * @param attributeEntry
+     * @param scimObject
+     * @param attributeNames
+     * @param scimObjectType
+     * @throws BadRequestException
+     * @throws CharonException
+     * @throws NotFoundException
+     */
+    public static void constructSCIMObjectFromAttributesOfLevelTwo(Map.Entry<String, String> attributeEntry,
+                                                                   SCIMObject scimObject, String[] attributeNames,
+                                                                   int scimObjectType)
+            throws BadRequestException, CharonException, NotFoundException {
+
+        constructSCIMObjectFromAttributesOfLevelTwo(null, attributeEntry, scimObject, attributeNames, scimObjectType);
+    }
+
     private static void updateComplexAttribute(SCIMObject scimObject, String parentAttributeName, SimpleAttribute
             typeSimpleAttribute, SimpleAttribute valueSimpleAttribute, ComplexAttribute complexAttribute)
             throws NotFoundException, CharonException {
@@ -620,6 +670,7 @@ public class AttributeMapper {
     /**
      * construct the level three extension attributes like extensionSchema.manager.id.
      *
+     * @param userManager
      * @param attributeEntry
      * @param scimObject
      * @param attributeNames
@@ -627,33 +678,32 @@ public class AttributeMapper {
      * @throws BadRequestException
      * @throws CharonException
      */
-    public static void constructSCIMObjectFromAttributesOfLevelThree(Map.Entry<String, String> attributeEntry,
+    public static void constructSCIMObjectFromAttributesOfLevelThree(UserManager userManager, Map.Entry<String, String> attributeEntry,
                                                                      SCIMObject scimObject, String[] attributeNames,
                                                                      int scimObjectType)
             throws BadRequestException, CharonException {
-
         String parentAttribute = attributeNames[0];
         //get immediate parent attribute name
         String immediateParentAttributeName = attributeNames[1];
 
         String subAttributeURI = attributeEntry.getKey().replace("." + attributeNames[2], "");
-        AttributeSchema subAttributeSchema = getAttributeSchema(subAttributeURI, scimObjectType);
+        AttributeSchema subAttributeSchema = getAttributeSchema(userManager, subAttributeURI, scimObjectType);
 
         String parentAttributeURI = subAttributeURI.replace(":" + attributeNames[1], "");
-        AttributeSchema attributeSchema = getAttributeSchema(parentAttributeURI, scimObjectType);
+        AttributeSchema attributeSchema = getAttributeSchema(userManager, parentAttributeURI, scimObjectType);
 
         // Differentiate between sub attribute of Complex attribute and a Multivalued attribute with complex value.
         if (subAttributeSchema.getMultiValued()) {
 
             SimpleAttribute typeSimpleAttribute = new SimpleAttribute(SCIMConstants.CommonSchemaConstants.TYPE,
                     attributeNames[2]);
-            AttributeSchema typeAttributeSchema = getAttributeSchema(subAttributeSchema.getURI()
+            AttributeSchema typeAttributeSchema = getAttributeSchema(userManager, subAttributeSchema.getURI()
                     + ".type", scimObjectType);
             if (typeAttributeSchema != null) {
                 DefaultAttributeFactory.createAttribute(typeAttributeSchema, typeSimpleAttribute);
             }
 
-            AttributeSchema valueAttributeSchema = getAttributeSchema(subAttributeSchema.getURI()
+            AttributeSchema valueAttributeSchema = getAttributeSchema(userManager, subAttributeSchema.getURI()
                     + ".value", scimObjectType);
             SimpleAttribute valueSimpleAttribute = null;
             if (valueAttributeSchema != null) {
@@ -683,7 +733,7 @@ public class AttributeMapper {
             }
             DefaultAttributeFactory.createAttribute(subAttributeSchema, complexAttribute);
 
-            ComplexAttribute extensionComplexAttribute = null;
+            ComplexAttribute extensionComplexAttribute;
 
             if (((AbstractSCIMObject) scimObject).isAttributeExist(parentAttribute)) {
                 Attribute extensionAttribute = ((AbstractSCIMObject) scimObject).getAttribute(parentAttribute);
@@ -695,7 +745,7 @@ public class AttributeMapper {
             }
 
             Map<String, Attribute> extensionSubAttributes = extensionComplexAttribute.getSubAttributesList();
-            if (extensionComplexAttribute != null && extensionSubAttributes.containsKey(attributeNames[1])) {
+            if (extensionSubAttributes.containsKey(attributeNames[1])) {
                 //create attribute value as complex value
                 MultiValuedAttribute multiValuedAttribute =
                         (MultiValuedAttribute) extensionSubAttributes.get(attributeNames[1]);
@@ -709,7 +759,7 @@ public class AttributeMapper {
             }
         } else {
 
-            AttributeSchema subSubAttributeSchema = getAttributeSchema(attributeEntry.getKey(), scimObjectType);
+            AttributeSchema subSubAttributeSchema = getAttributeSchema(userManager, attributeEntry.getKey(), scimObjectType);
             AbstractAttribute attribute;
 
             if (subSubAttributeSchema.getMultiValued()) {
@@ -771,15 +821,34 @@ public class AttributeMapper {
     }
 
     /**
+     * construct the level three extension attributes like extensionSchema.manager.id.
+     *
+     * @param attributeEntry
+     * @param scimObject
+     * @param attributeNames
+     * @param scimObjectType
+     * @throws BadRequestException
+     * @throws CharonException
+     */
+    public static void constructSCIMObjectFromAttributesOfLevelThree(Map.Entry<String, String> attributeEntry,
+                                                                     SCIMObject scimObject, String[] attributeNames,
+                                                                     int scimObjectType)
+            throws BadRequestException, CharonException {
+
+        constructSCIMObjectFromAttributesOfLevelThree(null, attributeEntry, scimObject, attributeNames, scimObjectType);
+    }
+
+    /**
      * Return the attribute schema for the asked attribute URI.
      *
      * @param attributeURI   URI of the SCIM attribute.
      * @param scimObjectType Type of the SCIM object.
      * @return Schema of the SCIM attribute belonging to the specified attributeURI and scimObjectType.
      */
-    private static AttributeSchema getAttributeSchema(String attributeURI, int scimObjectType) {
+    private static AttributeSchema getAttributeSchema(UserManager userManager, String attributeURI, int scimObjectType)
+            throws BadRequestException, CharonException {
 
-        ResourceTypeSchema resourceSchema = getResourceSchema(scimObjectType);
+        ResourceTypeSchema resourceSchema = getResourceSchema(userManager, scimObjectType);
         if (resourceSchema != null) {
             List<AttributeSchema> attributeSchemas = resourceSchema.getAttributesList();
             for (AttributeSchema attributeSchema : attributeSchemas) {
@@ -824,12 +893,23 @@ public class AttributeMapper {
      * @param scimObjectType SCIM object type.
      * @return Resource type schema of the given SCIM object type.
      */
-    private static ResourceTypeSchema getResourceSchema(int scimObjectType) {
+    private static ResourceTypeSchema getResourceSchema(UserManager userManager, int scimObjectType)
+            throws BadRequestException, CharonException {
 
         ResourceTypeSchema resourceSchema = null;
         switch (scimObjectType) {
             case 1:
-                resourceSchema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+                if (userManager != null) {
+                    try {
+                        resourceSchema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema(userManager);
+                    } catch (NotImplementedException e) {
+                        throw new CharonException("Error while getting user resource. GetUserResourceSchema is not " +
+                                "implemented.");
+                    }
+                }
+                if (resourceSchema == null) {
+                    resourceSchema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+                }
                 break;
             case 2:
                 resourceSchema = SCIMSchemaDefinitions.SCIM_GROUP_SCHEMA;

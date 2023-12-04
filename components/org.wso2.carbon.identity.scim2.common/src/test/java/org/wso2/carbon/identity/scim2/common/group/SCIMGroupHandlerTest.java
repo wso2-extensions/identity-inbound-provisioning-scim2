@@ -29,7 +29,6 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
-import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.charon3.core.objects.Group;
 
@@ -44,9 +43,11 @@ import java.util.Calendar;
 import java.util.Set;
 import java.util.HashSet;
 
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.anyMap;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.powermock.api.mockito.PowerMockito.mock;
@@ -165,13 +166,13 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
 
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
         when(connection.prepareStatement(anyString())).thenReturn(mockedPreparedStatement);
-        when(StringUtils.isNotEmpty(anyString())).thenReturn(true);
-        when(SCIMCommonUtils.getPrimaryFreeGroupName(anyString())).thenReturn("directors");
+        when(StringUtils.isNotEmpty(nullable(String.class))).thenReturn(true);
+        when(SCIMCommonUtils.getPrimaryFreeGroupName(nullable(String.class))).thenReturn("directors");
         when(mockedPreparedStatement.executeQuery()).thenReturn(resultSet);
         when(mockedGroupDAO.getGroupNameById(1, "5")).thenReturn("directors");
         assertEquals(new SCIMGroupHandler(1).getGroupName("5"), "directors", "asserting for existance");
 
-        when(StringUtils.isNotEmpty(anyString())).thenReturn(false);
+        when(StringUtils.isNotEmpty(nullable(String.class))).thenReturn(false);
         assertNull(new SCIMGroupHandler(1).getGroupName("NON_EXISITNG_GROUP_NAME"), "asserting for non existance");
     }
 
@@ -209,7 +210,6 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
         ResultSet resultSet = mock(ResultSet.class);
         mockStatic(IdentityDatabaseUtil.class);
         mockStatic(IdentityTenantUtil.class);
-        mockStatic(StringUtils.class);
         mockStatic(SCIMCommonUtils.class);
 
         Date today = Calendar.getInstance().getTime();
@@ -228,7 +228,6 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
         when(mockedGroupDAO.isExistingGroup("EXISTING_GROUP_NAME", 1)).thenReturn(true);
         whenNew(GroupDAO.class).withNoArguments().thenReturn(mockedGroupDAO);
         when(mockedGroupDAO.getSCIMGroupAttributes(anyInt(), anyString())).thenReturn(attributes);
-        when(StringUtils.isNotEmpty(resultSet.getString(anyInt()))).thenReturn(true);
         when(IdentityTenantUtil.getTenantDomain(1)).thenReturn("TENANT_DOMAIN");
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/t/TENANT_DOMAIN/Groups");
         assertEquals(new SCIMGroupHandler(1).getGroupWithAttributes(group, "EXISTING_GROUP_NAME"), group);
@@ -285,13 +284,13 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
 
         SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(1);
         ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
-        scimGroupHandler.updateRoleName("EXISTANT_ROLE_NAME", "NEW_ROLE_NAME");
+        scimGroupHandler.updateRoleName("EXISTENT_ROLE_NAME", "NEW_ROLE_NAME");
         verify(mockedGroupDAO).updateRoleName(anyInt(),argumentCaptor.capture(),anyString());
-        assertEquals(argumentCaptor.getValue(),"EXISTANT_ROLE_NAME");
+        assertEquals(argumentCaptor.getValue(),"EXISTENT_ROLE_NAME");
     }
 
-    @Test(expectedExceptions = IdentitySCIMException.class)
-    public void testUpdateRoleNameException() throws Exception {
+    @Test
+    public void testUpdateRoleNameNonExistent() throws Exception {
         ResultSet resultSet = mock(ResultSet.class);
         mockStatic(IdentityDatabaseUtil.class);
         mockStatic(SCIMCommonUtils.class);
@@ -302,7 +301,7 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
 
         SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(1);
         scimGroupHandler.updateRoleName("NON_EXISTENT_ROLE_NAME", "NEW_ROLE_NAME");
-        //this method is for testing of throwing IdentitySCIMException, hence no assertion
+        verify(mockedGroupDAO, times(0)).updateRoleName(anyInt(),anyString(),anyString());
     }
 
     @Test

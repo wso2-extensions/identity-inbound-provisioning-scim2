@@ -18,11 +18,19 @@
 
 package org.wso2.carbon.identity.scim2.common.group;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
+import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.Group;
@@ -77,6 +85,65 @@ public class SCIMGroupHandler {
     }
 
     /**
+     * Add roleV2 SCIM metadata.
+     *
+     * @param roleName Role name.
+     * @throws IdentitySCIMException if any error occurs while adding admin role attributes.
+     */
+    public void addRoleV2MandatoryAttributes(String roleName) throws IdentitySCIMException {
+
+        Map<String, String> attributes = new HashMap<>();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        String id;
+        int roleAudienceRefId;
+        try {
+            String orgId  = getOrganizationId(tenantDomain);
+            id = SCIMCommonComponentHolder.getRoleManagementServiceV2()
+                    .getRoleIdByName(UserCoreUtil.removeDomainFromName(roleName), RoleConstants.ORGANIZATION, orgId,
+                            tenantDomain);
+            roleAudienceRefId = RoleManagementUtils.resolveAudienceRefId(RoleConstants.ORGANIZATION, orgId);
+        } catch (IdentityRoleManagementException e) {
+            throw new IdentitySCIMException("Error while resolving " + roleName + " role id.", e);
+        }
+        if (StringUtils.isBlank(id)) {
+            throw new IdentitySCIMException("Role : " + roleName + " id not found.");
+        }
+        if (roleAudienceRefId == -1) {
+            throw new IdentitySCIMException("Role : " + roleName + " audience id not found.");
+        }
+        attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
+
+        String createdDate = AttributeUtil.formatDateTime(Instant.now());
+        attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
+
+        attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
+        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, SCIMCommonUtils.getSCIMRoleV2URL(id));
+        GroupDAO groupDAO = new GroupDAO();
+        groupDAO.addSCIMRoleV2Attributes(tenantId, roleName, roleAudienceRefId, attributes);
+    }
+
+    /**
+     * Get the organization id of the tenant.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Organization id.
+     * @throws IdentitySCIMException if any error occurs while resolving organization id.
+     */
+    private String getOrganizationId(String tenantDomain) throws IdentitySCIMException {
+
+        String orgId;
+        try {
+            orgId = SCIMCommonComponentHolder.getOrganizationManager().resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentitySCIMException("Error while resolving org id of tenant : " + tenantDomain, e);
+        }
+        if (StringUtils.isBlank(orgId)) {
+            throw new IdentitySCIMException("Organization id not found for tenant : " + tenantDomain);
+        }
+        return orgId;
+    }
+
+    /**
      * Retrieve the group attributes by group name
      *
      * @param groupName
@@ -125,6 +192,7 @@ public class SCIMGroupHandler {
      * @return
      */
     public String getGroupName(String id) throws IdentitySCIMException {
+
         GroupDAO groupDAO = new GroupDAO();
         String roleName = groupDAO.getGroupNameById(tenantId, id);
         if (roleName == null) {
@@ -216,8 +284,7 @@ public class SCIMGroupHandler {
         if (groupDAO.isExistingGroup(oldRoleName, this.tenantId)) {
             groupDAO.updateRoleName(this.tenantId, oldRoleName, newRoleName);
         } else {
-            throw new IdentitySCIMException("Non-existent group: " + oldRoleName +
-                    " is trying to be updated..");
+            logger.warn("Non-existent group: " + oldRoleName + " is trying to be updated..");
         }
     }
 
