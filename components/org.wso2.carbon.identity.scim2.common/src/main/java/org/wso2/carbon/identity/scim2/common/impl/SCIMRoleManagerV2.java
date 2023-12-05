@@ -96,6 +96,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private static final String ROLE_NAME_FILTER_ATTRIBUTE = "name";
     private static final String ROLE_AUDIENCE_TYPE_FILTER_ATTRIBUTE = "audience";
     private static final String ROLE_AUDIENCE_ID_FILTER_ATTRIBUTE = "audienceId";
+    private final String USERS = "users";
+    private final String GROUPS = "groups";
+    private final String PERMISSIONS = "permissions";
+    private final String ASSOCIATED_APPLICATIONS = "associatedApplications";
     private RoleManagementService roleManagementService;
     private String tenantDomain;
     private Set<String> systemRoles;
@@ -325,7 +329,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     public RolesV2GetResponse listRolesWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
-                                               String sortOrder)
+                                               String sortOrder, List<String> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         if (sortBy != null || sortOrder != null) {
@@ -333,18 +337,18 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         } else if (count != null && count == 0) {
             return new RolesV2GetResponse(0, Collections.emptyList());
         } else if (rootNode != null) {
-            return filterRoles(rootNode, count, startIndex, null, null);
+            return filterRoles(rootNode, count, startIndex, null, null, requiredAttributes);
         } else {
-            return listRoles(count, startIndex, null, null);
+            return listRoles(count, startIndex, null, null, requiredAttributes);
         }
     }
 
     @Override
-    public RolesV2GetResponse listRolesWithPost(SearchRequest searchRequest)
+    public RolesV2GetResponse listRolesWithPost(SearchRequest searchRequest, List<String> requiredAttributes)
             throws NotImplementedException, BadRequestException, CharonException {
 
         return listRolesWithGET(searchRequest.getFilter(), searchRequest.getStartIndex(), searchRequest.getCount(),
-                searchRequest.getSortBy(), searchRequest.getSortOder());
+                searchRequest.getSortBy(), searchRequest.getSortOder(), requiredAttributes);
     }
 
     @Override
@@ -440,11 +444,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @throws CharonException Error filtering the roles.
      */
     private RolesV2GetResponse filterRoles(Node node, Integer count, Integer startIndex, String sortBy,
-                                           String sortOrder)
+                                           String sortOrder, List<String> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         if (node instanceof ExpressionNode || node instanceof OperationNode) {
-            return filterRolesByAttributes(node, count, startIndex, sortBy, sortOrder);
+            return filterRolesByAttributes(node, count, startIndex, sortBy, sortOrder, requiredAttributes);
         }
         throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
     }
@@ -460,23 +464,24 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @return Filtered roles.
      * @throws CharonException Error filtering the roles.
      */
-    private RolesV2GetResponse filterRolesByAttributes(Node node, Integer count, Integer startIndex,
-                                                            String sortBy, String sortOrder)
+    private RolesV2GetResponse filterRolesByAttributes(Node node, Integer count, Integer startIndex, String sortBy,
+                                                       String sortOrder, List<String> requiredAttributes)
             throws CharonException, BadRequestException {
 
         String searchFilter = buildSearchFilter(node);
         if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("Filtering roles from search filter: %s", searchFilter));
         }
-        List<RoleBasicInfo> roles;
+        List<Role> roles;
         try {
-            roles = roleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain);
+            roles = roleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain,
+                    requiredAttributes);
         } catch (IdentityRoleManagementException e) {
             throw new CharonException(
                     String.format("Error occurred while listing roles based on the search filter: %s", searchFilter),
                     e);
         }
-        List<RoleV2> scimRoles = getScimRolesList(roles);
+        List<RoleV2> scimRoles = getScimRolesList(roles, requiredAttributes);
         return new RolesV2GetResponse(scimRoles.size(), scimRoles);
     }
 
@@ -528,15 +533,16 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @return List of roles matching to the criteria.
      * @throws CharonException Error while listing users.
      */
-    private RolesV2GetResponse listRoles(Integer count, Integer startIndex, String sortBy, String sortOrder)
+    private RolesV2GetResponse listRoles(Integer count, Integer startIndex, String sortBy, String sortOrder,
+                                         List<String> requiredAttributes)
             throws CharonException, BadRequestException {
 
         List<RoleV2> rolesList = new ArrayList<>();
         int rolesCount;
         try {
-            List<RoleBasicInfo> roles =
-                    roleManagementService.getRoles(count, startIndex, sortBy, sortOrder, tenantDomain);
-            List<RoleV2> scimRoles = getScimRolesList(roles);
+            List<Role> roles = roleManagementService.getRoles(count, startIndex, sortBy, sortOrder, tenantDomain,
+                    requiredAttributes);
+            List<RoleV2> scimRoles = getScimRolesList(roles, requiredAttributes);
             rolesCount = roleManagementService.getRolesCount(tenantDomain);
             // Set total number of results to 0th index.
             if (rolesCount == 0) {
@@ -593,18 +599,80 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return searchFilter;
     }
 
-    private List<RoleV2> getScimRolesList(List<RoleBasicInfo> roles) throws BadRequestException, CharonException {
+    private List<RoleV2> getScimRolesList(List<Role> roles, List<String> requiredAttributes)
+            throws BadRequestException, CharonException {
 
         List<RoleV2> scimRoles = new ArrayList<>();
-        for (RoleBasicInfo roleBasicInfo : roles) {
+        for (Role role : roles) {
             RoleV2 scimRole = new RoleV2();
-            scimRole.setDisplayName(roleBasicInfo.getName());
-            scimRole.setId(roleBasicInfo.getId());
-            scimRole.setLocation(SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId()));
-            scimRole.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
-                    roleBasicInfo.getAudience());
-            if (systemRoles.contains(roleBasicInfo.getName())) {
+            scimRole.setDisplayName(role.getName());
+            scimRole.setId(role.getId());
+            scimRole.setSchemas();
+            scimRole.setLocation(SCIMCommonUtils.getSCIMRoleV2URL(role.getId()));
+            scimRole.setAudience(role.getAudienceId(), role.getAudienceName(),
+                    role.getAudience());
+            if (systemRoles.contains(role.getName())) {
                 scimRole.setSystemRole(true);
+            }
+            if (requiredAttributes != null) {
+                if (requiredAttributes.contains(USERS)) {
+                    // Set role's assigned users.
+                    List<UserBasicInfo> assignedUsers = role.getUsers();
+                    if (assignedUsers != null) {
+                        for (UserBasicInfo userInfo : assignedUsers) {
+                            userInfo.getId();
+                            String userLocationURI = SCIMCommonUtils.getSCIMUserURL(userInfo.getId());
+                            User user = new User();
+                            user.setUserName(userInfo.getName());
+                            user.setId(userInfo.getId());
+                            user.setLocation(userLocationURI);
+                            scimRole.setUser(user);
+                        }
+                    }
+                }
+                if (requiredAttributes.contains(GROUPS)) {
+                    // Set role's assigned userstore groups.
+                    List<GroupBasicInfo> assignedUserstoreGroups = role.getGroups();
+                    if (assignedUserstoreGroups != null) {
+                        for (GroupBasicInfo groupInfo : assignedUserstoreGroups) {
+                            String groupId = groupInfo.getId();
+                            String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupId);
+                            Group group = new Group();
+                            group.setDisplayName(groupInfo.getName());
+                            group.setId(groupId);
+                            group.setLocation(groupLocationURI);
+                            scimRole.setGroup(group);
+                        }
+                    }
+
+                    // Set role's assigned idp groups.
+                    List<IdpGroup> assignedIdpGroups = role.getIdpGroups();
+                    if (assignedIdpGroups != null) {
+                        for (IdpGroup idpGroup : assignedIdpGroups) {
+                            String idpGroupId = idpGroup.getGroupId();
+                            String idpGroupLocationURI =
+                                    SCIMCommonUtils.getIdpGroupURL(idpGroup.getIdpId(), idpGroupId);
+                            Group group = new Group();
+                            group.setDisplayName(idpGroup.getGroupName());
+                            group.setId(idpGroupId);
+                            group.setLocation(idpGroupLocationURI);
+                            scimRole.setGroup(group);
+                        }
+                    }
+                }
+                if (requiredAttributes.contains(PERMISSIONS)) {
+                    List<MultiValuedComplexType> permissions =
+                            convertPermissionsToMultiValuedComplexType(role.getPermissions());
+                    scimRole.setPermissions(permissions);
+                }
+                if (requiredAttributes.contains(ASSOCIATED_APPLICATIONS)) {
+                    // Set associated applications.
+                    List<MultiValuedComplexType> associatedApps =
+                            convertAssociatedAppsToMultivaluedComplexType(role.getAssociatedApplications());
+                    if (CollectionUtils.isNotEmpty(associatedApps)) {
+                        scimRole.setAssociatedApplications(associatedApps);
+                    }
+                }
             }
             scimRoles.add(scimRole);
         }
