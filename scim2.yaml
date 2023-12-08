@@ -1355,12 +1355,12 @@ paths:
           type: string
         - name: attributes
           in: query
-          description: SCIM defined attributes parameter.
+          description: attributes parameter.
           required: false
           type: string
         - name: excludedAttributes
           in: query
-          description: SCIM defined excludedAttribute parameter.
+          description: excludedAttribute parameter.
           required: false
           type: string
       responses:
