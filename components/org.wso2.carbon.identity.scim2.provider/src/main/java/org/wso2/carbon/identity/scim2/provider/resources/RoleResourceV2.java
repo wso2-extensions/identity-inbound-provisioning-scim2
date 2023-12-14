@@ -146,7 +146,9 @@ public class RoleResourceV2 extends AbstractResource {
                              @QueryParam(SCIMProviderConstants.START_INDEX) Integer startIndex,
                              @QueryParam(SCIMProviderConstants.COUNT) Integer count,
                              @QueryParam(SCIMProviderConstants.SORT_BY) String sortBy,
-                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder) {
+                             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder,
+                             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
+                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes) {
 
         try {
             // Defaults to application/scim+json.
@@ -162,7 +164,8 @@ public class RoleResourceV2 extends AbstractResource {
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse scimResponse = roleResourceManager
-                    .listWithGETRole(roleManager, filter, startIndex, count, sortBy, sortOrder);
+                    .listWithGETRole(roleManager, filter, startIndex, count, sortBy, sortOrder, attribute,
+                            excludedAttributes);
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
             return handleCharonException(e);
