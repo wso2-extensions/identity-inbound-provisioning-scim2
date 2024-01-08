@@ -195,8 +195,7 @@ public class AdminAttributeUtil {
      *
      * @return Super admin ID.
      */
-    public static String getSuperAdminID()
-            throws CharonException {
+    public static String getSuperAdminID() throws CharonException {
 
         try {
             String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
