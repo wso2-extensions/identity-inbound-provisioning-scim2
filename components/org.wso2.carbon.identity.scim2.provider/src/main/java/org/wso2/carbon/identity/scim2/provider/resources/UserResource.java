@@ -22,6 +22,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
+import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -144,6 +146,12 @@ public class UserResource extends AbstractResource {
             }
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            String superAdminID = AdminAttributeUtil.getSuperAdminID();
+            String loggedInUser = SCIMCommonUtils.getLoggedInUserID();
+            if ((superAdminID.equals(id)) && (!loggedInUser.equals(id))) {
+                return Response.status(Response.Status.FORBIDDEN).build();
+            }
 
             // create charon-SCIM user resource manager and hand-over the request.
             UserResourceManager userResourceManager = new UserResourceManager();
@@ -327,6 +335,12 @@ public class UserResource extends AbstractResource {
             }
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+            String superAdminID = AdminAttributeUtil.getSuperAdminID();
+            String loggedInUser = SCIMCommonUtils.getLoggedInUserID();
+            if ((superAdminID.equals(id)) && (!loggedInUser.equals(id))) {
+                return Response.status(Response.Status.FORBIDDEN).build();
+            }
 
             // Build Custom schema
             buildCustomSchema(userManager, getTenantId());

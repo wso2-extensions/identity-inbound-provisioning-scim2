@@ -34,6 +34,8 @@ import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.constants.AccountConstants;
+import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
@@ -913,6 +915,23 @@ public class SCIMCommonUtils {
             } catch (org.wso2.carbon.user.api.UserStoreException | IdentitySCIMException e) {
                 log.error(e);
             }
+        }
+    }
+
+    /**
+     * Get the request initiating (logged in) user ID.
+     *
+     * @return logged in user ID.
+     */
+    public static String getLoggedInUserID() throws CharonException {
+
+        try {
+            String loggedInUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+            String loggedInUserTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            UserIDResolver userIDResolver = new UserIDResolver();
+            return userIDResolver.getIDByName(loggedInUserName, loggedInUserTenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            throw new CharonException("Error occurred while retrieving super admin ID.", e);
         }
     }
 }

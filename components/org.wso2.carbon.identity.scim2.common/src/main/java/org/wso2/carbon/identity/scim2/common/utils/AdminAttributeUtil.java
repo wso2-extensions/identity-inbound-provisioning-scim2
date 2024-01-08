@@ -23,17 +23,24 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.stratos.common.util.ClaimsMgtUtil;
+import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
@@ -181,6 +188,35 @@ public class AdminAttributeUtil {
         // UserCore Util functionality does not append primary domain.
         groupNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(groupNameWithDomain);
         return groupNameWithDomain;
+    }
+
+/**
+     * Get super admin ID.
+     *
+     * @return Super admin ID.
+     */
+    public static String getSuperAdminID()
+            throws CharonException {
+
+        try {
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            RealmService realmService = SCIMCommonComponentHolder.getRealmService();
+            int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+            UserRealm userRealm = (UserRealm) realmService.getTenantUserRealm(tenantId);
+            RealmConfiguration realmConfig = userRealm.getRealmConfiguration();
+            String adminUser = realmConfig.getAdminUserName();
+
+            UserIDResolver userIDResolver = new UserIDResolver();
+            String adminUserID = userIDResolver.getIDByName(adminUser, tenantDomain);
+
+            return adminUserID;
+
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            String error = "Error obtaining user realm.";
+            throw new CharonException(error, e);
+        } catch (IdentityRoleManagementException e) {
+            throw new CharonException("Error occurred while retrieving super admin ID.", e);
+        }
     }
 
     /**
