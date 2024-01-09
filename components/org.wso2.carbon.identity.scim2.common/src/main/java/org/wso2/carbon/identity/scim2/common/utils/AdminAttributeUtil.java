@@ -129,8 +129,12 @@ public class AdminAttributeUtil {
                 // UserCore Util functionality does not append primary domain.
                 roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleNameWithDomain);
                 try {
-                    //Validate the SCIM IS is avaialble for Groups.
-                    if (!scimGroupHandler.isGroupExisting(roleNameWithDomain)) {
+                    // Validate the SCIM ID is available for Groups.
+                    if (!scimGroupHandler.isGroupExisting(roleNameWithDomain) &&
+                            ((AbstractUserStoreManager) userStoreManager).isRoleAndGroupSeparationEnabled()) {
+                        // Adding the SCIM attributes to internal roles in user core (ex. Internal/admin).
+                        // This admin role is introduced after the role and group separation was introduced.
+                        // These are mapped to roles in SCIM
                         if (log.isDebugEnabled()) {
                             log.debug(
                                     "Group does not exist, setting scim attribute group value: " + roleNameWithDomain);
@@ -143,17 +147,18 @@ public class AdminAttributeUtil {
                     }
 
                     // Adding the SCIM attributes for admin group
-                    if (((AbstractUserStoreManager) userStoreManager).isRoleAndGroupSeparationEnabled()) {
-                        String groupNameWithDomain = getAdminGroupName(adminRoleName, domainName);
-                        // Validate the SCIM ID is available for groups.
-                        if (userStoreManager.isExistingRole(groupNameWithDomain) && !scimGroupHandler
-                                .isGroupExisting(groupNameWithDomain)) {
-                            if (log.isDebugEnabled()) {
-                                log.debug("Group does not exist, setting scim attributes for group: "
-                                        + groupNameWithDomain);
-                            }
-                            scimGroupHandler.addMandatoryAttributes(groupNameWithDomain);
+                    String groupNameWithDomain = getAdminGroupName(adminRoleName, domainName);
+                    // Validate the SCIM ID is available for groups.
+                    if (userStoreManager.isExistingRole(groupNameWithDomain) && !scimGroupHandler
+                            .isGroupExisting(groupNameWithDomain)) {
+                        // Adding the SCIM attributes to userstore roles in user core (ex. PRIMARY/admin).
+                        // This admin role was available before the role and group separation was introduced.
+                        // These are mapped to groups in SCIM
+                        if (log.isDebugEnabled()) {
+                            log.debug("Group does not exist, setting scim attributes for group: "
+                                    + groupNameWithDomain);
                         }
+                        scimGroupHandler.addMandatoryAttributes(groupNameWithDomain);
                     }
                 } catch (IdentitySCIMException e) {
                     throw new UserStoreException(
