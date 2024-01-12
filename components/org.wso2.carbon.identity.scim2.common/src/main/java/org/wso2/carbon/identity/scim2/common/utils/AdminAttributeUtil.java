@@ -211,8 +211,7 @@ public class AdminAttributeUtil {
             return adminUserID;
 
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            String error = "Error obtaining user realm.";
-            throw new CharonException(error, e);
+            throw new CharonException("Error obtaining user realm.", e);
         } catch (IdentityRoleManagementException e) {
             throw new CharonException("Error occurred while retrieving super admin ID.", e);
         }
