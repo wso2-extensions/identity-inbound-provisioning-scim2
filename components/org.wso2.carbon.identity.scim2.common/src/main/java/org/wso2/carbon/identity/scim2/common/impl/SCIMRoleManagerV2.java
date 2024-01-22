@@ -714,7 +714,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
     }
 
-    private String getCurrentRoleName(String roleId, String tenantDomain) throws CharonException, BadRequestException {
+    private String getCurrentRoleName(String roleId, String tenantDomain) throws CharonException, NotFoundException {
 
         String currentRoleName;
         try {
@@ -724,7 +724,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             }
         } catch (IdentityRoleManagementException e) {
             if ((ROLE_NOT_FOUND.getCode()).equals(e.getErrorCode())) {
-                throw new BadRequestException(e.getMessage());
+                throw new NotFoundException(e.getMessage());
             }
             throw new CharonException(String.format("Error occurred while getting the role name by " +
                     "the role id: %s", roleId), e);
