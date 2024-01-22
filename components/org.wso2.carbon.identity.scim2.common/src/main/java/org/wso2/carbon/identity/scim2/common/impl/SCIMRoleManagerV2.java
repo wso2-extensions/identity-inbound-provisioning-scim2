@@ -1292,7 +1292,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             }
 
             if (memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY) == null) {
-                throw new BadRequestException("User can't be resolved from the given user Id.");
+                throw new BadRequestException("User can't be resolved from the given user Id.",
+                        ResponseCodeConstants.INVALID_VALUE);
             }
 
             List<String> roleList;
