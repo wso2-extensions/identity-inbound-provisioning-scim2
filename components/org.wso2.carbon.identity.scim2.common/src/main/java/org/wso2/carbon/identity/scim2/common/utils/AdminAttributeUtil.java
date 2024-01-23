@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -23,17 +23,24 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.stratos.common.util.ClaimsMgtUtil;
+import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
@@ -129,8 +136,12 @@ public class AdminAttributeUtil {
                 // UserCore Util functionality does not append primary domain.
                 roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleNameWithDomain);
                 try {
-                    //Validate the SCIM IS is avaialble for Groups.
-                    if (!scimGroupHandler.isGroupExisting(roleNameWithDomain)) {
+                    // Validate the SCIM ID is available for Groups.
+                    if (!scimGroupHandler.isGroupExisting(roleNameWithDomain) &&
+                            ((AbstractUserStoreManager) userStoreManager).isRoleAndGroupSeparationEnabled()) {
+                        // Adding the SCIM attributes to internal roles in user core (ex. Internal/admin).
+                        // This admin role is introduced after the role and group separation was introduced.
+                        // These are mapped to roles in SCIM
                         if (log.isDebugEnabled()) {
                             log.debug(
                                     "Group does not exist, setting scim attribute group value: " + roleNameWithDomain);
@@ -143,17 +154,18 @@ public class AdminAttributeUtil {
                     }
 
                     // Adding the SCIM attributes for admin group
-                    if (((AbstractUserStoreManager) userStoreManager).isRoleAndGroupSeparationEnabled()) {
-                        String groupNameWithDomain = getAdminGroupName(adminRoleName, domainName);
-                        // Validate the SCIM ID is available for groups.
-                        if (userStoreManager.isExistingRole(groupNameWithDomain) && !scimGroupHandler
-                                .isGroupExisting(groupNameWithDomain)) {
-                            if (log.isDebugEnabled()) {
-                                log.debug("Group does not exist, setting scim attributes for group: "
-                                        + groupNameWithDomain);
-                            }
-                            scimGroupHandler.addMandatoryAttributes(groupNameWithDomain);
+                    String groupNameWithDomain = getAdminGroupName(adminRoleName, domainName);
+                    // Validate the SCIM ID is available for groups.
+                    if (userStoreManager.isExistingRole(groupNameWithDomain) && !scimGroupHandler
+                            .isGroupExisting(groupNameWithDomain)) {
+                        // Adding the SCIM attributes to userstore roles in user core (ex. PRIMARY/admin).
+                        // This admin role was available before the role and group separation was introduced.
+                        // These are mapped to groups in SCIM
+                        if (log.isDebugEnabled()) {
+                            log.debug("Group does not exist, setting scim attributes for group: "
+                                    + groupNameWithDomain);
                         }
+                        scimGroupHandler.addMandatoryAttributes(groupNameWithDomain);
                     }
                 } catch (IdentitySCIMException e) {
                     throw new UserStoreException(
@@ -181,6 +193,33 @@ public class AdminAttributeUtil {
         // UserCore Util functionality does not append primary domain.
         groupNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(groupNameWithDomain);
         return groupNameWithDomain;
+    }
+
+/**
+     * Get super admin ID.
+     *
+     * @return Super admin ID.
+     */
+    public static String getSuperAdminID() throws CharonException {
+
+        try {
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            RealmService realmService = SCIMCommonComponentHolder.getRealmService();
+            int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+            UserRealm userRealm = (UserRealm) realmService.getTenantUserRealm(tenantId);
+            RealmConfiguration realmConfig = userRealm.getRealmConfiguration();
+            String adminUser = realmConfig.getAdminUserName();
+
+            UserIDResolver userIDResolver = new UserIDResolver();
+            String adminUserID = userIDResolver.getIDByName(adminUser, tenantDomain);
+
+            return adminUserID;
+
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            throw new CharonException("Error obtaining user realm.", e);
+        } catch (IdentityRoleManagementException e) {
+            throw new CharonException("Error occurred while retrieving super admin ID.", e);
+        }
     }
 
     /**

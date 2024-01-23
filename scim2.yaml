@@ -1353,6 +1353,16 @@ paths:
           description: The order in which the "sortBy" parameter is applied.
           required: false
           type: string
+        - name: attributes
+          in: query
+          description: attributes parameter.
+          required: false
+          type: string
+        - name: excludedAttributes
+          in: query
+          description: excludedAttribute parameter.
+          required: false
+          type: string
       responses:
         200:
           description: Valid roles are found
@@ -2760,7 +2770,7 @@ definitions:
       Resources:
         type: array
         items:
-          $ref: "#/definitions/RoleObV2"
+          $ref: "#/definitions/RoleGetResponseObjectV2"
   #-----------------------------------------------------
   # The Roles Search Request Object
   #-----------------------------------------------------
@@ -2780,7 +2790,21 @@ definitions:
       filter:
         type: string
         example: 'displayName eq loginRole'
-
+      attributes:
+        type: array
+        items:
+          type: string
+        example:
+          - displayName
+          - users
+          - groups
+      excludedAttributes:
+        type: array
+        items:
+          type: string
+        example:
+          - permissions
+          - associatedApplications
   #-----------------------------------------------------
   # The Roles Search Response Object
   #-----------------------------------------------------
@@ -2804,37 +2828,8 @@ definitions:
       Resources:
         type: array
         items:
-          $ref: "#/definitions/RoleObV2"
-  #-----------------------------------------------------
-  # The Roles List Response Object
-  #-----------------------------------------------------
-  RoleObV2:
-    type: object
-    properties:
-      displayName:
-        type: string
-        example: 'loginRole'
-      meta:
-        type: object
-        properties:
-          location:
-            type: string
-            example: 'https://localhost:9443/scim2/Roles/4645709c-ea8c-4495-8590-e1fa0efe3de0'
-      id:
-        type: string
-        example: '4645709c-ea8c-4495-8590-e1fa0efe3de0'
-      audience:
-        type: object
-        properties:
-          value:
-            type: string
-            example: '3645709f-ea8d-5595-7690-e1fa0efe3df9'
-          display:
-            type: string
-            example: 'My Org'
-          type:
-            type: string
-            example: 'organization'
+          $ref: "#/definitions/RoleGetResponseObjectV2"
+
   #-----------------------------------------------------
   # The Role Creation Object
   #-----------------------------------------------------
