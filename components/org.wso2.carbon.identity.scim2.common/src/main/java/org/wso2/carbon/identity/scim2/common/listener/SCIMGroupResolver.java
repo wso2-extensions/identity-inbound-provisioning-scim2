@@ -43,7 +43,11 @@ import org.wso2.carbon.user.core.model.ExpressionCondition;
 import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.utils.AttributeUtil;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -619,5 +623,65 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         } else {
             return delimiter + attributeValue;
         }
+    }
+
+    @Override
+    public boolean addGroup(String displayName, String groupID, LocalDateTime createdDate,
+                            LocalDateTime lastModifiedDate, String location, int tenantId) throws UserStoreException {
+
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, groupID);
+        attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, AttributeUtil.formatDateTime(
+                createdDate.toInstant(ZoneOffset.UTC)));
+        attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, AttributeUtil.formatDateTime(
+                lastModifiedDate.toInstant(ZoneOffset.UTC)));
+        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, location);
+
+        try {
+            GroupDAO groupDAO = new GroupDAO();
+            groupDAO.addSCIMGroupAttributes(tenantId, displayName, attributes);
+        } catch (IdentitySCIMException e) {
+            throw new UserStoreException(String.format("Error occurred while saving the " +
+                    "group: %s in tenant: %s", displayName, tenantId), e);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean deleteGroup(String groupName, int tenantId) throws UserStoreException {
+
+        try {
+            GroupDAO groupDAO = new GroupDAO();
+            if (groupDAO.isExistingGroup(groupName, tenantId)) {
+                groupDAO.removeSCIMGroup(tenantId, groupName);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Information for the group: " + groupName +
+                            " doesn't contain in the identity scim table.");
+                }
+            }
+        } catch (IdentitySCIMException e) {
+            throw new UserStoreException(String.format("Error occurred while deleting the " +
+                    "group: %s in tenant: %s", groupName, tenantId), e);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean updateGroupName(String oldGroupName, String newGroupName, int tenantID) throws UserStoreException {
+
+        try {
+            GroupDAO groupDAO = new GroupDAO();
+            if (groupDAO.isExistingGroup(oldGroupName, tenantID)) {
+                groupDAO.updateGroupName(tenantID, oldGroupName, newGroupName);
+            } else {
+                log.warn("Non-existent group: " + oldGroupName + " is trying to be updated..");
+            }
+
+        } catch (IdentitySCIMException e) {
+            throw new UserStoreException(String.format("Error occurred while updating the " +
+                    "group: %s in tenant: %s", oldGroupName, tenantID), e);
+        }
+        return true;
     }
 }
