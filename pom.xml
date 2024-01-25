@@ -320,7 +320,7 @@
         <carbon.user.api.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.user.api.imp.pkg.version.range>
         <axis2.osgi.version.range>[.6.1-wso2v37, 2.0.0)</axis2.osgi.version.range>
         <scim.common.imp.pkg.version.range>[5.0.0, 6.0.0)</scim.common.imp.pkg.version.range>
-        <carbon.identity.framework.imp.pkg.version.range>[5.20.118, 7.0.0)
+        <carbon.identity.framework.imp.pkg.version.range>[5.20.118, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
         <org.wso2.carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
         </org.wso2.carbon.identity.organization.management.core.version.range>
