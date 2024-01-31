@@ -63,6 +63,7 @@ import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.Claim;
 import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 import org.wso2.carbon.user.core.jdbc.JDBCUserStoreManager;
@@ -2612,7 +2613,7 @@ public class SCIMUserManager implements UserManager {
                 throw charonException;
             }
             group.setDisplayName(roleNameWithDomain);
-            //check if the group already exists
+            // Check if the group already exists.
             if (carbonUM.isExistingRole(group.getDisplayName(), false)) {
                 String error = "Group with name: " + group.getDisplayName() + " already exists in the system.";
                 throw new ConflictException(error);
@@ -2625,8 +2626,8 @@ public class SCIMUserManager implements UserManager {
             // If members are sent when creating the group, check whether users already exist in the user store.
             List<Object> userIds = group.getMembers();
             List<String> userDisplayNames = group.getMembersWithDisplayName();
+            List<String> members = new ArrayList<>();
             if (isNotEmpty(userIds)) {
-                List<String> members = new ArrayList<>();
                 for (Object userId : userIds) {
                     String userIdLocalClaim = SCIMCommonUtils.getSCIMtoLocalMappings().get(SCIMConstants
                             .CommonSchemaConstants.ID_URI);
@@ -2662,21 +2663,14 @@ public class SCIMUserManager implements UserManager {
                         }
                     }
                 }
-                // Add other scim attributes in the identity DB since user store doesn't support some attributes.
-                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-                scimGroupHandler.createSCIMAttributes(group);
-                carbonUM.addRoleWithID(group.getDisplayName(), members.toArray(new String[0]), null, false);
-                if (log.isDebugEnabled()) {
-                    log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
-                }
-            } else {
-                // Add other scim attributes in the identity DB since user store doesn't support some attributes.
-                SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-                scimGroupHandler.createSCIMAttributes(group);
-                carbonUM.addRoleWithID(group.getDisplayName(), null, null, false);
-                if (log.isDebugEnabled()) {
-                    log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
-                }
+            }
+            Map<String, String> claimsInLocalDialect =
+                    SCIMCommonUtils.convertSCIMtoLocalDialect(AttributeMapper.getClaimsMap(group));
+            org.wso2.carbon.user.core.common.Group createdGroup =
+                    carbonUM.addGroup(roleNameWithDomain, members, buildGroupMetaClaimsList(claimsInLocalDialect));
+            group = buildGroup(createdGroup);
+            if (log.isDebugEnabled()) {
+                log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
             }
         } catch (UserStoreException e) {
             try {
@@ -2697,6 +2691,26 @@ public class SCIMUserManager implements UserManager {
             throw new BadRequestException(error, ResponseCodeConstants.INVALID_VALUE);
         }
         return group;
+    }
+
+    /**
+     * Convert the claimsInLocalDialect to a list of Claims. NOTE: This method drops the RESOURCE_TYPE_CLAIM claim
+     * dialect being added to the returned claims list.
+     *
+     * @param claimsInLocalDialect Map of claims in local dialect.
+     * @return List of claims.
+     */
+    private List<Claim> buildGroupMetaClaimsList(Map<String, String> claimsInLocalDialect) {
+
+        List<Claim> claimsList = new ArrayList<>();
+        for (Map.Entry<String, String> entry : claimsInLocalDialect.entrySet()) {
+            String claimUri = entry.getKey();
+            if (RESOURCE_TYPE_CLAIM.equals(claimUri)) {
+                continue;
+            }
+            claimsList.add(new Claim(entry.getKey(), entry.getValue()));
+        }
+        return claimsList;
     }
 
     @Override
@@ -2810,11 +2824,9 @@ public class SCIMUserManager implements UserManager {
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
 
             // Get group name by id.
-            SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
-            String groupName = groupHandler.getGroupName(groupId);
-
+            String groupName = carbonUM.getGroupNameByGroupId(groupId);
             if (groupName != null) {
-                String userStoreDomainFromSP = null;
+                String userStoreDomainFromSP;
                 try {
                     userStoreDomainFromSP = getUserStoreDomainFromSP();
                 } catch (IdentityApplicationManagementException e) {
@@ -2825,24 +2837,19 @@ public class SCIMUserManager implements UserManager {
                     throw new CharonException("Group :" + groupName + "is not belong to user store " +
                             userStoreDomainFromSP + "Hence group updating fail");
                 }
-
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(groupName);
-                if (!isInternalOrApplicationGroup(userStoreDomainName) && StringUtils.isNotBlank(userStoreDomainName)
-                        && !isSCIMEnabled
-                        (userStoreDomainName)) {
+                if (!isInternalOrApplicationGroup(userStoreDomainName) && StringUtils.isNotBlank(userStoreDomainName) &&
+                        !isSCIMEnabled(userStoreDomainName)) {
                     throw new CharonException("Cannot delete group: " + groupName + " through scim from user store: " +
                             userStoreDomainName + ". SCIM is not enabled for user store: " + userStoreDomainName);
                 }
-
-                //delete group in carbon UM
-                carbonUM.deleteRole(groupName);
+                // Delete group in carbon UM.
+                carbonUM.deleteGroup(groupId);
                 carbonUM.removeGroupRoleMappingByGroupName(groupName);
-
-                //we do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
+                // We do not update Identity_SCIM DB here since it is updated in SCIMUserOperationListener's methods.
                 if (log.isDebugEnabled()) {
                     log.debug("Group: " + groupName + " is deleted through SCIM.");
                 }
-
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Group with SCIM id: " + groupId + " doesn't exist in the system.");
@@ -2851,10 +2858,7 @@ public class SCIMUserManager implements UserManager {
             }
         } catch (UserStoreException e) {
             throw resolveError(e, "Error occurred while deleting group " + groupId);
-        } catch (IdentitySCIMException e) {
-            throw new CharonException("Error occurred while deleting group " + groupId, e);
         }
-
     }
 
     @Override
@@ -3346,12 +3350,10 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Updating group: " + currentGroupName);
         }
-
         try {
             List<PatchOperation> displayNameOperations = new ArrayList<>();
             List<PatchOperation> memberOperations = new ArrayList<>();
             String newGroupName = currentGroupName;
-
             for (List<PatchOperation> patchOperationList : patchOperations.values()) {
                 for (PatchOperation patchOperation : patchOperationList) {
                     if (StringUtils.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
@@ -3368,7 +3370,7 @@ public class SCIMUserManager implements UserManager {
 
             if (CollectionUtils.isNotEmpty(displayNameOperations)) {
                 newGroupName = (String) displayNameOperations.get(0).getValues();
-                setGroupDisplayName(currentGroupName, newGroupName);
+                setGroupDisplayName(groupId, currentGroupName, newGroupName);
             }
 
             Collections.sort(memberOperations);
@@ -3458,7 +3460,6 @@ public class SCIMUserManager implements UserManager {
 
             // Update the group name in UM_HYBRID_GROUP_ROLE table.
             carbonUM.updateGroupName(currentGroupName, newGroupName);
-
         } catch (UserStoreException e) {
             if (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
                     .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getCode(),
@@ -3516,7 +3517,7 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private void setGroupDisplayName(String oldGroupName, String newGroupName)
+    private void setGroupDisplayName(String groupId, String oldGroupName, String newGroupName)
             throws IdentityApplicationManagementException, CharonException, BadRequestException, IdentitySCIMException,
             UserStoreException {
 
@@ -3549,7 +3550,7 @@ public class SCIMUserManager implements UserManager {
 
         if (!StringUtils.equals(oldGroupName, newGroupName)) {
             // Update group name in carbon UM.
-            carbonUM.updateRoleName(oldGroupName, newGroupName);
+            carbonUM.renameGroup(groupId, newGroupName);
         }
     }
 
@@ -3634,10 +3635,9 @@ public class SCIMUserManager implements UserManager {
         boolean updated = false;
         if (isGroupDisplayNameChanged(oldGroupDisplayName, newGroupDisplayName)) {
             // Update group name in carbon UM
-            carbonUM.updateRoleName(oldGroupDisplayName, newGroupDisplayName);
+            carbonUM.renameGroup(oldGroup.getId(), newGroupDisplayName);
             updated = true;
         }
-
         // Update the group with added members and deleted members.
         if (isNotEmpty(addedMembers) || isNotEmpty(deletedMembers)) {
             carbonUM.updateUserListOfRoleWithID(newGroupDisplayName,
@@ -3645,7 +3645,6 @@ public class SCIMUserManager implements UserManager {
                     addedMemberIdsFromUserstore.toArray(new String[0]));
             updated = true;
         }
-
         return updated;
     }
 
@@ -6264,7 +6263,7 @@ public class SCIMUserManager implements UserManager {
         }
         scimGroup.setId(group.getGroupID());
         if (StringUtils.isBlank(group.getLocation())) {
-            // Location has not been sent from the user core. Therefore we need to use the group id to build location.
+            // Location has not been sent from the user core. Therefore, we need to use the group id to build location.
             scimGroup.setLocation(SCIMCommonUtils.getSCIMGroupURL(group.getGroupID()));
         } else {
             scimGroup.setLocation(group.getLocation());

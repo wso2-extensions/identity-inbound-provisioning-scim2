@@ -42,8 +42,11 @@ import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionCondition;
 import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.utils.AttributeUtil;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -65,6 +68,101 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             return orderId;
         }
         return 1;
+    }
+
+    @Override
+    public boolean addGroup(Group group, UserStoreManager userStoreManager) throws UserStoreException {
+
+        AbstractUserStoreManager abstractUserStoreManager = ((AbstractUserStoreManager) userStoreManager);
+        boolean isGroupIdEnabled = abstractUserStoreManager.isUniqueGroupIdEnabled();
+        if (isGroupIdEnabled) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
+                                "tenant %s since group id support is available in the userstore manager",
+                        abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
+                        abstractUserStoreManager.getTenantId()));
+            }
+            return true;
+        }
+        String userstoreDomainName = group.getUserStoreDomain();
+        int tenantId = abstractUserStoreManager.getTenantId();
+        if (StringUtils.isBlank(userstoreDomainName)) {
+            userstoreDomainName = abstractUserStoreManager.getRealmConfiguration().
+                    getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
+            group.setUserStoreDomain(userstoreDomainName);
+        }
+        // User core methods don't append primary domain name to the group name. Hence, we need to do it manually.
+        String groupWithDomain =
+                SCIMCommonUtils.getGroupNameWithDomain(UserCoreUtil.addDomainToName(group.getGroupName(),
+                        userstoreDomainName));
+        String groupId = group.getGroupID();
+        if (StringUtils.isBlank(groupId)) {
+            throw new UserStoreException(
+                    String.format("Group id cannot be empty the group: %s in tenant: %s. ", groupWithDomain, tenantId));
+        }
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, group.getGroupID());
+        // Validate whether date time attributes are in the correct format.
+        try {
+            if (StringUtils.isNotBlank(group.getCreatedDate())) {
+                attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI,
+                        AttributeUtil.formatDateTime(AttributeUtil.parseDateTime(group.getCreatedDate())));
+            }
+            if (StringUtils.isNotBlank(group.getLastModifiedDate())) {
+                attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
+                        AttributeUtil.formatDateTime(AttributeUtil.parseDateTime(group.getLastModifiedDate())));
+            }
+        } catch (CharonException e) {
+            throw new UserStoreException(String.format("Error occurred while adding the group: %s in tenant: %s. " +
+                    "Unsupported Datetime formats provided in the request", groupWithDomain, tenantId), e);
+        }
+        if (StringUtils.isNotBlank(group.getLastModifiedDate())) {
+            attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, group.getLocation());
+        }
+        // Update SCIM tables for storing meta information.
+        GroupDAO groupDAO = new GroupDAO();
+        try {
+            groupDAO.addSCIMGroupAttributes(tenantId, groupWithDomain, attributes);
+        } catch (IdentitySCIMException e) {
+            throw new UserStoreException(String.format("Error occurred while adding the group: %s in tenant: %s",
+                    groupWithDomain, tenantId), e);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean deleteGroupByName(String groupName, UserStoreManager userStoreManager) throws UserStoreException {
+
+        AbstractUserStoreManager abstractUserStoreManager = ((AbstractUserStoreManager) userStoreManager);
+        boolean isGroupIdEnabled = abstractUserStoreManager.isUniqueGroupIdEnabled();
+        if (isGroupIdEnabled) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
+                                "tenant %s since group id support is available in the userstore manager",
+                        abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
+                        abstractUserStoreManager.getTenantId()));
+            }
+            return true;
+        }
+        int tenantId = abstractUserStoreManager.getTenantId();
+        String domain = abstractUserStoreManager.getRealmConfiguration()
+                .getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
+        // User core methods don't append primary domain name to the group name. Hence, we need to do it manually.
+        String groupWithDomain =
+                SCIMCommonUtils.getGroupNameWithDomain(UserCoreUtil.addDomainToName(groupName, domain));
+        GroupDAO groupDAO = new GroupDAO();
+        try {
+            if (!groupDAO.isExistingGroup(groupWithDomain, tenantId)) {
+                log.debug(String.format("No group with name: %s found in SCIM tables for tenant: %s", groupWithDomain,
+                        tenantId));
+                return true;
+            }
+            groupDAO.removeSCIMGroup(tenantId, groupWithDomain);
+        } catch (IdentitySCIMException e) {
+            throw new UserStoreException(String.format("Error occurred while removing the group: %s in tenant: %s",
+                    groupWithDomain, tenantId), e);
+        }
+        return true;
     }
 
     @Override

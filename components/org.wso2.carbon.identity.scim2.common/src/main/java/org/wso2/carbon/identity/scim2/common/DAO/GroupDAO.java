@@ -195,7 +195,6 @@ public class GroupDAO {
                 }
                 prepStmt.executeBatch();
                 connection.commit();
-
             } catch (SQLException e) {
                 throw new IdentitySCIMException("Error when adding SCIM attributes for the group: "
                         + roleName, e);
