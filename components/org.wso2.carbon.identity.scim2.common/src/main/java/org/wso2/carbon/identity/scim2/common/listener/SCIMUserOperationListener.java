@@ -615,15 +615,15 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                             !CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
                         scimGroupHandler.addRoleV2MandatoryAttributes(roleNameWithDomain);
                     } else {
-                        scimGroupHandler.addMandatoryAttributes(roleNameWithDomain);
+                        if (!((AbstractUserStoreManager) userStoreManager).isUniqueGroupIdEnabled()) {
+                            scimGroupHandler.addMandatoryAttributes(roleNameWithDomain);
+                        }
                     }
                 }
             } catch (IdentitySCIMException e) {
                 throw new UserStoreException("Error retrieving group information from SCIM Tables.", e);
             }
-
             return true;
-
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException(e);
         }
