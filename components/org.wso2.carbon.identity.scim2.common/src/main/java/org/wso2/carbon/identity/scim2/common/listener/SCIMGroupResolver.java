@@ -116,9 +116,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             throw new UserStoreException(String.format("Error occurred while adding the group: %s in tenant: %s. " +
                     "Unsupported Datetime formats provided in the request", groupWithDomain, tenantId), e);
         }
-        if (StringUtils.isNotBlank(group.getLastModifiedDate())) {
-            attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, group.getLocation());
-        }
+        String location = SCIMCommonUtils.getSCIMGroupURL(groupId);
+        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, location);
+        group.setLocation(location);
         // Update SCIM tables for storing meta information.
         GroupDAO groupDAO = new GroupDAO();
         try {
