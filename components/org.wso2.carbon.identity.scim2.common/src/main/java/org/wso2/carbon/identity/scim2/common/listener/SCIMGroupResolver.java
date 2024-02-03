@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2021, WSO2 Inc. (http://www.wso2.com).
+ * Copyright (c) 2021-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -37,6 +37,7 @@ import org.wso2.carbon.user.core.UserStoreConfigConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.Claim;
 import org.wso2.carbon.user.core.common.Group;
 import org.wso2.carbon.user.core.model.Condition;
 import org.wso2.carbon.user.core.model.ExpressionCondition;
@@ -46,6 +47,8 @@ import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
+import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +56,7 @@ import java.util.Map;
 import static org.wso2.carbon.user.core.UserCoreConstants.RealmConfig.PROPERTY_DOMAIN_NAME;
 
 /**
- * Implementation of group domain resolver.
+ * Implementation of group domain resolver to manage the SCIM related tables.
  */
 public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
 
@@ -71,8 +74,10 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
     }
 
     @Override
-    public boolean addGroup(Group group, UserStoreManager userStoreManager) throws UserStoreException {
+    public Group addGroup(String groupName, String groupId, List<Claim> claims, UserStoreManager userStoreManager)
+            throws UserStoreException {
 
+        Group group = new Group(groupId, groupName);
         AbstractUserStoreManager abstractUserStoreManager = ((AbstractUserStoreManager) userStoreManager);
         boolean isGroupIdEnabled = abstractUserStoreManager.isUniqueGroupIdEnabled();
         if (isGroupIdEnabled) {
@@ -82,56 +87,78 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
                         abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
                         abstractUserStoreManager.getTenantId()));
             }
-            return true;
+            return null;
         }
-        String userstoreDomainName = group.getUserStoreDomain();
-        int tenantId = abstractUserStoreManager.getTenantId();
-        if (StringUtils.isBlank(userstoreDomainName)) {
-            userstoreDomainName = abstractUserStoreManager.getRealmConfiguration().
-                    getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
-            group.setUserStoreDomain(userstoreDomainName);
-        }
+        claims = CollectionUtils.isEmpty(claims) ? Collections.emptyList() : claims;
+        String domain = abstractUserStoreManager.getRealmConfiguration()
+                .getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME).toUpperCase();
+
         // User core methods don't append primary domain name to the group name. Hence, we need to do it manually.
-        String groupWithDomain =
-                SCIMCommonUtils.getGroupNameWithDomain(UserCoreUtil.addDomainToName(group.getGroupName(),
-                        userstoreDomainName));
-        String groupId = group.getGroupID();
+        String groupWithDomain = SCIMCommonUtils.getGroupNameWithDomain(
+                UserCoreUtil.addDomainToName(groupName, domain));
+        int tenantId = abstractUserStoreManager.getTenantId();
         if (StringUtils.isBlank(groupId)) {
             throw new UserStoreException(
                     String.format("Group id cannot be empty the group: %s in tenant: %s. ", groupWithDomain, tenantId));
         }
+        group.setDisplayName(groupWithDomain);
+        group.setUserStoreDomain(domain);
+        processTimestampAttributesOnGroupAdd(groupName, tenantId, claims, group);
+
         Map<String, String> attributes = new HashMap<>();
-        attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, group.getGroupID());
-        // Validate whether date time attributes are in the correct format.
-        try {
-            if (StringUtils.isNotBlank(group.getCreatedDate())) {
-                attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI,
-                        AttributeUtil.formatDateTime(AttributeUtil.parseDateTime(group.getCreatedDate())));
-            }
-            if (StringUtils.isNotBlank(group.getLastModifiedDate())) {
-                attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
-                        AttributeUtil.formatDateTime(AttributeUtil.parseDateTime(group.getLastModifiedDate())));
-            }
-        } catch (CharonException e) {
-            throw new UserStoreException(String.format("Error occurred while adding the group: %s in tenant: %s. " +
-                    "Unsupported Datetime formats provided in the request", groupWithDomain, tenantId), e);
-        }
+        attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, groupId);
+        attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, group.getCreatedDate());
+        attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, group.getLastModifiedDate());
+
+        // Generate the location URI using the id.
         String location = SCIMCommonUtils.getSCIMGroupURL(groupId);
         attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, location);
         group.setLocation(location);
+
         // Update SCIM tables for storing meta information.
         GroupDAO groupDAO = new GroupDAO();
         try {
             groupDAO.addSCIMGroupAttributes(tenantId, groupWithDomain, attributes);
         } catch (IdentitySCIMException e) {
-            throw new UserStoreException(String.format("Error occurred while adding the group: %s in tenant: %s",
-                    groupWithDomain, tenantId), e);
+            throw new UserStoreException(
+                    String.format("Error occurred while adding the group: %s in tenant: %s", groupWithDomain, tenantId),
+                    e);
         }
-        return true;
+        return group;
+    }
+
+    private void processTimestampAttributesOnGroupAdd(String groupName, int tenantId, List<Claim> claims, Group group)
+            throws UserStoreException {
+
+        String createdTime = AttributeUtil.formatDateTime(Instant.now());
+        group.setCreatedDate(createdTime);
+        group.setLastModifiedDate(createdTime);
+
+        // Process time attributes and validate whether date time attributes are in the correct format.
+        try {
+            for (Claim claim : claims) {
+                String uri = claim.getClaimUrl();
+                String value = claim.getClaimValue();
+                if (SCIMCommonUtils.getSCIMtoLocalMappings().get(SCIMConstants.CommonSchemaConstants.CREATED_URI)
+                        .equals(uri)) {
+                    String createdAttributeValue = StringUtils.isNotBlank(value) ?
+                            AttributeUtil.formatDateTime(AttributeUtil.parseDateTime(value)) : createdTime;
+                    group.setCreatedDate(createdAttributeValue);
+                } else if (SCIMCommonUtils.getSCIMtoLocalMappings()
+                        .get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI).equals(uri)) {
+                    String modifiedAttributeValue = StringUtils.isNotBlank(value) ?
+                            AttributeUtil.formatDateTime(AttributeUtil.parseDateTime(value)) : createdTime;
+                    group.setLastModifiedDate(modifiedAttributeValue);
+                }
+            }
+        } catch (CharonException e) {
+            throw new UserStoreException(String.format("Error occurred while adding the group: %s in tenant: %s. " +
+                    "Unsupported Datetime formats provided in the request", groupName, tenantId), e);
+        }
     }
 
     @Override
-    public boolean deleteGroupByName(String groupName, UserStoreManager userStoreManager) throws UserStoreException {
+    public void deleteGroupByName(String groupName, UserStoreManager userStoreManager) throws UserStoreException {
 
         AbstractUserStoreManager abstractUserStoreManager = ((AbstractUserStoreManager) userStoreManager);
         boolean isGroupIdEnabled = abstractUserStoreManager.isUniqueGroupIdEnabled();
@@ -142,11 +169,11 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
                         abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
                         abstractUserStoreManager.getTenantId()));
             }
-            return true;
+            return;
         }
         int tenantId = abstractUserStoreManager.getTenantId();
         String domain = abstractUserStoreManager.getRealmConfiguration()
-                .getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
+                .getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME).toUpperCase();
         // User core methods don't append primary domain name to the group name. Hence, we need to do it manually.
         String groupWithDomain =
                 SCIMCommonUtils.getGroupNameWithDomain(UserCoreUtil.addDomainToName(groupName, domain));
@@ -155,19 +182,18 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             if (!groupDAO.isExistingGroup(groupWithDomain, tenantId)) {
                 log.debug(String.format("No group with name: %s found in SCIM tables for tenant: %s", groupWithDomain,
                         tenantId));
-                return true;
+                return;
             }
             groupDAO.removeSCIMGroup(tenantId, groupWithDomain);
         } catch (IdentitySCIMException e) {
-            throw new UserStoreException(String.format("Error occurred while removing the group: %s in tenant: %s",
-                    groupWithDomain, tenantId), e);
+            throw new UserStoreException(
+                    String.format("Error occurred while removing the group: %s in tenant: %s", groupWithDomain,
+                            tenantId), e);
         }
-        return true;
     }
 
     @Override
-    public boolean resolveGroupDomainByGroupId(Group group, int tenantId)
-            throws UserStoreException {
+    public boolean resolveGroupDomainByGroupId(Group group, int tenantId) throws UserStoreException {
 
         if (group == null || StringUtils.isBlank(group.getGroupID())) {
             return true;
@@ -181,8 +207,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         try {
             groupName = groupDAO.getGroupNameById(tenantId, groupId);
         } catch (IdentitySCIMException exception) {
-            throw new UserStoreException(String.format("Error occurred while resolving the domain name for " +
-                    "group with id: %s in tenant: %s", groupId, tenantId), exception);
+            throw new UserStoreException(String.format(
+                    "Error occurred while resolving the domain name for " + "group with id: %s in tenant: %s", groupId,
+                    tenantId), exception);
         }
         if (StringUtils.isBlank(groupName)) {
             if (log.isDebugEnabled()) {
@@ -203,8 +230,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
     }
 
     @Override
-    public boolean getGroupsListOfUserByUserId(String userId, List<Group> groupList,
-                                               UserStoreManager userStoreManager) throws UserStoreException {
+    public boolean getGroupsListOfUserByUserId(String userId, List<Group> groupList, UserStoreManager userStoreManager)
+            throws UserStoreException {
 
         if (CollectionUtils.isEmpty(groupList)) {
             // To do filtering in IDN_SCIM_GROUP, we need group names. If the list is empty, we cannot do that.
@@ -234,8 +261,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
                 group.setGroupID(groupDAO.getGroupIdByName(tenantId,
                         UserCoreUtil.addDomainToName(group.getGroupName(), group.getUserStoreDomain())));
             } catch (IdentitySCIMException e) {
-                throw new UserStoreException(String.format("Error occurred while getting the group id of " +
-                        "group: %s in tenant: %s", group.getGroupName(), tenantId), e);
+                throw new UserStoreException(
+                        String.format("Error occurred while getting the group id of " + "group: %s in tenant: %s",
+                                group.getGroupName(), tenantId), e);
             }
         }
         return true;
@@ -275,8 +303,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             groupId = groupDAO.getGroupIdByName(tenantId,
                     UserCoreUtil.addDomainToName(group.getGroupName(), group.getUserStoreDomain()));
         } catch (IdentitySCIMException e) {
-            throw new UserStoreException(String.format("Error occurred while getting the group id of " +
-                    "group: %s in tenant: %s", groupName, tenantId), e);
+            throw new UserStoreException(
+                    String.format("Error occurred while getting the group id of " + "group: %s in tenant: %s",
+                            groupName, tenantId), e);
         }
         if (StringUtils.isBlank(groupId)) {
             if (log.isDebugEnabled()) {
@@ -319,8 +348,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
                 return true;
             }
         } catch (IdentitySCIMException e) {
-            throw new UserStoreException(String.format("Error occurred while getting the group name of " +
-                    "group: %s in tenant: %s", groupID, tenantId), e);
+            throw new UserStoreException(
+                    String.format("Error occurred while getting the group name of " + "group: %s in tenant: %s",
+                            groupID, tenantId), e);
         }
         if (group == null) {
             group = new Group(groupID);
@@ -368,8 +398,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             }
             attributes = groupDAO.getSCIMGroupAttributes(tenantId, groupName);
         } catch (IdentitySCIMException e) {
-            throw new UserStoreException(String.format("Error occurred while getting the group attributes of " +
-                    "group: %s in tenant: %s", groupID, tenantId), e);
+            throw new UserStoreException(
+                    String.format("Error occurred while getting the group attributes of " + "group: %s in tenant: %s",
+                            groupID, tenantId), e);
         }
         // At this point there is definitely a matching group for the given id.
         String domainName = UserCoreUtil.extractDomainFromName(groupName);
@@ -426,14 +457,15 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         try {
             // If the group name as the domain separator ( / ), that means, domain is in the name.
             if (!groupName.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
-                String domainName = abstractUserStoreManager.getRealmConfiguration().
-                        getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
+                String domainName = abstractUserStoreManager.getRealmConfiguration()
+                        .getUserStoreProperty(UserStoreConfigConstants.DOMAIN_NAME);
                 groupName = UserCoreUtil.addDomainToName(groupName, domainName);
             }
             attributes = groupDAO.getSCIMGroupAttributes(tenantId, groupName);
         } catch (IdentitySCIMException e) {
-            throw new UserStoreException(String.format("Error occurred while getting the group attributes of " +
-                    "group: %s in tenant: %s", groupName, tenantId), e);
+            throw new UserStoreException(
+                    String.format("Error occurred while getting the group attributes of " + "group: %s in tenant: %s",
+                            groupName, tenantId), e);
         }
         if (MapUtils.isEmpty(attributes)) {
             if (log.isDebugEnabled()) {
@@ -491,8 +523,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
          * attribute filtering. Therefore, we do not need to provide support for that.
          */
         if (condition instanceof OperationalCondition) {
-            throw new UserStoreException("OperationalCondition filtering is not supported by userstore: " +
-                    userStoreManager.getClass());
+            throw new UserStoreException(
+                    "OperationalCondition filtering is not supported by userstore: " + userStoreManager.getClass());
         }
         ExpressionCondition expressionCondition = (ExpressionCondition) condition;
         String attributeName = resolveGroupAttributeWithSCIMSchema(expressionCondition.getAttributeName(), tenantId);
@@ -503,8 +535,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             String[] groupNames = groupDAO.getGroupNameList(attributeName, attributeValue, tenantId, domain);
             if (ArrayUtils.isEmpty(groupNames)) {
                 if (log.isDebugEnabled()) {
-                    log.debug(String.format("No groups found for the filter in userstore: %s in tenant: %s",
-                            domain, tenantId));
+                    log.debug(String.format("No groups found for the filter in userstore: %s in tenant: %s", domain,
+                            tenantId));
                 }
                 return true;
             }
@@ -528,8 +560,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
                 groupsList.add(group);
             }
         } catch (IdentitySCIMException e) {
-            throw new UserStoreException(String.format("Error occurred while getting the group list in userstore: %s " +
-                    "in tenant: %s", domain, tenantId), e);
+            throw new UserStoreException(
+                    String.format("Error occurred while getting the group list in userstore: %s " + "in tenant: %s",
+                            domain, tenantId), e);
         }
         return true;
     }
@@ -556,8 +589,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             }
         }
         if (schema == null) {
-            throw new UserStoreException(String.format("No scim schema to attribute mapping for " +
-                    "attribute:%s for tenant: %s", attributeName, tenantId));
+            throw new UserStoreException(
+                    String.format("No scim schema to attribute mapping for " + "attribute:%s for tenant: %s",
+                            attributeName, tenantId));
         }
         return schema;
     }
@@ -592,13 +626,13 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
 
         String searchAttribute = null;
         if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.CO)) {
-            searchAttribute = createSearchValueForCoOperation(attributeName, filterOperation, attributeValue,
-                    delimiter);
+            searchAttribute =
+                    createSearchValueForCoOperation(attributeName, filterOperation, attributeValue, delimiter);
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)) {
             searchAttribute = attributeValue + delimiter;
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
-            searchAttribute = createSearchValueForEwOperation(attributeName, filterOperation, attributeValue,
-                    delimiter);
+            searchAttribute =
+                    createSearchValueForEwOperation(attributeName, filterOperation, attributeValue, delimiter);
         } else if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EQ)) {
             searchAttribute = attributeValue;
         }
@@ -614,8 +648,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
      * @param delimiter       Filter delimiter based on search type.
      * @return Search attribute value.
      */
-    private String createSearchValueForCoOperation(String attributeName, String filterOperation,
-                                                   String attributeValue, String delimiter) {
+    private String createSearchValueForCoOperation(String attributeName, String filterOperation, String attributeValue,
+                                                   String delimiter) {
 
         /*
          * For attributes which support domain embedding, create search value by appending the delimiter after the
@@ -644,11 +678,11 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
      */
     private boolean isDomainSupportedAttribute(String attributeName) {
 
-        return SCIMConstants.UserSchemaConstants.USER_NAME_URI.equalsIgnoreCase(attributeName)
-                || SCIMConstants.CommonSchemaConstants.ID_URI.equalsIgnoreCase(attributeName)
-                || SCIMConstants.UserSchemaConstants.GROUP_URI.equalsIgnoreCase(attributeName)
-                || SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI.equalsIgnoreCase(attributeName)
-                || SCIMConstants.GroupSchemaConstants.DISPLAY_URI.equalsIgnoreCase(attributeName);
+        return SCIMConstants.UserSchemaConstants.USER_NAME_URI.equalsIgnoreCase(attributeName) ||
+                SCIMConstants.CommonSchemaConstants.ID_URI.equalsIgnoreCase(attributeName) ||
+                SCIMConstants.UserSchemaConstants.GROUP_URI.equalsIgnoreCase(attributeName) ||
+                SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI.equalsIgnoreCase(attributeName) ||
+                SCIMConstants.GroupSchemaConstants.DISPLAY_URI.equalsIgnoreCase(attributeName);
     }
 
     /**
@@ -667,8 +701,9 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
 
         String searchAttribute;
         if (log.isDebugEnabled()) {
-            log.debug(String.format("Domain detected in attribute value: %s for filter attribute: %s for filter " +
-                    "operation: %s.", attributeValue, attributeName, filterOperation));
+            log.debug(String.format(
+                    "Domain detected in attribute value: %s for filter attribute: %s for filter " + "operation: %s.",
+                    attributeValue, attributeName, filterOperation));
         }
         if (filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)) {
             searchAttribute = attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR + delimiter + attributeItems[1];
@@ -677,8 +712,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
                     attributeItems[0] + CarbonConstants.DOMAIN_SEPARATOR + delimiter + attributeItems[1] + delimiter;
         } else {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("Filter operation: %s is not supported by method "
-                        + "createSearchValueWithDomainForCoEwOperations to create a search value", filterOperation));
+                log.debug(String.format("Filter operation: %s is not supported by method " +
+                        "createSearchValueWithDomainForCoEwOperations to create a search value", filterOperation));
             }
             searchAttribute = attributeValue;
         }
