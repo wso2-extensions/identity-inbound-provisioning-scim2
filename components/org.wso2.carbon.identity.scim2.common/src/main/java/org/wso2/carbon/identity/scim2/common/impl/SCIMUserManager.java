@@ -63,7 +63,6 @@ import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.claim.ClaimManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.user.core.common.Claim;
 import org.wso2.carbon.user.core.constants.UserCoreClaimConstants;
 import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 import org.wso2.carbon.user.core.jdbc.JDBCUserStoreManager;
@@ -2664,10 +2663,9 @@ public class SCIMUserManager implements UserManager {
                     }
                 }
             }
-            Map<String, String> claimsInLocalDialect =
-                    SCIMCommonUtils.convertSCIMtoLocalDialect(AttributeMapper.getClaimsMap(group));
+            // From SCIM we only need to generate the role name. Other attributes are handled by the user core.
             org.wso2.carbon.user.core.common.Group createdGroup =
-                    carbonUM.addGroup(roleNameWithDomain, members, buildGroupMetaClaimsList(claimsInLocalDialect));
+                    carbonUM.addGroup(roleNameWithDomain, members, null);
             group = buildGroup(createdGroup);
             if (log.isDebugEnabled()) {
                 log.debug("Group: " + group.getDisplayName() + " is created through SCIM.");
@@ -2691,26 +2689,6 @@ public class SCIMUserManager implements UserManager {
             throw new BadRequestException(error, ResponseCodeConstants.INVALID_VALUE);
         }
         return group;
-    }
-
-    /**
-     * Convert the claimsInLocalDialect to a list of Claims. NOTE: This method drops the RESOURCE_TYPE_CLAIM claim
-     * dialect being added to the returned claims list.
-     *
-     * @param claimsInLocalDialect Map of claims in local dialect.
-     * @return List of claims.
-     */
-    private List<Claim> buildGroupMetaClaimsList(Map<String, String> claimsInLocalDialect) {
-
-        List<Claim> claimsList = new ArrayList<>();
-        for (Map.Entry<String, String> entry : claimsInLocalDialect.entrySet()) {
-            String claimUri = entry.getKey();
-            if (RESOURCE_TYPE_CLAIM.equals(claimUri)) {
-                continue;
-            }
-            claimsList.add(new Claim(entry.getKey(), entry.getValue()));
-        }
-        return claimsList;
     }
 
     @Override
