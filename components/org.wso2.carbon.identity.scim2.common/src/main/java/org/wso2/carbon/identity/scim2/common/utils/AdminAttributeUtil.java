@@ -153,11 +153,18 @@ public class AdminAttributeUtil {
                         }
                     }
 
-                    // Adding the SCIM attributes for admin group
+                    // Need to add the SCIM attributes for admin group.
                     String groupNameWithDomain = getAdminGroupName(adminRoleName, domainName);
-                    // Validate the SCIM ID is available for groups.
-                    if (userStoreManager.isExistingRole(groupNameWithDomain) && !scimGroupHandler
-                            .isGroupExisting(groupNameWithDomain)) {
+                    if (((AbstractUserStoreManager) userStoreManager).isUniqueGroupIdEnabled()) {
+                        // If unique group ID is enabled, SCIM attributes are managed by the user store. Therefore,
+                        // we do not need to update SCIM tables.
+                        if (log.isDebugEnabled()) {
+                            log.debug(String.format("Unique group ID is enabled for user store. Therefore, SCIM " +
+                                    "attributes are managed by the user store. Hence, skipping the SCIM attribute " +
+                                    "update for group: %s in tenant with id: %s", groupNameWithDomain, tenantId));
+                        }
+                    } else if (userStoreManager.isExistingRole(groupNameWithDomain) &&
+                            !scimGroupHandler.isGroupExisting(groupNameWithDomain)) {
                         // Adding the SCIM attributes to userstore roles in user core (ex. PRIMARY/admin).
                         // This admin role was available before the role and group separation was introduced.
                         // These are mapped to groups in SCIM
