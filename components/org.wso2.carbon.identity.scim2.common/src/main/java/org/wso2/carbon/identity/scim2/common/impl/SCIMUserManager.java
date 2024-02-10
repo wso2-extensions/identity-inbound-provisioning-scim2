@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -1405,7 +1405,7 @@ public class SCIMUserManager implements UserManager {
         if (isFilteringNotSupported(node.getOperation())) {
             String errorMessage =
                     "Filter operation: " + node.getOperation() + " is not supported for filtering in users endpoint.";
-            throw new CharonException(errorMessage);
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_FILTER);
         }
         domainName = resolveDomainName(domainName, node);
         int totalResults = 0;
@@ -3111,7 +3111,7 @@ public class SCIMUserManager implements UserManager {
         // Check whether the filter operation is supported for filtering in groups.
         if (isFilteringNotSupported(filterOperation)) {
             String errorMessage = "Filter operation: " + filterOperation + " is not supported for groups filtering.";
-            throw new CharonException(errorMessage);
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_FILTER);
         }
         // Resolve the domain name in request according to 'FilterUsersAndGroupsOnlyFromPrimaryDomain' or
         // EnableFilteringEnhancements' properties in identity.xml or domain name embedded in the filter attribute
