@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
@@ -1122,13 +1123,15 @@ public class SCIMUserManager implements UserManager {
             }
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreClientException e) {
-            String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
+            String errorMessage = "Error while updating attributes of user: " + (LoggerUtils.isLogMaskingEnable ?
+                    LoggerUtils.getMaskedContent(user.getUserName()) : user.getUserName());
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
-            String errMsg = "Error while updating attributes of user: " + user.getUserName();
+            String errMsg = "Error while updating attributes of user: " + (LoggerUtils.isLogMaskingEnable ?
+                    LoggerUtils.getMaskedContent(user.getUserName()) : user.getUserName());
             log.error(errMsg, e);
             // Sometimes client exceptions are wrapped in the super class.
             // Therefore checking for possible client exception.
