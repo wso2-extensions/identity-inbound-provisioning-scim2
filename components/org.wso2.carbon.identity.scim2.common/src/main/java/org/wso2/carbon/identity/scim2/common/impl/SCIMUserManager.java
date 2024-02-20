@@ -1447,7 +1447,13 @@ public class SCIMUserManager implements UserManager {
                     maxLimit = Math.max(maxLimit, limit);
                 }
                 // Get total users based on the filter query without depending on pagination params.
-                totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
+                if(SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
+                    //Get the total user count by the filter query.
+                    totalResults += getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName);
+                } else {
+                    totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
+                }
+
             } else {
                 totalResults += users.size();
             }
@@ -1456,6 +1462,29 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException(errorMessage, e);
         }
         return getDetailedUsers(filteredUsers, totalResults);
+    }
+
+    /**
+     * method to get user count by filtering parameter.
+     *
+     * @param node       Expression node for single attribute filtering
+     * @param offset     Starting index of the count
+     * @param limit      Counting value
+     * @param sortBy     SortBy
+     * @param sortOrder  Sorting order
+     * @param domainName Domain to run the filter
+     * @return User count
+     * @throws BadRequestException
+     * @throws CharonException
+     */
+    private int getUserCountByAttribute(Node node, int offset, int limit, String sortBy,
+                             String sortOrder, String domainName) throws BadRequestException, CharonException {
+
+        if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
+            getUserCountByGroup(node, domainName);
+        }
+
+        return filterUsers(node, 1, limit, sortBy, sortOrder, domainName).size();
     }
 
     /**
@@ -1693,6 +1722,54 @@ public class SCIMUserManager implements UserManager {
         } else {
             return filterUsersFromMultipleDomains(node, offset, limit, sortBy, sortOrder, null);
         }
+    }
+
+    /**
+     * Method to get User Count by Group filter
+     *
+     * @param node       Expression or Operation node.
+     * @param domainName Domain name.
+     * @return User count for the filtered group.
+     * @throws CharonException
+     * @throws BadRequestException
+     */
+    private int getUserCountByGroup(Node node, String domainName)
+            throws CharonException, BadRequestException {
+
+        int count = 0;
+        // Set filter values.
+        String attributeName = ((ExpressionNode) node).getAttributeValue();
+        String filterOperation = ((ExpressionNode) node).getOperation();
+        String attributeValue = ((ExpressionNode) node).getValue();
+
+        /*
+        If there is a domain and if the domain separator is not found in the attribute value, append the domain
+        with the domain separator in front of the new attribute value.
+        */
+        attributeValue = UserCoreUtil.addDomainToName(((ExpressionNode) node).getValue(), domainName);
+
+        try {
+            List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
+            count = getUserCountForRole(roleNames);
+            return count;
+        } catch (UserStoreException e) {
+            String errorMessage = String.format("Error while filtering the users for filter with attribute name: "
+                            + "%s, filter operation: %s and attribute value: %s.", attributeName, filterOperation,
+                    attributeValue);
+            throw resolveError(e, errorMessage);
+        }
+    }
+
+    private int getUserCountForRole(List<String> roleNames) throws
+                        org.wso2.carbon.user.core.UserStoreException {
+
+        int count = 0;
+        if (roleNames != null) {
+            for (String roleName : roleNames) {
+                count += carbonUM.getUserCountForRole(roleName);
+            }
+        }
+        return count;
     }
 
     /**

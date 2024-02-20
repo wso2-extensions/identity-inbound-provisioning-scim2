@@ -620,6 +620,17 @@ public class SCIMCommonUtils {
     }
 
     /**
+     * Checks whether the identity.xml config is available to retrieve totalResults by user count.
+     *
+     * @return whether 'RetrieveTotalResultsByUserCount' property is enabled in identity.xml.
+     */
+    public static boolean isRetrieveTotalResultsByUserCountEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(
+                SCIMCommonConstants.SCIM_ENABLE_RETRIEVE_TOTAL_RESULTS_BY_User_Count));
+    }
+
+    /**
      * Checks whether the identity.xml config is available to notify userstore availability.
      *
      * @return whether 'NotifyUserstoreStatus' property is enabled in the identity.xml.
