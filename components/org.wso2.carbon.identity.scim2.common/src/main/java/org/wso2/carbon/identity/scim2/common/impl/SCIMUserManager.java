@@ -1481,7 +1481,7 @@ public class SCIMUserManager implements UserManager {
                              String sortOrder, String domainName) throws BadRequestException, CharonException {
 
         if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
-            getUserCountByGroup(node, domainName);
+            return getUserCountByGroup(node, domainName);
         }
 
         return filterUsers(node, 1, limit, sortBy, sortOrder, domainName).size();
