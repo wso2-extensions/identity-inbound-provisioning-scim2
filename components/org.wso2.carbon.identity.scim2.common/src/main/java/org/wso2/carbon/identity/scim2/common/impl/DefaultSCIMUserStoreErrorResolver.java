@@ -26,6 +26,8 @@ import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 
+import static org.wso2.carbon.user.core.constants.UserCoreErrorConstants.ErrorMessages.ERROR_CODE_GROUP_ALREADY_EXISTS;
+
 /**
  * Default implementation of SCIMUserStoreErrorResolver. Should be used to resolve errors thrown by default
  * user store managers packed in the product.
@@ -42,7 +44,9 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
         if (e.getMessage().contains(ERROR_CODE_USER_NOT_FOUND)) {
             String msg = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim();
             return new SCIMUserStoreException(msg, HttpStatus.SC_NOT_FOUND);
-        } else if (e.getMessage().contains(ERROR_CODE_EXISTING_ROLE_NAME)) {
+        } else if (e.getMessage().contains(ERROR_CODE_EXISTING_ROLE_NAME) ||
+                (e instanceof org.wso2.carbon.user.core.UserStoreClientException &&
+                ((UserStoreClientException) e).getErrorCode().contains(ERROR_CODE_GROUP_ALREADY_EXISTS.getCode()))) {
             String groupName = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim().split("\\s+")[0];
             String msg =
                     "Group name: " + groupName + " is already there in the system. Please pick another group name.";
