@@ -1123,8 +1123,7 @@ public class SCIMUserManager implements UserManager {
             }
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreClientException e) {
-            String errorMessage = "Error while updating attributes of user. " + (LoggerUtils.isLogMaskingEnable ?
-                    LoggerUtils.getMaskedContent(user.getUserName()) : user.getUserName());
+            String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
