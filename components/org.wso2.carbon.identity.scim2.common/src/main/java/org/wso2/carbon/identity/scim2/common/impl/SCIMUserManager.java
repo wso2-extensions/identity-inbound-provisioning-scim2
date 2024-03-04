@@ -1129,7 +1129,6 @@ public class SCIMUserManager implements UserManager {
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
             String errMsg = "Error while updating attributes of user: " + user.getUserName();
-            log.error(errMsg, e);
             // Sometimes client exceptions are wrapped in the super class.
             // Therefore checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
@@ -1142,6 +1141,7 @@ public class SCIMUserManager implements UserManager {
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
             handleErrorsOnUserNameAndPasswordPolicy(e);
+            log.error(errMsg, e);
             if (isNotifyUserstoreStatusEnabled()) {
                 throw resolveError(e, errMsg + ". " + e.getMessage());
             } else {
