@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
@@ -359,6 +360,32 @@ public class SCIMCommonComponent {
     protected void unsetOrganizationManager(OrganizationManager organizationManager) {
 
         SCIMCommonComponentHolder.setOrganizationManager(null);
+    }
+
+    /**
+     * Unset identityEventService service implementation.
+     *
+     * @param identityEventService IdentityEventService
+     */
+    protected void unsetIdentityEventService(IdentityEventService identityEventService) {
+
+        SCIMCommonComponentHolder.setIdentityEventService(null);
+    }
+
+    /**
+     * Set IdentityEventService implementation
+     *
+     * @param identityEventService IdentityEventService
+     */
+    @Reference(
+            name = "IdentityEventService",
+            service = org.wso2.carbon.identity.event.services.IdentityEventService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityEventService")
+    protected void setIdentityEventService(IdentityEventService identityEventService) {
+
+        SCIMCommonComponentHolder.setIdentityEventService(identityEventService);
     }
 
     @Deactivate
