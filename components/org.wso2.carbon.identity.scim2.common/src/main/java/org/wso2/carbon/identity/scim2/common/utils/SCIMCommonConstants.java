@@ -179,7 +179,8 @@ public class SCIMCommonConstants {
         ERROR_CODE_REGEX_VIOLATION("SUO-10001", "Regex validation error",
                 "%s attribute value doesn't match with %s regex pattern"),
         ERROR_CODE_LENGTH_VIOLATION("SUO-10002", "Length validation error",
-                                            "%s attribute should be between %s and %s characters");
+                                            "%s attribute should be between %s and %s characters"),
+        ERROR_CODE_INVALID_SCENARIO("SUO-10003","Invalid scenario","Invalid scenario: '%s'");
 
         private final String code;
         private final String message;

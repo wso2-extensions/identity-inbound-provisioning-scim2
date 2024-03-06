@@ -58,6 +58,7 @@ import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.scim2.common.utils.Scenarios;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
@@ -6287,7 +6288,7 @@ public class SCIMUserManager implements UserManager {
      * @throws UserStoreException  If an error occurs related to the user store.
      * @throws CharonException     If an error occurs during the event handling.
      */
-    private void publishEvent(User user, String eventName, Boolean isAdminUpdate)
+    private void publishEvent(User user, String eventName, boolean isAdminUpdate)
             throws BadRequestException, UserStoreException, CharonException {
 
         HashMap<String, Object> properties = new HashMap<>();
@@ -6298,7 +6299,13 @@ public class SCIMUserManager implements UserManager {
         properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN,
                 IdentityUtil.extractDomainFromName(user.getUsername()));
         properties.put(IdentityEventConstants.EventProperty.CREDENTIAL, user.getPassword());
-        properties.put(IdentityEventConstants.EventProperty.IS_ADMIN_UPDATE, isAdminUpdate);
+        if (isAdminUpdate) {
+            properties.put(IdentityEventConstants.EventProperty.SCENARIO,
+                    Scenarios.CREDENTIAL_UPDATE_BY_ADMIN_VIA_CONSOLE.name());
+        } else {
+            properties.put(IdentityEventConstants.EventProperty.SCENARIO,
+                    Scenarios.CREDENTIAL_UPDATE_BY_USER_VIA_MY_ACCOUNT.name());
+        }
 
         Event identityMgtEvent = new Event(eventName, properties);
         try {
