@@ -301,7 +301,7 @@ public class SCIMGroupHandlerTest extends PowerMockTestCase {
 
         SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(1);
         scimGroupHandler.updateRoleName("NON_EXISTENT_ROLE_NAME", "NEW_ROLE_NAME");
-        // this method is for testing of throwing IdentitySCIMException, hence no assertion
+        // This method is to test the throwing of an IdentitySCIMException, hence no assertion.
     }
 
     @Test
