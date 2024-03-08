@@ -48,7 +48,7 @@ public enum Scenarios {
                 }
             }
         }
-        throw new IdentitySCIMException(SCIMCommonConstants.ErrorMessages.ERROR_CODE_INVALID_SCENARIO.getMessage());
+        throw new IdentitySCIMException("Invalid scenario: " + scenarioName);
     }
 
 }
