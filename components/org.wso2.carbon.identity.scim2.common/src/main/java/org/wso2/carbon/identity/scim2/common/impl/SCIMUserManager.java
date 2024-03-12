@@ -41,7 +41,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
@@ -56,6 +58,7 @@ import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.scim2.common.utils.Scenarios;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
@@ -1114,6 +1117,7 @@ public class SCIMUserManager implements UserManager {
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
+                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect);
@@ -1299,6 +1303,7 @@ public class SCIMUserManager implements UserManager {
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
+                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect, allSimpleMultiValuedClaimsList);
@@ -6271,5 +6276,42 @@ public class SCIMUserManager implements UserManager {
 
         return groupsList.stream().map(groupName -> UserCoreUtil.addDomainToName(groupName, userStoreDomainName))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Publish event for credential updates.
+     *
+     * @param user      User object.
+     * @param eventName Name of the event.
+     * @param isAdminUpdate   Indicates whether the user is an admin.
+     * @throws BadRequestException If the request is invalid.
+     * @throws UserStoreException  If an error occurs related to the user store.
+     * @throws CharonException     If an error occurs during the event handling.
+     */
+    private void publishEvent(User user, String eventName, boolean isAdminUpdate)
+            throws BadRequestException, UserStoreException, CharonException {
+
+        HashMap<String, Object> properties = new HashMap<>();
+        properties.put(IdentityEventConstants.EventProperty.USER_NAME,
+                UserCoreUtil.removeDomainFromName(user.getUsername()));
+        properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_ID, carbonUM.getTenantId());
+        properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN,
+                IdentityUtil.extractDomainFromName(user.getUsername()));
+        properties.put(IdentityEventConstants.EventProperty.CREDENTIAL, user.getPassword());
+        if (isAdminUpdate) {
+            properties.put(IdentityEventConstants.EventProperty.SCENARIO,
+                    Scenarios.CREDENTIAL_UPDATE_BY_ADMIN_VIA_CONSOLE.name());
+        } else {
+            properties.put(IdentityEventConstants.EventProperty.SCENARIO,
+                    Scenarios.CREDENTIAL_UPDATE_BY_USER_VIA_MY_ACCOUNT.name());
+        }
+
+        Event identityMgtEvent = new Event(eventName, properties);
+        try {
+            SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
+        } catch (IdentityEventException e) {
+            throw new BadRequestException("Error occurred publishing event", ResponseCodeConstants.INVALID_VALUE);
+        }
     }
 }
