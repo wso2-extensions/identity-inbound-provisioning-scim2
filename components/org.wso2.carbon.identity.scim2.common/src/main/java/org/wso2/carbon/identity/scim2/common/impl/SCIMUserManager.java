@@ -1117,7 +1117,7 @@ public class SCIMUserManager implements UserManager {
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
-                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL, false);
+                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect);
@@ -1303,7 +1303,7 @@ public class SCIMUserManager implements UserManager {
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
-                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL, true);
+                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect, allSimpleMultiValuedClaimsList);
