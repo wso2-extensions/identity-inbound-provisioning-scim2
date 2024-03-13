@@ -1117,7 +1117,7 @@ public class SCIMUserManager implements UserManager {
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
-                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
+                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL, false);
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect);
@@ -1303,7 +1303,7 @@ public class SCIMUserManager implements UserManager {
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
-                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
+                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL, true);
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect, allSimpleMultiValuedClaimsList);
@@ -6301,10 +6301,10 @@ public class SCIMUserManager implements UserManager {
         properties.put(IdentityEventConstants.EventProperty.CREDENTIAL, user.getPassword());
         if (isAdminUpdate) {
             properties.put(IdentityEventConstants.EventProperty.SCENARIO,
-                    Scenarios.CREDENTIAL_UPDATE_BY_ADMIN_VIA_CONSOLE.name());
+                    Scenarios.ADMIN_UPDATED.name());
         } else {
             properties.put(IdentityEventConstants.EventProperty.SCENARIO,
-                    Scenarios.CREDENTIAL_UPDATE_BY_USER_VIA_MY_ACCOUNT.name());
+                    Scenarios.SELF_UPDATED.name());
         }
 
         Event identityMgtEvent = new Event(eventName, properties);

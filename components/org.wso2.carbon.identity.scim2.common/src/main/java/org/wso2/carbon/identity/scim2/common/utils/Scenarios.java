@@ -26,8 +26,8 @@ import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
  */
 public enum Scenarios {
 
-    CREDENTIAL_UPDATE_BY_ADMIN_VIA_CONSOLE,
-    CREDENTIAL_UPDATE_BY_USER_VIA_MY_ACCOUNT;
+    ADMIN_UPDATED,
+    SELF_UPDATED;
 
     /**
      * Get scenario which matches the given scenario name.
@@ -39,7 +39,7 @@ public enum Scenarios {
     public static Scenarios getScenario(String scenarioName) throws IdentitySCIMException {
 
         Scenarios[] scenarios = {
-                CREDENTIAL_UPDATE_BY_ADMIN_VIA_CONSOLE, CREDENTIAL_UPDATE_BY_USER_VIA_MY_ACCOUNT
+                ADMIN_UPDATED, SELF_UPDATED
         };
         if (StringUtils.isNotEmpty(scenarioName)) {
             for (Scenarios scenario : scenarios) {
