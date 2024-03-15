@@ -6300,10 +6300,10 @@ public class SCIMUserManager implements UserManager {
         properties.put(IdentityEventConstants.EventProperty.CREDENTIAL, user.getPassword());
         if (isAdminUpdate) {
             properties.put(IdentityEventConstants.EventProperty.SCENARIO,
-                    SCIMCommonConstants.EventScenarioTypes.POST_CREDENTIAL_UPDATE_BY_ADMIN.name());
+                    IdentityEventConstants.EventProperty.Scenario.ScenarioTypes.POST_CREDENTIAL_UPDATE_BY_ADMIN);
         } else {
             properties.put(IdentityEventConstants.EventProperty.SCENARIO,
-                    SCIMCommonConstants.EventScenarioTypes.POST_CREDENTIAL_UPDATE_BY_USER.name());
+                    IdentityEventConstants.EventProperty.Scenario.ScenarioTypes.POST_CREDENTIAL_UPDATE_BY_USER);
         }
 
         Event identityMgtEvent = new Event(eventName, properties);
