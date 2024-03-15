@@ -213,5 +213,14 @@ public class SCIMCommonConstants {
             return code + " : " + message;
         }
     }
+
+    /**
+     * Enum which contains the event scenario types.
+     */
+    public enum EventScenarioTypes {
+
+        POST_CREDENTIAL_UPDATE_BY_ADMIN,
+        POST_CREDENTIAL_UPDATE_BY_USER,
+    }
 }
 

@@ -58,7 +58,6 @@ import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
-import org.wso2.carbon.identity.scim2.common.utils.Scenarios;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
@@ -6301,10 +6300,10 @@ public class SCIMUserManager implements UserManager {
         properties.put(IdentityEventConstants.EventProperty.CREDENTIAL, user.getPassword());
         if (isAdminUpdate) {
             properties.put(IdentityEventConstants.EventProperty.SCENARIO,
-                    Scenarios.ADMIN_UPDATED.name());
+                    SCIMCommonConstants.EventScenarioTypes.POST_CREDENTIAL_UPDATE_BY_ADMIN.name());
         } else {
             properties.put(IdentityEventConstants.EventProperty.SCENARIO,
-                    Scenarios.SELF_UPDATED.name());
+                    SCIMCommonConstants.EventScenarioTypes.POST_CREDENTIAL_UPDATE_BY_USER.name());
         }
 
         Event identityMgtEvent = new Event(eventName, properties);
