@@ -198,7 +198,7 @@ public class UserResource extends AbstractResource {
             }
 
             // Validates the count parameter if exists.
-            if (count != null && IdentityUtil.isSCIM2UserEndpointPaginationEnabled()) {
+            if (count != null && IdentityUtil.isSCIM2UserMaxItemsPerPageEnabled()) {
                 count = validateCountParameter(count);
             }
 
