@@ -403,9 +403,8 @@ public class UserResource extends AbstractResource {
      *
      * @param count Requested item count.
      * @return Validated count parameter.
-     * @throws CharonException If the count is negative.
      */
-    private int validateCountParameter(Integer count) throws CharonException {
+    private int validateCountParameter(Integer count) {
 
         int maximumItemsPerPage = IdentityUtil.getMaximumItemPerPage();
         if (count > maximumItemsPerPage) {
