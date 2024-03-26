@@ -1,16 +1,14 @@
 {
     "name": "SCIM 2.0 Inbound Provisioning Connector",
     "owner": "WSO2",
-    "category": "Federated authenticator & Provisioning connector",
+    "category": "OAuth Client Authenticator",
     "documentationUrl": "https://docs.wso2.com/display/ISCONNECTORS/Configuring+SCIM+2.0+Provisioning+Connector",
     "description": "The System for Cross-domain Identity Management (SCIM) specification is designed to make managing user identities in cloud-based applications and services easier. SCIM 2.0 Inbound Provisioning Connector enables you to leverage the Identity Server as an SCIM 2.0 Provider to achieve seamless identity inbound provisioning.",
     "status": "Active",
     "labels": [
         "inbound-provisioning",
         "IS-5.3.0",
-        "scim2",
-        "isProductVersions/v530",
-        "isProductCategories/v520"
+        "scim2"
     ],
     "releases": []
 }
