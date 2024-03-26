@@ -1447,13 +1447,12 @@ public class SCIMUserManager implements UserManager {
                     maxLimit = Math.max(maxLimit, limit);
                 }
                 // Get total users based on the filter query without depending on pagination params.
-                if(SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
-                    //Get the total user count by the filter query.
+                if (SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
+                    // Get the total user count by the filter query.
                     totalResults += getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName);
                 } else {
                     totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
                 }
-
             } else {
                 totalResults += users.size();
             }

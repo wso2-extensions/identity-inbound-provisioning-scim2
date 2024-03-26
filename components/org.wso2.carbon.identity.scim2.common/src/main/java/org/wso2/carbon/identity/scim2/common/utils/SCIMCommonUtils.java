@@ -627,7 +627,7 @@ public class SCIMCommonUtils {
     public static boolean isRetrieveTotalResultsByUserCountEnabled() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(
-                SCIMCommonConstants.SCIM_ENABLE_RETRIEVE_TOTAL_RESULTS_BY_User_Count));
+                SCIMCommonConstants.SCIM_ENABLE_RETRIEVE_TOTAL_RESULTS_BY_USER_COUNT));
     }
 
     /**
