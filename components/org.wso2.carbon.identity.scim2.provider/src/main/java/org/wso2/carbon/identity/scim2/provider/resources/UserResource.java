@@ -197,6 +197,11 @@ public class UserResource extends AbstractResource {
                 throw  new FormatNotSupportedException(error);
             }
 
+            // Validates the count parameter if exists.
+            if (count != null && IdentityUtil.isSCIM2UserMaxItemsPerPageEnabled()) {
+                count = validateCountParameter(count);
+            }
+
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
@@ -391,5 +396,25 @@ public class UserResource extends AbstractResource {
 
         IdentityUtil.threadLocalProperties.get()
                 .remove(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY);
+    }
+
+    /**
+     * Validate the count query parameter.
+     *
+     * @param count Requested item count.
+     * @return Validated count parameter.
+     */
+    private int validateCountParameter(Integer count) {
+
+        int maximumItemsPerPage = IdentityUtil.getMaximumItemPerPage();
+        if (count > maximumItemsPerPage) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("Given limit exceeds the maximum limit. Therefore the limit is set to %s.",
+                        maximumItemsPerPage));
+            }
+            return maximumItemsPerPage;
+        }
+
+        return count;
     }
 }
