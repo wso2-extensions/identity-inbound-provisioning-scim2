@@ -1493,7 +1493,8 @@ public class SCIMUserManager implements UserManager {
         } catch (BadRequestException e) {
             String errorMessage = String
                     .format("Domain parameter: %s in request does not match with the domain name in the attribute "
-                            + "value: %s ", domainName, node.getValue());
+                            + "value: %s ", domainName, (LoggerUtils.isLogMaskingEnable ?
+                            LoggerUtils.getMaskedContent(node.getValue()) : node.getValue()));
             throw new CharonException(errorMessage, e);
         }
         // Get domain name according to Filter Enhancements properties as in identity.xml
