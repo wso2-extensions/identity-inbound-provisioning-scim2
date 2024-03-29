@@ -2057,8 +2057,7 @@ public class SCIMUserManager implements UserManager {
         try {
             if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
                 List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
-                if ((isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()) &&
-                        SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
+                if (SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
                     users = getUserListOfGroups(roleNames);
                 } else {
                     users = getUserListOfRoles(roleNames);
