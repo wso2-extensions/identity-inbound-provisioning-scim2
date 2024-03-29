@@ -1680,7 +1680,13 @@ public class SCIMUserManager implements UserManager {
 
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
-            Set<org.wso2.carbon.user.core.common.User> users = getUserListOfRoles(roleNames);
+            Set<org.wso2.carbon.user.core.common.User> users;
+            if ((isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()) &&
+                    SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
+                users = getUserListOfGroups(roleNames);
+            } else {
+                users = getUserListOfRoles(roleNames);
+            }
             users = paginateUsers(users, limit, offset);
             return users;
         } catch (UserStoreException e) {
@@ -1749,7 +1755,7 @@ public class SCIMUserManager implements UserManager {
 
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
-            count = getUserCountForRole(roleNames);
+            count = getUserCountForGroup(roleNames);
             return count;
         } catch (UserStoreException e) {
             String errorMessage = String.format("Error while filtering the users for filter with attribute name: "
@@ -1759,13 +1765,13 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private int getUserCountForRole(List<String> roleNames) throws
+    private int getUserCountForGroup(List<String> groupNames) throws
                         org.wso2.carbon.user.core.UserStoreException {
 
         int count = 0;
-        if (roleNames != null) {
-            for (String roleName : roleNames) {
-                count += carbonUM.getUserCountForRole(roleName);
+        if (groupNames != null) {
+            for (String groupName : groupNames) {
+                count += carbonUM.getUserCountForGroup(groupName);
             }
         }
         return count;
@@ -2053,7 +2059,12 @@ public class SCIMUserManager implements UserManager {
         try {
             if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
                 List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
-                users = getUserListOfRoles(roleNames);
+                if ((isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()) &&
+                        SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
+                    users = getUserListOfGroups(roleNames);
+                } else {
+                    users = getUserListOfRoles(roleNames);
+                }
             } else {
                 // Get the user name of the user with this id.
                 users = getUserNames(attributeName, filterOperation, attributeValue);
@@ -4807,6 +4818,18 @@ public class SCIMUserManager implements UserManager {
         if (roleNames != null) {
             for (String roleName : roleNames) {
                 users.addAll(new HashSet<>(carbonUM.getUserListOfRoleWithID(roleName)));
+            }
+        }
+        return users;
+    }
+
+    private Set<org.wso2.carbon.user.core.common.User> getUserListOfGroups(List<String> groupNames)
+            throws org.wso2.carbon.user.core.UserStoreException {
+
+        Set<org.wso2.carbon.user.core.common.User> users = new HashSet<>();
+        if (groupNames != null) {
+            for (String groupName : groupNames) {
+                users.addAll(new HashSet<>(carbonUM.getUserListOfGroupWithID(groupName)));
             }
         }
         return users;
