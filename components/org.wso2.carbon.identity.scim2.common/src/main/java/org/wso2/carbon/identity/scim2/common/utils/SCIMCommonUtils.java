@@ -936,6 +936,9 @@ public class SCIMCommonUtils {
      */
     public static String getLoggedInUserID() throws CharonException {
 
+        if (PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserId() != null) {
+            return PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserId();
+        }
         try {
             String loggedInUserName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
             String loggedInUserTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
