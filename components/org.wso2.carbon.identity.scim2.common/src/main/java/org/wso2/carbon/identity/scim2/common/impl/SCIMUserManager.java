@@ -1681,8 +1681,7 @@ public class SCIMUserManager implements UserManager {
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
             Set<org.wso2.carbon.user.core.common.User> users;
-            if ((isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()) &&
-                    SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
+            if (SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
                 users = getUserListOfGroups(roleNames);
             } else {
                 users = getUserListOfRoles(roleNames);
