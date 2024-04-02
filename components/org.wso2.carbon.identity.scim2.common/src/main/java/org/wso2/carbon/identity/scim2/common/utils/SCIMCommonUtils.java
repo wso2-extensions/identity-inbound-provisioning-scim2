@@ -620,14 +620,14 @@ public class SCIMCommonUtils {
     }
 
     /**
-     * Checks whether the identity.xml config is available to retrieve totalResults by user count.
+     * Checks whether the identity.xml config is available to enable group based user filtering improvements.
      *
-     * @return whether 'RetrieveTotalResultsByUserCount' property is enabled in identity.xml.
+     * @return Whether 'SCIM_ENABLE_GROUP_BASED_USER_FILTERING_IMPROVEMENTS' property is enabled in identity.xml.
      */
-    public static boolean isRetrieveTotalResultsByUserCountEnabled() {
+    public static boolean isGroupBasedUserFilteringImprovementsEnabled() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(
-                SCIMCommonConstants.SCIM_ENABLE_RETRIEVE_TOTAL_RESULTS_BY_USER_COUNT));
+                SCIMCommonConstants.SCIM_ENABLE_GROUP_BASED_USER_FILTERING_IMPROVEMENTS));
     }
 
     /**

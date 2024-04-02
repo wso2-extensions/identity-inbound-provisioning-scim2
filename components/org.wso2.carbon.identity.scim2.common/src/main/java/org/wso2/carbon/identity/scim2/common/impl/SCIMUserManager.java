@@ -1446,7 +1446,7 @@ public class SCIMUserManager implements UserManager {
                     maxLimit = Math.max(maxLimit, limit);
                 }
                 // Get total users based on the filter query without depending on pagination params.
-                if (SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
+                if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled()) {
                     // Get the total user count by the filter query.
                     totalResults += getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName);
                 } else {
@@ -1472,8 +1472,8 @@ public class SCIMUserManager implements UserManager {
      * @param sortOrder  Sorting order
      * @param domainName Domain to run the filter
      * @return User count
-     * @throws BadRequestException
-     * @throws CharonException
+     * @throws BadRequestException Exception occurred due to a bad request.
+     * @throws CharonException Error while filtering the users.
      */
     private int getUserCountByAttribute(Node node, int offset, int limit, String sortBy,
                              String sortOrder, String domainName) throws BadRequestException, CharonException {
@@ -1680,7 +1680,7 @@ public class SCIMUserManager implements UserManager {
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
             Set<org.wso2.carbon.user.core.common.User> users;
-            if (SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
+            if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled()) {
                 users = getUserListOfGroups(roleNames);
             } else {
                 users = getUserListOfRoles(roleNames);
@@ -1733,8 +1733,8 @@ public class SCIMUserManager implements UserManager {
      * @param node       Expression or Operation node.
      * @param domainName Domain name.
      * @return User count for the filtered group.
-     * @throws CharonException
-     * @throws BadRequestException
+     * @throws CharonException Error while filtering the users.
+     * @throws BadRequestException Exception occurred due to a bad request.
      */
     private int getUserCountByGroup(Node node, String domainName)
             throws CharonException, BadRequestException {
@@ -2057,7 +2057,7 @@ public class SCIMUserManager implements UserManager {
         try {
             if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
                 List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
-                if (SCIMCommonUtils.isRetrieveTotalResultsByUserCountEnabled()) {
+                if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled()) {
                     users = getUserListOfGroups(roleNames);
                 } else {
                     users = getUserListOfRoles(roleNames);
