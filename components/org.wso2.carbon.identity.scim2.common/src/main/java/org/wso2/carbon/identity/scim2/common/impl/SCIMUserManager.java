@@ -1446,8 +1446,10 @@ public class SCIMUserManager implements UserManager {
                     maxLimit = Math.max(maxLimit, limit);
                 }
                 // Get total users based on the filter query without depending on pagination params.
-                if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled()) {
+                if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
+                        (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC())) {
                     // Get the total user count by the filter query.
+                    // This is only implemented for JDBC userstores.
                     totalResults += getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName);
                 } else {
                     totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
