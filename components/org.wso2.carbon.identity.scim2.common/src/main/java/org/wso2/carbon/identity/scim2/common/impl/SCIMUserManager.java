@@ -1475,10 +1475,11 @@ public class SCIMUserManager implements UserManager {
      * @param domainName Domain to run the filter
      * @return User count
      * @throws BadRequestException Exception occurred due to a bad request.
-     * @throws CharonException Error while filtering the users.
+     * @throws CharonException     Error while filtering the users.
      */
     private int getUserCountByAttribute(Node node, int offset, int limit, String sortBy,
-                             String sortOrder, String domainName) throws BadRequestException, CharonException {
+                                        String sortOrder, String domainName)
+            throws BadRequestException, CharonException {
 
         if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
             return getUserCountByGroup(node, domainName);
@@ -1735,7 +1736,7 @@ public class SCIMUserManager implements UserManager {
      * @param node       Expression or Operation node.
      * @param domainName Domain name.
      * @return User count for the filtered group.
-     * @throws CharonException Error while filtering the users.
+     * @throws CharonException     Error while filtering the users.
      * @throws BadRequestException Exception occurred due to a bad request.
      */
     private int getUserCountByGroup(Node node, String domainName)
@@ -1766,7 +1767,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     private int getUserCountForGroup(List<String> groupNames) throws
-                        org.wso2.carbon.user.core.UserStoreException {
+            org.wso2.carbon.user.core.UserStoreException {
 
         int count = 0;
         if (groupNames != null) {
