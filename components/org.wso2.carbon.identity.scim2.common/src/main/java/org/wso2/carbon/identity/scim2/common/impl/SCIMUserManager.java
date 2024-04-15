@@ -1446,7 +1446,14 @@ public class SCIMUserManager implements UserManager {
                     maxLimit = Math.max(maxLimit, limit);
                 }
                 // Get total users based on the filter query without depending on pagination params.
-                totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
+                if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
+                        (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC())) {
+                    // Get the total user count by the filter query.
+                    // This is only implemented for JDBC userstores.
+                    totalResults += getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName);
+                } else {
+                    totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
+                }
             } else {
                 totalResults += users.size();
             }
@@ -1455,6 +1462,30 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException(errorMessage, e);
         }
         return getDetailedUsers(filteredUsers, totalResults);
+    }
+
+    /**
+     * method to get user count by filtering parameter.
+     *
+     * @param node       Expression node for single attribute filtering
+     * @param offset     Starting index of the count
+     * @param limit      Counting value
+     * @param sortBy     SortBy
+     * @param sortOrder  Sorting order
+     * @param domainName Domain to run the filter
+     * @return User count
+     * @throws BadRequestException Exception occurred due to a bad request.
+     * @throws CharonException     Error while filtering the users.
+     */
+    private int getUserCountByAttribute(Node node, int offset, int limit, String sortBy,
+                                        String sortOrder, String domainName)
+            throws BadRequestException, CharonException {
+
+        if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
+            return getUserCountByGroup(node, domainName);
+        }
+
+        return filterUsers(node, 1, limit, sortBy, sortOrder, domainName).size();
     }
 
     /**
@@ -1652,7 +1683,12 @@ public class SCIMUserManager implements UserManager {
 
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
-            Set<org.wso2.carbon.user.core.common.User> users = getUserListOfRoles(roleNames);
+            Set<org.wso2.carbon.user.core.common.User> users;
+            if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled()) {
+                users = getUserListOfGroups(roleNames);
+            } else {
+                users = getUserListOfRoles(roleNames);
+            }
             users = paginateUsers(users, limit, offset);
             return users;
         } catch (UserStoreException e) {
@@ -1693,6 +1729,54 @@ public class SCIMUserManager implements UserManager {
         } else {
             return filterUsersFromMultipleDomains(node, offset, limit, sortBy, sortOrder, null);
         }
+    }
+
+    /**
+     * Method to get User Count by Group filter
+     *
+     * @param node       Expression or Operation node.
+     * @param domainName Domain name.
+     * @return User count for the filtered group.
+     * @throws CharonException     Error while filtering the users.
+     * @throws BadRequestException Exception occurred due to a bad request.
+     */
+    private int getUserCountByGroup(Node node, String domainName)
+            throws CharonException, BadRequestException {
+
+        int count = 0;
+        // Set filter values.
+        String attributeName = ((ExpressionNode) node).getAttributeValue();
+        String filterOperation = ((ExpressionNode) node).getOperation();
+        String attributeValue = ((ExpressionNode) node).getValue();
+
+        /*
+        If there is a domain and if the domain separator is not found in the attribute value, append the domain
+        with the domain separator in front of the new attribute value.
+        */
+        attributeValue = UserCoreUtil.addDomainToName(((ExpressionNode) node).getValue(), domainName);
+
+        try {
+            List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
+            count = getUserCountForGroup(roleNames);
+            return count;
+        } catch (UserStoreException e) {
+            String errorMessage = String.format("Error while filtering the users for filter with attribute name: "
+                            + "%s, filter operation: %s and attribute value: %s.", attributeName, filterOperation,
+                    attributeValue);
+            throw resolveError(e, errorMessage);
+        }
+    }
+
+    private int getUserCountForGroup(List<String> groupNames) throws
+            org.wso2.carbon.user.core.UserStoreException {
+
+        int count = 0;
+        if (groupNames != null) {
+            for (String groupName : groupNames) {
+                count += carbonUM.getUserCountForGroup(groupName);
+            }
+        }
+        return count;
     }
 
     /**
@@ -1977,7 +2061,11 @@ public class SCIMUserManager implements UserManager {
         try {
             if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(attributeName)) {
                 List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
-                users = getUserListOfRoles(roleNames);
+                if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled()) {
+                    users = getUserListOfGroups(roleNames);
+                } else {
+                    users = getUserListOfRoles(roleNames);
+                }
             } else {
                 // Get the user name of the user with this id.
                 users = getUserNames(attributeName, filterOperation, attributeValue);
@@ -4731,6 +4819,18 @@ public class SCIMUserManager implements UserManager {
         if (roleNames != null) {
             for (String roleName : roleNames) {
                 users.addAll(new HashSet<>(carbonUM.getUserListOfRoleWithID(roleName)));
+            }
+        }
+        return users;
+    }
+
+    private Set<org.wso2.carbon.user.core.common.User> getUserListOfGroups(List<String> groupNames)
+            throws org.wso2.carbon.user.core.UserStoreException {
+
+        Set<org.wso2.carbon.user.core.common.User> users = new HashSet<>();
+        if (groupNames != null) {
+            for (String groupName : groupNames) {
+                users.addAll(new HashSet<>(carbonUM.getUserListOfGroupWithID(groupName)));
             }
         }
         return users;

@@ -620,6 +620,17 @@ public class SCIMCommonUtils {
     }
 
     /**
+     * Checks whether the identity.xml config is available to enable group based user filtering improvements.
+     *
+     * @return Whether 'SCIM_ENABLE_GROUP_BASED_USER_FILTERING_IMPROVEMENTS' property is enabled in identity.xml.
+     */
+    public static boolean isGroupBasedUserFilteringImprovementsEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(
+                SCIMCommonConstants.SCIM_ENABLE_GROUP_BASED_USER_FILTERING_IMPROVEMENTS));
+    }
+
+    /**
      * Checks whether the identity.xml config is available to notify userstore availability.
      *
      * @return whether 'NotifyUserstoreStatus' property is enabled in the identity.xml.
