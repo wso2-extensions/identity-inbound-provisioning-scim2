@@ -10,5 +10,12 @@
         "IS-5.3.0",
         "scim2"
     ],
-    "releases": []
+    "releases": [
+        {
+            "tagName": "1.1.19",
+            "products": [
+                "IS 5.3.0"
+            ]
+        }
+    ]
 }
