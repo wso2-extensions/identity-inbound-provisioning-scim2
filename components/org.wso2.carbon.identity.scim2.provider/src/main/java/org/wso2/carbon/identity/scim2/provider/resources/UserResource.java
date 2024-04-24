@@ -40,6 +40,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.buildCustomSchema;
+import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.getTenantDomain;
 import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.getTenantId;
 
 @Path("/")
@@ -151,13 +152,14 @@ public class UserResource extends AbstractResource {
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
-            String superAdminID = AdminAttributeUtil.getSuperAdminID();
-            String loggedInUser = SCIMCommonUtils.getLoggedInUserID();
-            if ((superAdminID.equals(id)) && (!loggedInUser.equals(id))) {
-                if (LOG.isDebugEnabled()) {
+            // Skipping this validation if the request comes from a sub organization.
+            if (!SCIMCommonUtils.isOrganization(getTenantDomain())) {
+                String superAdminID = AdminAttributeUtil.getSuperAdminID();
+                String loggedInUser = SCIMCommonUtils.getLoggedInUserID();
+                if (superAdminID.equals(id) && !loggedInUser.equals(id)) {
                     LOG.debug("Do not have permission to delete SuperAdmin user.");
+                    return Response.status(Response.Status.FORBIDDEN).build();
                 }
-                return Response.status(Response.Status.FORBIDDEN).build();
             }
 
             // create charon-SCIM user resource manager and hand-over the request.
@@ -348,13 +350,14 @@ public class UserResource extends AbstractResource {
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
-            String superAdminID = AdminAttributeUtil.getSuperAdminID();
-            String loggedInUser = SCIMCommonUtils.getLoggedInUserID();
-            if ((superAdminID.equals(id)) && (!loggedInUser.equals(id))) {
-                if (LOG.isDebugEnabled()) {
+            // Skipping this validation if the request comes from a sub organization.
+            if (!SCIMCommonUtils.isOrganization(getTenantDomain())) {
+                String superAdminID = AdminAttributeUtil.getSuperAdminID();
+                String loggedInUser = SCIMCommonUtils.getLoggedInUserID();
+                if (superAdminID.equals(id) && !loggedInUser.equals(id)) {
                     LOG.debug("Do not have permission to patch SuperAdmin user.");
+                    return Response.status(Response.Status.FORBIDDEN).build();
                 }
-                return Response.status(Response.Status.FORBIDDEN).build();
             }
 
             // Build Custom schema

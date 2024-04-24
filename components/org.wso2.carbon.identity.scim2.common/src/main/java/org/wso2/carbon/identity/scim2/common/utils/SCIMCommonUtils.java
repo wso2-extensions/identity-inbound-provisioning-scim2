@@ -34,6 +34,8 @@ import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.constants.AccountConstants;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
@@ -946,6 +948,22 @@ public class SCIMCommonUtils {
             return userIDResolver.getIDByName(loggedInUserName, loggedInUserTenantDomain);
         } catch (IdentityRoleManagementException e) {
             throw new CharonException("Error occurred while retrieving super admin ID.", e);
+        }
+    }
+
+    /**
+     * Check whether the given tenant domain is an organization.
+     *
+     * @param tenantDomain Tenant domain of the request.
+     * @return True if the tenant domain is an organization.
+     * @throws CharonException If an error occurred while checking the organization state.
+     */
+    public static boolean isOrganization(String tenantDomain) throws CharonException {
+
+        try {
+            return OrganizationManagementUtil.isOrganization(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new CharonException("Error occurred while checking the organization state.", e);
         }
     }
 }
