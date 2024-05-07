@@ -1297,10 +1297,19 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                         ResponseCodeConstants.INVALID_VALUE);
             }
 
+            String userID = memberObject.get(SCIMConstants.RoleSchemaConstants.VALUE);
+            if (StringUtils.isEmpty(userID)) {
+                userID = userStoreManager.getUserIDFromUserName(
+                        memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
+                if (StringUtils.isEmpty(userID)) {
+                    throw new BadRequestException("User can't be resolved from the given username.",
+                            ResponseCodeConstants.NO_TARGET);
+                }
+            }
+
             List<String> roleList;
             try {
-                roleList = roleManagementService.getRoleIdListOfUser(
-                        memberObject.get(SCIMConstants.RoleSchemaConstants.VALUE), tenantDomain);
+                roleList = roleManagementService.getRoleIdListOfUser(userID, tenantDomain);
             } catch (IdentityRoleManagementException e) {
                 throw new CharonException("Error occurred while retrieving the role list of user.");
             }
