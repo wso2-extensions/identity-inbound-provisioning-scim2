@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
@@ -145,6 +144,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isNoti
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForGroupNamesInGroupsResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
         .mandateDomainForUsernamesAndGroupNamesInResponse;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.maskIfRequired;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
 import static org.wso2.carbon.user.core.UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI;
 import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_ROLES_CLAIM;
@@ -276,7 +276,8 @@ public class SCIMUserManager implements UserManager {
             }
 
             if (isExistingUser) {
-                String error = "User with the name: " + user.getUserName() + " already exists in the system.";
+                String error = "User with the name: " +  maskIfRequired(user.getUserName()) +
+                        " already exists in the system.";
                 throw new ConflictException(error);
             }
 
@@ -347,8 +348,8 @@ public class SCIMUserManager implements UserManager {
             // Set the schemas of the SCIM user.
             user.setSchemas(this);
         } catch (UserStoreClientException e) {
-            String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
-                    e.getMessage());
+            String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName()) +
+                    ". %s", e.getMessage());
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
@@ -361,8 +362,8 @@ public class SCIMUserManager implements UserManager {
             // Therefore checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
             if (ex instanceof UserStoreClientException) {
-                String errorMessage = String.format("Error in adding the user: " + user.getUserName() + ". %s",
-                        ex.getMessage());
+                String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName())
+                        + ". %s", ex.getMessage());
                 if (log.isDebugEnabled()) {
                     log.debug(errorMessage, ex);
                 }
@@ -533,8 +534,8 @@ public class SCIMUserManager implements UserManager {
             } else if (userStoreDomainFromSP != null &&
                     !(userStoreDomainFromSP
                             .equalsIgnoreCase(coreUser.getUserStoreDomain()))) {
-                throw new CharonException("User :" + coreUser.getUsername() + "is not belong to user store " +
-                        userStoreDomainFromSP + "Hence user updating fail");
+                throw new CharonException("User :" + maskIfRequired(coreUser.getUsername()) + "is not belong to user " +
+                        "store " + userStoreDomainFromSP + "Hence user updating fail");
             } else {
                 // We assume (since id is unique per user) only one user exists for a given id.
                 userName = coreUser.getUsername();
@@ -542,8 +543,9 @@ public class SCIMUserManager implements UserManager {
 
                 // Check if SCIM is enabled for the user store.
                 if (!isSCIMEnabled(userStoreDomainName)) {
-                    throw new CharonException("Cannot delete user: " + userName + " through SCIM from user store: " +
-                            userStoreDomainName + ". SCIM is not enabled for user store: " + userStoreDomainName);
+                    throw new CharonException("Cannot delete user: " + maskIfRequired(userName) + " through SCIM from" +
+                            " user store: " + userStoreDomainName + ". SCIM is not enabled for user store: " +
+                            userStoreDomainName);
                 }
                 carbonUM.deleteUserWithID(coreUser.getUserID());
                 if (log.isDebugEnabled()) {
@@ -1017,8 +1019,8 @@ public class SCIMUserManager implements UserManager {
                 User oldUser = this.getUser(user.getId(), ResourceManagerUtil.getAllAttributeURIs(schema));
                 if (userStoreDomainFromSP != null && !userStoreDomainFromSP
                         .equalsIgnoreCase(IdentityUtil.extractDomainFromName(oldUser.getUserName()))) {
-                    throw new CharonException("User :" + oldUser.getUserName() + "is not belong to user store " +
-                            userStoreDomainFromSP + "Hence user updating fail");
+                    throw new CharonException("User :" + maskIfRequired(oldUser.getUserName()) + "is not belong to " +
+                            "user store " + userStoreDomainFromSP + "Hence user updating fail");
                 }
                 if (getUserStoreDomainFromSP() != null &&
                         !UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(getUserStoreDomainFromSP())) {
@@ -1132,8 +1134,7 @@ public class SCIMUserManager implements UserManager {
             }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
-            String errMsg = "Error while updating attributes of user: " + (LoggerUtils.isLogMaskingEnable ?
-                    LoggerUtils.getMaskedContent(user.getUserName()) : user.getUserName());
+            String errMsg = "Error while updating attributes of user: " + maskIfRequired(user.getUserName());
             // Sometimes client exceptions are wrapped in the super class.
             // Therefore checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
@@ -1209,7 +1210,7 @@ public class SCIMUserManager implements UserManager {
                             .equalsIgnoreCase(IdentityUtil.extractDomainFromName(oldUser.getUserName()))) {
                         String errorMessage =
                                 String.format("User : %s does not belong to userstore %s. Hence user updating failed",
-                                        oldUser.getUserName(), userStoreDomainFromSP);
+                                        maskIfRequired(oldUser.getUserName()), userStoreDomainFromSP);
                         throw new CharonException(errorMessage);
                     }
                     if (!UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(userStoreDomainFromSP)) {
@@ -1313,7 +1314,8 @@ public class SCIMUserManager implements UserManager {
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreException e) {
             handleErrorsOnUserNameAndPasswordPolicy(e);
-            throw resolveError(e, "Error while updating attributes of user: " + user.getUserName());
+            throw resolveError(e, "Error while updating attributes of user: " +
+                    maskIfRequired(user.getUserName()));
         } catch (BadRequestException e) {
             /*
             This is needed as most BadRequests are thrown to charon as
@@ -1322,9 +1324,11 @@ public class SCIMUserManager implements UserManager {
             the end party.
              */
             reThrowMutabilityBadRequests(e);
-            throw new CharonException("Error occurred while trying to update the user: " + user.getUserName(), e);
+            throw new CharonException("Error occurred while trying to update the user: " +
+                    maskIfRequired(user.getUserName()), e);
         } catch (CharonException e) {
-            throw new CharonException("Error occurred while trying to update the user: " + user.getUserName(), e);
+            throw new CharonException("Error occurred while trying to update the user: " +
+                    maskIfRequired(user.getUserName()), e);
         }
     }
 
@@ -1524,8 +1528,7 @@ public class SCIMUserManager implements UserManager {
         } catch (BadRequestException e) {
             String errorMessage = String
                     .format("Domain parameter: %s in request does not match with the domain name in the attribute "
-                            + "value: %s ", domainName, (LoggerUtils.isLogMaskingEnable ?
-                            LoggerUtils.getMaskedContent(node.getValue()) : node.getValue()));
+                            + "value: %s ", domainName, maskIfRequired(node.getValue()));
             throw new CharonException(errorMessage, e);
         }
         // Get domain name according to Filter Enhancements properties as in identity.xml
@@ -4183,7 +4186,7 @@ public class SCIMUserManager implements UserManager {
                     attributes = SCIMCommonUtils.convertLocalToSCIMDialect(userClaimValues, scimToLocalClaimsMap);
                 } catch (UserStoreException e) {
                     throw resolveError(e, "Error in converting local claims to SCIM dialect for user: "
-                            + user.getUsername());
+                            + maskIfRequired(user.getUsername()));
                 }
 
                 try {
@@ -4294,10 +4297,11 @@ public class SCIMUserManager implements UserManager {
                     }
 
                 } catch (UserStoreException e) {
-                    throw resolveError(e, "Error in getting user information for user: " + user.getUsername());
-                } catch (CharonException | NotFoundException | IdentitySCIMException |
-                        BadRequestException e) {
-                    throw new CharonException("Error in getting user information for user: " + user.getUsername(), e);
+                    throw resolveError(e, "Error in getting user information for user: " +
+                            maskIfRequired(user.getUsername()));
+                } catch (CharonException | NotFoundException | IdentitySCIMException | BadRequestException e) {
+                    throw new CharonException("Error in getting user information for user: " +
+                            maskIfRequired(user.getUsername()), e);
                 }
 
                 if (scimUser != null) {
