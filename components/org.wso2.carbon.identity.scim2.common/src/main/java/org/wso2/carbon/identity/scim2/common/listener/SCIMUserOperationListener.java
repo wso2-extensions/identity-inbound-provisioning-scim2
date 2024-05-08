@@ -75,6 +75,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MI
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.REQUIRED;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_LENGTH_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.maskIfRequired;
 
 /**
  * This is to perform SCIM related operation on User Operations.
@@ -434,7 +435,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         try {
             isExistingJITProvisionedUser = UserSessionStore.getInstance().isExistingUser(username);
         } catch (UserSessionException e) {
-            throw new UserStoreException("Error while checking the federated user existence for the user: " + username);
+            throw new UserStoreException("Error while checking the federated user existence for the user: " +
+                    maskIfRequired(username));
         }
 
         // If federated user is already provisioned, block that user's synced attribute editing.
