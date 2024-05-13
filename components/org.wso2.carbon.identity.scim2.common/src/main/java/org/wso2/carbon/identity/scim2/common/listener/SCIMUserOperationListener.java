@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
@@ -75,7 +76,6 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MI
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.REQUIRED;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_LENGTH_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.maskIfRequired;
 
 /**
  * This is to perform SCIM related operation on User Operations.
@@ -436,7 +436,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             isExistingJITProvisionedUser = UserSessionStore.getInstance().isExistingUser(username);
         } catch (UserSessionException e) {
             throw new UserStoreException("Error while checking the federated user existence for the user: " +
-                    maskIfRequired(username));
+                    (LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(username) : username));
         }
 
         // If federated user is already provisioned, block that user's synced attribute editing.

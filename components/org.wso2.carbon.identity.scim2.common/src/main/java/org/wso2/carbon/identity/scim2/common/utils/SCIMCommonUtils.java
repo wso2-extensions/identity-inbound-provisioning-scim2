@@ -967,15 +967,4 @@ public class SCIMCommonUtils {
             throw new CharonException("Error occurred while checking the organization state.", e);
         }
     }
-
-    /**
-     * Mask the given value if it is required.
-     *
-     * @param value Value to be masked.
-     * @return Masked/unmasked value.
-     */
-    public static String maskIfRequired(String value) {
-
-        return LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(value) : value;
-    }
 }

@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
@@ -144,7 +145,6 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isNoti
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandateDomainForGroupNamesInGroupsResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
         .mandateDomainForUsernamesAndGroupNamesInResponse;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.maskIfRequired;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
 import static org.wso2.carbon.user.core.UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI;
 import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_ROLES_CLAIM;
@@ -535,7 +535,7 @@ public class SCIMUserManager implements UserManager {
                     !(userStoreDomainFromSP
                             .equalsIgnoreCase(coreUser.getUserStoreDomain()))) {
                 throw new CharonException("User :" + maskIfRequired(coreUser.getUsername()) + "is not belong to user " +
-                        "store " + userStoreDomainFromSP + "Hence user updating fail");
+                        "store " + userStoreDomainFromSP + ". Hence user updating fail.");
             } else {
                 // We assume (since id is unique per user) only one user exists for a given id.
                 userName = coreUser.getUsername();
@@ -1020,7 +1020,7 @@ public class SCIMUserManager implements UserManager {
                 if (userStoreDomainFromSP != null && !userStoreDomainFromSP
                         .equalsIgnoreCase(IdentityUtil.extractDomainFromName(oldUser.getUserName()))) {
                     throw new CharonException("User :" + maskIfRequired(oldUser.getUserName()) + "is not belong to " +
-                            "user store " + userStoreDomainFromSP + "Hence user updating fail");
+                            "user store " + userStoreDomainFromSP + ". Hence user updating fail.");
                 }
                 if (getUserStoreDomainFromSP() != null &&
                         !UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(getUserStoreDomainFromSP())) {
@@ -1208,9 +1208,8 @@ public class SCIMUserManager implements UserManager {
                 if (userStoreDomainFromSP != null) {
                     if (!userStoreDomainFromSP
                             .equalsIgnoreCase(IdentityUtil.extractDomainFromName(oldUser.getUserName()))) {
-                        String errorMessage =
-                                String.format("User : %s does not belong to userstore %s. Hence user updating failed",
-                                        maskIfRequired(oldUser.getUserName()), userStoreDomainFromSP);
+                        String errorMessage = String.format("User : %s does not belong to userstore %s. Hence user " +
+                                "updating failed.", maskIfRequired(oldUser.getUserName()), userStoreDomainFromSP);
                         throw new CharonException(errorMessage);
                     }
                     if (!UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME.equalsIgnoreCase(userStoreDomainFromSP)) {
@@ -1526,9 +1525,8 @@ public class SCIMUserManager implements UserManager {
             // Extract the domain name if the domain name is embedded in the filter attribute value.
             domainName = resolveDomainNameInAttributeValue(domainName, node);
         } catch (BadRequestException e) {
-            String errorMessage = String
-                    .format("Domain parameter: %s in request does not match with the domain name in the attribute "
-                            + "value: %s ", domainName, maskIfRequired(node.getValue()));
+            String errorMessage = String.format("Domain parameter: %s in request does not match with the domain " +
+                    "name in the attribute value: %s ", domainName, maskIfRequired(node.getValue()));
             throw new CharonException(errorMessage, e);
         }
         // Get domain name according to Filter Enhancements properties as in identity.xml
@@ -6417,5 +6415,16 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentityEventException e) {
             throw new BadRequestException("Error occurred publishing event", ResponseCodeConstants.INVALID_VALUE);
         }
+    }
+
+    /**
+     * Mask the given value if it is required.
+     *
+     * @param value Value to be masked.
+     * @return Masked/unmasked value.
+     */
+    private String maskIfRequired(String value) {
+
+        return LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(value) : value;
     }
 }
