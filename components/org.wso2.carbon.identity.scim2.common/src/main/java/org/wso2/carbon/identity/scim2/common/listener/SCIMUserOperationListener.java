@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
@@ -434,7 +435,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         try {
             isExistingJITProvisionedUser = UserSessionStore.getInstance().isExistingUser(username);
         } catch (UserSessionException e) {
-            throw new UserStoreException("Error while checking the federated user existence for the user: " + username);
+            throw new UserStoreException("Error while checking the federated user existence for the user: " +
+                    (LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(username) : username));
         }
 
         // If federated user is already provisioned, block that user's synced attribute editing.
