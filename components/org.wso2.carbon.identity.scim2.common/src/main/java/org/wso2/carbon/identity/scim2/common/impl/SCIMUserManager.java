@@ -534,8 +534,8 @@ public class SCIMUserManager implements UserManager {
             } else if (userStoreDomainFromSP != null &&
                     !(userStoreDomainFromSP
                             .equalsIgnoreCase(coreUser.getUserStoreDomain()))) {
-                throw new CharonException("User :" + maskIfRequired(coreUser.getUsername()) + "is not belong to user " +
-                        "store " + userStoreDomainFromSP + ". Hence user updating fail.");
+                throw new CharonException("User : " + maskIfRequired(coreUser.getUsername()) + " is not belong to " +
+                        "user store " + userStoreDomainFromSP + ". Hence user updating fail.");
             } else {
                 // We assume (since id is unique per user) only one user exists for a given id.
                 userName = coreUser.getUsername();
@@ -1019,7 +1019,7 @@ public class SCIMUserManager implements UserManager {
                 User oldUser = this.getUser(user.getId(), ResourceManagerUtil.getAllAttributeURIs(schema));
                 if (userStoreDomainFromSP != null && !userStoreDomainFromSP
                         .equalsIgnoreCase(IdentityUtil.extractDomainFromName(oldUser.getUserName()))) {
-                    throw new CharonException("User :" + maskIfRequired(oldUser.getUserName()) + "is not belong to " +
+                    throw new CharonException("User : " + maskIfRequired(oldUser.getUserName()) + " is not belong to " +
                             "user store " + userStoreDomainFromSP + ". Hence user updating fail.");
                 }
                 if (getUserStoreDomainFromSP() != null &&
@@ -1526,7 +1526,7 @@ public class SCIMUserManager implements UserManager {
             domainName = resolveDomainNameInAttributeValue(domainName, node);
         } catch (BadRequestException e) {
             String errorMessage = String.format("Domain parameter: %s in request does not match with the domain " +
-                    "name in the attribute value: %s ", domainName, maskIfRequired(node.getValue()));
+                    "name in the attribute value: %s", domainName, maskIfRequired(node.getValue()));
             throw new CharonException(errorMessage, e);
         }
         // Get domain name according to Filter Enhancements properties as in identity.xml
