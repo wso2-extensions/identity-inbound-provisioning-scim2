@@ -163,8 +163,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             RoleBasicInfo roleBasicInfo =
                     roleManagementService.addRole(role.getDisplayName(), role.getUsers(), localGroupIds,
                             permissionList, audienceType, role.getAudienceValue(), tenantDomain);
-            roleManagementService.updateIdpGroupListOfRole(roleBasicInfo.getId(), idpGroupList, new ArrayList<>(),
-                    tenantDomain);
+            if (isNotEmpty(idpGroupList)) {
+                roleManagementService.updateIdpGroupListOfRole(roleBasicInfo.getId(), idpGroupList, new ArrayList<>(),
+                        tenantDomain);
+            }
             RoleV2 createdRole = new RoleV2();
             createdRole.setId(roleBasicInfo.getId());
             String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
