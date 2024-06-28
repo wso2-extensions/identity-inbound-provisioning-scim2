@@ -3535,6 +3535,16 @@ public class SCIMUserManager implements UserManager {
             // Update the group name in UM_HYBRID_GROUP_ROLE table.
             carbonUM.updateGroupName(currentGroupName, newGroupName);
         } catch (UserStoreException e) {
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException && (StringUtils
+                    .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_WRITING_TO_DATABASE
+                            .getCode(), ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode()) ||
+                    StringUtils.equals(UserCoreErrorConstants.ErrorMessages
+                                    .ERROR_CODE_DUPLICATE_WHILE_UPDATING_USER_OF_ROLE.getCode(),
+                            ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode()))) {
+                // This handles the scenario where a unique key violation exception occurs when concurrent group
+                // patch requests try to add the same users to the group.
+                return;
+            }
             if (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
                     .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getCode(),
                             ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode())) {
