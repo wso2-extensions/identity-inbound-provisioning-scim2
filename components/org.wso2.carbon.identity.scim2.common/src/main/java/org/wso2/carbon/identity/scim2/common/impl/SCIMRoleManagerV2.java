@@ -1126,11 +1126,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             } catch (IdentityRoleManagementException e) {
                 if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
                     // Custom error message and SCIM type
-                    String customMessage = "Invalid request: Group display name is not supported. Please use the group ID instead.";
+                    String errorMessage = "Invalid request: The provided value is not supported. Please use the group ID instead.";
                     String scimType = "invalidSyntax"; // From RFC 7644 Table 9
 
                     // Throw BadRequestException with custom message and scimType
-                    throw new BadRequestException(customMessage, scimType);
+                    throw new BadRequestException(errorMessage, scimType);
                 }
                 throw new CharonException(
                         String.format("Error occurred while updating groups in the role with ID: %s", roleId), e);
