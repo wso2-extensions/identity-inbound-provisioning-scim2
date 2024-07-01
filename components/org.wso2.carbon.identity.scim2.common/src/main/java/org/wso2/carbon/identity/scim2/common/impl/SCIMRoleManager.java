@@ -771,21 +771,30 @@ public class SCIMRoleManager implements RoleManager {
 
     private void prepareAddedRemovedGroupLists(Set<String> addedGroupsIds, Set<String> removedGroupsIds,
                                                Set<String> replacedGroupsIds, PatchOperation groupOperation,
-                                               Map<String, String> groupObject, List<GroupBasicInfo> groupListOfRole) {
+                                               Map<String, String> groupObject, List<GroupBasicInfo> groupListOfRole)
+            throws BadRequestException {
+
+        String value = groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE);
+        String errorMessage =
+                "Updating groups of the role by display name is not supported. Update using group id instead.";
+
+        if (value == null) {
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_SYNTAX);
+        }
 
         switch (groupOperation.getOperation()) {
             case (SCIMConstants.OperationalConstants.ADD):
-                removedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                if (!isGroupExist(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE), groupListOfRole)) {
-                    addedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                removedGroupsIds.remove(value);
+                if (!isGroupExist(value, groupListOfRole)) {
+                    addedGroupsIds.add(value);
                 }
                 break;
             case (SCIMConstants.OperationalConstants.REMOVE):
-                addedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                removedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                addedGroupsIds.remove(value);
+                removedGroupsIds.add(value);
                 break;
             case (SCIMConstants.OperationalConstants.REPLACE):
-                replacedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                replacedGroupsIds.add(value);
                 break;
         }
     }

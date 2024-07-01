@@ -1125,13 +1125,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                         new ArrayList<>(deleteGroupIDList), tenantDomain);
             } catch (IdentityRoleManagementException e) {
                 if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
-                    // Error message and SCIM type
-                    String errorMessage = "Updating groups of the role by display name is not supported. "
-                            + "Update using group id instead.";
-                    String scimType = "invalidSyntax"; // From RFC 7644 Table 9
-
-                    // Throw BadRequestException with custom message and scimType
-                    throw new BadRequestException(errorMessage, scimType);
+                    throw new BadRequestException();
                 }
                 throw new CharonException(
                         String.format("Error occurred while updating groups in the role with ID: %s", roleId), e);
@@ -1220,19 +1214,27 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
     private void prepareInitialGroupLists(Set<String> givenAddedGroupsIds, Set<String> givenRemovedGroupsIds,
                                           Set<String> givenReplacedGroupsIds, PatchOperation groupOperation,
-                                          Map<String, String> groupObject) {
+                                          Map<String, String> groupObject) throws BadRequestException {
+
+        String value = groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE);
+        String errorMessage =
+                "Updating groups of the role by display name is not supported. Update using group id instead.";
+
+        if (value == null) {
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_SYNTAX);
+        }
 
         switch (groupOperation.getOperation()) {
             case (SCIMConstants.OperationalConstants.ADD):
-                givenRemovedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                givenAddedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                    givenRemovedGroupsIds.remove(value);
+                    givenAddedGroupsIds.add(value);
                 break;
             case (SCIMConstants.OperationalConstants.REMOVE):
-                givenAddedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                givenRemovedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                    givenAddedGroupsIds.remove(value);
+                    givenRemovedGroupsIds.add(value);
                 break;
             case (SCIMConstants.OperationalConstants.REPLACE):
-                givenReplacedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                    givenReplacedGroupsIds.add(value);
                 break;
             default:
                 break;
