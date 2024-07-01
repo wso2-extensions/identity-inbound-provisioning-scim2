@@ -775,11 +775,11 @@ public class SCIMRoleManager implements RoleManager {
             throws BadRequestException {
 
         String value = groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE);
-        String errorMessage =
-                "Updating groups of the role by display name is not supported. Update using group id instead.";
 
         if (value == null) {
-            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_SYNTAX);
+            throw new BadRequestException(
+                    "Updating groups of the role by display name is not supported. Update using group id instead.",
+                    ResponseCodeConstants.INVALID_SYNTAX);
         }
 
         switch (groupOperation.getOperation()) {
