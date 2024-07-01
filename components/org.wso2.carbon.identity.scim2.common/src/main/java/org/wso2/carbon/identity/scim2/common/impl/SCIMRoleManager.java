@@ -776,7 +776,7 @@ public class SCIMRoleManager implements RoleManager {
 
         String value = groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE);
 
-        if (value == null) {
+        if (StringUtils.isBlank(value)) {
             throw new BadRequestException(
                     "Updating groups of the role by display name is not supported. Update using group id instead.",
                     ResponseCodeConstants.INVALID_SYNTAX);
