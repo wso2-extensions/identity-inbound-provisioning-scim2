@@ -1214,19 +1214,27 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
     private void prepareInitialGroupLists(Set<String> givenAddedGroupsIds, Set<String> givenRemovedGroupsIds,
                                           Set<String> givenReplacedGroupsIds, PatchOperation groupOperation,
-                                          Map<String, String> groupObject) {
+                                          Map<String, String> groupObject) throws BadRequestException {
+
+        String value = groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE);
+
+        if (StringUtils.isBlank(value)) {
+            throw new BadRequestException(
+                    "Updating groups of the role by display name is not supported. Update using group id instead.",
+                    ResponseCodeConstants.INVALID_SYNTAX);
+        }
 
         switch (groupOperation.getOperation()) {
             case (SCIMConstants.OperationalConstants.ADD):
-                givenRemovedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                givenAddedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                givenRemovedGroupsIds.remove(value);
+                givenAddedGroupsIds.add(value);
                 break;
             case (SCIMConstants.OperationalConstants.REMOVE):
-                givenAddedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                givenRemovedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                givenAddedGroupsIds.remove(value);
+                givenRemovedGroupsIds.add(value);
                 break;
             case (SCIMConstants.OperationalConstants.REPLACE):
-                givenReplacedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                givenReplacedGroupsIds.add(value);
                 break;
             default:
                 break;
