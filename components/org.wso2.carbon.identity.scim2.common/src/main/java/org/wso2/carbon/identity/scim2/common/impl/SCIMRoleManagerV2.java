@@ -1219,9 +1219,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         String value = groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE);
 
         if (StringUtils.isBlank(value)) {
-            throw new BadRequestException(
-                    "Updating groups of the role by display name is not supported. Update using group id instead.",
-                    ResponseCodeConstants.INVALID_SYNTAX);
+            throw new BadRequestException("Group id is required to update group of the role.",
+                    ResponseCodeConstants.INVALID_VALUE);
         }
 
         switch (groupOperation.getOperation()) {
