@@ -50,7 +50,7 @@ import static org.testng.AssertJUnit.assertEquals;
 /**
  * Contains the unit test cases for SCIMRoleManagerV2.
  */
-@PrepareForTest({SCIMRoleManagerV2.class, IdentityUtil.class})
+@PrepareForTest({IdentityUtil.class})
 public class SCIMRoleManagerV2Test extends PowerMockTestCase {
 
     private static final String SAMPLE_TENANT_DOMAIN = "carbon.super";
