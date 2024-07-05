@@ -61,7 +61,7 @@ public class SCIMRoleManagerV2Test extends PowerMockTestCase {
 
     @Mock
     private RoleManagementService roleManagementService;
-    @Mock
+
     private SCIMRoleManagerV2 scimRoleManagerV2;
 
     @BeforeClass
@@ -73,8 +73,8 @@ public class SCIMRoleManagerV2Test extends PowerMockTestCase {
     @BeforeMethod
     public void setUpMethod() {
 
-        scimRoleManagerV2 = PowerMockito.spy(new SCIMRoleManagerV2(roleManagementService, SAMPLE_TENANT_DOMAIN));
         PowerMockito.mockStatic(IdentityUtil.class);
+        scimRoleManagerV2 = new SCIMRoleManagerV2(roleManagementService, SAMPLE_TENANT_DOMAIN);
     }
 
     @DataProvider(name = "scimOperations")
