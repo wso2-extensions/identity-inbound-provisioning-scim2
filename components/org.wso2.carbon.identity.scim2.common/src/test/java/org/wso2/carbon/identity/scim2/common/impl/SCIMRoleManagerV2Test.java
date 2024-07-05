@@ -45,7 +45,7 @@ import java.util.Map;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.Assert.assertEquals;
 
 /**
  * Contains the unit test cases for SCIMRoleManagerV2.
