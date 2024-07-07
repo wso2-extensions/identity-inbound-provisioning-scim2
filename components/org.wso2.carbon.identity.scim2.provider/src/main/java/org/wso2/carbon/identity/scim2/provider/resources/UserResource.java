@@ -26,15 +26,19 @@ import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
+import org.wso2.charon3.core.config.SCIMConfigConstants;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.UserResourceManager;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.utils.ResourceManagerUtil;
 
+import java.util.Objects;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -187,7 +191,8 @@ public class UserResource extends AbstractResource {
                             @QueryParam (SCIMProviderConstants.COUNT) Integer count,
                             @QueryParam (SCIMProviderConstants.SORT_BY) String sortBy,
                             @QueryParam (SCIMProviderConstants.SORT_ORDER) String sortOrder,
-                            @QueryParam (SCIMProviderConstants.DOMAIN) String domainName) {
+                            @QueryParam (SCIMProviderConstants.DOMAIN) String domainName,
+                            @QueryParam (SCIMProviderConstants.CURSOR) String cursor) {
 
         try {
             // defaults to application/scim+json.
@@ -215,9 +220,24 @@ public class UserResource extends AbstractResource {
 
             SCIMResponse scimResponse;
 
+            //Check pagination type.
+            String paginationType = ResourceManagerUtil.processPagination(startIndex, cursor);
+
+            if (SCIMProviderConstants.CURSOR.equals(paginationType)) {
+                //If the count is null when using a cursor pagination, set count to the value of
+                //pagination_default_count specified in the server config (charon-config.xml)
+                if (count == null) {
+                    count = Integer.parseInt(SCIMConfigProcessor.getInstance().
+                            getProperty(SCIMConfigConstants.PAGINATION_DEFAULT_COUNT));
+                }
+                scimResponse = userResourceManager.listWithGET(userManager, filter, cursor, count,
+                        sortBy, sortOrder, domainName, attribute, excludedAttributes);
+                return SupportUtils.buildResponse(scimResponse);
+            }
             scimResponse = userResourceManager.listWithGET(userManager, filter, startIndex, count,
                     sortBy, sortOrder, domainName, attribute, excludedAttributes);
             return SupportUtils.buildResponse(scimResponse);
+
         } catch (CharonException e) {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
