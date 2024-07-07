@@ -1541,7 +1541,8 @@ public class SCIMUserManager implements UserManager {
             return getUserCountByGroup(node, domainName);
         }
 
-        return filterUsers(node, 1, limit, sortBy, sortOrder, domainName).size();
+//        return filterUsers(node, 1, limit, sortBy, sortOrder, domainName).size();
+        return filterUsers(node, 1, null, limit, sortBy, sortOrder, domainName).size();
     }
 
     /**
