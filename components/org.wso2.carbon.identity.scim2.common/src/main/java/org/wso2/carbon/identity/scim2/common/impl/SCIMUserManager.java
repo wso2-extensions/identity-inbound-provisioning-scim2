@@ -1903,13 +1903,12 @@ public class SCIMUserManager implements UserManager {
         int initialOffset = 1;
 
         // Checking the number of matches till the original offset.
-        int skippedUserCount;
         boolean paginationRequest = false;
         Set<org.wso2.carbon.user.core.common.User> skippedUsers =
                 getFilteredUsersFromMultiAttributeFiltering(node, initialOffset, offset, sortBy, sortOrder, domainName,
                         paginationRequest);
 
-        skippedUserCount = skippedUsers.size();
+        int skippedUserCount = skippedUsers.size();
 
         // Calculate the new offset and return
         return offset - skippedUserCount;
