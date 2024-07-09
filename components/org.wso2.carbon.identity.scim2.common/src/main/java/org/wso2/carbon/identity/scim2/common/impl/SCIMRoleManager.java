@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2020, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2020-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -771,21 +771,29 @@ public class SCIMRoleManager implements RoleManager {
 
     private void prepareAddedRemovedGroupLists(Set<String> addedGroupsIds, Set<String> removedGroupsIds,
                                                Set<String> replacedGroupsIds, PatchOperation groupOperation,
-                                               Map<String, String> groupObject, List<GroupBasicInfo> groupListOfRole) {
+                                               Map<String, String> groupObject, List<GroupBasicInfo> groupListOfRole)
+            throws BadRequestException {
+
+        String value = groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE);
+
+        if (StringUtils.isBlank(value)) {
+            throw new BadRequestException("Group id is required to update group of the role.",
+                    ResponseCodeConstants.INVALID_VALUE);
+        }
 
         switch (groupOperation.getOperation()) {
             case (SCIMConstants.OperationalConstants.ADD):
-                removedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                if (!isGroupExist(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE), groupListOfRole)) {
-                    addedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                removedGroupsIds.remove(value);
+                if (!isGroupExist(value, groupListOfRole)) {
+                    addedGroupsIds.add(value);
                 }
                 break;
             case (SCIMConstants.OperationalConstants.REMOVE):
-                addedGroupsIds.remove(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
-                removedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                addedGroupsIds.remove(value);
+                removedGroupsIds.add(value);
                 break;
             case (SCIMConstants.OperationalConstants.REPLACE):
-                replacedGroupsIds.add(groupObject.get(SCIMConstants.CommonSchemaConstants.VALUE));
+                replacedGroupsIds.add(value);
                 break;
         }
     }
