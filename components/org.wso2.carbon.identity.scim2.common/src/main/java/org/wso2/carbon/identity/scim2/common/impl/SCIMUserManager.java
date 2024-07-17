@@ -2190,7 +2190,7 @@ public class SCIMUserManager implements UserManager {
             String sortBy, String sortOrder, String domainName, int maxLimit, boolean paginationRequested)
             throws CharonException, BadRequestException {
 
-        Set<org.wso2.carbon.user.core.common.User> users = new HashSet<>();
+        Set<org.wso2.carbon.user.core.common.User> users = new LinkedHashSet<>();
         if (StringUtils.isNotEmpty(domainName)) {
             users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder, domainName,
                     false);
