@@ -645,10 +645,19 @@ public class SCIMUserManager implements UserManager {
         } else if (count != null && count == 0) {
             return new UsersGetResponse(0, Collections.emptyList());
         } else if (rootNode != null) {
+            validateCursor(cursor);
             return filterUsers(rootNode, requiredAttributes, startIndex, cursor, count, sortBy, sortOrder,
                     domainName);
         } else {
+            validateCursor(cursor);
             return listUsers(requiredAttributes, startIndex, cursor, count, sortBy, sortOrder, domainName);
+        }
+    }
+
+    private void validateCursor(Cursor cursor) throws BadRequestException {
+        if (!SCIMConstants.NEXT.equals(cursor.getDirection()) &&
+                !SCIMConstants.PREVIOUS.equals(cursor.getDirection())) {
+            throw new BadRequestException("Invalid cursor direction","invalidCursor");
         }
     }
 
