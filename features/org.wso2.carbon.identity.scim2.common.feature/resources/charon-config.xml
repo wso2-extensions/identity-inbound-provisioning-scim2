@@ -32,6 +32,11 @@
     <Property name="etag-supported">false</Property>
     <Property name="pagination-default-count">100</Property>
     <Property name="cursor-pagination-supported">true</Property>
+    <Property name="index-pagination-supported">true</Property>
+    <Property name="cursor-timeout-supported">false</Property>
+    <Property name="default-pagination-method">index</Property>
+    <Property name="default-page-size">100</Property>
+    <Property name="max-page-size">100</Property>
     <authenticationSchemes>
         <schema id="1">
             <Property name="name">OAuth Bearer Token</Property>

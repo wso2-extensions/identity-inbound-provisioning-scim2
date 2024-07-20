@@ -84,6 +84,11 @@ public class SCIMCommonConstants {
     public static final String CUSTOM_USER_SCHEMA_URI = "custom-user-schema-uri";
     public static final String ENABLE_REGEX_VALIDATION_FOR_USER_CLAIM_INPUTS = "UserClaimUpdate.EnableUserClaimInputRegexValidation";
     public static final String CURSOR_PAGINATION_SUPPORTED = "cursor-pagination-supported";
+    public static final String INDEX_PAGINATION_SUPPORTED = "index-pagination-supported";
+    public static final String CURSOR_TIMEOUT_SUPPORTED = "cursor-timeout-supported";
+    public static final String DEFAULT_PAGINATION_METHOD = "default-pagination-method";
+    public static final String DEFAULT_PAGE_SIZE = "default-page-size";
+    public static final String MAX_PAGE_SIZE = "max-page-size";
     public static final java.lang.String ASK_PASSWORD_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:askPassword";
     public static final java.lang.String VERIFY_EMAIL_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:verifyEmail";
 

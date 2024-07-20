@@ -208,7 +208,17 @@ public class IdentitySCIMManager {
                     (Integer.parseInt(scimConfigProcessor.getProperty(SCIMCommonConstants.PAGINATION_DEFAULT_COUNT)));
             charonConfiguration.setCursorPaginationSupport(
                     Boolean.parseBoolean(scimConfigProcessor
-                            .getProperty(SCIMCommonConstants.CURSOR_PAGINATION_SUPPORTED)));
+                            .getProperty(SCIMCommonConstants.CURSOR_PAGINATION_SUPPORTED)),
+                    Boolean.parseBoolean(scimConfigProcessor
+                            .getProperty(SCIMCommonConstants.INDEX_PAGINATION_SUPPORTED)),
+                    Boolean.parseBoolean(scimConfigProcessor
+                            .getProperty(SCIMCommonConstants.CURSOR_TIMEOUT_SUPPORTED)),
+                    scimConfigProcessor.
+                            getProperty(SCIMCommonConstants.DEFAULT_PAGINATION_METHOD),
+                    Integer.parseInt(scimConfigProcessor
+                            .getProperty(SCIMCommonConstants.DEFAULT_PAGE_SIZE)),
+                    Integer.parseInt(scimConfigProcessor
+                            .getProperty(SCIMCommonConstants.MAX_PAGE_SIZE)));
 
             ArrayList<Object[]> schemaList = new ArrayList<>();
             for (AuthenticationSchema authenticationSchema : scimConfigProcessor.getAuthenticationSchemas()) {
