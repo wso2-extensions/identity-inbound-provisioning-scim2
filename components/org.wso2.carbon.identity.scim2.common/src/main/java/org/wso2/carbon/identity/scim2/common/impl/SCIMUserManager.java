@@ -6451,7 +6451,7 @@ public class SCIMUserManager implements UserManager {
     private int validateCountParameter(Integer count) {
 
         int maximumItemsPerPage = IdentityUtil.getMaximumItemPerPage();
-        if (count > maximumItemsPerPage) {
+        if (maximumItemsPerPage != -1 && count > maximumItemsPerPage) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Given limit exceeds the maximum limit. Therefore the limit is set to %s.",
                         maximumItemsPerPage));
