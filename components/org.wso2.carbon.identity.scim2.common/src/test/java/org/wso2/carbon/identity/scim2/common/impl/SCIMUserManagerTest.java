@@ -532,8 +532,8 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
 
     @Test(dataProvider = "userInfoForFiltering")
     public void testFilteringUsersWithGET(List<org.wso2.carbon.user.core.common.User> users, String filter,
-                                          Integer count, int expectedResultCount,
-                                          List<org.wso2.carbon.user.core.common.User> filteredUsers) throws Exception {
+                                          int expectedResultCount, List<org.wso2.carbon.user.core.common.User>
+                                                  filteredUsers) throws Exception {
 
         Map<String, String> scimToLocalClaimMap = new HashMap<>();
         scimToLocalClaimMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName",
@@ -570,8 +570,6 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         when(mockRealmService.getBootstrapRealmConfiguration()).thenReturn(mockedRealmConfig);
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()).thenReturn(false);
-        when(IdentityUtil.getMaximumItemPerPage()).thenReturn(2);
-        when(IdentityUtil.isSCIM2UserMaxItemsPerPageEnabled()).thenReturn(true);
 
         ClaimMapping[] claimMappings = getTestClaimMappings();
         when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(claimMappings);
@@ -587,7 +585,7 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
             node = filterTreeManager.buildTree();
         }
 
-        UsersGetResponse result = scimUserManager.listUsersWithGET(node, Integer.valueOf(1), count, null, null, null,
+        UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, null, null, null, null,
                 requiredClaimsMap);
         assertEquals(result.getUsers().size(), expectedResultCount);
     }
@@ -615,30 +613,16 @@ public class SCIMUserManagerTest extends PowerMockTestCase {
         testUser2.setUserStoreDomain("PRIMARY");
         users.add(testUser2);
 
-        org.wso2.carbon.user.core.common.User testUser3 = new org.wso2.carbon.user.core.common.User(UUID.randomUUID()
-                .toString(), "testUser3", "testUser3");
-        Map<String, String> testUser3Attributes = new HashMap<>();
-        testUser3Attributes.put("http://wso2.org/claims/givenname", "testUser");
-        testUser3Attributes.put("http://wso2.org/claims/emailaddress", "testUser3@wso2.com");
-        testUser3.setAttributes(testUser1Attributes);
-        testUser3.setUserStoreDomain("PRIMARY");
-        users.add(testUser3);
-
         return new Object[][]{
 
-                {users, "name.givenName eq testUser", null, 2,
+                {users, "name.givenName eq testUser", 2,
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                         }}},
-                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", null, 1,
+                {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", 1,
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
-                        }}},
-                {users, "name.givenName eq testUser", 3, 2,
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
-                            add(testUser1);
-                            add(testUser2);
                         }}}
         };
     }

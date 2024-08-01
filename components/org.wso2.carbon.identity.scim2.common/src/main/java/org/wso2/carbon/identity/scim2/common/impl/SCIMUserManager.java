@@ -605,10 +605,6 @@ public class SCIMUserManager implements UserManager {
                                          String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
-        // Validates the count parameter if exists.
-        if (count != null && IdentityUtil.isSCIM2UserMaxItemsPerPageEnabled()) {
-            count = validateCountParameter(count);
-        }
         // Validate NULL value for startIndex.
         startIndex = handleStartIndexEqualsNULL(startIndex);
         if (sortBy != null || sortOrder != null) {
@@ -6440,25 +6436,5 @@ public class SCIMUserManager implements UserManager {
     private String maskIfRequired(String value) {
 
         return LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(value) : value;
-    }
-
-    /**
-     * Validate the count query parameter.
-     *
-     * @param count Requested item count.
-     * @return Validated count parameter.
-     */
-    private int validateCountParameter(Integer count) {
-
-        int maximumItemsPerPage = IdentityUtil.getMaximumItemPerPage();
-        if (count > maximumItemsPerPage) {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Given limit exceeds the maximum limit. Therefore the limit is set to %s.",
-                        maximumItemsPerPage));
-            }
-            return maximumItemsPerPage;
-        }
-
-        return count;
     }
 }
