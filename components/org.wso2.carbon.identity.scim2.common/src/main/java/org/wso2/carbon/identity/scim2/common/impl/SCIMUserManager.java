@@ -3391,6 +3391,16 @@ public class SCIMUserManager implements UserManager {
         try {
             doUpdateGroup(oldGroup, newGroup);
         } catch (UserStoreException e) {
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException && (StringUtils
+                    .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_WRITING_TO_DATABASE
+                            .getCode(), ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode()) ||
+                    StringUtils.equals(UserCoreErrorConstants.ErrorMessages
+                                    .ERROR_CODE_DUPLICATE_WHILE_UPDATING_USER_OF_ROLE.getCode(),
+                            ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode()))) {
+                // This handles the scenario where a unique key violation exception occurs when concurrent group
+                // patch requests try to add the same users to the group.
+                return;
+            }
             handleErrorsOnRoleNamePolicy(e);
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
@@ -3659,6 +3669,16 @@ public class SCIMUserManager implements UserManager {
                 return oldGroup;
             }
         } catch (UserStoreException e) {
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException && (StringUtils
+                    .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_WRITING_TO_DATABASE
+                            .getCode(), ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode()) ||
+                    StringUtils.equals(UserCoreErrorConstants.ErrorMessages
+                                    .ERROR_CODE_DUPLICATE_WHILE_UPDATING_USER_OF_ROLE.getCode(),
+                            ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode()))) {
+                // This handles the scenario where a unique key violation exception occurs when concurrent group
+                // patch requests try to add the same users to the group.
+                return getGroup(newGroup.getId(), requiredAttributes);
+            }
             handleErrorsOnRoleNamePolicy(e);
             throw resolveError(e, e.getMessage());
         } catch (IdentitySCIMException e) {
