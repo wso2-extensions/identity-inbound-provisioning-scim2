@@ -29,6 +29,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
@@ -386,6 +387,34 @@ public class SCIMCommonComponent {
     protected void setIdentityEventService(IdentityEventService identityEventService) {
 
         SCIMCommonComponentHolder.setIdentityEventService(identityEventService);
+    }
+
+    @Reference(
+            name = "resource.configuration.manager",
+            service = ConfigurationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetConfigurationManager"
+    )
+
+    /**
+     * This method is used to set the Configuration manager Service.
+     *
+     * @param configurationManager The Realm Service which needs to be set.
+     */
+    protected void setConfigurationManager(ConfigurationManager configurationManager) {
+
+        SCIMCommonComponentHolder.setConfigurationManager(configurationManager);
+    }
+
+    /**
+     * This method is used to unset the Configuration manager Service.
+     *
+     * @param configurationManager The Configuration manager Service which needs to unset.
+     */
+    protected void unsetConfigurationManager(ConfigurationManager configurationManager) {
+
+        SCIMCommonComponentHolder.setConfigurationManager(null);
     }
 
     @Deactivate

@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
@@ -111,6 +112,7 @@ import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 
 import java.time.Instant;
 import java.util.AbstractMap;
@@ -180,6 +182,9 @@ public class SCIMUserManager implements UserManager {
     private static final String USERNAME_CLAIM = "http://wso2.org/claims/username";
     private static final String ROLE_CLAIM = "http://wso2.org/claims/role";
     private boolean removeDuplicateUsersInUsersResponseEnabled = isRemoveDuplicateUsersInUsersResponseEnabled();
+
+    private static final String MAX_LIMIT_RESOURCE_TYPE_NAME = "response-max-limit-configurations";
+    private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -622,9 +627,43 @@ public class SCIMUserManager implements UserManager {
     public UsersGetResponse listUsersWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
+        int count = searchRequest.getCount();
+
+        try {
+            if (!IdentityUtil.isConsiderServerWideUserEndpointMaxLimitEnabled()) {
+                Resource maxLimitResource = getResourceByTenantId(carbonUM.getTenantId());
+                if (maxLimitResource != null) {
+                    count = maxLimitResource.getAttributes().stream()
+                            .filter(item -> "userResponseMaxLimit".equals(item.getKey()))
+                            .map(org.wso2.carbon.identity.configuration.mgt.core.model.Attribute::getValue)
+                            .findFirst()
+                            .map(Integer::parseInt)
+                            .orElse(count);  // Use the local count variable
+                }
+            } else {
+                count = SCIMCommonUtils.validateCountParameter(count);
+            }
+        } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            log.error("Error occurred while getting the tenant name", e);
+        }
+
         return listUsersWithGET(searchRequest.getFilter(), (Integer) searchRequest.getStartIndex(),
-                (Integer) searchRequest.getCount(), searchRequest.getSortBy(), searchRequest.getSortOder(),
+                (Integer) count, searchRequest.getSortBy(), searchRequest.getSortOder(),
                 searchRequest.getDomainName(), requiredAttributes);
+    }
+
+    private Resource getResourceByTenantId(int tenantId) throws org.wso2.carbon.user.core.UserStoreException {
+
+        try {
+            return SCIMCommonComponentHolder.getConfigurationManager()
+                    .getResourceByTenantId(tenantId, MAX_LIMIT_RESOURCE_TYPE_NAME, MAX_LIMIT_RESOURCE_NAME);
+        } catch (ConfigurationManagementException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("The user response maximum limit is not configured for the tenant: " +
+                        tenantId);
+            }
+            return null;
+        }
     }
 
     /**

@@ -966,4 +966,24 @@ public class SCIMCommonUtils {
             throw new CharonException("Error occurred while checking the organization state.", e);
         }
     }
+
+    /**
+     * Validate the count query parameter.
+     *
+     * @param count Requested item count.
+     * @return Validated count parameter.
+     */
+    public static int validateCountParameter(Integer count) {
+
+        int maximumItemsPerPage = IdentityUtil.getMaximumItemPerPage();
+        if (count > maximumItemsPerPage) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Given limit exceeds the maximum limit. Therefore the limit is set to %s.",
+                        maximumItemsPerPage));
+            }
+            return maximumItemsPerPage;
+        }
+
+        return count;
+    }
 }

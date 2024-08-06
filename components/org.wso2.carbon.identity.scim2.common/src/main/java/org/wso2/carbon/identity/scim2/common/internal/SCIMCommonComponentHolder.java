@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.internal;
 
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
@@ -45,6 +46,7 @@ public class SCIMCommonComponentHolder {
     private static OrganizationManager organizationManager;
     private static IdpManager idpManager;
     private static IdentityEventService identityEventService;
+    private static ConfigurationManager configurationManager;
     private static final List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
 
     /**
@@ -224,5 +226,25 @@ public class SCIMCommonComponentHolder {
     public static void setIdentityEventService(IdentityEventService identityEventService) {
 
         SCIMCommonComponentHolder.identityEventService = identityEventService;
+    }
+
+    /**
+     * Get Configuration Manager.
+     *
+     * @return ConfigurationManager.
+     */
+    public static ConfigurationManager getConfigurationManager() {
+
+        return configurationManager;
+    }
+
+    /**
+     * Set Configuration manager.
+     *
+     * @param configurationManager Configuration Manager.
+     */
+    public static void setConfigurationManager(ConfigurationManager configurationManager) {
+
+        SCIMCommonComponentHolder.configurationManager = configurationManager;
     }
 }
