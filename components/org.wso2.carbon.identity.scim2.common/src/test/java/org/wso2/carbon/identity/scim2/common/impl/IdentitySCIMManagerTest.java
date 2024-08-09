@@ -19,13 +19,11 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.testng.annotations.Listeners;
+import org.mockito.testng.MockitoTestNGListener;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
@@ -44,19 +42,18 @@ import org.wso2.charon3.core.extensions.UserManager;
 
 import java.nio.file.Paths;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyInt;
 
 /**
  * Contains the unit test cases for IdentitySCIMManager.
  */
-@PrepareForTest({SCIMCommonUtils.class, PrivilegedCarbonContext.class, SCIMCommonComponentHolder.class,CharonConfiguration.class})
-@PowerMockIgnore({"javax.xml.*","org.w3c.dom.*","org.xml.sax.*"})
-public class IdentitySCIMManagerTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class IdentitySCIMManagerTest {
 
     @Mock
     RealmService realmService;
@@ -76,14 +73,17 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
     private SCIMConfigProcessor scimConfigProcessor;
     private IdentitySCIMManager identitySCIMManager;
 
+    private MockedStatic<SCIMCommonUtils> scimCommonUtils;
+    private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolder;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
-        mockStatic(SCIMCommonUtils.class);
-        when(SCIMCommonUtils.getSCIMUserURL()).thenReturn("http://scimUserUrl:9443");
+        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMUserURL()).thenReturn("http://scimUserUrl:9443");
 
-        mockStatic(SCIMCommonComponentHolder.class);
-        when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
+        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
+        scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
 
         scimConfigProcessor = SCIMConfigProcessor.getInstance();
         String filePath = Paths
@@ -91,7 +91,7 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
         scimConfigProcessor.buildConfigFromFile(filePath);
         identitySCIMManager = IdentitySCIMManager.getInstance();
 
-        mockStatic(SCIMCommonComponentHolder.class);
+        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
 
         when(realmService.getTenantManager()).thenReturn(mockedTenantManager);
         when(mockedTenantManager.getTenantId(anyString())).thenReturn(-1234);
@@ -100,12 +100,6 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
         when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
         when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
         CommonTestUtils.initPrivilegedCarbonContext();
-    }
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 
     @Test

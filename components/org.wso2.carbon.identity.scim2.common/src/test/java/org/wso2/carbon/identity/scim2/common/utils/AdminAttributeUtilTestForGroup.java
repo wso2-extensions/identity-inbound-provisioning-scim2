@@ -20,8 +20,7 @@ package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -38,18 +37,12 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.verify;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+
 import static org.testng.Assert.assertEquals;
 
-@PrepareForTest({SCIMCommonComponentHolder.class, ClaimsMgtUtil.class, IdentityTenantUtil.class, UserCoreUtil.class,
-        IdentityUtil.class, SCIMCommonUtils.class, AdminAttributeUtil.class})
-public class AdminAttributeUtilTestForGroup extends PowerMockTestCase {
+public class AdminAttributeUtilTestForGroup {
 
     @Mock
     RealmService realmService;
@@ -67,6 +60,13 @@ public class AdminAttributeUtilTestForGroup extends PowerMockTestCase {
     SCIMGroupHandler scimGroupHandler;
 
     AdminAttributeUtil adminAttributeUtil;
+
+    private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolder;
+    private MockedStatic<ClaimsMgtUtil> claimsMgtUtil;
+    private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+    private MockedStatic<UserCoreUtil> userCoreUtil;
+    private MockedStatic<IdentityUtil> identityUtil;
+    private MockedStatic<SCIMCommonUtils> scimCommonUtils;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -93,13 +93,13 @@ public class AdminAttributeUtilTestForGroup extends PowerMockTestCase {
     public void testUpdateAdminGroup(String domainName) throws Exception {
         String roleNameWithDomain = "TESTDOMAIN/admin";
 
-        mockStatic(SCIMCommonComponentHolder.class);
-        mockStatic(ClaimsMgtUtil.class);
-        mockStatic(IdentityTenantUtil.class);
-        mockStatic(UserCoreUtil.class);
-        mockStatic(IdentityUtil.class);
-        mockStatic(SCIMCommonUtils.class);
-        when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
+        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
+        claimsMgtUtil = mockStatic(ClaimsMgtUtil.class);
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        userCoreUtil = mockStatic(UserCoreUtil.class);
+        identityUtil = mockStatic(IdentityUtil.class);
+        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
+        scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
         when(userStoreManager.isSCIMEnabled()).thenReturn(true);
@@ -107,11 +107,10 @@ public class AdminAttributeUtilTestForGroup extends PowerMockTestCase {
         when(userStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
         when(userStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(true);
         when(realmConfiguration.getAdminRoleName()).thenReturn("admin");
-        when(UserCoreUtil.getDomainName((RealmConfiguration) anyObject())).thenReturn(domainName);
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn("TESTDOMAIN");
-        when(UserCoreUtil.addDomainToName(anyString(), anyString())).thenReturn(roleNameWithDomain);
-        when(SCIMCommonUtils.getGroupNameWithDomain(anyString())).thenReturn(roleNameWithDomain);
-        whenNew(SCIMGroupHandler.class).withAnyArguments().thenReturn(scimGroupHandler);
+        userCoreUtil.when(() -> UserCoreUtil.getDomainName((RealmConfiguration) any())).thenReturn(domainName);
+        identityUtil.when(() -> IdentityUtil.getPrimaryDomainName()).thenReturn("TESTDOMAIN");
+        userCoreUtil.when(() -> UserCoreUtil.addDomainToName(anyString(), anyString())).thenReturn(roleNameWithDomain);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(anyString())).thenReturn(roleNameWithDomain);
 
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
@@ -125,24 +124,23 @@ public class AdminAttributeUtilTestForGroup extends PowerMockTestCase {
     public void testUpdateAdminGroup1() throws Exception {
         String roleNameWithDomain = "TESTDOMAIN/admin";
 
-        mockStatic(SCIMCommonComponentHolder.class);
-        mockStatic(ClaimsMgtUtil.class);
-        mockStatic(IdentityTenantUtil.class);
-        mockStatic(UserCoreUtil.class);
-        mockStatic(IdentityUtil.class);
-        mockStatic(SCIMCommonUtils.class);
-        when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
+        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
+        claimsMgtUtil = mockStatic(ClaimsMgtUtil.class);
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        userCoreUtil = mockStatic(UserCoreUtil.class);
+        identityUtil = mockStatic(IdentityUtil.class);
+        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
+        scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
         when(userStoreManager.isSCIMEnabled()).thenReturn(true);
         when(userStoreManager.getTenantId()).thenReturn(1);
         when(userStoreManager.getRealmConfiguration()).thenReturn(realmConfiguration);
         when(realmConfiguration.getAdminRoleName()).thenReturn("admin");
-        when(UserCoreUtil.getDomainName((RealmConfiguration) anyObject())).thenReturn("testDomain");
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn("TESTDOMAIN");
-        when(UserCoreUtil.addDomainToName(anyString(), anyString())).thenReturn(roleNameWithDomain);
-        when(SCIMCommonUtils.getGroupNameWithDomain(anyString())).thenReturn(roleNameWithDomain);
-        whenNew(SCIMGroupHandler.class).withAnyArguments().thenReturn(scimGroupHandler);
+        userCoreUtil.when(() -> UserCoreUtil.getDomainName((RealmConfiguration) any())).thenReturn("testDomain");
+        identityUtil.when(() -> IdentityUtil.getPrimaryDomainName()).thenReturn("TESTDOMAIN");
+        userCoreUtil.when(() -> UserCoreUtil.addDomainToName(anyString(), anyString())).thenReturn(roleNameWithDomain);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(anyString())).thenReturn(roleNameWithDomain);
         when(scimGroupHandler.isGroupExisting(anyString())).thenThrow(new IdentitySCIMException("testException"));
 
         adminAttributeUtil.updateAdminGroup(1);

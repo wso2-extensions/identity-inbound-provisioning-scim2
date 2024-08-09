@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.http.HttpStatus;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
@@ -31,7 +30,7 @@ import static org.testng.Assert.assertNull;
 /**
  * Contains the unit test cases for DefaultSCIMUserStoreErrorResolver.
  */
-public class DefaultSCIMUserStoreErrorResolverTest extends PowerMockTestCase {
+public class DefaultSCIMUserStoreErrorResolverTest {
 
     @Test
     public void testGetOrder() {
