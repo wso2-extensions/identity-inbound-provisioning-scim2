@@ -19,12 +19,9 @@
 package org.wso2.carbon.identity.scim2.common.listener;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
@@ -49,22 +46,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.Mockito.*;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({UserCoreUtil.class, SCIMGroupHandler.class, SCIMCommonUtils.class, IdentityUtil.class,
-        IdentityTenantUtil.class})
-public class SCIMUserOperationListenerTest extends PowerMockTestCase {
+
+public class SCIMUserOperationListenerTest {
 
     private final String CARBON_SUPER = "carbon.super";
     private String userName = "testUser";
@@ -93,22 +81,21 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
     @Mock
     GroupDAO groupDAO;
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
+    private MockedStatic<UserCoreUtil> userCoreUtil;
+    private MockedStatic<SCIMCommonUtils> scimCommonUtils;
+    private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+    private MockedStatic<IdentityUtil> identityUtil;
 
     @BeforeMethod
     public void setUp() throws Exception {
 
         scimUserOperationListener = spy(new SCIMUserOperationListener());
-        mockStatic(UserCoreUtil.class);
-        mockStatic(SCIMCommonUtils.class);
-        mockStatic(IdentityTenantUtil.class);
+        userCoreUtil = mockStatic(UserCoreUtil.class);
+        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
         SCIMCommonComponentHolder.setClaimManagementService(claimMetadataManagementService);
         when(userStoreManager.getTenantId()).thenReturn(-1234);
-        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(CARBON_SUPER);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(CARBON_SUPER);
     }
 
     @DataProvider(name = "testGetExecutionOrderIdData")
@@ -234,8 +221,8 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         when(scimUserOperationListener.isEnable()).thenReturn(isEnabled);
         when(userStoreManager.isSCIMEnabled()).thenReturn(isSCIMEnabled);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(FrameworkConstants.ENABLE_JIT_PROVISION_ENHANCE_FEATURE)).thenReturn("false");
+        identityUtil = mockStatic(IdentityUtil.class);
+        identityUtil.when(() -> IdentityUtil.getProperty(FrameworkConstants.ENABLE_JIT_PROVISION_ENHANCE_FEATURE)).thenReturn("false");
 
         assertTrue(scimUserOperationListener.
                 doPreSetUserClaimValuesWithID(userId, claims, profile, userStoreManager));
@@ -426,7 +413,7 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
 
     @Test(dataProvider = "testSCIMAttributesData")
     public void testGetSCIMAttributes(Map<String, String> claimsMap) throws Exception {
-        mockStatic(SCIMCommonUtils.class);
+        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, "http://wso2.org/claims/created");
@@ -435,13 +422,13 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, "http://wso2.org/claims/username");
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI,
                 "http://wso2.org/claims/resourceType");
-        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         assertNotNull(scimUserOperationListener.getSCIMAttributes(userName, claimsMap));
     }
 
     @Test(dataProvider = "testSCIMAttributesData")
     public void testPopulateSCIMAttributes(Map<String, String> claimsMap) throws Exception {
-        mockStatic(SCIMCommonUtils.class);
+        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, "http://wso2.org/claims/created");
@@ -450,16 +437,15 @@ public class SCIMUserOperationListenerTest extends PowerMockTestCase {
         scimToLocalClaimsMap.put(SCIMConstants.UserSchemaConstants.USER_NAME_URI, "http://wso2.org/claims/username");
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI,
                 "http://wso2.org/claims/resourceType");
-        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
         assertNotNull(scimUserOperationListener.populateSCIMAttributes(userName, claimsMap));
     }
 
     private void mockTestEnvironment(boolean isEnabled, boolean isSCIMEnabled, String domainName) throws Exception {
         when(scimUserOperationListener.isEnable()).thenReturn(isEnabled);
         when(userStoreManager.isSCIMEnabled()).thenReturn(isSCIMEnabled);
-        whenNew(GroupDAO.class).withNoArguments().thenReturn(groupDAO);
-        when(UserCoreUtil.getDomainName((RealmConfiguration) anyObject())).thenReturn(domainName);
-        when(UserCoreUtil.addDomainToName(anyString(), anyString())).thenReturn("testRoleNameWithDomain");
-        when(SCIMCommonUtils.getGroupNameWithDomain(anyString())).thenReturn("testRoleNameWithDomain");
+        userCoreUtil.when(() -> UserCoreUtil.getDomainName((RealmConfiguration) any())).thenReturn(domainName);
+        userCoreUtil.when(() -> UserCoreUtil.addDomainToName(anyString(), anyString())).thenReturn("testRoleNameWithDomain");
+        scimCommonUtils.when(() ->SCIMCommonUtils.getGroupNameWithDomain(anyString())).thenReturn("testRoleNameWithDomain");
     }
 }
