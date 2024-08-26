@@ -2962,7 +2962,7 @@ public class SCIMUserManager implements UserManager {
         startIndex = handleStartIndexEqualsNULL(startIndex);
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        } else if (startIndex != 1 || count != null) {
+        } else if (startIndex != 1 && count != null) {
             throw new NotImplementedException("Pagination is not supported");
         } else if (rootNode != null) {
             return filterGroups(rootNode, startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
