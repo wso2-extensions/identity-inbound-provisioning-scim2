@@ -20,7 +20,9 @@ package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -40,6 +42,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.any;
 
+import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 
 public class AdminAttributeUtilTestForGroup {
@@ -70,7 +73,24 @@ public class AdminAttributeUtilTestForGroup {
 
     @BeforeMethod
     public void setUp() throws Exception {
+        initMocks(this);
         adminAttributeUtil = new AdminAttributeUtil();
+        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
+        claimsMgtUtil = mockStatic(ClaimsMgtUtil.class);
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        userCoreUtil = mockStatic(UserCoreUtil.class);
+        identityUtil = mockStatic(IdentityUtil.class);
+        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+        scimCommonComponentHolder.close();
+        claimsMgtUtil.close();
+        identityTenantUtil.close();
+        userCoreUtil.close();
+        identityUtil.close();
+        scimCommonUtils.close();
     }
 
     @DataProvider(name = "testUpdateAdminUserData")
@@ -93,12 +113,6 @@ public class AdminAttributeUtilTestForGroup {
     public void testUpdateAdminGroup(String domainName) throws Exception {
         String roleNameWithDomain = "TESTDOMAIN/admin";
 
-        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
-        claimsMgtUtil = mockStatic(ClaimsMgtUtil.class);
-        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-        userCoreUtil = mockStatic(UserCoreUtil.class);
-        identityUtil = mockStatic(IdentityUtil.class);
-        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
@@ -112,24 +126,22 @@ public class AdminAttributeUtilTestForGroup {
         userCoreUtil.when(() -> UserCoreUtil.addDomainToName(anyString(), anyString())).thenReturn(roleNameWithDomain);
         scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(anyString())).thenReturn(roleNameWithDomain);
 
-        ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
-        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
-        adminAttributeUtil.updateAdminGroup(1);
-        verify(scimGroupHandler).addMandatoryAttributes(argument.capture());
+        try (MockedConstruction<SCIMGroupHandler> mocked = mockConstruction(SCIMGroupHandler.class, (mock, context) -> {
+            when(mock.isGroupExisting(anyString())).thenReturn(false);
+        })) {
+            ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
+            CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+            adminAttributeUtil.updateAdminGroup(1);
+            verify(mocked.constructed().get(0)).addMandatoryAttributes(argument.capture());
 
-        assertEquals(argument.getValue(), roleNameWithDomain);
+            assertEquals(argument.getValue(), roleNameWithDomain);
+        }
     }
 
     @Test(expectedExceptions = IdentitySCIMException.class)
     public void testUpdateAdminGroup1() throws Exception {
         String roleNameWithDomain = "TESTDOMAIN/admin";
 
-        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
-        claimsMgtUtil = mockStatic(ClaimsMgtUtil.class);
-        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-        userCoreUtil = mockStatic(UserCoreUtil.class);
-        identityUtil = mockStatic(IdentityUtil.class);
-        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
