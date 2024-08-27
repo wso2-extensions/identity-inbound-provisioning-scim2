@@ -20,8 +20,9 @@ package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.MockitoAnnotations;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -63,17 +64,17 @@ import java.util.Set;
 import java.util.HashSet;
 
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyListOf;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
@@ -87,8 +88,7 @@ import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.UNEXPEC
 /**
  * Contains the unit test cases for SCIMRoleManager.
  */
-@PrepareForTest({SCIMCommonUtils.class, OrganizationManagementUtil.class})
-public class SCIMRoleManagerTest extends PowerMockTestCase {
+public class SCIMRoleManagerTest {
 
     private static final String SAMPLE_TENANT_DOMAIN = "carbon.super";
     private static final String SAMPLE_TENANT_DOMAIN2 = "abc.com";
@@ -121,6 +121,9 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
     @Mock
     RoleManagementService mockRoleManagementService;
 
+    private MockedStatic<SCIMCommonUtils> scimCommonUtils;
+    private MockedStatic<OrganizationManagementUtil> organizationManagementUtil;
+
     @BeforeClass
     public void setUpClass() {
 
@@ -129,11 +132,18 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
     @BeforeMethod
     public void setUpMethod() {
-
-        mockStatic(SCIMCommonUtils.class);
-        mockStatic(OrganizationManagementUtil.class);
+        MockitoAnnotations.openMocks(this);
+        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
+        organizationManagementUtil = mockStatic(OrganizationManagementUtil.class);
         when(SCIMCommonUtils.getSCIMRoleURL(nullable(String.class))).thenReturn(DUMMY_SCIM_URL);
         when(mockRoleManagementService.getSystemRoles()).thenReturn(SYSTEM_ROLES);
+    }
+
+    @AfterMethod
+    public void tearDownMethod() {
+
+        scimCommonUtils.close();
+        organizationManagementUtil.close();
     }
 
     @DataProvider(name = "dataProviderForCreateRoleExistingRole")
@@ -163,8 +173,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             OrganizationManagementException {
 
         Role role = getDummyRole(SAMPLE_VALID_ROLE_ID2, SAMPLE_EXISTING_ROLE_NAME);
-        when(mockRoleManagementService.addRole(anyString(), anyListOf(String.class), anyListOf(String.class),
-                anyListOf(String.class), anyString())).thenThrow(
+        when(mockRoleManagementService.addRole(anyString(), anyList(), anyList(),
+                anyList(), anyString())).thenThrow(
                 new IdentityRoleManagementException(ROLE_ALREADY_EXISTS.getCode(),
                         "Role already exist for the role name: " + SAMPLE_EXISTING_ROLE_NAME));
         when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
@@ -179,8 +189,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         Role role = getDummyRole(SAMPLE_VALID_ROLE_ID, SAMPLE_INVALID_ROLE_NAME);
 
-        when(mockRoleManagementService.addRole(anyString(), anyListOf(String.class), anyListOf(String.class),
-                anyListOf(String.class), anyString())).
+        when(mockRoleManagementService.addRole(anyString(), anyList(), anyList(),
+                anyList(), anyString())).
                 thenThrow(new IdentityRoleManagementClientException(INVALID_REQUEST.getCode(),
                         String.format("Invalid role name: %s. Role names with the prefix: %s, is not allowed"
                                         + " to be created from externally in the system.", SAMPLE_INVALID_ROLE_NAME,
@@ -206,8 +216,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             OrganizationManagementException {
 
         Role role = getDummyRole(roleId, roleDisplayName);
-        when(mockRoleManagementService.addRole(anyString(), anyListOf(String.class), anyListOf(String.class),
-                anyListOf(String.class), anyString())).
+        when(mockRoleManagementService.addRole(anyString(), anyList(), anyList(),
+                anyList(), anyString())).
                 thenThrow(unExpectedErrorThrower(tenantDomain, sError,
                         "Error while creating the role: %s in the tenantDomain: %s", roleDisplayName));
         when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
@@ -235,8 +245,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
             OrganizationManagementException {
 
         Role role = getDummyRole(roleId, roleDisplayName);
-        when(mockRoleManagementService.addRole(nullable(String.class), anyListOf(String.class), anyListOf(String.class),
-                anyListOf(String.class), anyString())).thenReturn(new RoleBasicInfo(roleId, roleDisplayName));
+        when(mockRoleManagementService.addRole(nullable(String.class), anyList(), anyList(),
+                anyList(), anyString())).thenReturn(new RoleBasicInfo(roleId, roleDisplayName));
         when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         Role createdRole = scimRoleManager.createRole(role);
@@ -633,10 +643,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
         when(mockRoleManagementService.updateRoleName(anyString(), anyString(), anyString())).thenReturn(roleBasicInfo);
         when(mockRoleManagementService.updateUserListOfRole(
-                eq(roleId), anyListOf(String.class), anyListOf(String.class), anyString())).thenReturn(roleBasicInfo);
-        when(mockRoleManagementService.updateGroupListOfRole(eq(roleId), anyListOf(String.class),
-                anyListOf(String.class), anyString())).thenReturn(roleBasicInfo);
-        when(mockRoleManagementService.setPermissionsForRole(eq(roleId), anyListOf(String.class), anyString())).
+                eq(roleId), anyList(), anyList(), anyString())).thenReturn(roleBasicInfo);
+        when(mockRoleManagementService.updateGroupListOfRole(eq(roleId), anyList(),
+                anyList(), anyString())).thenReturn(roleBasicInfo);
+        when(mockRoleManagementService.setPermissionsForRole(eq(roleId), anyList(), anyString())).
                 thenReturn(roleBasicInfo);
 
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
@@ -725,7 +735,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
 
         when(mockRoleManagementService.updateRoleName(anyString(), anyString(), anyString())).thenReturn(roleBasicInfo);
         when(mockRoleManagementService.updateUserListOfRole(
-                anyString(), anyListOf(String.class), anyListOf(String.class), anyString())).
+                anyString(), anyList(), anyList(), anyString())).
                 thenAnswer(invocationOnMock -> {
                     String roleIdArg = invocationOnMock.getArgument(0);
                     String tenantDomainArg = invocationOnMock.getArgument(3);
@@ -770,7 +780,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
         when(mockRoleManagementService.updateRoleName(anyString(), anyString(), anyString())).thenReturn(roleBasicInfo);
         when(mockRoleManagementService.updateGroupListOfRole(
-                anyString(), anyListOf(String.class), anyListOf(String.class), anyString())).
+                anyString(), anyList(), anyList(), anyString())).
                 thenAnswer(invocationOnMock -> {
                     String roleIdArg = invocationOnMock.getArgument(0);
                     String tenantDomainArg = invocationOnMock.getArgument(3);
@@ -785,8 +795,8 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     if (unExpectedErrors != null) throw unExpectedErrors;
                     return roleBasicInfo;
                 });
-        when(mockRoleManagementService.updateUserListOfRole(eq(roleId), anyListOf(String.class),
-                anyListOf(String.class), anyString())).thenReturn(roleBasicInfo);
+        when(mockRoleManagementService.updateUserListOfRole(eq(roleId), anyList(),
+                anyList(), anyString())).thenReturn(roleBasicInfo);
 
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         scimRoleManager.updateRole(oldAndNewRoles[0], oldAndNewRoles[1]);
@@ -817,7 +827,7 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, permissionType);
         when(mockRoleManagementService.updateRoleName(anyString(), anyString(), anyString())).thenReturn(roleBasicInfo);
         when(mockRoleManagementService.setPermissionsForRole(
-                anyString(), anyListOf(String.class), anyString())).
+                anyString(), anyList(), anyString())).
                 thenAnswer(invocationOnMock -> {
                     String roleIdArg = invocationOnMock.getArgument(0);
                     String tenantDomainArg = invocationOnMock.getArgument(2);
@@ -838,10 +848,10 @@ public class SCIMRoleManagerTest extends PowerMockTestCase {
                     if (unExpectedErrors != null) throw unExpectedErrors;
                     return roleBasicInfo;
                 });
-        when(mockRoleManagementService.updateUserListOfRole(eq(roleId), anyListOf(String.class),
-                anyListOf(String.class), anyString())).thenReturn(roleBasicInfo);
-        when(mockRoleManagementService.updateGroupListOfRole(eq(roleId), anyListOf(String.class),
-                anyListOf(String.class), anyString())).thenReturn(roleBasicInfo);
+        when(mockRoleManagementService.updateUserListOfRole(eq(roleId), anyList(),
+                anyList(), anyString())).thenReturn(roleBasicInfo);
+        when(mockRoleManagementService.updateGroupListOfRole(eq(roleId), anyList(),
+                anyList(), anyString())).thenReturn(roleBasicInfo);
 
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
         scimRoleManager.updateRole(oldAndNewRoles[0], oldAndNewRoles[1]);
