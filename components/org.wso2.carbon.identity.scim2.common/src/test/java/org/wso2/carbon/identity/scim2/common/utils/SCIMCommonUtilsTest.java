@@ -89,7 +89,11 @@ public class SCIMCommonUtilsTest {
     }
 
     @AfterMethod
-    public void tearDown() throws Exception {
+    public void tearDown() {
+        identityUtil.close();
+        userCoreUtil.close();
+        identityTenantUtil.close();
+        serviceURLBuilder.close();
         System.clearProperty(CarbonBaseConstants.CARBON_HOME);
     }
 
