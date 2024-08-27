@@ -19,7 +19,10 @@
 package org.wso2.carbon.identity.scim2.common.listener;
 
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -30,7 +33,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
-import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.Permission;
@@ -47,6 +49,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
+import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -88,14 +91,23 @@ public class SCIMUserOperationListenerTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
-
+        initMocks(this);
         scimUserOperationListener = spy(new SCIMUserOperationListener());
         userCoreUtil = mockStatic(UserCoreUtil.class);
         scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        identityUtil = mockStatic(IdentityUtil.class);
         SCIMCommonComponentHolder.setClaimManagementService(claimMetadataManagementService);
         when(userStoreManager.getTenantId()).thenReturn(-1234);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(CARBON_SUPER);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+        userCoreUtil.close();
+        scimCommonUtils.close();
+        identityTenantUtil.close();
+        identityUtil.close();
     }
 
     @DataProvider(name = "testGetExecutionOrderIdData")
@@ -221,7 +233,6 @@ public class SCIMUserOperationListenerTest {
         when(scimUserOperationListener.isEnable()).thenReturn(isEnabled);
         when(userStoreManager.isSCIMEnabled()).thenReturn(isSCIMEnabled);
 
-        identityUtil = mockStatic(IdentityUtil.class);
         identityUtil.when(() -> IdentityUtil.getProperty(FrameworkConstants.ENABLE_JIT_PROVISION_ENHANCE_FEATURE)).thenReturn("false");
 
         assertTrue(scimUserOperationListener.
@@ -294,19 +305,13 @@ public class SCIMUserOperationListenerTest {
     @Test(expectedExceptions = UserStoreException.class)
     public void testDoPostAddRole2() throws Exception {
         mockTestEnvironment(true, true, "testDomain");
-        when(groupDAO.isExistingGroup(anyString(), anyInt())).thenThrow(new IdentitySCIMException
-                ("IdentitySCIMException"));
-
-        scimUserOperationListener.doPostAddRoleWithID(roleName, userList, permissions, userStoreManager);
-    }
-
-    @Test(dataProvider = "testDoPostAddRoleData")
-    public void testDoPreDeleteRole(boolean isEnabled, boolean isSCIMEnabled, boolean isGroupExisting,
-                                    String domainName) throws Exception {
-        mockTestEnvironment(isEnabled, isSCIMEnabled, domainName);
-        when(groupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(isGroupExisting);
-
-        assertTrue(scimUserOperationListener.doPreDeleteRole(roleName, userStoreManager));
+        try (MockedConstruction<GroupDAO> mockedGroupDAO = Mockito.mockConstruction(GroupDAO.class,
+                (mock, context) -> {
+                    when(mock.isExistingGroup(anyString(), anyInt()))
+                            .thenThrow(new IdentitySCIMException("IdentitySCIMException"));
+                })) {
+            scimUserOperationListener.doPostAddRoleWithID(roleName, userList, permissions, userStoreManager);
+        }
     }
 
     @Test(expectedExceptions = UserStoreException.class)
@@ -320,10 +325,13 @@ public class SCIMUserOperationListenerTest {
     @Test(expectedExceptions = UserStoreException.class)
     public void testDoPreDeleteRole2() throws Exception {
         mockTestEnvironment(true, true, "testDomain");
-        when(groupDAO.isExistingGroup(anyString(), anyInt())).thenThrow(new IdentitySCIMException
-                ("IdentitySCIMException"));
-
-        scimUserOperationListener.doPreDeleteRole(roleName, userStoreManager);
+        try (MockedConstruction<GroupDAO> mockedGroupDAO = Mockito.mockConstruction(GroupDAO.class,
+                (mock, context) -> {
+                    when(mock.isExistingGroup(nullable(String.class), anyInt()))
+                            .thenThrow(new IdentitySCIMException("IdentitySCIMException"));
+                })) {
+            scimUserOperationListener.doPreDeleteRole(roleName, userStoreManager);
+        }
     }
 
     @Test
@@ -350,9 +358,12 @@ public class SCIMUserOperationListenerTest {
     @Test(dataProvider = "testDoPostUpdateRoleNameData")
     public void testDoPostUpdateRoleName(boolean isEnabled, boolean isSCIMEnabled, String domainName) throws Exception {
         mockTestEnvironment(isEnabled, isSCIMEnabled, domainName);
-        when(groupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(true);
-
-        assertTrue(scimUserOperationListener.doPostUpdateRoleName(roleName, roleName, userStoreManager));
+        try (MockedConstruction<GroupDAO> mockedGroupDAO = Mockito.mockConstruction(GroupDAO.class,
+                (mock, context) -> {
+                    when(mock.isExistingGroup(anyString(), anyInt())).thenReturn(true);
+                })) {
+            assertTrue(scimUserOperationListener.doPostUpdateRoleName(roleName, roleName, userStoreManager));
+        }
     }
 
     @Test(expectedExceptions = UserStoreException.class)
@@ -366,10 +377,13 @@ public class SCIMUserOperationListenerTest {
     @Test(expectedExceptions = UserStoreException.class)
     public void testDoPostUpdateRoleName2() throws Exception {
         mockTestEnvironment(true, true, "testDomain");
-        when(groupDAO.isExistingGroup(anyString(), anyInt()))
-                .thenThrow(new IdentitySCIMException("IdentitySCIMException"));
-
-        scimUserOperationListener.doPostUpdateRoleName(roleName, roleName, userStoreManager);
+        try (MockedConstruction<GroupDAO> mockedGroupDAO = Mockito.mockConstruction(GroupDAO.class,
+                (mock, context) -> {
+                    when(mock.isExistingGroup(anyString(), anyInt()))
+                            .thenThrow(new IdentitySCIMException("IdentitySCIMException"));
+                })) {
+            scimUserOperationListener.doPostUpdateRoleName(roleName, roleName, userStoreManager);
+        }
     }
 
     @Test
@@ -413,7 +427,6 @@ public class SCIMUserOperationListenerTest {
 
     @Test(dataProvider = "testSCIMAttributesData")
     public void testGetSCIMAttributes(Map<String, String> claimsMap) throws Exception {
-        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, "http://wso2.org/claims/created");
@@ -428,7 +441,6 @@ public class SCIMUserOperationListenerTest {
 
     @Test(dataProvider = "testSCIMAttributesData")
     public void testPopulateSCIMAttributes(Map<String, String> claimsMap) throws Exception {
-        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "http://wso2.org/claims/userid");
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, "http://wso2.org/claims/created");
