@@ -21,22 +21,22 @@ package org.wso2.carbon.identity.scim2.common.utils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.stratos.common.util.ClaimsMgtUtil;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.Map;
 
 import static org.mockito.Mockito.*;
+import static org.mockito.MockitoAnnotations.initMocks;
 
 public class AdminAttributeUtilTest {
 
@@ -53,12 +53,22 @@ public class AdminAttributeUtilTest {
 
     private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolder;
     private MockedStatic<ClaimsMgtUtil> claimsMgtUtil;
-
-private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+    private MockedStatic<IdentityTenantUtil> identityTenantUtil;
 
     @BeforeMethod
     public void setUp() throws Exception {
+        initMocks(this);
         adminAttributeUtil = new AdminAttributeUtil();
+        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
+        claimsMgtUtil = mockStatic(ClaimsMgtUtil.class);
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+    }
+
+    @AfterMethod
+    public void tearDown() throws Exception {
+        scimCommonComponentHolder.close();
+        claimsMgtUtil.close();
+        identityTenantUtil.close();
     }
 
     @DataProvider(name = "testUpdateAdminUserData")
@@ -73,9 +83,6 @@ private MockedStatic<IdentityTenantUtil> identityTenantUtil;
     public void testUpdateAdminUser(boolean validateSCIMID) throws Exception {
         String adminUsername = "admin";
 
-        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
-        claimsMgtUtil = mockStatic(ClaimsMgtUtil.class);
-        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
         scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
@@ -91,9 +98,6 @@ private MockedStatic<IdentityTenantUtil> identityTenantUtil;
 
     @Test(expectedExceptions = UserStoreException.class)
     public void testUpdateAdminUser1() throws Exception {
-        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
-        claimsMgtUtil = mockStatic(ClaimsMgtUtil.class);
-        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
         scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
