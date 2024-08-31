@@ -5414,15 +5414,22 @@ public class SCIMUserManager implements UserManager {
         }
 
         // Update user claims.
-        userClaimsToBeModified.putAll(userClaimsToBeAdded);
-        if (MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) &&
-                MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
-            // If no multi-valued attribute is modified.
-            carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
-        } else {
-            carbonUM.setUserClaimValuesWithID(user.getId(), convertClaimValuesToList(oldClaimList),
-                    simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved,
-                    convertClaimValuesToList(userClaimsToBeModified), null);
+        try {
+            // The new claim list can be help full for downstream tasks like outbound provisioning.
+            IdentityUtil.threadLocalProperties.get().put("newClaimList", newClaimList);
+            userClaimsToBeModified.putAll(userClaimsToBeAdded);
+            if (MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) &&
+                    MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
+                // If no multi-valued attribute is modified.
+                carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
+            } else {
+                carbonUM.setUserClaimValuesWithID(user.getId(), convertClaimValuesToList(oldClaimList),
+                        simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved,
+                        convertClaimValuesToList(userClaimsToBeModified), null);
+            }
+        }
+        finally {
+            IdentityUtil.threadLocalProperties.get().remove("newClaimList");
         }
     }
 
