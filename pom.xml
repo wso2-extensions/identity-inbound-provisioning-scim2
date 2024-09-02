@@ -341,6 +341,9 @@
         <spotbugs-maven-plugin.version>4.5.3.0</spotbugs-maven-plugin.version>
 
         <jaxp-ri-version>1.4.5</jaxp-ri-version>
+
+        <sonar.organization>madurangasiriwardena</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     </properties>
 
     <build>
