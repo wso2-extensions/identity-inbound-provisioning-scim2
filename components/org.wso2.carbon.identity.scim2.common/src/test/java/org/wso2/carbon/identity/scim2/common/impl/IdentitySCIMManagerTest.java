@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 LLC. (http://www.wso2.org)
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -20,22 +20,17 @@ package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.quality.Strictness;
-import org.mockito.testng.MockitoSettings;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.testng.annotations.Listeners;
 import org.mockito.testng.MockitoTestNGListener;
-import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.claim.ClaimManager;
-import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -54,7 +49,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
  * Contains the unit test cases for IdentitySCIMManager.
  */
 @Listeners(MockitoTestNGListener.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 public class IdentitySCIMManagerTest {
 
     @Mock
@@ -65,12 +59,6 @@ public class IdentitySCIMManagerTest {
 
     @Mock
     UserRealm mockedUserRealm;
-
-    @Mock
-    ClaimManager mockedClaimManager;
-
-    @Mock
-    AbstractUserStoreManager mockedUserStoreManager;
 
     private SCIMConfigProcessor scimConfigProcessor;
     private IdentitySCIMManager identitySCIMManager;
@@ -84,20 +72,12 @@ public class IdentitySCIMManagerTest {
         scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMUserURL()).thenReturn("http://scimUserUrl:9443");
 
         scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
-        scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
-
         scimConfigProcessor = SCIMConfigProcessor.getInstance();
         String filePath = Paths
                 .get(System.getProperty("user.dir"), "src", "test", "resources", "charon-config-test.xml").toString();
         scimConfigProcessor.buildConfigFromFile(filePath);
         identitySCIMManager = IdentitySCIMManager.getInstance();
 
-        when(realmService.getTenantManager()).thenReturn(mockedTenantManager);
-        when(mockedTenantManager.getTenantId(anyString())).thenReturn(-1234);
-        when(realmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
-
-        when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
-        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
         CommonTestUtils.initPrivilegedCarbonContext();
     }
 
@@ -105,7 +85,6 @@ public class IdentitySCIMManagerTest {
     public void tearDown() {
         scimCommonComponentHolder.close();
         scimCommonUtils.close();
-        System.clearProperty(CarbonBaseConstants.CARBON_HOME);
     }
 
     @Test
@@ -125,6 +104,8 @@ public class IdentitySCIMManagerTest {
     public void testGetUserManager() throws Exception {
 
         when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
+        when(realmService.getTenantManager()).thenReturn(mockedTenantManager);
+        when(realmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
         UserManager userManager = identitySCIMManager.getUserManager();
         assertNotNull(userManager);
     }
@@ -144,9 +125,11 @@ public class IdentitySCIMManagerTest {
     @Test
     public void testGetUserManagerWithException2() throws Exception {
 
+        when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
+        when(realmService.getTenantManager()).thenReturn(mockedTenantManager);
+        when(mockedTenantManager.getTenantId(anyString())).thenThrow(new UserStoreException());
+
         try {
-            when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
-            when(mockedTenantManager.getTenantId(anyString())).thenThrow(new UserStoreException());
             identitySCIMManager.getUserManager();
             fail("getUserManager() method should have thrown a CharonException");
         } catch (CharonException e) {

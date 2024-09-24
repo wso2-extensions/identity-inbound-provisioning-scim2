@@ -82,7 +82,6 @@ public class SCIMRoleManagerV2Test {
     @AfterMethod
     public void tearDown() {
         identityUtil.close();
-        System.clearProperty(CarbonBaseConstants.CARBON_HOME);
     }
 
     @DataProvider(name = "scimOperations")

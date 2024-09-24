@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 LLC. (http://www.wso2.org)
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -27,7 +27,6 @@ import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
@@ -79,7 +78,8 @@ public class SCIMGroupHandlerTest {
     private MockedStatic<StringUtils> stringUtils;
 
     @BeforeMethod
-    public void setUp() throws Exception {
+    public void setUp() {
+
         initMocks(this);
         scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
@@ -93,7 +93,6 @@ public class SCIMGroupHandlerTest {
         identityDatabaseUtil.close();
         identityTenantUtil.close();
         stringUtils.close();
-        System.clearProperty(CarbonBaseConstants.CARBON_HOME);
     }
 
     @Test
@@ -315,7 +314,6 @@ public class SCIMGroupHandlerTest {
 
     @Test(expectedExceptions = IdentitySCIMException.class)
     public void testUpdateRoleNameNonExistent() throws Exception {
-        ResultSet resultSet = mock(ResultSet.class);
 
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
 
@@ -327,6 +325,7 @@ public class SCIMGroupHandlerTest {
 
             SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(1);
             scimGroupHandler.updateRoleName("NON_EXISTENT_ROLE_NAME", "NEW_ROLE_NAME");
+            // This method is to test the throwing of an IdentitySCIMException, hence no assertion.
         }
     }
 

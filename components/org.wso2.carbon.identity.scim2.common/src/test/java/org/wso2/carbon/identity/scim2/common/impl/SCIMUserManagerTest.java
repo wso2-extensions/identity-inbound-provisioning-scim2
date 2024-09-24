@@ -226,7 +226,6 @@ public class SCIMUserManagerTest {
         scimUserSchemaExtensionBuilder.close();
         claimMetadataHandler.close();
         resourceManagerUtil.close();
-        System.clearProperty(CarbonBaseConstants.CARBON_HOME);
     }
 
     @DataProvider(name = "ClaimData")
