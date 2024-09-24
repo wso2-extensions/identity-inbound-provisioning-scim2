@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.scim2.common.group;
 
-import org.apache.commons.lang.StringUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -75,7 +74,6 @@ public class SCIMGroupHandlerTest {
     private MockedStatic<SCIMCommonUtils> scimCommonUtils;
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
-    private MockedStatic<StringUtils> stringUtils;
 
     @BeforeMethod
     public void setUp() {
@@ -84,7 +82,6 @@ public class SCIMGroupHandlerTest {
         scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-        stringUtils = mockStatic(StringUtils.class);
     }
 
     @AfterMethod
@@ -92,7 +89,6 @@ public class SCIMGroupHandlerTest {
         scimCommonUtils.close();
         identityDatabaseUtil.close();
         identityTenantUtil.close();
-        stringUtils.close();
     }
 
     @Test
@@ -181,13 +177,12 @@ public class SCIMGroupHandlerTest {
 
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
         when(connection.prepareStatement(anyString())).thenReturn(mockedPreparedStatement);
-        when(StringUtils.isNotEmpty(nullable(String.class))).thenReturn(true);
         when(SCIMCommonUtils.getPrimaryFreeGroupName(nullable(String.class))).thenReturn("directors");
         when(mockedPreparedStatement.executeQuery()).thenReturn(resultSet);
         when(mockedGroupDAO.getGroupNameById(1, "5")).thenReturn("directors");
+        when(resultSet.next()).thenReturn(true).thenReturn(false);
+        when(resultSet.getString(1)).thenReturn("roleName");
         assertEquals(new SCIMGroupHandler(1).getGroupName("5"), "directors", "asserting for existance");
-
-        when(StringUtils.isNotEmpty(nullable(String.class))).thenReturn(false);
         assertNull(new SCIMGroupHandler(1).getGroupName("NON_EXISITNG_GROUP_NAME"), "asserting for non existance");
     }
 

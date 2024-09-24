@@ -110,7 +110,14 @@ import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -362,7 +369,7 @@ public class SCIMUserManagerTest {
     @Test(dataProvider = "getGroupException")
     public void testGetGroupWithExceptions(String roleName, String userStoreDomain) throws Exception {
 
-        AbstractUserStoreManager mockedUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         Field field = AbstractUserStoreManager.class.getDeclaredField("userStoreManagerHolder");
         field.setAccessible(true);
         field.set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
@@ -423,7 +430,7 @@ public class SCIMUserManagerTest {
 
         mockedUserStoreManager = mock(AbstractUserStoreManager.class);
 
-        AbstractUserStoreManager mockedUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         Field field = AbstractUserStoreManager.class.getDeclaredField("userStoreManagerHolder");
         field.setAccessible(true);
         field.set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
@@ -1450,7 +1457,7 @@ public class SCIMUserManagerTest {
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
 
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
-        mockedUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         org.wso2.carbon.user.core.common.User user = mock(org.wso2.carbon.user.core.common.User.class);
@@ -1485,7 +1492,7 @@ public class SCIMUserManagerTest {
         List<org.wso2.carbon.user.core.common.User> coreUsers = new ArrayList<>();
 
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
-        AbstractUserStoreManager mockedUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(coreUsers);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -1507,7 +1514,7 @@ public class SCIMUserManagerTest {
         coreUser.setUserStoreDomain("DomainName");
 
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
-        AbstractUserStoreManager mockedUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(coreUser);
         when(mockedUserStoreManager.getSecondaryUserStoreManager("DomainName")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(false);
@@ -1530,7 +1537,7 @@ public class SCIMUserManagerTest {
         coreUser.setUserStoreDomain("PRIMARY");
 
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
-        AbstractUserStoreManager mockedUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(coreUser);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -1585,7 +1592,7 @@ public class SCIMUserManagerTest {
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         doThrow(new NotImplementedException()).when(mockedUser).setSchemas(Mockito.any(UserManager.class));
-        mockedUser.setSchemas(Mockito.mock(UserManager.class));
+        mockedUser.setSchemas(mock(UserManager.class));
         scimUserManager.createUser(user, null);
         // This method is for testing of throwing CharonException, hence no assertion.
     }
@@ -1616,7 +1623,7 @@ public class SCIMUserManagerTest {
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
 
-        mockedUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.isExistingUserWithID(anyString())).thenReturn(true);
         when(mockedUserStoreManager.isExistingUser(anyString())).thenReturn(true);
         when(mockedUserStoreManager.getUserList(anyString(), anyString(), nullable(String.class))).thenReturn(existingUserList);
@@ -1650,7 +1657,7 @@ public class SCIMUserManagerTest {
         when(SCIMCommonUtils.convertSCIMtoLocalDialect(anyMap())).thenCallRealMethod();
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimMappings);
 
-        mockedUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserList(anyString(), anyString(), anyString())).thenReturn(null);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
                 .thenReturn(secondaryUserStoreManager);
