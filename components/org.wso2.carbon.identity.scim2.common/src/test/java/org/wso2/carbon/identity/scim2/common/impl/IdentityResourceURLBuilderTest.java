@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2021, WSO2 LLC. (http://www.wso2.org)
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -19,8 +19,9 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -33,17 +34,16 @@ import org.wso2.charon3.core.exceptions.NotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.mockito.Mockito.mockStatic;
 
 /**
  * Contains the unit test cases for IdentityResourceURLBuilder.
  */
-@PrepareForTest({IdentityTenantUtil.class, ServiceURLBuilder.class})
-public class IdentityResourceURLBuilderTest extends PowerMockTestCase {
+public class IdentityResourceURLBuilderTest {
 
     private static final Map<String, String> DUMMY_ENDPOINT_URI_MAP = new HashMap<String, String>() {{
         put("Users", "https://localhost:9444/scim2/Users");
@@ -56,14 +56,23 @@ public class IdentityResourceURLBuilderTest extends PowerMockTestCase {
     @Mock
     ServiceURL mockServiceUrl;
 
+    private MockedStatic<ServiceURLBuilder> serviceURLBuilder;
+    private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+
     @BeforeMethod
     public void setUpMethod() {
 
         initMocks(this);
-        mockStatic(ServiceURLBuilder.class);
-        when(ServiceURLBuilder.create()).thenReturn(mockServiceURLBuilder);
+        serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+        serviceURLBuilder.when(() -> ServiceURLBuilder.create()).thenReturn(mockServiceURLBuilder);
         when(mockServiceURLBuilder.addPath(anyString())).thenReturn(mockServiceURLBuilder);
-        mockStatic(IdentityTenantUtil.class);
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+    }
+
+    @AfterMethod
+    public void tearDownMethod() {
+        serviceURLBuilder.close();
+        identityTenantUtil.close();
     }
 
     @DataProvider(name = "dataProviderForBuild")
@@ -82,7 +91,7 @@ public class IdentityResourceURLBuilderTest extends PowerMockTestCase {
     public void testBuild(boolean isTenantQualifiedUrlsEnabled, String url, String resource, boolean throwError,
                           String expected) throws NotFoundException, URLBuilderException {
 
-        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedUrlsEnabled);
+        identityTenantUtil.when(() -> IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedUrlsEnabled);
         when(mockServiceURLBuilder.build()).thenAnswer(invocationOnMock -> {
             if (throwError) {
                 throw new URLBuilderException("Protocol of service URL is not available.");
@@ -109,7 +118,7 @@ public class IdentityResourceURLBuilderTest extends PowerMockTestCase {
     public void testBuildThrowingNotFoundException(boolean isTenantQualifiedUrlsEnabled, String resource)
             throws URLBuilderException, NotFoundException {
 
-        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedUrlsEnabled);
+        identityTenantUtil.when(() -> IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedUrlsEnabled);
         when(mockServiceURLBuilder.build()).thenThrow(
                 new URLBuilderException("Protocol of service URL is not available."));
         IdentityResourceURLBuilder identityResourceURLBuilder = new IdentityResourceURLBuilder();

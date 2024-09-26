@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 LLC. (http://www.wso2.org)
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -19,44 +19,37 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.testng.annotations.Listeners;
+import org.mockito.testng.MockitoTestNGListener;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.UserStoreManager;
-import org.wso2.carbon.user.core.claim.ClaimManager;
-import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
-import org.wso2.charon3.core.config.CharonConfiguration;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.extensions.UserManager;
 
 import java.nio.file.Paths;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyInt;
 
 /**
  * Contains the unit test cases for IdentitySCIMManager.
  */
-@PrepareForTest({SCIMCommonUtils.class, PrivilegedCarbonContext.class, SCIMCommonComponentHolder.class,CharonConfiguration.class})
-@PowerMockIgnore({"javax.xml.*","org.w3c.dom.*","org.xml.sax.*"})
-public class IdentitySCIMManagerTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class IdentitySCIMManagerTest {
 
     @Mock
     RealmService realmService;
@@ -67,45 +60,31 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
     @Mock
     UserRealm mockedUserRealm;
 
-    @Mock
-    ClaimManager mockedClaimManager;
-
-    @Mock
-    AbstractUserStoreManager mockedUserStoreManager;
-
     private SCIMConfigProcessor scimConfigProcessor;
     private IdentitySCIMManager identitySCIMManager;
 
+    private MockedStatic<SCIMCommonUtils> scimCommonUtils;
+    private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolder;
+
     @BeforeMethod
     public void setUp() throws Exception {
+        scimCommonUtils = mockStatic(SCIMCommonUtils.class);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMUserURL()).thenReturn("http://scimUserUrl:9443");
 
-        mockStatic(SCIMCommonUtils.class);
-        when(SCIMCommonUtils.getSCIMUserURL()).thenReturn("http://scimUserUrl:9443");
-
-        mockStatic(SCIMCommonComponentHolder.class);
-        when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
-
+        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
         scimConfigProcessor = SCIMConfigProcessor.getInstance();
         String filePath = Paths
                 .get(System.getProperty("user.dir"), "src", "test", "resources", "charon-config-test.xml").toString();
         scimConfigProcessor.buildConfigFromFile(filePath);
         identitySCIMManager = IdentitySCIMManager.getInstance();
 
-        mockStatic(SCIMCommonComponentHolder.class);
-
-        when(realmService.getTenantManager()).thenReturn(mockedTenantManager);
-        when(mockedTenantManager.getTenantId(anyString())).thenReturn(-1234);
-        when(realmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
-
-        when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
-        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
         CommonTestUtils.initPrivilegedCarbonContext();
     }
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
+    @AfterMethod
+    public void tearDown() {
+        scimCommonComponentHolder.close();
+        scimCommonUtils.close();
     }
 
     @Test
@@ -125,6 +104,8 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
     public void testGetUserManager() throws Exception {
 
         when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
+        when(realmService.getTenantManager()).thenReturn(mockedTenantManager);
+        when(realmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
         UserManager userManager = identitySCIMManager.getUserManager();
         assertNotNull(userManager);
     }
@@ -144,9 +125,11 @@ public class IdentitySCIMManagerTest extends PowerMockTestCase {
     @Test
     public void testGetUserManagerWithException2() throws Exception {
 
+        when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
+        when(realmService.getTenantManager()).thenReturn(mockedTenantManager);
+        when(mockedTenantManager.getTenantId(anyString())).thenThrow(new UserStoreException());
+
         try {
-            when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
-            when(mockedTenantManager.getTenantId(anyString())).thenThrow(new UserStoreException());
             identitySCIMManager.getUserManager();
             fail("getUserManager() method should have thrown a CharonException");
         } catch (CharonException e) {
