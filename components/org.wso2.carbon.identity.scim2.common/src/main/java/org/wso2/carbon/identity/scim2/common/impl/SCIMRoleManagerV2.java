@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -117,10 +118,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, ConflictException, NotImplementedException, BadRequestException {
 
         try {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role creation is not allowed for organizations.",
-                        ResponseCodeConstants.INVALID_VALUE);
-            }
             // Check if the role already exists.
             if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
                 String error = "Role with id: " + role.getId() + " already exists in the tenantDomain: "
@@ -313,8 +310,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
 
         try {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role deletion is not allowed for organizations.",
+            if (isSharedRole(roleID)) {
+                throw new BadRequestException("Shared role deletion is not allowed.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             roleManagementService.deleteRole(roleID, tenantDomain);
@@ -408,16 +405,16 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
 
         if (CollectionUtils.isNotEmpty(displayNameOperations)) {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role name modification is not allowed for organizations.",
+            if (isSharedRole(roleId)) {
+                throw new BadRequestException("Role name modification is not allowed for shared roles.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             String newRoleName = (String) displayNameOperations.get(displayNameOperations.size() - 1).getValues();
             updateRoleName(roleId, currentRoleName, newRoleName);
         }
         if (CollectionUtils.isNotEmpty(permissionOperations)) {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role's permission change is not allowed for organizations.",
+            if (isSharedRole(roleId)) {
+                throw new BadRequestException("Role permission modification is not allowed for shared roles.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             updatePermissions(roleId, permissionOperations);
@@ -697,8 +694,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         if (!StringUtils.equals(oldRoleDisplayName, newRoleDisplayName)) {
             // Update role name.
             try {
-                if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                    throw new BadRequestException("Role name update is not allowed for organizations.",
+                if (isSharedRole(roleId)) {
+                    throw new BadRequestException("Role name update is not allowed for shared roles.",
                             ResponseCodeConstants.INVALID_VALUE);
                 }
                 roleManagementService.updateRoleName(oldRole.getId(), newRoleDisplayName, tenantDomain);
@@ -821,8 +818,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         // Update the role with added permissions and deleted permissions.
         if (isNotEmpty(deletePermissionValuesList) || isNotEmpty(addedPermissionValuesList)) {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role's permission modification is not allowed for organizations.",
+            if (isSharedRole(oldRole.getId())) {
+                throw new BadRequestException("Role's permission modification is not allowed for shared roles.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             if (LOG.isDebugEnabled()) {
@@ -1419,5 +1416,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         IdpGroup convertedGroup = new IdpGroup(idpGroup.getIdpGroupId(), idpGroup.getIdpId());
         convertedGroup.setGroupName(idpGroup.getIdpGroupName());
         return convertedGroup;
+    }
+
+    private boolean isSharedRole(String roleId) throws CharonException {
+
+        try {
+            return RoleManagementUtils.isSharedRole(roleId, tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            throw new CharonException("Error while checking whether the role is a shared role.", e);
+        }
     }
 }
