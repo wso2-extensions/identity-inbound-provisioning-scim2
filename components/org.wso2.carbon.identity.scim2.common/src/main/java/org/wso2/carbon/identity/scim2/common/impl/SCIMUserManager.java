@@ -1435,18 +1435,7 @@ public class SCIMUserManager implements UserManager {
                     || SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
                 int maxLimit = getMaxLimit(domainName);
                 if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
-                    if (StringUtils.isBlank(domainName)) {
-                        String[] userStoreDomainNames = getDomainNames();
-                        boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
-                        if (canCountTotalUserCount) {
-                            for (String userStoreDomainName : userStoreDomainNames) {
-                                maxLimit += getTotalUsers(node, userStoreDomainName);
-                            }
-                        }
-                    } else {
-                        maxLimit = getMaxLimitForTotalResults(domainName);
-                    }
-                    maxLimit = Math.max(maxLimit, limit);
+                    maxLimit = Integer.MAX_VALUE;
                 }
                 // Get total users based on the filter query without depending on pagination params.
                 if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
@@ -1502,11 +1491,11 @@ public class SCIMUserManager implements UserManager {
         return canCountTotalUserCount(userStoreDomainNames);
     }
 
-    private int getMaxLimitForTotalResults(String domainName) throws CharonException {
+    private int getMaxLimitForTotalResults(String domainName) {
 
         int maxLimit = getMaxLimit(domainName);
         if (isJDBCUSerStore(domainName) && !SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
-            maxLimit = Math.toIntExact(getTotalUsers(domainName));
+            maxLimit = Integer.MAX_VALUE;
         }
         return maxLimit;
     }
