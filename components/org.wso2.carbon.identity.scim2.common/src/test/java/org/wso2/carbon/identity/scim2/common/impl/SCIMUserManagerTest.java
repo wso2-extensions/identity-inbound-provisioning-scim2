@@ -672,7 +672,7 @@ public class SCIMUserManagerTest {
         when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(configuredMaxLimit),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithoutPagination);
 
-        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(users.size()),
+        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(Integer.MAX_VALUE),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithoutPagination);
 
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
