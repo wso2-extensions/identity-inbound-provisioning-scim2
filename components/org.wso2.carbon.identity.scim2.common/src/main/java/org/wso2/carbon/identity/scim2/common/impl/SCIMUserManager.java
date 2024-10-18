@@ -1474,18 +1474,7 @@ public class SCIMUserManager implements UserManager {
                     || SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
                 int maxLimit = getMaxLimit(domainName);
                 if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
-                    if (StringUtils.isBlank(domainName)) {
-                        String[] userStoreDomainNames = getDomainNames();
-                        boolean canCountTotalUserCount = canCountTotalUserCount(userStoreDomainNames);
-                        if (canCountTotalUserCount) {
-                            for (String userStoreDomainName : userStoreDomainNames) {
-                                maxLimit += getTotalUsers(node, userStoreDomainName);
-                            }
-                        }
-                    } else {
-                        maxLimit = getMaxLimitForTotalResults(domainName);
-                    }
-                    maxLimit = Math.max(maxLimit, limit);
+                    maxLimit = Integer.MAX_VALUE;
                 }
                 // Get total users based on the filter query without depending on pagination params.
                 if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
@@ -1541,11 +1530,11 @@ public class SCIMUserManager implements UserManager {
         return canCountTotalUserCount(userStoreDomainNames);
     }
 
-    private int getMaxLimitForTotalResults(String domainName) throws CharonException {
+    private int getMaxLimitForTotalResults(String domainName) {
 
         int maxLimit = getMaxLimit(domainName);
         if (isJDBCUSerStore(domainName) && !SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
-            maxLimit = Math.toIntExact(getTotalUsers(domainName));
+            maxLimit = Integer.MAX_VALUE;
         }
         return maxLimit;
     }
@@ -3001,7 +2990,7 @@ public class SCIMUserManager implements UserManager {
         startIndex = handleStartIndexEqualsNULL(startIndex);
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        } else if (startIndex != 1 || count != null) {
+        } else if (startIndex != 1 && count != null) {
             throw new NotImplementedException("Pagination is not supported");
         } else if (rootNode != null) {
             return filterGroups(rootNode, startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
@@ -4858,7 +4847,7 @@ public class SCIMUserManager implements UserManager {
             // If users.length > limit + offset, then return only the users bounded by the offset and the limit.
             AbstractSet<org.wso2.carbon.user.core.common.User>  usersSorted = new TreeSet<>(
                     Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
-            if (users.size() > limit + offset) {
+            if (Integer.MAX_VALUE != limit && users.size() > limit + offset) {
                 usersSorted.addAll(new ArrayList<>(sortedSet).subList(offset - 1, limit + offset - 1));
             } else {
                 // Return all the users from the offset.

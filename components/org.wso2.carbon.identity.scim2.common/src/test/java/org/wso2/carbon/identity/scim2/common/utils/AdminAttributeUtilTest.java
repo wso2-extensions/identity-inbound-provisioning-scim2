@@ -20,33 +20,30 @@ package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.stratos.common.util.ClaimsMgtUtil;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.Map;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.initMocks;
 
-@PrepareForTest({SCIMCommonComponentHolder.class, ClaimsMgtUtil.class, IdentityTenantUtil.class, UserCoreUtil.class,
-        IdentityUtil.class, SCIMCommonUtils.class, AdminAttributeUtil.class})
-public class AdminAttributeUtilTest extends PowerMockTestCase {
+public class AdminAttributeUtilTest {
 
     @Mock
     RealmService realmService;
@@ -59,9 +56,24 @@ public class AdminAttributeUtilTest extends PowerMockTestCase {
 
     AdminAttributeUtil adminAttributeUtil;
 
+    private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolder;
+    private MockedStatic<ClaimsMgtUtil> claimsMgtUtil;
+    private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+
     @BeforeMethod
     public void setUp() throws Exception {
+        initMocks(this);
         adminAttributeUtil = new AdminAttributeUtil();
+        scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
+        claimsMgtUtil = mockStatic(ClaimsMgtUtil.class);
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+    }
+
+    @AfterMethod
+    public void tearDown() throws Exception {
+        scimCommonComponentHolder.close();
+        claimsMgtUtil.close();
+        identityTenantUtil.close();
     }
 
     @DataProvider(name = "testUpdateAdminUserData")
@@ -76,15 +88,12 @@ public class AdminAttributeUtilTest extends PowerMockTestCase {
     public void testUpdateAdminUser(boolean validateSCIMID) throws Exception {
         String adminUsername = "admin";
 
-        mockStatic(SCIMCommonComponentHolder.class);
-        mockStatic(ClaimsMgtUtil.class);
-        mockStatic(IdentityTenantUtil.class);
-        when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
+        scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
         when(userStoreManager.isSCIMEnabled()).thenReturn(true);
-        when(ClaimsMgtUtil.getAdminUserNameFromTenantId(eq(realmService), anyInt())).thenReturn(adminUsername);
-        when(IdentityTenantUtil.getRealmService()).thenReturn(realmService);
+        claimsMgtUtil.when(() -> ClaimsMgtUtil.getAdminUserNameFromTenantId(eq(realmService), anyInt())).thenReturn(adminUsername);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getRealmService()).thenReturn(realmService);
         when(userStoreManager.getUserClaimValue(anyString(), anyString(), anyString())).thenReturn("");
 
         ArgumentCaptor<Map> argument = ArgumentCaptor.forClass(Map.class);
@@ -94,10 +103,7 @@ public class AdminAttributeUtilTest extends PowerMockTestCase {
 
     @Test(expectedExceptions = UserStoreException.class)
     public void testUpdateAdminUser1() throws Exception {
-        mockStatic(SCIMCommonComponentHolder.class);
-        mockStatic(ClaimsMgtUtil.class);
-        mockStatic(IdentityTenantUtil.class);
-        when(SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
+        scimCommonComponentHolder.when(() -> SCIMCommonComponentHolder.getRealmService()).thenReturn(realmService);
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
         when(userStoreManager.isSCIMEnabled()).thenThrow(new UserStoreException());

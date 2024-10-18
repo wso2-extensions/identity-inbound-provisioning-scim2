@@ -19,13 +19,13 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
@@ -50,8 +51,7 @@ import static org.testng.Assert.assertEquals;
 /**
  * Contains the unit test cases for SCIMRoleManagerV2.
  */
-@PrepareForTest({IdentityUtil.class})
-public class SCIMRoleManagerV2Test extends PowerMockTestCase {
+public class SCIMRoleManagerV2Test {
 
     private static final String SAMPLE_TENANT_DOMAIN = "carbon.super";
     private static final String SAMPLE_VALID_ROLE_ID = "595f5508-f286-446a-86c4-5071e07b98fc";
@@ -64,6 +64,8 @@ public class SCIMRoleManagerV2Test extends PowerMockTestCase {
 
     private SCIMRoleManagerV2 scimRoleManagerV2;
 
+    private MockedStatic<IdentityUtil> identityUtil;
+
     @BeforeClass
     public void setUpClass() {
 
@@ -73,8 +75,13 @@ public class SCIMRoleManagerV2Test extends PowerMockTestCase {
     @BeforeMethod
     public void setUpMethod() {
 
-        PowerMockito.mockStatic(IdentityUtil.class);
+        identityUtil = mockStatic(IdentityUtil.class);
         scimRoleManagerV2 = new SCIMRoleManagerV2(roleManagementService, SAMPLE_TENANT_DOMAIN);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+        identityUtil.close();
     }
 
     @DataProvider(name = "scimOperations")

@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
@@ -812,11 +813,9 @@ public class SCIMRoleManager implements RoleManager {
                         userStoreManager.getUserListWithID(SCIMConstants.CommonSchemaConstants.ID_URI,
                                 memberObject.get(SCIMConstants.CommonSchemaConstants.VALUE), null);
                 if (isNotEmpty(userListWithID)) {
-                    String tempDisplay = userListWithID.get(0).getUsername();
-                    if(StringUtils.isNotBlank(userListWithID.get(0).getUserStoreDomain())) {
-                        tempDisplay = userListWithID.get(0).getUserStoreDomain() + "/" + tempDisplay;
-                    }
-                    memberObject.put(SCIMConstants.RoleSchemaConstants.DISPLAY, tempDisplay);
+                    memberObject.put(SCIMConstants.RoleSchemaConstants.DISPLAY,
+                            UserCoreUtil.addDomainToName(userListWithID.get(0).getUsername(),
+                                    userListWithID.get(0).getUserStoreDomain()));
                     memberOperation.setValues(memberObject);
                 }
             }
