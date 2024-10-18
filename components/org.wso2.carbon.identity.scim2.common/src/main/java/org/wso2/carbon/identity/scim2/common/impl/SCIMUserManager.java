@@ -633,12 +633,13 @@ public class SCIMUserManager implements UserManager {
             if (!IdentityUtil.isConsiderServerWideUserEndpointMaxLimitEnabled()) {
                 Resource maxLimitResource = getResourceByTenantId(carbonUM.getTenantId());
                 if (maxLimitResource != null) {
-                    count = maxLimitResource.getAttributes().stream()
+                    int maxLimit = maxLimitResource.getAttributes().stream()
                             .filter(item -> "userResponseMaxLimit".equals(item.getKey()))
                             .map(org.wso2.carbon.identity.configuration.mgt.core.model.Attribute::getValue)
                             .findFirst()
                             .map(Integer::parseInt)
                             .orElse(count);  // Use the local count variable
+                    count = Math.min(count, maxLimit);
                 }
             } else {
                 count = SCIMCommonUtils.validateCountParameter(count);
