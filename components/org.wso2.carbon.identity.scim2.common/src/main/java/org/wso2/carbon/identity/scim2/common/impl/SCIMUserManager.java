@@ -4808,7 +4808,7 @@ public class SCIMUserManager implements UserManager {
             // If users.length > limit + offset, then return only the users bounded by the offset and the limit.
             AbstractSet<org.wso2.carbon.user.core.common.User>  usersSorted = new TreeSet<>(
                     Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
-            if (users.size() > limit + offset) {
+            if (Integer.MAX_VALUE != limit && users.size() > limit + offset) {
                 usersSorted.addAll(new ArrayList<>(sortedSet).subList(offset - 1, limit + offset - 1));
             } else {
                 // Return all the users from the offset.
