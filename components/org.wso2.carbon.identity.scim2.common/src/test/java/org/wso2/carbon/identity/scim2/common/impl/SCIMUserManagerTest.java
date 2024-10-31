@@ -30,7 +30,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
-import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -40,6 +39,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.model.AttributeMapping;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
@@ -91,6 +91,7 @@ import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.FilterTreeManager;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -142,6 +143,7 @@ public class SCIMUserManagerTest {
     private static final String ADDRESS_LOCAL_CLAIM = "http://wso2.org/claims/addresses";
     private static final String USER_SCHEMA_ADDRESS_HOME = "urn:ietf:params:scim:schemas:core:2.0:User:addresses.home";
     private static final String USER_SCHEMA_ADDRESS_WORK= "urn:ietf:params:scim:schemas:core:2.0:User:addresses.work";
+    private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -190,6 +192,9 @@ public class SCIMUserManagerTest {
 
     @Mock
     private SCIMGroupHandler mockedSCIMGroupHandler;
+
+    @Mock
+    private ConfigurationManager mockedConfigurationManager;
 
     @Mock
     private RolePermissionManagementService mockedRolePermissionManagementService;
@@ -1479,6 +1484,10 @@ public class SCIMUserManagerTest {
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
         doReturn(usersGetResponse).when(scimUserManager)
                 .listUsersWithGET(any(), any(), any(), nullable(String.class), nullable(String.class), nullable(String.class), anyMap());
+        when(SCIMCommonComponentHolder.getConfigurationManager()).thenReturn(mockedConfigurationManager);
+        Resource resource = getResource();
+        when(mockedConfigurationManager.getResourceByTenantId( anyInt(), anyString(),
+                anyString() )).thenReturn(resource);
         UsersGetResponse users = scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
         assertEquals(users, usersGetResponse);
     }
@@ -1684,5 +1693,24 @@ public class SCIMUserManagerTest {
         group.setGroupID(groupId);
         group.setUserStoreDomain(domainName);
         return group;
+    }
+
+    private List<org.wso2.carbon.identity.configuration.mgt.core.model.Attribute> getResourceAttribute() {
+
+        org.wso2.carbon.identity.configuration.mgt.core.model.Attribute attribute =
+                new org.wso2.carbon.identity.configuration.mgt.core.model.Attribute();
+        attribute.setKey("userResponseMaxLimit");
+        attribute.setValue("100");
+
+        List<org.wso2.carbon.identity.configuration.mgt.core.model.Attribute> attributes = new ArrayList<>();
+        attributes.add(attribute);
+        return attributes;
+    }
+
+    private Resource getResource() {
+        Resource resource = new Resource();
+        resource.setResourceName(MAX_LIMIT_RESOURCE_NAME);
+        resource.setAttributes(getResourceAttribute());
+        return resource;
     }
 }
