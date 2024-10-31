@@ -630,7 +630,7 @@ public class SCIMUserManager implements UserManager {
         int count = searchRequest.getCount();
 
         try {
-            if (!IdentityUtil.isConsiderServerWideUserEndpointMaxLimitEnabled()) {
+            if (!SCIMCommonUtils.isConsiderServerWideUserEndpointMaxLimitEnabled()) {
                 Resource maxLimitResource = getResourceByTenantId(carbonUM.getTenantId());
                 if (maxLimitResource != null) {
                     int maxLimit = maxLimitResource.getAttributes().stream()
