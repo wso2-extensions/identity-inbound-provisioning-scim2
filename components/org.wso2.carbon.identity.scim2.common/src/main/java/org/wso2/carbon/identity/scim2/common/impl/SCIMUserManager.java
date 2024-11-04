@@ -174,6 +174,7 @@ public class SCIMUserManager implements UserManager {
     private static final String DISPLAY_NAME_PROPERTY = "displayName";
     private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
     private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
+    private static final String EXCLUDED_USER_STORES_PROPERTY = "excludedUserStores";
     private static final String LOCATION_CLAIM = "http://wso2.org/claims/location";
     private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
     private static final String RESOURCE_TYPE_CLAIM = "http://wso2.org/claims/resourceType";
@@ -5950,6 +5951,10 @@ public class SCIMUserManager implements UserManager {
             if (mappedLocalClaim.getClaimProperty(ClaimConstants.MAX_LENGTH) != null) {
                 attribute.addAttributeProperty(ClaimConstants.MAX_LENGTH,
                         mappedLocalClaim.getClaimProperty(ClaimConstants.MAX_LENGTH));
+            }
+            if (mappedLocalClaim.getClaimProperty(ClaimConstants.EXCLUDED_USER_STORES_PROPERTY) != null) {
+                attribute.addAttributeProperty(EXCLUDED_USER_STORES_PROPERTY,
+                        mappedLocalClaim.getClaimProperty(ClaimConstants.EXCLUDED_USER_STORES_PROPERTY));
             }
         }
     }
