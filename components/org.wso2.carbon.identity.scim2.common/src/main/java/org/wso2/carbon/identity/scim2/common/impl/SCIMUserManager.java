@@ -2115,14 +2115,15 @@ public class SCIMUserManager implements UserManager {
         int totalResults = 0;
         // Handle pagination.
         if (limit > 0) {
-            users = getFilteredUsersFromMultiAttributeFiltering(node, offset, limit, sortBy, sortOrder, domainName,
+            users = getMultiAttributeFilteredUsersWithMaxLimit(node, offset, sortBy, sortOrder, domainName, limit,
                     true);
-            filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
         } else {
             int maxLimit = getMaxLimit(domainName);
-            users = getMultiAttributeFilteredUsersWithMaxLimit(node, offset, sortBy, sortOrder, domainName, maxLimit);
-            filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
+            users = getMultiAttributeFilteredUsersWithMaxLimit(node, offset, sortBy, sortOrder, domainName, maxLimit,
+                    false);
         }
+        filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
+
         // Check that total user count matching the client query needs to be calculated.
         if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC() ||
                 SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
@@ -2144,27 +2145,41 @@ public class SCIMUserManager implements UserManager {
 
 
     private Set<org.wso2.carbon.user.core.common.User> getMultiAttributeFilteredUsersWithMaxLimit(Node node, int offset,
-                                           String sortBy, String sortOrder, String domainName, int maxLimit)
+                                           String sortBy, String sortOrder, String domainName, int maxLimit, boolean paginationRequested)
             throws CharonException, BadRequestException {
 
-        Set<org.wso2.carbon.user.core.common.User> users = null;
+        Set<org.wso2.carbon.user.core.common.User> users = new LinkedHashSet<>();
         if (StringUtils.isNotEmpty(domainName)) {
             users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder, domainName,
                     false);
             return users;
         } else {
             AbstractUserStoreManager tempCarbonUM = carbonUM;
-            // If pagination and domain name are not given, then perform filtering on all available user stores.
-            while (tempCarbonUM != null) {
+            // If domain name are not given, then perform filtering on all available user stores.
+            while (tempCarbonUM != null && maxLimit > 0) {
                 // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
                 if (tempCarbonUM instanceof AbstractUserStoreManager) {
                     domainName = tempCarbonUM.getRealmConfiguration().getUserStoreProperty("DomainName");
-                    users = getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder,
-                            domainName, false);
+                    users.addAll(getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder,
+                            domainName, paginationRequested));
                 }
                 // If secondary user store manager assigned to carbonUM then global variable carbonUM will contains the
                 // secondary user store manager.
                 tempCarbonUM = (AbstractUserStoreManager) tempCarbonUM.getSecondaryUserStoreManager();
+
+                // Calculating new offset and limit parameters.
+                int numberOfFilteredUsers = users.size();
+                if (numberOfFilteredUsers <= 0 && offset > 1) {
+                    if (log.isDebugEnabled()) {
+                        log.debug(String.format("Filter returned no results for original offset: %d.", offset));
+                    }
+                    offset = calculateOffsetForMultiAttributeFilter(node, offset, sortBy, sortOrder, domainName);
+                } else {
+                    // Returned usernames size > 0 implies there are users in that domain which is larger than
+                    // the offset.
+                    offset = 1;
+                    maxLimit = calculateLimit(maxLimit, numberOfFilteredUsers);
+                }
             }
             return users;
         }
@@ -6628,5 +6643,38 @@ public class SCIMUserManager implements UserManager {
         Map<String, String> attributes = getAllAttributes(domainName);
         Condition condition = getCondition(node, attributes);
         return getFilteredUserCountFromSingleDomain(condition, offset, limit, domainName);
+    }
+
+    /**
+     * Method to update the offset when iterating a filter across all domains with multi attribute filter.
+     *
+     * @param node       Condition node of the multi attribute filter
+     * @param offset     Starting index
+     * @param sortBy     Sort by
+     * @param sortOrder  Sort order
+     * @param domainName Domain to be filtered
+     * @return New calculated offset
+     * @throws CharonException Error while filtering the domain from index 1 to offset
+     */
+    private int calculateOffsetForMultiAttributeFilter(Node node, int offset, String sortBy, String sortOrder,
+                                                       String domainName) throws CharonException, BadRequestException {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Checking for number of matches from the beginning to the original offset: %d for "
+                    + "the same filter and updating the new offset.", offset));
+        }
+        // Starting index of the filter
+        int initialOffset = 1;
+
+        // Checking the number of matches till the original offset.
+        boolean paginationRequest = false;
+        Set<org.wso2.carbon.user.core.common.User> skippedUsers =
+                getFilteredUsersFromMultiAttributeFiltering(node, initialOffset, offset, sortBy, sortOrder, domainName,
+                        paginationRequest);
+
+        int skippedUserCount = skippedUsers.size();
+
+        // Calculate the new offset and return
+        return offset - skippedUserCount;
     }
 }
