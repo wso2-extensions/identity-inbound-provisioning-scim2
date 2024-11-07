@@ -1445,7 +1445,7 @@ public class SCIMUserManager implements UserManager {
                     // This is only implemented for JDBC userstores.
                     totalResults += getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName);
                 } else {
-                    totalResults += filterUsers(node, 1, maxLimit, sortBy, sortOrder, domainName).size();
+                    totalResults += getFilteredUsersCount(node, 1, maxLimit, domainName);
                 }
             } else {
                 totalResults += users.size();
@@ -1478,7 +1478,7 @@ public class SCIMUserManager implements UserManager {
             return getUserCountByGroup(node, domainName);
         }
 
-        return filterUsers(node, 1, limit, sortBy, sortOrder, domainName).size();
+        return getFilteredUsersCount(node, 1, limit, domainName);
     }
 
     /**
@@ -1723,6 +1723,31 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
+     * This method retrieves the count of users based on the filter query without depending on pagination params.
+     *
+     * @param node       Filter condition tree.
+     * @param offset     Starting index of the count.
+     * @param maxLimit   The maximum number of users to be counted.
+     * @param domainName Domain that the filter should perform. If empty, filtering is applied to all available domains.
+     * @return The count of users that match the filtering conditions.
+     * @throws CharonException     Error while filtering the users.
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value.
+     */
+    private int getFilteredUsersCount(Node node, int offset, int maxLimit, String domainName)
+            throws CharonException, BadRequestException {
+
+        if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
+            return filterUsersByGroup(node, offset, maxLimit, domainName).size();
+        }
+        if (StringUtils.isNotEmpty(domainName)) {
+            Condition condition = createConditionForSingleAttributeFilter(domainName, node);
+            return getFilteredUserCountFromSingleDomain(condition, offset, maxLimit, domainName);
+        } else {
+            return getFilteredUserCountFromMultipleDomains(node, offset, maxLimit, null);
+        }
+    }
+
+    /**
      * Method to get User Count by Group filter
      *
      * @param node       Expression or Operation node.
@@ -1851,6 +1876,58 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
+     * Retrieves the count of users from multiple domains based on the specified filtering conditions, limit, and offset.
+     *
+     * @param node                     Expression or Operation node.
+     * @param offset                   The starting index for counting users.
+     * @param limit                    The maximum number of users to consider.
+     * @param conditionForListingUsers Condition for listing users when the function is used to list users
+     *                                 except for filtering. For filtering this value should be set to NULL.
+     * @return The total count of users that match the filtering conditions across all specified domains.
+     * @throws CharonException     Error while filtering the users.
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value.
+     */
+    private int getFilteredUserCountFromMultipleDomains(Node node, int offset, int limit,
+                                                        Condition conditionForListingUsers)
+            throws CharonException, BadRequestException {
+
+        // Filter users when the domain is not set in the request. Then filter through multiple domains.
+        String[] userStoreDomainNames = getDomainNames();
+        int filteredUsersCount = 0;
+
+        Condition condition;
+        for (String userStoreDomainName : userStoreDomainNames) {
+
+            // Check for a user listing scenario. (For filtering this value will be set to NULL)
+            if (conditionForListingUsers == null) {
+
+                if (isLoginIdentifiersEnabled() && SCIMConstants.UserSchemaConstants.USER_NAME_URI
+                        .equals(((ExpressionNode) node).getAttributeValue())) {
+                    try {
+                        ((ExpressionNode) node).setAttributeValue(getScimUriForPrimaryLoginIdentifier(node));
+                    } catch (org.wso2.carbon.user.core.UserStoreException e) {
+                        throw new CharonException("Error in retrieving scim to local mappings.", e);
+                    }
+                }
+                // Create filter condition for each domain for single attribute filter.
+                condition = createConditionForSingleAttributeFilter(userStoreDomainName, node);
+            } else {
+                condition = conditionForListingUsers;
+            }
+
+            // Filter users for given condition and domain.
+            try {
+                filteredUsersCount +=
+                        getFilteredUserCountFromSingleDomain(condition, offset, limit, userStoreDomainName);
+            } catch (CharonException e) {
+                log.error("Error occurred while getting the filtered users count for domain: " + userStoreDomainName,
+                        e);
+            }
+        }
+        return filteredUsersCount;
+    }
+
+    /**
      * Method to update the count(limit) when iterating a filter across all domains.
      *
      * @param limit                 Counting value (limit)
@@ -1961,6 +2038,45 @@ public class SCIMUserManager implements UserManager {
                     .format("Error while retrieving users for the domain: %s with limit: %d and offset: %d.",
                             domainName, limit, offset);
             throw resolveError(e, errorMessage);
+        }
+    }
+
+    /**
+     * Retrieves the count of users from a single domain based on the specified filtering condition, limit, and offset.
+     *
+     * @param condition  The filtering condition to be applied.
+     * @param offset     The starting index of the count.
+     * @param limit      The maximum number of users to consider.
+     * @param domainName The domain in which to search for users.
+     * @return The count of users that match the filtering conditions within the specified domain.
+     * @throws CharonException     Error while filtering the users.
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value.
+     */
+    private int getFilteredUserCountFromSingleDomain(Condition condition, int offset, int limit, String domainName)
+            throws CharonException, BadRequestException {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Getting the filtered users count in domain : %s with limit: %d and offset: %d.",
+                    domainName, limit, offset));
+        }
+        try {
+            return carbonUM.getUsersCount(condition, domainName, UserCoreConstants.DEFAULT_PROFILE, limit, offset,
+                    removeDuplicateUsersInUsersResponseEnabled);
+        } catch (UserStoreException e) {
+            // Sometimes client exceptions are wrapped in the super class.
+            // Therefore checking for possible client exception.
+            Throwable rootCause = ExceptionUtils.getRootCause(e);
+            String errorMessage = String.format(
+                    "Error while retrieving filtered users count for the domain: %s with limit: %d and offset: %d. %s",
+                    domainName, limit, offset, rootCause != null ? rootCause.getMessage() : e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage, e);
+            }
+            if (e instanceof UserStoreClientException || rootCause instanceof UserStoreClientException) {
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            } else {
+                throw new CharonException(errorMessage, e);
+            }
         }
     }
 
@@ -2133,6 +2249,7 @@ public class SCIMUserManager implements UserManager {
             // Get total users based on the filter query.
             totalResults += getMultiAttributeFilteredUsersWithMaxLimit(node, 1, sortBy,
                     sortOrder, domainName, maxLimit).size();
+            totalResults += getMultiAttributeFilteredUsersCount(node, 1, domainName, maxLimit);
         } else {
             totalResults += filteredUsers.size();
             if (totalResults == 0 && filteredUsers.size() > 1) {
@@ -2169,6 +2286,69 @@ public class SCIMUserManager implements UserManager {
             return users;
         }
     }
+
+    /**
+     * This method retrieves the count of users based on multi-attribute filtering.
+     *
+     * @param node       Filter condition tree.
+     * @param offset     Starting index of the count.
+     * @param domainName Domain that the filter should perform. If empty, filtering is applied to all available domains.
+     * @param maxLimit   The maximum number of users to be counted.
+     * @return The count of users that match the filtering conditions.
+     * @throws CharonException     Error while filtering the users.
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value.
+     */
+    private int getMultiAttributeFilteredUsersCount(Node node, int offset, String domainName, int maxLimit)
+            throws CharonException, BadRequestException {
+
+        int filteredUsersCount = 0;
+        if (StringUtils.isNotEmpty(domainName)) {
+            filteredUsersCount +=
+                    getMultiAttributeFilteredUsersCountFromSingleDomain(node, offset, domainName, maxLimit);
+        } else {
+            AbstractUserStoreManager tempCarbonUM = carbonUM;
+            // If domain name are not given, then perform filtering on all available user stores.
+            while (tempCarbonUM != null && maxLimit > 0) {
+                // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
+                if (tempCarbonUM instanceof AbstractUserStoreManager) {
+                    domainName =
+                            tempCarbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.RealmConfig.
+                                    PROPERTY_DOMAIN_NAME);
+                    filteredUsersCount +=
+                            getMultiAttributeFilteredUsersCountFromSingleDomain(node, offset, domainName, maxLimit);
+                }
+                // If secondary user store manager assigned to carbonUM then global variable carbonUM will contains the
+                // secondary user store manager.
+                tempCarbonUM = (AbstractUserStoreManager) tempCarbonUM.getSecondaryUserStoreManager();
+            }
+        }
+        return filteredUsersCount;
+    }
+
+    /**
+     * This method retrieves the count of users based on multi-attribute filtering.
+     *
+     * @param node       Filter condition tree.
+     * @param offset     Starting index of the count.
+     * @param domainName Domain that the filter should perform.
+     * @param limit      The number of users to be counted.
+     * @return The count of users that match the filtering conditions.
+     * @throws CharonException     Error while filtering the users.
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value.
+     */
+    private int getMultiAttributeFilteredUsersCountFromSingleDomain(Node node, int offset, String domainName, int limit)
+            throws CharonException, BadRequestException {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format(
+                    "Getting users count filtered by multi attributes in domain : %s with limit: %d and offset: %d.",
+                    domainName, limit, offset));
+        }
+        Map<String, String> attributes = getAllAttributes(domainName);
+        Condition condition = getCondition(node, attributes);
+        return getFilteredUserCountFromSingleDomain(condition, offset, limit, domainName);
+    }
+
     /**
      * Get maximum user limit to retrieve.
      *
