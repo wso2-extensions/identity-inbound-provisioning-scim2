@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolv
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserStoreClientException;
+import org.wso2.carbon.user.core.common.PaginatedUserResponse;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -573,6 +574,9 @@ public class SCIMUserManagerTest {
                 .thenReturn(filteredUsers);
         when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsers);
+        when(mockedUserStoreManager.getPaginatedUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
+                anyInt(), nullable(String.class), nullable(String.class)))
+                .thenReturn(new PaginatedUserResponse(filteredUsers));
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
         when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
@@ -643,8 +647,8 @@ public class SCIMUserManagerTest {
 
     @Test(dataProvider = "getDataForFilterUsersWithPagination")
     public void testFilteringUsersWithGETWithPagination(List<org.wso2.carbon.user.core.common.User> users, String filter,
-                                                        List<org.wso2.carbon.user.core.common.User> filteredUsersWithPagination,
-                                                        List<org.wso2.carbon.user.core.common.User> filteredUsersWithoutPagination,
+                                                        PaginatedUserResponse filteredUsersWithPagination,
+                                                        PaginatedUserResponse filteredUsersWithoutPagination,
                                                         boolean isConsiderTotalRecordsForTotalResultOfLDAPEnabled,
                                                         boolean isConsiderMaxLimitForTotalResultEnabled,
                                                         String domain, int count, int configuredMaxLimit, int expectedResultCount,
@@ -666,23 +670,27 @@ public class SCIMUserManagerTest {
 
         mockedUserStoreManager = mock(AbstractUserStoreManager.class);
 
-        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(count),
+        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
+                anyInt(), nullable(String.class), nullable(String.class)))
+                .thenReturn(filteredUsersWithPagination.getFilteredUsers());
+
+        when(mockedUserStoreManager.getPaginatedUserListWithID(any(Condition.class), anyString(), anyString(), eq(count),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithPagination);
 
-        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(configuredMaxLimit),
+        when(mockedUserStoreManager.getPaginatedUserListWithID(any(Condition.class), anyString(), anyString(), eq(configuredMaxLimit),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithoutPagination);
 
-        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(Integer.MAX_VALUE),
+        when(mockedUserStoreManager.getPaginatedUserListWithID(any(Condition.class), anyString(), anyString(), eq(Integer.MAX_VALUE),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithoutPagination);
 
         when(mockedUserStoreManager.getUsersCount(any(Condition.class), anyString(), anyString(), eq(count),
-                anyInt(), anyBoolean())).thenReturn(filteredUsersWithPagination.size());
+                anyInt(), anyBoolean())).thenReturn(filteredUsersWithPagination.getFilteredUsers().size());
 
         when(mockedUserStoreManager.getUsersCount(any(Condition.class), anyString(), anyString(), eq(configuredMaxLimit),
-                anyInt(), anyBoolean())).thenReturn(filteredUsersWithoutPagination.size());
+                anyInt(), anyBoolean())).thenReturn(filteredUsersWithoutPagination.getFilteredUsers().size());
 
         when(mockedUserStoreManager.getUsersCount(any(Condition.class), anyString(), anyString(), eq(Integer.MAX_VALUE),
-                anyInt(), anyBoolean())).thenReturn(filteredUsersWithoutPagination.size());
+                anyInt(), anyBoolean())).thenReturn(filteredUsersWithoutPagination.getFilteredUsers().size());
 
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
 
@@ -836,87 +844,87 @@ public class SCIMUserManagerTest {
                 // value of the 'totalResult'.
 
                 {users, "name.givenName eq testUser",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                             add(testUser3);
-                        }},
+                        }}),
                         true, false, "PRIMARY", 2, 4, 2, 3},
                 {users, "name.givenName eq testUser",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                             add(testUser3);
-                        }},
+                        }}),
                         false, false, "PRIMARY", 2, 4, 2, 2},
 
                 {users, "name.givenName eq testUser",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                             add(testUser3);
-                        }},
+                        }}),
                         true, false, "SECONDARY", 2, 4, 2, 3},
                 {users, "name.givenName eq testUser",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                             add(testUser3);
-                        }},
+                        }}),
                         true, true, "SECONDARY", 2, 4, 2, 3},
 
                 {users, "name.givenName sw testUser and name.givenName co New",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
                             add(testUser5);
-                        }},
+                        }}),
                         true, false, "PRIMARY", 1, 4, 1, 2},
                 {users, "name.givenName sw testUser and name.givenName co New",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
                             add(testUser5);
-                        }},
+                        }}),
                         false, false, "PRIMARY", 1, 4, 1, 1},
 
                 {users, "name.givenName sw testUser and name.givenName co New",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
                             add(testUser5);
-                        }},
+                        }}),
                         true, false, "SECONDARY", 1, 4, 1, 2},
                 {users, "name.givenName sw testUser and name.givenName co New",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
                             add(testUser5);
-                        }},
+                        }}),
                         false, false, "SECONDARY", 1, 4, 1, 2},
 
         };
