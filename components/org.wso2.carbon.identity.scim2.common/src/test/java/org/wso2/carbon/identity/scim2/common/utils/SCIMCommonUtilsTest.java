@@ -42,6 +42,8 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.assertFalse;
 
 public class SCIMCommonUtilsTest {
 
@@ -267,4 +269,26 @@ public class SCIMCommonUtilsTest {
         };
     }
 
+    @DataProvider
+    public Object[][] getServerWideUserEndpointMaxLimitEnabledData() {
+        return new Object[][]{
+                {"", true},
+                {null, true},
+                {"true", true},
+                {"false", false},
+        };
+    }
+
+    @Test(dataProvider = "getServerWideUserEndpointMaxLimitEnabledData")
+    public void testIsConsiderServerWideUserEndpointMaxLimitEnabled(Object value, boolean isExpectedResultTrue) {
+
+        identityUtil.when(() -> IdentityUtil.getProperty(SCIMCommonConstants.CONSIDER_SERVER_WIDE_MAX_LIMIT_ENABLED))
+                .thenReturn(value);
+        if (isExpectedResultTrue) {
+            assertTrue(SCIMCommonUtils.isConsiderServerWideUserEndpointMaxLimitEnabled());
+        } else {
+            assertFalse(SCIMCommonUtils.isConsiderServerWideUserEndpointMaxLimitEnabled());
+        }
+
+    }
 }
