@@ -161,6 +161,7 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
+    private static final String ERROR_CODE_PASSWORD_POLICY_VIOLATION = "20035";
     private static final String ERROR_CODE_INVALID_ROLE_NAME = "30011";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
     private AbstractUserStoreManager carbonUM;
@@ -430,6 +431,11 @@ public class SCIMUserManager implements UserManager {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             if (e instanceof PolicyViolationException) {
+                if (StringUtils.equals(ERROR_CODE_PASSWORD_POLICY_VIOLATION, ((PolicyViolationException) e)
+                        .getErrorCode()) && SCIMCommonUtils.isErrorCodeForPasswordPolicyViolationEnabled()) {
+                    throw new BadRequestException(ERROR_CODE_PASSWORD_POLICY_VIOLATION + " - " + e.getMessage(),
+                            ResponseCodeConstants.INVALID_VALUE);
+                }
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             if ((e instanceof IdentityEventException) && StringUtils
