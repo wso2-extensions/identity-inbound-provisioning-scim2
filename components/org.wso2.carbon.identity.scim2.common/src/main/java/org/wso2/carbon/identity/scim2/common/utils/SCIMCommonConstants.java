@@ -86,6 +86,7 @@ public class SCIMCommonConstants {
 
     public static final java.lang.String ASK_PASSWORD_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:askPassword";
     public static final java.lang.String VERIFY_EMAIL_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:verifyEmail";
+    public static final String ENABLE_ERROR_CODE_FOR_PASSWORD_POLICY_VIOLATION = "SCIM2.EnableErrorCodeForPasswordPolicyViolation";
 
     // Identity recovery claims
     public static final String ASK_PASSWORD_CLAIM = "http://wso2.org/claims/identity/askPassword";

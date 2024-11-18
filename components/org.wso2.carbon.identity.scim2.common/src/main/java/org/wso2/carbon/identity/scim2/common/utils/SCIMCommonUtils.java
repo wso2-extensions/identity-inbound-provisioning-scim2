@@ -666,6 +666,25 @@ public class SCIMCommonUtils {
     }
 
     /**
+     * Checks if the configuration in identity.xml enables appending the error code to the error detail.
+     * By default, this feature is enabled.
+     *
+     * @return True if the error code in the error detail is enabled.
+     *         Returns true if no configuration is found. If the configuration is present, its value is returned.
+     */
+    public static boolean isErrorCodeForPasswordPolicyViolationEnabled() {
+
+        String configValue =
+                IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_ERROR_CODE_FOR_PASSWORD_POLICY_VIOLATION);
+
+        if (configValue == null) {
+            return true;
+        }
+
+        return Boolean.parseBoolean(configValue);
+    }
+
+    /**
      * Get mapped local claim for specified external claim.
      *
      * @param externalClaim
