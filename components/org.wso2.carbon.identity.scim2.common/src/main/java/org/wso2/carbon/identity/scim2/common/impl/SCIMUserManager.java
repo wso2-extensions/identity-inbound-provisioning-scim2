@@ -151,6 +151,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
 import static org.wso2.carbon.user.core.UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI;
 import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_ROLES_CLAIM;
+import static org.wso2.carbon.user.core.constants.UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_ADDING_A_USER;
 import static org.wso2.carbon.user.core.constants.UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER;
 
 public class SCIMUserManager implements UserManager {
@@ -240,6 +241,11 @@ public class SCIMUserManager implements UserManager {
                     "enabled for user store " + userStoreDomainName);
         }
 
+        org.wso2.carbon.user.core.common.User coreUser = null;
+        List<String> requiredClaimsInLocalDialect = null;
+        Map<String, String> scimToLocalClaimsMap = null;
+        Map<String, String> claimsInLocalDialect = null;
+
         try {
 
             // Persist in carbon user store.
@@ -290,9 +296,15 @@ public class SCIMUserManager implements UserManager {
 
             claimsMap.remove(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
 
-            Map<String, String> claimsInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap);
+            claimsInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap);
 
-            org.wso2.carbon.user.core.common.User coreUser = null;
+            // Get Claims related to SCIM claim dialect
+            scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+
+            // Get required SCIM Claims in local claim dialect.
+            requiredClaimsInLocalDialect = getRequiredClaimsInLocalDialect(scimToLocalClaimsMap,
+                    requiredAttributes);
+
             /*Provide a preferred primary login identifier.Generate a unique user id as the immutable identifier of
              the user instead of human readable username. The primary login identifier claim value will be the
              human readable username.*/
@@ -332,28 +344,6 @@ public class SCIMUserManager implements UserManager {
                     return user;
                 }
             }
-
-            // We use the generated unique ID of the user core user as the SCIM ID.
-            user.setId(coreUser.getUserID());
-
-            if (log.isDebugEnabled()) {
-                log.debug("User: " + user.getUserName() + " and with ID " + user.getId() +
-                        "  is created through SCIM.");
-            }
-
-            // Get Claims related to SCIM claim dialect
-            Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
-
-            // Get required SCIM Claims in local claim dialect.
-            List<String> requiredClaimsInLocalDialect = getRequiredClaimsInLocalDialect(scimToLocalClaimsMap,
-                    requiredAttributes);
-
-            // Get the user from the user store in order to get the default attributes during the user creation
-            // response.
-            user = this.getSCIMUser(coreUser, requiredClaimsInLocalDialect, scimToLocalClaimsMap, claimsInLocalDialect);
-
-            // Set the schemas of the SCIM user.
-            user.setSchemas(this);
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName()) +
                     ". %s", e.getMessage());
@@ -365,21 +355,48 @@ public class SCIMUserManager implements UserManager {
             }
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
-            // Sometimes client exceptions are wrapped in the super class.
-            // Therefore checking for possible client exception.
-            Throwable ex = ExceptionUtils.getRootCause(e);
-            if (ex instanceof UserStoreClientException) {
-                String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName())
-                        + ". %s", ex.getMessage());
-                if (log.isDebugEnabled()) {
-                    log.debug(errorMessage, ex);
+            if (e instanceof org.wso2.carbon.user.core.UserStoreException &&
+                    ERROR_CODE_DUPLICATE_WHILE_ADDING_A_USER.getCode()
+                    .equals(((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode())) {
+                try {
+                    coreUser = carbonUM.getUser(null, user.getUserName());
+                } catch (org.wso2.carbon.user.core.UserStoreException exc) {
+                    throw new RuntimeException(exc);
                 }
-                if (isResourceLimitReachedError((UserStoreClientException) ex)) {
-                    handleResourceLimitReached();
+            } else {
+                // Sometimes client exceptions are wrapped in the super class.
+                // Therefore checking for possible client exception.
+                Throwable ex = ExceptionUtils.getRootCause(e);
+                if (ex instanceof UserStoreClientException) {
+                    String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName())
+                            + ". %s", ex.getMessage());
+                    if (log.isDebugEnabled()) {
+                        log.debug(errorMessage, ex);
+                    }
+                    if (isResourceLimitReachedError((UserStoreClientException) ex)) {
+                        handleResourceLimitReached();
+                    }
+                    throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
                 }
-                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+                handleErrorsOnUserNameAndPasswordPolicy(e);
             }
-            handleErrorsOnUserNameAndPasswordPolicy(e);
+        }
+
+        // We use the generated unique ID of the user core user as the SCIM ID.
+        user.setId(coreUser.getUserID());
+
+        if (log.isDebugEnabled()) {
+            log.debug("User: " + user.getUserName() + " and with ID " + user.getId() +
+                    "  is created through SCIM.");
+        }
+
+        try {
+            // Get the user from the user store in order to get the default attributes during the user creation
+            // response.
+            user = this.getSCIMUser(coreUser, requiredClaimsInLocalDialect, scimToLocalClaimsMap, claimsInLocalDialect);
+
+            // Set the schemas of the SCIM user.
+            user.setSchemas(this);
         } catch (NotImplementedException e) {
             throw new CharonException("Error in getting user information from Carbon User Store", e);
         }

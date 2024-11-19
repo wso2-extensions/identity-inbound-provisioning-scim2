@@ -1690,7 +1690,7 @@ public class SCIMUserManagerTest {
         when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        scimUserManager.createUser(user, null);
+        scimUserManager.createUser(user, new HashMap<>());
         // This method is for testing of throwing BadRequestException, hence no assertion.
     }
 
