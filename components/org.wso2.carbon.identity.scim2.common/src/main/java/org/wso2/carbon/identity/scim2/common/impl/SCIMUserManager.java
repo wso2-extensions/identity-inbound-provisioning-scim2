@@ -1482,8 +1482,7 @@ public class SCIMUserManager implements UserManager {
                 // Get total users based on the filter query without depending on pagination params.
                 if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
                         (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC())) {
-                    // Get the total user count by the filter query.
-                    // This is only implemented for JDBC userstores.
+                    // Get the total user count by the filter query. This is only implemented for JDBC userstores.
                     totalResults += getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName);
                 } else {
                     totalResults += getFilteredUsersCount(node, 1, maxLimit, domainName);
@@ -1499,7 +1498,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * method to get user count by filtering parameter.
+     * Get user count by filtering parameter.
      *
      * @param node       Expression node for single attribute filtering
      * @param offset     Starting index of the count
@@ -1764,7 +1763,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Method to get User Count by Group filter
+     * Get user count by group filter.
      *
      * @param node       Expression or Operation node.
      * @param domainName Domain name.
@@ -1779,13 +1778,11 @@ public class SCIMUserManager implements UserManager {
         // Set filter values.
         String attributeName = ((ExpressionNode) node).getAttributeValue();
         String filterOperation = ((ExpressionNode) node).getOperation();
-        String attributeValue = ((ExpressionNode) node).getValue();
-
         /*
         If there is a domain and if the domain separator is not found in the attribute value, append the domain
         with the domain separator in front of the new attribute value.
         */
-        attributeValue = UserCoreUtil.addDomainToName(((ExpressionNode) node).getValue(), domainName);
+        String attributeValue = UserCoreUtil.addDomainToName(((ExpressionNode) node).getValue(), domainName);
 
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
