@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -663,6 +663,24 @@ public class SCIMCommonUtils {
         } catch (ClaimMetadataException e) {
             throw new CharonException("Error while retrieving schema attribute details.", e);
         }
+    }
+
+    /**
+     * Checks if the configuration in identity.xml enables appending the error code to the error detail.
+     * By default, this feature is enabled.
+     *
+     * @return Returns true by default. If the configuration is present, its value is returned.
+     */
+    public static boolean isErrorCodeForPasswordPolicyViolationEnabled() {
+
+        String configValue =
+                IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_ERROR_CODE_FOR_PASSWORD_POLICY_VIOLATION);
+
+        if (configValue == null) {
+            return true;
+        }
+
+        return Boolean.parseBoolean(configValue);
     }
 
     /**
