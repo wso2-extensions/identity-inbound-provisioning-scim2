@@ -401,7 +401,7 @@
                                 <artifactId>findsecbugs-plugin</artifactId>
                                 <version>${findsecbugs-plugin.version}</version>
                             </plugin>  
-                </plugins>
+                        </plugins>
                     </configuration>
                     <executions>
                         <execution>
