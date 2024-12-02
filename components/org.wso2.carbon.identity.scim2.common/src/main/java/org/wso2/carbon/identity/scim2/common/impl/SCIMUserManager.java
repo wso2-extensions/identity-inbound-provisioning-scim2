@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpStatus;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.identity.application.authentication.framework.exception.PostAuthenticationFailedException;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -98,6 +99,7 @@ import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.Role;
 import org.wso2.charon3.core.objects.RoleV2;
 import org.wso2.charon3.core.objects.User;
+import org.wso2.charon3.core.objects.plainobjects.MultiValuedComplexType;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
 import org.wso2.charon3.core.objects.plainobjects.GroupsGetResponse;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
@@ -114,6 +116,8 @@ import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
+import org.wso2.carbon.identity.password.expiry.util.PasswordPolicyUtils;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.time.Instant;
 import java.util.AbstractMap;
@@ -173,6 +177,9 @@ public class SCIMUserManager implements UserManager {
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
     private static final String SERVICE_PROVIDER = "serviceProvider";
     private final String SERVICE_PROVIDER_TENANT_DOMAIN = "serviceProviderTenantDomain";
+    private final String PASSWORD_EXPIRY_TIME_ATTRIBUTE_NAME = "passwordExpiryTime";
+    private final String PASSWORD_EXPIRY_TIME_CLAIM_URI =
+            getCustomSchemaURI() + SCIMConstants.OperationalConstants.COLON + PASSWORD_EXPIRY_TIME_ATTRIBUTE_NAME;
 
     // Additional wso2 user schema properties.
     private static final String DISPLAY_NAME_PROPERTY = "displayName";
@@ -4188,6 +4195,10 @@ public class SCIMUserManager implements UserManager {
                 setRolesOfUser(rolesList, groupMetaAttributesCache, coreUser, scimUser);
             }
 
+            if (scimToLocalClaimsMap.containsKey(PASSWORD_EXPIRY_TIME_CLAIM_URI)) {
+                setUserPasswordExpiryTime(scimUser, coreUser, tenantDomain);
+            }
+
         } catch (UserStoreException e) {
             throw resolveError(e, "Error in getting user information for user: " +
                     coreUser.getDomainQualifiedUsername());
@@ -4389,6 +4400,9 @@ public class SCIMUserManager implements UserManager {
                         setRolesOfUser(rolesList, groupMetaAttributesCache, user, scimUser);
                     }
 
+                    if (requiredAttributes.containsKey(PASSWORD_EXPIRY_TIME_CLAIM_URI)) {
+                        setUserPasswordExpiryTime(scimUser, user, tenantDomain);
+                    }
                 } catch (UserStoreException e) {
                     throw resolveError(e, "Error in getting user information for user: " +
                             maskIfRequired(user.getUsername()));
@@ -4415,6 +4429,60 @@ public class SCIMUserManager implements UserManager {
         Set<User> scimUserSet = new LinkedHashSet<>();
         scimUserSet.addAll(scimUsers);
         return scimUserSet;
+    }
+
+    /**
+     * Adds password expiry information to the SCIM user object.
+     *
+     * @param scimUser     The SCIM user object to update.
+     * @param user         The core user object.
+     * @param tenantDomain The tenant domain.
+     * @throws CharonException If there's an error during SCIM object construction.
+     */
+    private void setUserPasswordExpiryTime(User scimUser,
+                                      org.wso2.carbon.user.core.common.User user,
+                                      String tenantDomain) throws CharonException {
+
+        try {
+            String tenantAwareUsername = MultitenantUtils.getTenantAwareUsername(
+                    user.getFullQualifiedUsername());
+
+            List<String> roleIds = extractValueFromComplexType(scimUser.getRoles());
+            List<String> groupIds = extractValueFromComplexType(scimUser.getGroups());
+
+            Optional<Long> passwordExpiryTime = PasswordPolicyUtils.getUserPasswordExpiryTime(
+                    tenantDomain, tenantAwareUsername, roleIds, groupIds);
+
+            if (passwordExpiryTime.isPresent()) {
+                Map.Entry<String, String> passwordExpiryTimeEntry = new AbstractMap.SimpleEntry<>(
+                        PASSWORD_EXPIRY_TIME_CLAIM_URI, String.valueOf(passwordExpiryTime.get()));
+                AttributeMapper.constructSCIMObjectFromAttributesOfLevelTwo(this, passwordExpiryTimeEntry,
+                        scimUser,new String[]{getCustomSchemaURI(), PASSWORD_EXPIRY_TIME_ATTRIBUTE_NAME},
+                        1);
+            }
+        } catch (CharonException | NotFoundException | BadRequestException
+                 | PostAuthenticationFailedException e) {
+            throw new CharonException("Error in getting user information for user: " +
+                    maskIfRequired(user.getUsername()), e);
+        }
+    }
+
+    /**
+     * Extracts values from MultiValuedComplexType list.
+     *
+     * @param complexTypes List of complex types.
+     * @return List of extracted values or null if no valid values exist.
+     */
+    private List<String> extractValueFromComplexType(List<MultiValuedComplexType> complexTypes) {
+
+        if (CollectionUtils.isEmpty(complexTypes)) {
+            return null;
+        }
+        List<String> values = complexTypes.stream()
+                .map(MultiValuedComplexType::getValue)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        return values.isEmpty() ? null : values;
     }
 
     private void setRolesOfUser(List<String> rolesOfUser, Map<String, Group> groupMetaAttributesCache,
