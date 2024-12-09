@@ -42,12 +42,14 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.password.expiry.util.PasswordPolicyUtils;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -102,6 +104,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -206,6 +209,8 @@ public class SCIMUserManagerTest {
     private MockedStatic<ClaimMetadataHandler> claimMetadataHandler;
     private MockedStatic<CarbonConstants> carbonConstants;
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+    private MockedStatic<PasswordPolicyUtils> passwordPolicyUtils;
+    private MockedStatic<MultitenantUtils> muliTenantUtils;
     private MockedStatic<ApplicationManagementService> applicationManagementServiceMockedStatic;
     private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolder;
     private MockedStatic<ResourceManagerUtil> resourceManagerUtil;
@@ -218,6 +223,8 @@ public class SCIMUserManagerTest {
         scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         carbonConstants = mockStatic(CarbonConstants.class);
         identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        muliTenantUtils = mockStatic(MultitenantUtils.class);
+        passwordPolicyUtils = mockStatic(PasswordPolicyUtils.class);
         applicationManagementServiceMockedStatic = mockStatic(ApplicationManagementService.class);
         scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
         scimUserSchemaExtensionBuilder = mockStatic(SCIMUserSchemaExtensionBuilder.class);
@@ -234,6 +241,8 @@ public class SCIMUserManagerTest {
         scimCommonUtils.close();
         carbonConstants.close();
         identityTenantUtil.close();
+        muliTenantUtils.close();
+        passwordPolicyUtils.close();
         applicationManagementServiceMockedStatic.close();
         scimCommonComponentHolder.close();
         scimUserSchemaExtensionBuilder.close();
@@ -743,6 +752,10 @@ public class SCIMUserManagerTest {
                 .thenReturn(isConsiderTotalRecordsForTotalResultOfLDAPEnabled);
         scimCommonUtils.when(() -> SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled())
                 .thenReturn(isConsiderMaxLimitForTotalResultEnabled);
+
+        muliTenantUtils.when(() -> MultitenantUtils.getTenantAwareUsername(any())).thenReturn("testUser1");
+        passwordPolicyUtils.when(() ->PasswordPolicyUtils.getUserPasswordExpiryTime(
+                anyString(), anyString(), any(), any())).thenReturn(Optional.empty());
 
         Map<String, String> supportedByDefaultProperties = new HashMap<String, String>() {{
             put("SupportedByDefault", "true");
