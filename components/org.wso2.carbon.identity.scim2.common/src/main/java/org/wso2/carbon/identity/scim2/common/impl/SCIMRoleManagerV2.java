@@ -472,16 +472,22 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             LOG.debug(String.format("Filtering roles from search filter: %s", searchFilter));
         }
         List<Role> roles;
+        int roleCount;
+        List<RoleV2> scimRoles;
         try {
             roles = roleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain,
                     requiredAttributes);
+            scimRoles = getScimRolesList(roles, requiredAttributes);
+            roleCount = roleManagementService.getRolesCount(searchFilter, tenantDomain);
+            if (roleCount == 0) {
+                roleCount = scimRoles.size();
+            }
         } catch (IdentityRoleManagementException e) {
             throw new CharonException(
                     String.format("Error occurred while listing roles based on the search filter: %s", searchFilter),
                     e);
         }
-        List<RoleV2> scimRoles = getScimRolesList(roles, requiredAttributes);
-        return new RolesV2GetResponse(scimRoles.size(), scimRoles);
+        return new RolesV2GetResponse(roleCount, scimRoles);
     }
 
     private String buildSearchFilter(Node node) throws BadRequestException {
