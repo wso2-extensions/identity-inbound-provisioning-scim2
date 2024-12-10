@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.IdpGroup;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.UserIDResolver;
@@ -118,6 +119,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, ConflictException, NotImplementedException, BadRequestException {
 
         try {
+            if (role.getRoleProperties() != null) {
+                throw new BadRequestException("Role properties cannot be added during role creation.",
+                        ResponseCodeConstants.INVALID_VALUE);
+            }
             // Check if the role already exists.
             if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
                 String error = "Role with id: " + role.getId() + " already exists in the tenantDomain: "
@@ -307,6 +312,20 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return permissionValues;
     }
 
+    private List<MultiValuedComplexType> convertRolePropertiesToMultiValuedComplexType(List<RoleProperty> roleProperties) {
+
+        List<MultiValuedComplexType> rolePropertyValues = new ArrayList<>();
+        if (roleProperties != null) {
+            for (RoleProperty roleProperty : roleProperties) {
+                MultiValuedComplexType rolePropertyComplexObject = new MultiValuedComplexType();
+                rolePropertyComplexObject.setValue(roleProperty.getValue());
+                rolePropertyComplexObject.setDisplay(roleProperty.getName());
+                rolePropertyValues.add(rolePropertyComplexObject);
+            }
+        }
+        return rolePropertyValues;
+    }
+
     public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
 
         try {
@@ -354,6 +373,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     public RoleV2 updateRole(RoleV2 oldRole, RoleV2 newRole)
             throws BadRequestException, CharonException, ConflictException, NotFoundException {
 
+        if (newRole.getRoleProperties() != null) {
+            throw new BadRequestException("Role properties cannot be updated during role update.",
+                    ResponseCodeConstants.INVALID_VALUE);
+        }
         doUpdateRoleName(oldRole, newRole);
         doUpdateUsers(oldRole, newRole);
         doUpdateGroups(oldRole, newRole);
@@ -614,6 +637,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             if (systemRoles.contains(role.getName())) {
                 scimRole.setSystemRole(true);
             }
+            List<MultiValuedComplexType> roleProperties =
+                    convertRolePropertiesToMultiValuedComplexType(role.getRoleProperties());
+            scimRole.setRoleProperties(roleProperties);
             if (requiredAttributes != null) {
                 if (requiredAttributes.contains(USERS)) {
                     // Set role's assigned users.
