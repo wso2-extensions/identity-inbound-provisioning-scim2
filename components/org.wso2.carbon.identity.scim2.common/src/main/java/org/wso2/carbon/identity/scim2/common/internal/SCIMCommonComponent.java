@@ -61,8 +61,6 @@ import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.carbon.idp.mgt.IdpManager;
 
 import java.io.File;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 @Component(
         name = "identity.scim2.common",
@@ -71,8 +69,6 @@ import java.util.concurrent.Executors;
 public class SCIMCommonComponent {
 
     private static final Log logger = LogFactory.getLog(SCIMCommonComponent.class);
-
-    ExecutorService executorService = Executors.newFixedThreadPool(1);
 
     private ServiceRegistration<TenantMgtListener> tenantMgtListenerServiceReg;
     private ServiceRegistration<UserOperationEventListener> userOperationEventListenerServiceReg;
