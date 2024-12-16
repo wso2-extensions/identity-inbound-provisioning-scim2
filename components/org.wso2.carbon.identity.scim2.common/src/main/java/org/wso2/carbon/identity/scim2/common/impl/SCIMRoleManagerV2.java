@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.IdpGroup;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.UserIDResolver;
@@ -101,6 +102,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private final String GROUPS = "groups";
     private final String PERMISSIONS = "permissions";
     private final String ASSOCIATED_APPLICATIONS = "associatedApplications";
+    private final String PROPERTIES = "properties";
     private RoleManagementService roleManagementService;
     private String tenantDomain;
     private Set<String> systemRoles;
@@ -211,6 +213,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             if (systemRoles.contains(role.getName())) {
                 scimRole.setSystemRole(true);
             }
+            List<MultiValuedComplexType> roleProperties =
+                    convertRolePropertiesToMultiValuedComplexType(role.getRoleProperties());
+            scimRole.setRoleProperties(roleProperties);
             // Set permissions.
             List<MultiValuedComplexType> permissions =
                     convertPermissionsToMultiValuedComplexType(role.getPermissions());
@@ -305,6 +310,20 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             }
         }
         return permissionValues;
+    }
+
+    private List<MultiValuedComplexType> convertRolePropertiesToMultiValuedComplexType(List<RoleProperty> roleProperties) {
+
+        List<MultiValuedComplexType> rolePropertyValues = new ArrayList<>();
+        if (roleProperties != null) {
+            for (RoleProperty roleProperty : roleProperties) {
+                MultiValuedComplexType rolePropertyComplexObject = new MultiValuedComplexType();
+                rolePropertyComplexObject.setValue(roleProperty.getValue());
+                rolePropertyComplexObject.setDisplay(roleProperty.getName());
+                rolePropertyValues.add(rolePropertyComplexObject);
+            }
+        }
+        return rolePropertyValues;
     }
 
     public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
@@ -677,6 +696,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                             convertAssociatedAppsToMultivaluedComplexType(role.getAssociatedApplications());
                     if (CollectionUtils.isNotEmpty(associatedApps)) {
                         scimRole.setAssociatedApplications(associatedApps);
+                    }
+                }
+                if (requiredAttributes.contains(PROPERTIES)) {
+                    // Set role properties.
+                    List<MultiValuedComplexType> roleProperties =
+                            convertRolePropertiesToMultiValuedComplexType(role.getRoleProperties());
+                    if (CollectionUtils.isNotEmpty(roleProperties)) {
+                        scimRole.setRoleProperties(roleProperties);
                     }
                 }
             }
