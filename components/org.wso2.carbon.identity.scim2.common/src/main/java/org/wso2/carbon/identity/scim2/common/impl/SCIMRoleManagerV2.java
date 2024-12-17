@@ -75,6 +75,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -953,8 +954,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                                 permissionOperation, permissionObject, permissionListOfRole);
                     }
                 }
-                prepareReplacedPermissionLists(permissionListOfRole, addedPermissions, deletedPermissions,
-                        replacedPermissions);
+                if (SCIMConstants.OperationalConstants.REPLACE.equals(
+                        permissionOperation.getOperation().toLowerCase(Locale.ENGLISH))) {
+                    prepareReplacedPermissionLists(permissionListOfRole, addedPermissions, deletedPermissions,
+                            replacedPermissions);
+                }
             }
             if (isNotEmpty(addedPermissions) || isNotEmpty(deletedPermissions)) {
                 doUpdatePermissions(roleId, addedPermissions, deletedPermissions);
