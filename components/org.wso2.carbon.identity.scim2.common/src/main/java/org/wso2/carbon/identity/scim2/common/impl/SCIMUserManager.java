@@ -508,7 +508,7 @@ public class SCIMUserManager implements UserManager {
                 throw resolveError(e, errMsg);
             }
         } catch (BadRequestException | NotImplementedException e) {
-           throw new CharonException("Error in getting user information from Carbon User Store", e);
+            throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return scimUser;
     }
@@ -601,7 +601,7 @@ public class SCIMUserManager implements UserManager {
     @Override
     @Deprecated
     public UsersGetResponse listUsersWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
-                                         String domainName, Map<String, Boolean> requiredAttributes)
+                                             String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         if (sortBy != null || sortOrder != null) {
@@ -615,7 +615,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public UsersGetResponse listUsersWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
-                                         String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
+                                             String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         // Validate NULL value for startIndex.
@@ -689,7 +689,7 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse listUsers(Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                   String sortBy, String sortOrder, String domainName) throws CharonException,
+                                       String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
         List<User> scimUsers = new ArrayList<>();
@@ -980,7 +980,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error while retrieving users
      */
     private List<User> getUserDetails(Set<org.wso2.carbon.user.core.common.User> coreUsers,
-                                        Map<String, Boolean> requiredAttributes)
+                                      Map<String, Boolean> requiredAttributes)
             throws CharonException, BadRequestException {
 
         List<User> users = new ArrayList<>();
@@ -1410,7 +1410,7 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                     String sortBy, String sortOrder, String domainName) throws CharonException,
+                                         String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
         // Handle limit equals NULL scenario.
@@ -3503,6 +3503,9 @@ public class SCIMUserManager implements UserManager {
             List<PatchOperation> displayNameOperations = new ArrayList<>();
             List<PatchOperation> memberOperations = new ArrayList<>();
             String newGroupName = currentGroupName;
+            Date groupLastUpdatedTime = null;
+            String groupNameForIDNScim = SCIMCommonUtils.getGroupNameWithDomain(currentGroupName);
+
             for (List<PatchOperation> patchOperationList : patchOperations.values()) {
                 for (PatchOperation patchOperation : patchOperationList) {
                     if (StringUtils.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
@@ -3519,7 +3522,14 @@ public class SCIMUserManager implements UserManager {
 
             if (CollectionUtils.isNotEmpty(displayNameOperations)) {
                 newGroupName = (String) displayNameOperations.get(0).getValues();
-                setGroupDisplayName(groupId, currentGroupName, newGroupName);
+                String[] resolvedGroupNames = resolveGroupDomains(currentGroupName, newGroupName);
+                boolean groupUpdated = setGroupDisplayName(groupId, resolvedGroupNames[0], resolvedGroupNames[1]);
+                if (groupUpdated) {
+                    groupLastUpdatedTime = new Date();
+                    groupNameForIDNScim = resolvedGroupNames[1];
+                } else {
+                    groupNameForIDNScim = resolvedGroupNames[0];
+                }
             }
 
             Collections.sort(memberOperations);
@@ -3605,10 +3615,20 @@ public class SCIMUserManager implements UserManager {
                 carbonUM.updateUserListOfRoleWithID(newGroupName,
                         deletedMemberIdsFromUserstore.toArray(new String[0]),
                         addedMemberIdsFromUserstore.toArray(new String[0]));
+                groupLastUpdatedTime = new Date();
             }
 
             // Update the group name in UM_HYBRID_GROUP_ROLE table.
             carbonUM.updateGroupName(currentGroupName, newGroupName);
+
+            // Update the last modified time of the group.
+            if (!carbonUM.isUniqueGroupIdEnabled() && groupLastUpdatedTime != null) {
+                Map<String, String> attributes = new HashMap<>();
+                attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
+                        AttributeUtil.formatDateTime(groupLastUpdatedTime.toInstant()));
+                SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+                groupHandler.updateSCIMAttributes(groupNameForIDNScim, attributes);
+            }
         } catch (UserStoreException e) {
             if (e instanceof org.wso2.carbon.user.core.UserStoreException && (StringUtils
                     .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_WRITING_TO_DATABASE
@@ -3676,12 +3696,10 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private void setGroupDisplayName(String groupId, String oldGroupName, String newGroupName)
-            throws IdentityApplicationManagementException, CharonException, BadRequestException, IdentitySCIMException,
-            UserStoreException {
+    private String[] resolveGroupDomains(String oldGroupName, String newGroupName)
+            throws IdentityApplicationManagementException, CharonException, IdentitySCIMException {
 
         String userStoreDomainFromSP = getUserStoreDomainFromSP();
-
         String oldGroupDomain = IdentityUtil.extractDomainFromName(oldGroupName);
         if (userStoreDomainFromSP != null && !userStoreDomainFromSP.equalsIgnoreCase(oldGroupDomain)) {
             throw new CharonException("Group :" + oldGroupName + "is not belong to user store " +
@@ -3707,10 +3725,19 @@ public class SCIMUserManager implements UserManager {
         oldGroupName = SCIMCommonUtils.getGroupNameWithDomain(oldGroupName);
         newGroupName = SCIMCommonUtils.getGroupNameWithDomain(newGroupName);
 
+        return new String[] { oldGroupName, newGroupName };
+    }
+
+    private boolean setGroupDisplayName(String groupId, String oldGroupName, String newGroupName)
+            throws IdentityApplicationManagementException, IdentitySCIMException, UserStoreException {
+
         if (!StringUtils.equals(oldGroupName, newGroupName)) {
             // Update group name in carbon UM.
             carbonUM.renameGroup(groupId, newGroupName);
+            return true;
         }
+
+        return false;
     }
 
     @Override
@@ -3757,6 +3784,9 @@ public class SCIMUserManager implements UserManager {
 
     public boolean doUpdateGroup(Group oldGroup, Group newGroup) throws CharonException, IdentitySCIMException,
             BadRequestException, IdentityApplicationManagementException, org.wso2.carbon.user.core.UserStoreException {
+
+        Date groupLastUpdatedTime = null;
+        String groupNameForIDNScim = SCIMCommonUtils.getGroupNameWithDomain(oldGroup.getDisplayName());
 
         setGroupDisplayName(oldGroup, newGroup);
         if (log.isDebugEnabled()) {
@@ -3806,6 +3836,8 @@ public class SCIMUserManager implements UserManager {
             // Update group name in carbon UM
             carbonUM.renameGroup(oldGroup.getId(), newGroupDisplayName);
             updated = true;
+            groupLastUpdatedTime = new Date();
+            groupNameForIDNScim = SCIMCommonUtils.getGroupNameWithDomain(newGroupDisplayName);
         }
         // Update the group with added members and deleted members.
         if (isNotEmpty(addedMembers) || isNotEmpty(deletedMembers)) {
@@ -3813,7 +3845,18 @@ public class SCIMUserManager implements UserManager {
                     deletedMemberIdsFromUserstore.toArray(new String[0]),
                     addedMemberIdsFromUserstore.toArray(new String[0]));
             updated = true;
+            groupLastUpdatedTime = new Date();
         }
+
+        // Update the last modified time of the group.
+        if (!carbonUM.isUniqueGroupIdEnabled() && groupLastUpdatedTime != null) {
+            Map<String, String> attributes = new HashMap<>();
+            attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
+                    AttributeUtil.formatDateTime(groupLastUpdatedTime.toInstant()));
+            SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+            groupHandler.updateSCIMAttributes(groupNameForIDNScim, attributes);
+        }
+
         return updated;
     }
 
