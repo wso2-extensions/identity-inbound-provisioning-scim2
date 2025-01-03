@@ -510,7 +510,7 @@ public class SCIMUserManager implements UserManager {
                 throw resolveError(e, errMsg);
             }
         } catch (BadRequestException | NotImplementedException e) {
-            throw new CharonException("Error in getting user information from Carbon User Store", e);
+           throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return scimUser;
     }
@@ -603,7 +603,7 @@ public class SCIMUserManager implements UserManager {
     @Override
     @Deprecated
     public UsersGetResponse listUsersWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
-                                             String domainName, Map<String, Boolean> requiredAttributes)
+                                         String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         if (sortBy != null || sortOrder != null) {
@@ -617,7 +617,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public UsersGetResponse listUsersWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
-                                             String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
+                                         String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         // Validate NULL value for startIndex.
@@ -691,7 +691,7 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse listUsers(Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                       String sortBy, String sortOrder, String domainName) throws CharonException,
+                                   String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
         List<User> scimUsers = new ArrayList<>();
@@ -982,7 +982,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error while retrieving users
      */
     private List<User> getUserDetails(Set<org.wso2.carbon.user.core.common.User> coreUsers,
-                                      Map<String, Boolean> requiredAttributes)
+                                        Map<String, Boolean> requiredAttributes)
             throws CharonException, BadRequestException {
 
         List<User> users = new ArrayList<>();
@@ -1412,7 +1412,7 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                         String sortBy, String sortOrder, String domainName) throws CharonException,
+                                     String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
         // Handle limit equals NULL scenario.
