@@ -22,7 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.wso2.carbon.identity.scim2.common.handlers.SCIMClaimOperationEventHandler;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.encoder.JSONDecoder;
@@ -73,11 +72,8 @@ public class IdentityResourceTypeResourceManager extends ResourceTypeResourceMan
      */
     private SCIMResponse getResourceType() {
 
-        JSONEncoder encoder = null;
         try {
-            //obtain the json encoder
-            encoder = getEncoder();
-            //obtain the json decoder
+            JSONEncoder encoder = getEncoder();
             JSONDecoder decoder = getDecoder();
 
             // get the service provider config schema
@@ -109,7 +105,7 @@ public class IdentityResourceTypeResourceManager extends ResourceTypeResourceMan
                     groupResourceTypeObject);
             //encode the newly created SCIM Resource Type object.
             String encodedObject;
-            Map<String, String> responseHeaders = new HashMap<String, String>();
+            Map<String, String> responseHeaders = new HashMap<>();
 
             if (resourceTypeObject != null) {
                 //create a deep copy of the resource type object since we are going to change it.
@@ -144,7 +140,6 @@ public class IdentityResourceTypeResourceManager extends ResourceTypeResourceMan
      * @param userObject
      * @param groupObject
      * @return
-     * @throws CharonException
      */
     private AbstractSCIMObject buildCombinedResourceType(AbstractSCIMObject userObject, AbstractSCIMObject groupObject)
             throws CharonException {
@@ -185,7 +180,7 @@ public class IdentityResourceTypeResourceManager extends ResourceTypeResourceMan
         userResourceTypeObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA,
                 SCIMConstants.USER_CORE_SCHEMA_URI);
 
-        if (SCIMResourceSchemaManager.getInstance().isExtensionSet()) {
+        if (Boolean.TRUE.equals(SCIMResourceSchemaManager.getInstance().isExtensionSet())) {
             JSONObject extensionSchemaObject = new JSONObject();
             extensionSchemaObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS_SCHEMA,
                     SCIMResourceSchemaManager.getInstance().getExtensionURI());
@@ -194,6 +189,15 @@ public class IdentityResourceTypeResourceManager extends ResourceTypeResourceMan
 
             userResourceTypeObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS,
                     extensionSchemaObject);
+
+            JSONObject systemSchemaObject = new JSONObject();
+            systemSchemaObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS_SCHEMA,
+                    SCIMResourceSchemaManager.getInstance().getSystemSchemaExtensionURI());
+            systemSchemaObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS_REQUIRED,
+                    SCIMResourceSchemaManager.getInstance().getSystemSchemaExtensionRequired());
+
+            userResourceTypeObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS,
+                    systemSchemaObject);
         }
         return userResourceTypeObject.toString();
     }

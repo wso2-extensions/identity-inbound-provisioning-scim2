@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
 import org.wso2.carbon.user.core.model.UniqueIDUserClaimSearchEntry;
+import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -128,6 +129,8 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.charon3.core.schema.SCIMConstants.CUSTOM_USER_SCHEMA_URI;
+import static org.wso2.charon3.core.schema.SCIMConstants.ENTERPRISE_USER_SCHEMA_URI;
 
 /*
  * Unit tests for SCIMUserManager
@@ -207,6 +210,7 @@ public class SCIMUserManagerTest {
     @Mock
     private RolePermissionManagementService mockedRolePermissionManagementService;
     private MockedStatic<SCIMUserSchemaExtensionBuilder> scimUserSchemaExtensionBuilder;
+    private MockedStatic<SCIMSystemSchemaExtensionBuilder> scimSystemSchemaExtensionBuilder;
     private MockedStatic<IdentityUtil> identityUtil;
     private MockedStatic<SCIMCommonUtils> scimCommonUtils;
     private MockedStatic<AttributeMapper> attributeMapper;
@@ -228,11 +232,17 @@ public class SCIMUserManagerTest {
         applicationManagementServiceMockedStatic = mockStatic(ApplicationManagementService.class);
         scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
         scimUserSchemaExtensionBuilder = mockStatic(SCIMUserSchemaExtensionBuilder.class);
+        scimSystemSchemaExtensionBuilder = mockStatic(SCIMSystemSchemaExtensionBuilder.class);
         claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);
         resourceManagerUtil = mockStatic(ResourceManagerUtil.class);
         SCIMUserSchemaExtensionBuilder mockSCIMUserSchemaExtensionBuilder = mock(SCIMUserSchemaExtensionBuilder.class);
+        SCIMSystemSchemaExtensionBuilder mockSCIMSystemSchemaExtensionBuilder = mock(SCIMSystemSchemaExtensionBuilder.class);
         scimUserSchemaExtensionBuilder.when(SCIMUserSchemaExtensionBuilder::getInstance).thenReturn(mockSCIMUserSchemaExtensionBuilder);
         when(mockSCIMUserSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
+        when(mockedSCIMAttributeSchema.getURI()).thenReturn(ENTERPRISE_USER_SCHEMA_URI)
+                .thenReturn(CUSTOM_USER_SCHEMA_URI);
+        scimSystemSchemaExtensionBuilder.when(SCIMSystemSchemaExtensionBuilder::getInstance).thenReturn(mockSCIMSystemSchemaExtensionBuilder);
+        when(mockSCIMSystemSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
     }
 
     @AfterMethod
@@ -244,6 +254,7 @@ public class SCIMUserManagerTest {
         applicationManagementServiceMockedStatic.close();
         scimCommonComponentHolder.close();
         scimUserSchemaExtensionBuilder.close();
+        scimSystemSchemaExtensionBuilder.close();
         claimMetadataHandler.close();
         resourceManagerUtil.close();
     }
