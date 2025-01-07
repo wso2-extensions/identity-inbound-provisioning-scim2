@@ -55,12 +55,15 @@ import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
+import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.carbon.idp.mgt.IdpManager;
 
 import java.io.File;
+
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.USER_SCHEMA_EXTENSION_ENABLED;
 
 @Component(
         name = "identity.scim2.common",
@@ -83,12 +86,13 @@ public class SCIMCommonComponent {
             SCIMConfigProcessor scimConfigProcessor = SCIMConfigProcessor.getInstance();
             scimConfigProcessor.buildConfigFromFile(filePath);
 
-            // reading user schema extension
-            if (Boolean.parseBoolean(scimConfigProcessor.getProperty("user-schema-extension-enabled"))) {
+            // Reading schema extensions.
+            if (Boolean.parseBoolean(scimConfigProcessor.getProperty(USER_SCHEMA_EXTENSION_ENABLED))) {
                 String schemaFilePath =
                         CarbonUtils.getCarbonConfigDirPath() + File.separator +
                                 SCIMConfigConstants.SCIM_SCHEMA_EXTENSION_CONFIG;
                 SCIMUserSchemaExtensionBuilder.getInstance().buildUserSchemaExtension(schemaFilePath);
+                SCIMSystemSchemaExtensionBuilder.getInstance().buildSystemSchemaExtension(schemaFilePath);
             }
             // If custom schema is enabled, read it root attribute URI from the file config if it is configured.
             if (SCIMCommonUtils.isCustomSchemaEnabled()) {

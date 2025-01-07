@@ -20,9 +20,10 @@ package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.wso2.carbon.identity.scim2.common.handlers.SCIMClaimOperationEventHandler;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.encoder.JSONDecoder;
@@ -176,6 +177,8 @@ public class IdentityResourceTypeResourceManager extends ResourceTypeResourceMan
     private String buildUserResourceTypeJsonBody() throws JSONException {
 
         JSONObject userResourceTypeObject = new JSONObject();
+        SCIMResourceSchemaManager schemaManager = SCIMResourceSchemaManager.getInstance();
+
         userResourceTypeObject.put(SCIMConstants.CommonSchemaConstants.SCHEMAS, SCIMConstants.RESOURCE_TYPE_SCHEMA_URI);
         userResourceTypeObject.put(SCIMConstants.ResourceTypeSchemaConstants.ID, SCIMConstants.USER);
         userResourceTypeObject.put(SCIMConstants.ResourceTypeSchemaConstants.NAME, SCIMConstants.USER);
@@ -185,16 +188,27 @@ public class IdentityResourceTypeResourceManager extends ResourceTypeResourceMan
         userResourceTypeObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA,
                 SCIMConstants.USER_CORE_SCHEMA_URI);
 
-        if (SCIMResourceSchemaManager.getInstance().isExtensionSet()) {
-            JSONObject extensionSchemaObject = new JSONObject();
-            extensionSchemaObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS_SCHEMA,
-                    SCIMResourceSchemaManager.getInstance().getExtensionURI());
-            extensionSchemaObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS_REQUIRED,
-                    SCIMResourceSchemaManager.getInstance().getExtensionRequired());
-
-            userResourceTypeObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS,
-                    extensionSchemaObject);
+        if (Boolean.TRUE.equals(schemaManager.isExtensionSet())) {
+            JSONObject extensionSchemaObject = createSchemaExtensionObject(
+                    schemaManager.getExtensionURI(), schemaManager.getExtensionRequired());
+            if (SCIMCommonUtils.isExtensionSchemasListingEnabledInResourceTypesAPI()) {
+                JSONArray schemaExtensions = new JSONArray();
+                schemaExtensions.put(extensionSchemaObject);
+                schemaExtensions.put(createSchemaExtensionObject(
+                        schemaManager.getSystemSchemaExtensionURI(), schemaManager.getSystemSchemaExtensionRequired()));
+                userResourceTypeObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS, schemaExtensions);
+            } else {
+                userResourceTypeObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS, extensionSchemaObject);
+            }
         }
         return userResourceTypeObject.toString();
+    }
+
+    private JSONObject createSchemaExtensionObject(String schemaURI, boolean isRequired) throws JSONException {
+
+        JSONObject extensionSchemaObject = new JSONObject();
+        extensionSchemaObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS_SCHEMA, schemaURI);
+        extensionSchemaObject.put(SCIMConstants.ResourceTypeSchemaConstants.SCHEMA_EXTENSIONS_REQUIRED, isRequired);
+        return extensionSchemaObject;
     }
 }
