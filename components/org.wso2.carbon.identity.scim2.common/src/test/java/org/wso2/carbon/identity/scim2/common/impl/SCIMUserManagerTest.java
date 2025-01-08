@@ -629,8 +629,13 @@ public class SCIMUserManagerTest {
 
         org.wso2.carbon.user.core.common.User testUser1 = new org.wso2.carbon.user.core.common.User(UUID.randomUUID()
                 .toString(), "testUser1", "testUser1");
+        testUser1.setUserStoreDomain("PRIMARY");
         List<org.wso2.carbon.user.core.common.User> filteredUsers = new ArrayList<>();
         filteredUsers.add(testUser1);
+
+        scimCommonUtils.when(() -> SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap())).thenReturn(new HashMap<String, String>() {{
+            put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c");
+        }});
 
         when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(mockedJDBCUserStoreManager);
         when(mockedJDBCUserStoreManager.isSCIMEnabled()).thenReturn(true);
@@ -641,8 +646,10 @@ public class SCIMUserManagerTest {
         when(mockedUserStoreManager.getUserListOfGroupWithID(anyString())).thenReturn(filteredUsers);
 
         UniqueIDUserClaimSearchEntry uniqueIDUserClaimSearchEntry = new UniqueIDUserClaimSearchEntry();
-        when(mockedUserStoreManager.getUsersClaimValuesWithID(any(), any(), nullable(String.class))).thenReturn(
-                Collections.singletonList(uniqueIDUserClaimSearchEntry));
+        List<UniqueIDUserClaimSearchEntry> uniqueIDUserClaimSearchEntries = new ArrayList<>();
+        uniqueIDUserClaimSearchEntries.add(uniqueIDUserClaimSearchEntry);
+        when(mockedUserStoreManager.getUsersClaimValuesWithID(any(), any(), nullable(String.class)))
+                .thenReturn(uniqueIDUserClaimSearchEntries);
 
         UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, null, null, null, domain, new HashMap<>());
         assertEquals(result.getUsers().size(), filteredUsers.size());
