@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
+import org.wso2.carbon.user.core.model.UniqueIDUserClaimSearchEntry;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -94,6 +95,7 @@ import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -148,6 +150,8 @@ public class SCIMUserManagerTest {
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
+    @Mock
+    private JDBCUserStoreManager mockedJDBCUserStoreManager;
 
     @Mock
     private ClaimManager mockedClaimManager;
@@ -611,6 +615,38 @@ public class SCIMUserManagerTest {
         UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, null, null, null, null,
                 requiredClaimsMap);
         assertEquals(result.getUsers().size(), expectedResultCount);
+    }
+
+    @Test
+    public void testFilteringUsersOfGroupWithGET() throws UserStoreException, IOException, BadRequestException,
+            NotImplementedException, CharonException {
+
+        String domain = "PRIMARY";
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+        FilterTreeManager filterTreeManager = new FilterTreeManager("groups eq admin", schema);
+        Node node = filterTreeManager.buildTree();
+
+        org.wso2.carbon.user.core.common.User testUser1 = new org.wso2.carbon.user.core.common.User(UUID.randomUUID()
+                .toString(), "testUser1", "testUser1");
+        List<org.wso2.carbon.user.core.common.User> filteredUsers = new ArrayList<>();
+        filteredUsers.add(testUser1);
+
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(mockedJDBCUserStoreManager);
+        when(mockedJDBCUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        scimCommonUtils.when(SCIMCommonUtils::isGroupBasedUserFilteringImprovementsEnabled).thenReturn(true);
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(new String[]{"admin"});
+        when(mockedUserStoreManager.getUserCountForGroup(anyString())).thenReturn(filteredUsers.size());
+        when(mockedUserStoreManager.getUserListOfGroupWithID(anyString())).thenReturn(filteredUsers);
+
+        UniqueIDUserClaimSearchEntry uniqueIDUserClaimSearchEntry = new UniqueIDUserClaimSearchEntry();
+        when(mockedUserStoreManager.getUsersClaimValuesWithID(any(), any(), nullable(String.class))).thenReturn(
+                Collections.singletonList(uniqueIDUserClaimSearchEntry));
+
+        UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, null, null, null, domain, new HashMap<>());
+        assertEquals(result.getUsers().size(), filteredUsers.size());
+
     }
 
     @DataProvider(name = "userInfoForFiltering")
