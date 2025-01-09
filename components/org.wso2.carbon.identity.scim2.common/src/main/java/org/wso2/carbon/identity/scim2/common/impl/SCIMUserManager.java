@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -1481,9 +1481,11 @@ public class SCIMUserManager implements UserManager {
             // Check that total user count matching the client query needs to be calculated.
             if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()
                     || SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
-                int maxLimit = getMaxLimit(domainName);
+                int maxLimit;
                 if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
                     maxLimit = Integer.MAX_VALUE;
+                } else {
+                    maxLimit = getMaxLimit(domainName);
                 }
                 // Get total users based on the filter query without depending on pagination params.
                 if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
@@ -1791,7 +1793,10 @@ public class SCIMUserManager implements UserManager {
         If there is a domain and if the domain separator is not found in the attribute value, append the domain
         with the domain separator in front of the new attribute value.
         */
-        attributeValue = UserCoreUtil.addDomainToName(((ExpressionNode) node).getValue(), domainName);
+        if (StringUtils.isNotEmpty(domainName) && StringUtils
+                .containsNone(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+            attributeValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR + attributeValue;
+        }
 
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
