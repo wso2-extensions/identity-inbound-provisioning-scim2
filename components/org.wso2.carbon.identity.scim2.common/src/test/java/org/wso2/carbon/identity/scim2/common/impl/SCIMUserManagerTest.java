@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.model.AttributeMapping;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -122,6 +123,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
@@ -145,6 +147,7 @@ public class SCIMUserManagerTest {
     private static final String USER_SCHEMA_ADDRESS_HOME = "urn:ietf:params:scim:schemas:core:2.0:User:addresses.home";
     private static final String USER_SCHEMA_ADDRESS_WORK= "urn:ietf:params:scim:schemas:core:2.0:User:addresses.work";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
+    private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -1199,6 +1202,8 @@ public class SCIMUserManagerTest {
         Map<String, String> supportedByDefaultProperties = new HashMap<String, String>() {{
             put("SupportedByDefault", "true");
             put("ReadOnly", "true");
+            put(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD,
+                    ClaimConstants.SharedProfileValueResolvingMethod.FROM_ORIGIN.getName());
         }};
 
         List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
@@ -1223,6 +1228,19 @@ public class SCIMUserManagerTest {
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         List<Attribute> list = scimUserManager.getUserSchema();
         assertEquals(list.size(), 3);
+        // First item is emails claim.
+        assertEquals(list.get(0).getName(), "emails");
+        assertEquals(list.get(0).getAttributeProperties().get(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY),
+                ClaimConstants.SharedProfileValueResolvingMethod.FROM_ORIGIN.getName());
+        // Second item is name claim.
+        assertEquals(list.get(1).getName(), "name");
+        assertFalse(list.get(1).getAttributeProperties().containsKey(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY));
+        assertEquals(list.get(1).getSubAttribute("givenName").getAttributeProperties()
+                        .get(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY),
+                ClaimConstants.SharedProfileValueResolvingMethod.FROM_ORIGIN.getName());
+        // Third item is userName claim.
+        assertEquals(list.get(2).getName(), "userName");
+        assertFalse(list.get(2).getAttributeProperties().containsKey(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY));
     }
 
     @Test(dataProvider = "groupPermission")

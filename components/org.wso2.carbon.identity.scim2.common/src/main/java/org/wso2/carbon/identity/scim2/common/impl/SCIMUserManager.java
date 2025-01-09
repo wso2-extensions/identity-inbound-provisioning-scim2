@@ -179,6 +179,7 @@ public class SCIMUserManager implements UserManager {
     private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
     private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
     private static final String EXCLUDED_USER_STORES_PROPERTY = "excludedUserStores";
+    private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
     private static final String LOCATION_CLAIM = "http://wso2.org/claims/location";
     private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
     private static final String RESOURCE_TYPE_CLAIM = "http://wso2.org/claims/resourceType";
@@ -6030,6 +6031,10 @@ public class SCIMUserManager implements UserManager {
             if (mappedLocalClaim.getClaimProperty(ClaimConstants.EXCLUDED_USER_STORES_PROPERTY) != null) {
                 attribute.addAttributeProperty(EXCLUDED_USER_STORES_PROPERTY,
                         mappedLocalClaim.getClaimProperty(ClaimConstants.EXCLUDED_USER_STORES_PROPERTY));
+            }
+            if (mappedLocalClaim.getClaimProperty(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD) != null) {
+                attribute.addAttributeProperty(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY,
+                        mappedLocalClaim.getClaimProperty(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD));
             }
         }
     }
