@@ -49,6 +49,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
+import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
@@ -451,10 +452,16 @@ public class SCIMCommonUtils {
 
             // Get the extension claims, if there are any extensions enabled.
             if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
-                Map<String, String> extensionClaims = ClaimMetadataHandler.getInstance()
+                Map<String, String> enterpriseExtensionClaims = ClaimMetadataHandler.getInstance()
                         .getMappingsMapFromOtherDialectToCarbon(SCIMUserSchemaExtensionBuilder.getInstance()
                                 .getExtensionSchema().getURI(), null, tenantDomain, false);
-                scimToLocalClaimMap.putAll(extensionClaims);
+                scimToLocalClaimMap.putAll(enterpriseExtensionClaims);
+            }
+            if (SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+                Map<String, String> systemExtensionClaims = ClaimMetadataHandler.getInstance()
+                        .getMappingsMapFromOtherDialectToCarbon(SCIMSystemSchemaExtensionBuilder.getInstance()
+                                .getExtensionSchema().getURI(), null, tenantDomain, false);
+                scimToLocalClaimMap.putAll(systemExtensionClaims);
             }
 
             String userTenantDomain = getTenantDomain();
