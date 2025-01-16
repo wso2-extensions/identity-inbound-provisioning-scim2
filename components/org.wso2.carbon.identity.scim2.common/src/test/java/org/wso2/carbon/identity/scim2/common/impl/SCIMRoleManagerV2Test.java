@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.impl;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.testng.annotations.AfterMethod;
@@ -28,8 +29,10 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
+import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -44,13 +47,18 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
@@ -64,6 +72,9 @@ public class SCIMRoleManagerV2Test {
     private static final String SAMPLE_TENANT_DOMAIN = "carbon.super";
     private static final String SAMPLE_VALID_ROLE_ID = "595f5508-f286-446a-86c4-5071e07b98fc";
     private static final String SAMPLE_GROUP_NAME = "testGroup";
+    private static final String SAMPLE_PERMISSION_1_NAME = "permission1";
+    private static final String SAMPLE_PERMISSION_2_NAME = "permission2";
+    private static final String SAMPLE_PERMISSION_3_NAME = "permission3";
     private static final String SAMPLE_VALID_ROLE_NAME = "admin";
     private static final String ROLE_ID = "role_id";
     private static final String ROLE_ID_2 = "role_id_2";
@@ -138,6 +149,161 @@ public class SCIMRoleManagerV2Test {
             assertEquals(ResponseCodeConstants.INVALID_VALUE, e.getScimType());
             assertEquals("Group id is required to update group of the role.", e.getDetail());
         }
+    }
+
+    @Test
+    public void testPatchRoleWithAddPermissions()
+            throws IdentityRoleManagementException, ForbiddenException, ConflictException, NotFoundException,
+            CharonException {
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        List<PatchOperation> patchOperationList = new ArrayList<>();
+        PatchOperation patchOperation = getPatchOperation(SAMPLE_PERMISSION_1_NAME, SCIMConstants.OperationalConstants.ADD);
+        patchOperationList.add(patchOperation);
+        patchOperations.put(SCIMConstants.RoleSchemaConstants.PERMISSIONS, patchOperationList);
+
+        Role role = new Role();
+        role.setId(SAMPLE_VALID_ROLE_ID);
+        role.setName(SAMPLE_VALID_ROLE_NAME);
+
+        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
+             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+
+            when(roleManagementService.getPermissionListOfRole(any(), any()))
+                    .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_2_NAME)));
+            when(SCIMCommonUtils.getSCIMRoleV2URL(any()))
+                    .thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + SAMPLE_VALID_ROLE_ID);
+            when(RoleManagementUtils.isSharedRole(any(), any())).thenReturn(Boolean.FALSE);
+            scimRoleManagerV2.patchRole(SAMPLE_VALID_ROLE_ID, patchOperations);
+
+            // Capture the arguments passed to updatePermissionListOfRole.
+            ArgumentCaptor<List<Permission>> addedPermissionsCaptor = ArgumentCaptor.forClass(List.class);
+            ArgumentCaptor<List<Permission>> removedPermissionsCaptor = ArgumentCaptor.forClass(List.class);
+            verify(roleManagementService, atLeastOnce()).updatePermissionListOfRole(eq(SAMPLE_VALID_ROLE_ID),
+                    addedPermissionsCaptor.capture(), removedPermissionsCaptor.capture(), any());
+
+            List<Permission> addedPermissions = addedPermissionsCaptor.getValue();
+            assertEquals(addedPermissions.size(), 1);
+            assertTrue(addedPermissions.stream().anyMatch(permission ->
+                    SAMPLE_PERMISSION_1_NAME.equals(permission.getName())));
+
+            List<Permission> removedPermissions = removedPermissionsCaptor.getValue();
+            assertEquals(removedPermissions.size(), 0);
+
+        } catch (BadRequestException e) {
+            assertEquals(BAD_REQUEST, e.getStatus());
+            assertEquals(ResponseCodeConstants.INVALID_VALUE, e.getScimType());
+            assertEquals("Group id is required to update group of the role.", e.getDetail());
+        }
+    }
+
+    @Test
+    public void testPatchRoleWithAddRemovePermissions()
+            throws IdentityRoleManagementException, ForbiddenException, ConflictException, NotFoundException,
+            CharonException {
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        List<PatchOperation> patchOperationList = new ArrayList<>();
+        PatchOperation patchOperation = getPatchOperation(SAMPLE_PERMISSION_1_NAME, SCIMConstants.OperationalConstants.ADD);
+        PatchOperation patchOperation2 = getPatchOperation(SAMPLE_PERMISSION_2_NAME, SCIMConstants.OperationalConstants.REMOVE);
+        patchOperationList.add(patchOperation);
+        patchOperationList.add(patchOperation2);
+        patchOperations.put(SCIMConstants.RoleSchemaConstants.PERMISSIONS, patchOperationList);
+
+        Role role = new Role();
+        role.setId(SAMPLE_VALID_ROLE_ID);
+        role.setName(SAMPLE_VALID_ROLE_NAME);
+
+        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
+             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+
+            when(roleManagementService.getPermissionListOfRole(any(), any()))
+                    .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_2_NAME)));
+            when(SCIMCommonUtils.getSCIMRoleV2URL(any()))
+                    .thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + SAMPLE_VALID_ROLE_ID);
+            when(RoleManagementUtils.isSharedRole(any(), any())).thenReturn(Boolean.FALSE);
+            RoleV2 patchedRole = scimRoleManagerV2.patchRole(SAMPLE_VALID_ROLE_ID, patchOperations);
+
+            // Capture the arguments passed to updatePermissionListOfRole.
+            ArgumentCaptor<List<Permission>> addedPermissionsCaptor = ArgumentCaptor.forClass(List.class);
+            ArgumentCaptor<List<Permission>> removedPermissionsCaptor = ArgumentCaptor.forClass(List.class);
+            verify(roleManagementService, atLeastOnce()).updatePermissionListOfRole(eq(SAMPLE_VALID_ROLE_ID),
+                    addedPermissionsCaptor.capture(), removedPermissionsCaptor.capture(), any());
+
+            List<Permission> addedPermissions = addedPermissionsCaptor.getValue();
+            assertEquals(addedPermissions.size(), 1);
+            assertTrue(addedPermissions.stream().anyMatch(permission ->
+                    SAMPLE_PERMISSION_1_NAME.equals(permission.getName())));
+
+            List<Permission> removedPermissions = removedPermissionsCaptor.getValue();
+            assertEquals(removedPermissions.size(), 1);
+            assertTrue(removedPermissions.stream().anyMatch(permission ->
+                    SAMPLE_PERMISSION_2_NAME.equals(permission.getName())));
+
+        } catch (BadRequestException e) {
+            assertEquals(BAD_REQUEST, e.getStatus());
+            assertEquals(ResponseCodeConstants.INVALID_VALUE, e.getScimType());
+            assertEquals("Group id is required to update group of the role.", e.getDetail());
+        }
+    }
+
+    @Test
+    public void testPatchRoleWithReplacePermissions()
+            throws IdentityRoleManagementException, ForbiddenException, ConflictException, NotFoundException,
+            CharonException {
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        List<PatchOperation> patchOperationList = new ArrayList<>();
+        PatchOperation patchOperation = getPatchOperation(SAMPLE_PERMISSION_2_NAME, SCIMConstants.OperationalConstants.REPLACE);
+        patchOperationList.add(patchOperation);
+        patchOperations.put(SCIMConstants.RoleSchemaConstants.PERMISSIONS, patchOperationList);
+
+        Role role = new Role();
+        role.setId(SAMPLE_VALID_ROLE_ID);
+        role.setName(SAMPLE_VALID_ROLE_NAME);
+
+        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
+             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+
+            when(roleManagementService.getPermissionListOfRole(any(), any()))
+                    .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_1_NAME)));
+            when(SCIMCommonUtils.getSCIMRoleV2URL(any()))
+                    .thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + SAMPLE_VALID_ROLE_ID);
+            when(RoleManagementUtils.isSharedRole(any(), any())).thenReturn(Boolean.FALSE);
+            RoleV2 patchedRole = scimRoleManagerV2.patchRole(SAMPLE_VALID_ROLE_ID, patchOperations);
+
+            // Capture the arguments passed to updatePermissionListOfRole.
+            ArgumentCaptor<List<Permission>> addedPermissionsCaptor = ArgumentCaptor.forClass(List.class);
+            ArgumentCaptor<List<Permission>> removedPermissionsCaptor = ArgumentCaptor.forClass(List.class);
+            verify(roleManagementService, atLeastOnce()).updatePermissionListOfRole(eq(SAMPLE_VALID_ROLE_ID),
+                    addedPermissionsCaptor.capture(), removedPermissionsCaptor.capture(), any());
+
+            List<Permission> addedPermissions = addedPermissionsCaptor.getValue();
+            assertEquals(addedPermissions.size(), 1);
+            assertTrue(addedPermissions.stream().anyMatch(permission ->
+                    SAMPLE_PERMISSION_2_NAME.equals(permission.getName())));
+
+            List<Permission> removedPermissions = removedPermissionsCaptor.getValue();
+            assertEquals(removedPermissions.size(), 1);
+            assertTrue(removedPermissions.stream().anyMatch(permission ->
+                    SAMPLE_PERMISSION_1_NAME.equals(permission.getName())));
+
+        } catch (BadRequestException e) {
+            assertEquals(BAD_REQUEST, e.getStatus());
+            assertEquals(ResponseCodeConstants.INVALID_VALUE, e.getScimType());
+            assertEquals("Group id is required to update group of the role.", e.getDetail());
+        }
+    }
+
+    private static PatchOperation getPatchOperation(String permissionName, String operation) {
+
+        Map<String, String> valueMap = new HashMap<>();
+        valueMap.put(SCIMConstants.CommonSchemaConstants.VALUE, permissionName);
+        PatchOperation patchOperation = new PatchOperation();
+        patchOperation.setOperation(operation);
+        patchOperation.setAttributeName(SCIMConstants.RoleSchemaConstants.PERMISSIONS);
+        patchOperation.setValues(valueMap);
+        return patchOperation;
     }
 
     @Test
