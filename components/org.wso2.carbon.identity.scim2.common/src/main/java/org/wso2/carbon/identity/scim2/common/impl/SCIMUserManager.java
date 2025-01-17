@@ -5835,8 +5835,19 @@ public class SCIMUserManager implements UserManager {
 
     private boolean isSupportedByDefault(LocalClaim mappedLocalClaim) {
 
-        String supportedByDefault = mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
-        return Boolean.parseBoolean(supportedByDefault);
+        String globalSupportedByDefault =
+                mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
+
+        boolean profileSpecificSupportedByDefault = mappedLocalClaim.getClaimProperties().entrySet().stream()
+                .filter(entry -> StringUtils.startsWith(entry.getKey(), ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX))
+                .anyMatch(entry -> {
+                    String[] profilePropertyKeyArray = entry.getKey().split("\\.");
+                    return profilePropertyKeyArray.length == 3 &&
+                            StringUtils.endsWith(entry.getKey(), ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY) &&
+                            Boolean.parseBoolean(entry.getValue());
+                });
+
+        return Boolean.parseBoolean(globalSupportedByDefault) || profileSpecificSupportedByDefault;
     }
 
     private boolean isUsernameClaim(ExternalClaim scimClaim) {
@@ -6040,6 +6051,15 @@ public class SCIMUserManager implements UserManager {
             if (mappedLocalClaim.getClaimProperty(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD) != null) {
                 attribute.addAttributeProperty(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY,
                         mappedLocalClaim.getClaimProperty(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD));
+            }
+
+            // Add attribute profile properties.
+            for (Map.Entry<String, String> entry: mappedLocalClaim.getClaimProperties().entrySet()) {
+                String propertyKey = entry.getKey();
+                String propertyValue = entry.getValue();
+                if (StringUtils.startsWith(propertyKey, ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX)) {
+                    attribute.addAttributeProperty(propertyKey, propertyValue);
+                }
             }
         }
     }
