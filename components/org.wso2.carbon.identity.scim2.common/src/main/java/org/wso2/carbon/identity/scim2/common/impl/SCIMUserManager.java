@@ -28,6 +28,7 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpStatus;
+import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -180,6 +181,8 @@ public class SCIMUserManager implements UserManager {
     private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
     private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
     private static final String EXCLUDED_USER_STORES_PROPERTY = "excludedUserStores";
+    private static final String SUPPORTED_BY_DEFAULT_PROPERTY = "supportedByDefault";
+    private static final String ATTRIBUTE_PROFILES_PROPERTY = "profiles";
     private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
     private static final String LOCATION_CLAIM = "http://wso2.org/claims/location";
     private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
@@ -5924,8 +5927,19 @@ public class SCIMUserManager implements UserManager {
 
     private boolean isSupportedByDefault(LocalClaim mappedLocalClaim) {
 
-        String supportedByDefault = mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
-        return Boolean.parseBoolean(supportedByDefault);
+        String globalSupportedByDefault =
+                mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
+
+        boolean profileSpecificSupportedByDefault = mappedLocalClaim.getClaimProperties().entrySet().stream()
+                .filter(entry -> StringUtils.startsWith(entry.getKey(), ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX))
+                .anyMatch(entry -> {
+                    String[] profilePropertyKeyArray = entry.getKey().split("\\.");
+                    return profilePropertyKeyArray.length == 3 &&
+                            StringUtils.endsWith(entry.getKey(), ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY) &&
+                            Boolean.parseBoolean(entry.getValue());
+                });
+
+        return Boolean.parseBoolean(globalSupportedByDefault) || profileSpecificSupportedByDefault;
     }
 
     private boolean isUsernameClaim(ExternalClaim scimClaim) {
@@ -6144,7 +6158,58 @@ public class SCIMUserManager implements UserManager {
                 attribute.addAttributeProperty(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY,
                         mappedLocalClaim.getClaimProperty(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD));
             }
+
+            // Add attribute profile properties.
+            for (Map.Entry<String, String> entry: mappedLocalClaim.getClaimProperties().entrySet()) {
+                if (StringUtils.startsWith(entry.getKey(), ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX)) {
+                    addAttributeProfilesProperty(attribute, entry.getKey(), entry.getValue());
+                }
+            }
         }
+    }
+
+    /**
+     * Helper method to insert attribute profile-related properties as a JSON object to attribute.
+     *
+     * @param attribute     Attribute object.
+     * @param propertyKey   Key of the property.
+     * @param propertyValue Value of the property.
+     */
+    private void addAttributeProfilesProperty(AbstractAttribute attribute, String propertyKey, String propertyValue) {
+
+        // Example key format: "Profiles.{profileName}.{propertyName}" - Profiles.console.SupportedByDefault.
+        String[] propertyKeyParts = propertyKey.split("\\.");
+        if (propertyKeyParts.length != 3) {
+            return;
+        }
+        String profileName = propertyKeyParts[1];
+        String profileProperty = propertyKeyParts[2];
+
+        JSONObject profilesObject = new JSONObject();
+        if (!profilesObject.has(profileName)) {
+            profilesObject.put(profileName, new JSONObject());
+        }
+
+        JSONObject profileObject = profilesObject.getJSONObject(profileName);
+        switch(profileProperty) {
+            case ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY:
+                profileObject.put(SUPPORTED_BY_DEFAULT_PROPERTY, Boolean.parseBoolean(propertyValue));
+                break;
+            case ClaimConstants.REQUIRED_PROPERTY:
+                profileObject.put(SCIMConfigConstants.REQUIRED, Boolean.parseBoolean(propertyValue));
+                break;
+            case ClaimConstants.READ_ONLY_PROPERTY:
+                if (Boolean.parseBoolean(propertyValue)) {
+                    profileObject.put(SCIMConfigConstants.MUTABILITY, SCIMDefinitions.Mutability.READ_ONLY);
+                } else {
+                    profileObject.put(SCIMConfigConstants.MUTABILITY, SCIMDefinitions.Mutability.READ_WRITE);
+                }
+                break;
+            default:
+                break;
+        }
+
+        attribute.addAttributeJsonProperty(ATTRIBUTE_PROFILES_PROPERTY, profilesObject);
     }
 
     /**
