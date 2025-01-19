@@ -6185,7 +6185,10 @@ public class SCIMUserManager implements UserManager {
         String profileName = propertyKeyParts[1];
         String profileProperty = propertyKeyParts[2];
 
-        JSONObject profilesObject = new JSONObject();
+        JSONObject profilesObject = attribute.getAttributeJsonProperty(ATTRIBUTE_PROFILES_PROPERTY) != null
+                ? attribute.getAttributeJsonProperty(ATTRIBUTE_PROFILES_PROPERTY)
+                : new JSONObject();
+
         if (!profilesObject.has(profileName)) {
             profilesObject.put(profileName, new JSONObject());
         }
@@ -6199,11 +6202,9 @@ public class SCIMUserManager implements UserManager {
                 profileObject.put(SCIMConfigConstants.REQUIRED, Boolean.parseBoolean(propertyValue));
                 break;
             case ClaimConstants.READ_ONLY_PROPERTY:
-                if (Boolean.parseBoolean(propertyValue)) {
-                    profileObject.put(SCIMConfigConstants.MUTABILITY, SCIMDefinitions.Mutability.READ_ONLY);
-                } else {
-                    profileObject.put(SCIMConfigConstants.MUTABILITY, SCIMDefinitions.Mutability.READ_WRITE);
-                }
+                profileObject.put(SCIMConfigConstants.MUTABILITY, Boolean.parseBoolean(propertyValue)
+                        ? SCIMDefinitions.Mutability.READ_ONLY
+                        : SCIMDefinitions.Mutability.READ_WRITE);
                 break;
             default:
                 break;
