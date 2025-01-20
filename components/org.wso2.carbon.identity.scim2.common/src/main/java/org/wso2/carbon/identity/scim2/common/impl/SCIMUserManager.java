@@ -6082,8 +6082,8 @@ public class SCIMUserManager implements UserManager {
         String profileName = propertyKeyParts[1];
         String profileProperty = propertyKeyParts[2];
 
-        JSONObject profilesObject = attribute.getAttributeJsonProperty(ATTRIBUTE_PROFILES_PROPERTY) != null
-                ? attribute.getAttributeJsonProperty(ATTRIBUTE_PROFILES_PROPERTY)
+        JSONObject profilesObject = attribute.getAttributeJSONProperty(ATTRIBUTE_PROFILES_PROPERTY) != null
+                ? attribute.getAttributeJSONProperty(ATTRIBUTE_PROFILES_PROPERTY)
                 : new JSONObject();
 
         if (!profilesObject.has(profileName)) {
@@ -6107,7 +6107,7 @@ public class SCIMUserManager implements UserManager {
                 break;
         }
 
-        attribute.addAttributeJsonProperty(ATTRIBUTE_PROFILES_PROPERTY, profilesObject);
+        attribute.addAttributeJSONProperty(ATTRIBUTE_PROFILES_PROPERTY, profilesObject);
     }
 
     /**
