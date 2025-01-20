@@ -6158,6 +6158,10 @@ public class SCIMUserManager implements UserManager {
                 attribute.addAttributeProperty(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY,
                         mappedLocalClaim.getClaimProperty(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD));
             }
+            if (mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY) != null) {
+                attribute.addAttributeProperty(SUPPORTED_BY_DEFAULT_PROPERTY,
+                        mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY));
+            }
 
             // Add attribute profile properties.
             for (Map.Entry<String, String> entry: mappedLocalClaim.getClaimProperties().entrySet()) {
