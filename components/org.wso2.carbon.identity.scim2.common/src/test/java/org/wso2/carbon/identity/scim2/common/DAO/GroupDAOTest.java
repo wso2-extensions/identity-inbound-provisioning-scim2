@@ -22,7 +22,6 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -69,17 +68,8 @@ public class GroupDAOTest {
         scimCommonUtils.close();
     }
 
-    @DataProvider(name = "updateSCIMGroupAttributesDataProvider")
-    public Object[][] updateSCIMGroupAttributesDataProvider() {
-
-        return new Object[][]{
-                {true},
-                {false}
-        };
-    }
-
-    @Test(dataProvider = "updateSCIMGroupAttributesDataProvider")
-    public void testUpdateSCIMGroupAttributes(boolean isUpdatedColumnMethod) throws Exception {
+    @Test
+    public void testUpdateSCIMGroupAttributes() throws Exception {
 
         Map<String, String> attributes = new HashMap<>();
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.created", "2017-10-10T10:10:10Z");
@@ -102,19 +92,14 @@ public class GroupDAOTest {
         GroupDAO groupDAO = spy(new GroupDAO());
         doReturn(true).when(groupDAO).isExistingGroup(anyString(), anyInt());
 
-        if (isUpdatedColumnMethod) {
-            groupDAO.updateSCIMGroupAttributesWithUpdatedColumn(1, "GROUP_NAME", attributes);
-        } else {
-            groupDAO.updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
-        }
+        groupDAO.updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
         verify(mockedPreparedStatement, times(1)).executeBatch();
     }
 
-    @Test(dataProvider = "updateSCIMGroupAttributesDataProvider",
-            expectedExceptions = IdentitySCIMException.class,
+    @Test(expectedExceptions = IdentitySCIMException.class,
             expectedExceptionsMessageRegExp = "Error when updating SCIM Attributes for the group: GROUP_NAME " +
                     "A Group with the same name doesn't exists.")
-    public void testUpdateSCIMGroupAttributesWithNonExistingGroup(boolean isUpdatedColumnMethod) throws Exception {
+    public void testUpdateSCIMGroupAttributesWithNonExistingGroup() throws Exception {
 
         Map<String, String> attributes = new HashMap<>();
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.created", "2017-10-10T10:10:10Z");
@@ -125,20 +110,13 @@ public class GroupDAOTest {
 
         GroupDAO groupDAO = spy(new GroupDAO());
         doReturn(false).when(groupDAO).isExistingGroup(anyString(), anyInt());
-
-        if (isUpdatedColumnMethod) {
-            groupDAO.updateSCIMGroupAttributesWithUpdatedColumn(1, "GROUP_NAME", attributes);
-        } else {
-            groupDAO.updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
-        }
+        groupDAO.updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
     }
 
-    @Test(dataProvider = "updateSCIMGroupAttributesDataProvider",
-            expectedExceptions = IdentitySCIMException.class,
+    @Test(expectedExceptions = IdentitySCIMException.class,
             expectedExceptionsMessageRegExp = "Error when adding SCIM Attribute: nonExisting " +
                     "An attribute with the same name doesn't exists.")
-    public void testUpdateSCIMGroupAttributesWithNonExistingAttributes(boolean isUpdatedColumnMethod)
-            throws Exception {
+    public void testUpdateSCIMGroupAttributesWithNonExistingAttributes() throws Exception {
 
         Map<String, String> attributes = new HashMap<>();
         attributes.put("nonExisting", "test-value");
@@ -159,18 +137,12 @@ public class GroupDAOTest {
 
         GroupDAO groupDAO = spy(new GroupDAO());
         doReturn(true).when(groupDAO).isExistingGroup(anyString(), anyInt());
-
-        if (isUpdatedColumnMethod) {
-            groupDAO.updateSCIMGroupAttributesWithUpdatedColumn(1, "GROUP_NAME", attributes);
-        } else {
-            groupDAO.updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
-        }
+        groupDAO.updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
     }
 
-    @Test(dataProvider = "updateSCIMGroupAttributesDataProvider",
-            expectedExceptions = IdentitySCIMException.class,
+    @Test(expectedExceptions = IdentitySCIMException.class,
             expectedExceptionsMessageRegExp = "Error updating the SCIM Group Attributes.")
-    public void testUpdateSCIMGroupAttributesWithSQLException(boolean isUpdatedColumnMethod) throws Exception {
+    public void testUpdateSCIMGroupAttributesWithSQLException() throws Exception {
 
         Map<String, String> attributes = new HashMap<>();
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.created", "2017-10-10T10:10:10Z");
@@ -182,11 +154,6 @@ public class GroupDAOTest {
 
         GroupDAO groupDAO = spy(new GroupDAO());
         doReturn(true).when(groupDAO).isExistingGroup(anyString(), anyInt());
-
-        if (isUpdatedColumnMethod) {
-            groupDAO.updateSCIMGroupAttributesWithUpdatedColumn(1, "GROUP_NAME", attributes);
-        } else {
-            groupDAO.updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
-        }
+        groupDAO.updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
     }
 }

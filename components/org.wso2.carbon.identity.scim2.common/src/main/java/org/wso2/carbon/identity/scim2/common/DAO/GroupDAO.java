@@ -290,7 +290,6 @@ public class GroupDAO {
     }
 
     /**
-     * @deprecated Use {@link GroupDAO#updateSCIMGroupAttributesWithUpdatedColumn(int, String, Map)} instead.
      * Update SCIM group attributes.
      *
      * @param tenantId      Tenant id.
@@ -298,26 +297,10 @@ public class GroupDAO {
      * @param attributes    Attributes to be updated.
      * @throws IdentitySCIMException If an error occurred while updating the attributes.
      */
-    @Deprecated
     public void updateSCIMGroupAttributes(int tenantId, String roleName,
                                           Map<String, String> attributes) throws IdentitySCIMException {
 
         doUpdateSCIMGroupAttributes(tenantId, roleName, attributes, SQLQueries.UPDATE_ATTRIBUTES_SQL);
-    }
-
-    /**
-     * Update SCIM group attributes.
-     *
-     * @param tenantId      Tenant id.
-     * @param roleName      Group name.
-     * @param attributes    Attributes to be updated.
-     * @throws IdentitySCIMException If an error occurred while updating the attributes.
-     */
-    public void updateSCIMGroupAttributesWithUpdatedColumn(int tenantId, String roleName,
-                                                           Map<String, String> attributes)
-            throws IdentitySCIMException {
-
-        doUpdateSCIMGroupAttributes(tenantId, roleName, attributes, SQLQueries.UPDATE_ATTRIBUTES_SQL_NEW);
     }
 
     /**
