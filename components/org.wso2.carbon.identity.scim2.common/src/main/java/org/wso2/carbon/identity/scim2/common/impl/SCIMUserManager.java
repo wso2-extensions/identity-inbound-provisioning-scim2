@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -28,6 +28,7 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpStatus;
+import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -179,6 +180,9 @@ public class SCIMUserManager implements UserManager {
     private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
     private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
     private static final String EXCLUDED_USER_STORES_PROPERTY = "excludedUserStores";
+    private static final String SUPPORTED_BY_DEFAULT_PROPERTY = "supportedByDefault";
+    private static final String ATTRIBUTE_PROFILES_PROPERTY = "profiles";
+    private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
     private static final String LOCATION_CLAIM = "http://wso2.org/claims/location";
     private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
     private static final String RESOURCE_TYPE_CLAIM = "http://wso2.org/claims/resourceType";
@@ -1481,9 +1485,11 @@ public class SCIMUserManager implements UserManager {
             // Check that total user count matching the client query needs to be calculated.
             if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()
                     || SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
-                int maxLimit = getMaxLimit(domainName);
+                int maxLimit;
                 if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
                     maxLimit = Integer.MAX_VALUE;
+                } else {
+                    maxLimit = getMaxLimit(domainName);
                 }
                 // Get total users based on the filter query without depending on pagination params.
                 if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
@@ -1791,7 +1797,10 @@ public class SCIMUserManager implements UserManager {
         If there is a domain and if the domain separator is not found in the attribute value, append the domain
         with the domain separator in front of the new attribute value.
         */
-        attributeValue = UserCoreUtil.addDomainToName(((ExpressionNode) node).getValue(), domainName);
+        if (StringUtils.isNotEmpty(domainName) && StringUtils
+                .containsNone(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
+            attributeValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR + attributeValue;
+        }
 
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
@@ -5872,8 +5881,19 @@ public class SCIMUserManager implements UserManager {
 
     private boolean isSupportedByDefault(LocalClaim mappedLocalClaim) {
 
-        String supportedByDefault = mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
-        return Boolean.parseBoolean(supportedByDefault);
+        String globalSupportedByDefault =
+                mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
+
+        boolean profileSpecificSupportedByDefault = mappedLocalClaim.getClaimProperties().entrySet().stream()
+                .filter(entry -> StringUtils.startsWith(entry.getKey(), ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX))
+                .anyMatch(entry -> {
+                    String[] profilePropertyKeyArray = entry.getKey().split("\\.");
+                    return profilePropertyKeyArray.length == 3 &&
+                            StringUtils.endsWith(entry.getKey(), ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY) &&
+                            Boolean.parseBoolean(entry.getValue());
+                });
+
+        return Boolean.parseBoolean(globalSupportedByDefault) || profileSpecificSupportedByDefault;
     }
 
     private boolean isUsernameClaim(ExternalClaim scimClaim) {
@@ -6074,7 +6094,67 @@ public class SCIMUserManager implements UserManager {
                 attribute.addAttributeProperty(EXCLUDED_USER_STORES_PROPERTY,
                         mappedLocalClaim.getClaimProperty(ClaimConstants.EXCLUDED_USER_STORES_PROPERTY));
             }
+            if (mappedLocalClaim.getClaimProperty(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD) != null) {
+                attribute.addAttributeProperty(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY,
+                        mappedLocalClaim.getClaimProperty(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD));
+            }
+            if (mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY) != null) {
+                attribute.addAttributeProperty(SUPPORTED_BY_DEFAULT_PROPERTY,
+                        mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY));
+            }
+
+            // Add attribute profile properties.
+            for (Map.Entry<String, String> entry: mappedLocalClaim.getClaimProperties().entrySet()) {
+                if (StringUtils.startsWith(entry.getKey(), ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX)) {
+                    addAttributeProfilesProperty(attribute, entry.getKey(), entry.getValue());
+                }
+            }
         }
+    }
+
+    /**
+     * Helper method to insert attribute profile-related properties as a JSON object to attribute.
+     *
+     * @param attribute     Attribute object.
+     * @param propertyKey   Key of the property.
+     * @param propertyValue Value of the property.
+     */
+    private void addAttributeProfilesProperty(AbstractAttribute attribute, String propertyKey, String propertyValue) {
+
+        // Example key format: "Profiles.{profileName}.{propertyName}" - Profiles.console.SupportedByDefault.
+        String[] propertyKeyParts = propertyKey.split("\\.");
+        if (propertyKeyParts.length != 3) {
+            return;
+        }
+        String profileName = propertyKeyParts[1];
+        String profileProperty = propertyKeyParts[2];
+
+        JSONObject profilesObject = attribute.getAttributeJSONProperty(ATTRIBUTE_PROFILES_PROPERTY) != null
+                ? attribute.getAttributeJSONProperty(ATTRIBUTE_PROFILES_PROPERTY)
+                : new JSONObject();
+
+        if (!profilesObject.has(profileName)) {
+            profilesObject.put(profileName, new JSONObject());
+        }
+
+        JSONObject profileObject = profilesObject.getJSONObject(profileName);
+        switch(profileProperty) {
+            case ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY:
+                profileObject.put(SUPPORTED_BY_DEFAULT_PROPERTY, Boolean.parseBoolean(propertyValue));
+                break;
+            case ClaimConstants.REQUIRED_PROPERTY:
+                profileObject.put(SCIMConfigConstants.REQUIRED, Boolean.parseBoolean(propertyValue));
+                break;
+            case ClaimConstants.READ_ONLY_PROPERTY:
+                profileObject.put(SCIMConfigConstants.MUTABILITY, Boolean.parseBoolean(propertyValue)
+                        ? SCIMDefinitions.Mutability.READ_ONLY
+                        : SCIMDefinitions.Mutability.READ_WRITE);
+                break;
+            default:
+                break;
+        }
+
+        attribute.addAttributeJSONProperty(ATTRIBUTE_PROFILES_PROPERTY, profilesObject);
     }
 
     /**
