@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.lang.StringUtils;
+import org.json.JSONObject;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
@@ -31,6 +32,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -50,6 +52,7 @@ import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
 import org.wso2.carbon.user.core.model.UniqueIDUserClaimSearchEntry;
+import org.wso2.charon3.core.config.SCIMConfigConstants;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
@@ -94,6 +97,7 @@ import org.wso2.charon3.core.utils.ResourceManagerUtil;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.FilterTreeManager;
 import org.wso2.charon3.core.utils.codeutils.Node;
+import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 
@@ -123,6 +127,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
@@ -154,6 +160,8 @@ public class SCIMUserManagerTest {
     private static final String USER_SCHEMA_ADDRESS_WORK= "urn:ietf:params:scim:schemas:core:2.0:User:addresses.work";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
     private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
+    private static final String ATTRIBUTE_PROFILES_PROPERTY = "profiles";
+    private static final String SUPPORTED_BY_DEFAULT_PROPERTY = "supportedByDefault";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -1298,6 +1306,89 @@ public class SCIMUserManagerTest {
         assertFalse(list.get(2).getAttributeProperties().containsKey(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY));
     }
 
+    @Test
+    public void testGetUserSchemaWithAttributeProfiles() throws Exception {
+
+        String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
+
+        String consoleProfile = "console";
+        String endUserProfile = "endUser";
+
+        Map<String, String> claimProperties1 = new HashMap<String, String>() {{
+            put("SupportedByDefault", "true");
+            put("ReadOnly", "true");
+            put("Required", "false");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY), "false");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.REQUIRED_PROPERTY), "false");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.REQUIRED_PROPERTY), "true");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.READ_ONLY_PROPERTY), "false");
+        }};
+
+        Map<String, String> claimProperties2 = new HashMap<String, String>() {{
+            put("SupportedByDefault", "false");
+            put("ReadOnly", "false");
+            put("Required", "false");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY), "true");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.READ_ONLY_PROPERTY), "true");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.REQUIRED_PROPERTY), "true");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.DISPLAY_NAME_PROPERTY), "invalid");
+        }};
+
+        List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim(EMAIL_ADDRESS_LOCAL_CLAIM, null, claimProperties1));
+            add(new LocalClaim(GIVEN_NAME_LOCAL_CLAIM, null, claimProperties2));
+        }};
+
+        List<ExternalClaim> externalClaimList = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":emails", EMAIL_ADDRESS_LOCAL_CLAIM));
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":name.givenName", GIVEN_NAME_LOCAL_CLAIM));
+        }};
+
+        when(mockClaimMetadataManagementService.getExternalClaims(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimList);
+        when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(localClaimList);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        List<Attribute> userAttributes = scimUserManager.getUserSchema();
+        
+        assertEquals(userAttributes.size(), 2);
+
+        // Emails - Simple attribute.
+        assertEquals(userAttributes.get(0).getName(), "emails");
+        assertTrue(userAttributes.get(0).getAttributeJSONProperties().containsKey(ATTRIBUTE_PROFILES_PROPERTY));
+
+        JSONObject profiles1 = userAttributes.get(0).getAttributeJSONProperties().get(ATTRIBUTE_PROFILES_PROPERTY);
+        assertTrue(profiles1.has(consoleProfile));
+        assertTrue(profiles1.has(endUserProfile));
+        assertTrue(((JSONObject) profiles1.get(consoleProfile)).has(SUPPORTED_BY_DEFAULT_PROPERTY));
+        assertTrue(((JSONObject) profiles1.get(consoleProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertTrue(((JSONObject) profiles1.get(endUserProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertTrue(((JSONObject) profiles1.get(endUserProfile)).has(SCIMConfigConstants.MUTABILITY));
+
+        // Given name - Complex attribute.
+        assertEquals(userAttributes.get(1).getName(), "name");
+        assertFalse(userAttributes.get(1).getAttributeProperties().containsKey(ATTRIBUTE_PROFILES_PROPERTY));
+        assertTrue(userAttributes.get(1).getSubAttribute("givenName").getAttributeJSONProperties()
+                .containsKey(ATTRIBUTE_PROFILES_PROPERTY));
+
+        JSONObject profiles2 = userAttributes.get(1).getSubAttribute("givenName").getAttributeJSONProperties()
+                .get(ATTRIBUTE_PROFILES_PROPERTY);
+        assertTrue(profiles2.has(consoleProfile));
+        assertTrue(profiles2.has(endUserProfile));
+        assertTrue(((JSONObject) profiles2.get(consoleProfile)).has(SUPPORTED_BY_DEFAULT_PROPERTY));
+        assertTrue(((JSONObject) profiles2.get(consoleProfile)).has(SCIMConfigConstants.MUTABILITY));
+        assertTrue(((JSONObject) profiles2.get(endUserProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertTrue(((JSONObject) profiles2.get(endUserProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertFalse(((JSONObject) profiles2.get(endUserProfile)).has(ClaimConstants.DISPLAY_NAME_PROPERTY));
+    }
+
+    private String buildAttributeProfileProperty(String profileName, String property) {
+
+        return ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX + profileName + "." + property;
+    }
+
     @Test(dataProvider = "groupPermission")
     public void testGetGroupPermissions(String roleName, String[] permission, Object expected) throws Exception {
 
@@ -1765,6 +1856,217 @@ public class SCIMUserManagerTest {
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         scimUserManager.createUser(user, null);
         // This method is for testing of throwing BadRequestException, hence no assertion.
+    }
+
+    @DataProvider(name = "patchGroupDataProvider")
+    public Object[][] patchGroupDataProvider() {
+
+        String currentGroupName = "CurrentGroupName";
+        String updatedGroupName = "UpdatedGroupName";
+        String userName = "user1";
+        String userId = "1234";
+
+        Map<String, List<PatchOperation>> patchOperations1 = new HashMap<>();
+        Map<String, List<PatchOperation>> patchOperations2 = new HashMap<>();
+        Map<String, List<PatchOperation>> patchOperations3 = new HashMap<>();
+        Map<String, List<PatchOperation>> patchOperations4 = new HashMap<>();
+
+        PatchOperation patchOperation1 = new PatchOperation();
+        patchOperation1.setOperation("add");
+        patchOperation1.setValues(updatedGroupName);
+        patchOperation1.setAttributeName("displayName");
+        patchOperation1.setExecutionOrder(1);
+        patchOperations1.put("add", new ArrayList<PatchOperation>() {{
+            add(patchOperation1);
+        }});
+        patchOperations3.put("add", new ArrayList<PatchOperation>() {{
+            add(patchOperation1);
+        }});
+
+        // Update with the same display name.
+        PatchOperation patchOperation2 = new PatchOperation();
+        patchOperation2.setOperation("add");
+        patchOperation2.setValues(currentGroupName);
+        patchOperation2.setAttributeName("displayName");
+        patchOperation2.setExecutionOrder(1);
+        patchOperations2.put("add", new ArrayList<PatchOperation>() {{
+            add(patchOperation2);
+        }});
+
+        PatchOperation patchOperation3 = new PatchOperation();
+        patchOperation3.setOperation("remove");
+        HashMap<String, String> groupUsers = new HashMap<>();
+        groupUsers.put("display", userName);
+        groupUsers.put("value", userId);
+        patchOperation3.setValues(groupUsers);
+        patchOperation3.setAttributeName("members");
+        patchOperation3.setExecutionOrder(2);
+        patchOperation3.setPath("members[display eq \"" + userName + "\"]");
+        patchOperations1.put("remove", new ArrayList<PatchOperation>() {{
+            add(patchOperation3);
+        }});
+        patchOperations2.put("remove", new ArrayList<PatchOperation>() {{
+            add(patchOperation3);
+        }});
+        patchOperations4.put("remove", new ArrayList<PatchOperation>() {{
+            add(patchOperation3);
+        }});
+
+        return new Object[][]{
+                {true, currentGroupName, updatedGroupName, patchOperations1},
+                {false, currentGroupName, updatedGroupName, patchOperations1},
+                {false, currentGroupName, currentGroupName, patchOperations2},
+                {false, currentGroupName, updatedGroupName, patchOperations3},
+                {false, currentGroupName, currentGroupName, patchOperations4},
+                {true, currentGroupName, currentGroupName, new HashMap<>()},
+                {false, currentGroupName, currentGroupName, new HashMap<>()},
+        };
+    }
+
+    @Test(dataProvider = "patchGroupDataProvider")
+    public void testPatchGroup(boolean isUniqueGroupIdEnabled, String currentGroupName, String updatedGroupName,
+                               Map<String, List<PatchOperation>> patchOperations)
+            throws NotImplementedException, BadRequestException, NotFoundException, CharonException,
+            IdentityApplicationManagementException, UserStoreException {
+
+        String currentGroupNameWithDomain = "PRIMARY/" + currentGroupName;
+        String updatedGroupNameWithDomain = "PRIMARY/" + updatedGroupName;
+
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
+                .thenReturn(currentGroupNameWithDomain);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(updatedGroupName))
+                .thenReturn(updatedGroupNameWithDomain);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
+
+        InboundProvisioningConfig inboundProvisioningConfig = new InboundProvisioningConfig();
+        inboundProvisioningConfig.setProvisioningUserStore("PRIMARY");
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setInboundProvisioningConfig(inboundProvisioningConfig);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(serviceProvider);
+
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+        when(mockedUserStoreManager.isUniqueGroupIdEnabled()).thenReturn(isUniqueGroupIdEnabled);
+        when(secondaryUserStoreManager.getUserIDFromProperties(USERNAME_LOCAL_CLAIM, "user1", "default"))
+                .thenReturn("1234");
+
+        try (MockedConstruction<SCIMGroupHandler> mockedGroupHandler = mockConstruction(SCIMGroupHandler.class)) {
+            SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                    mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            scimUserManager.patchGroup("123456", currentGroupName, patchOperations);
+
+            // Assert if mocks are called as expected.
+            if (currentGroupName.equals(updatedGroupName) || !patchOperations.containsKey("add")) {
+                verify(mockedUserStoreManager, times(0)).renameGroup("123456", updatedGroupNameWithDomain);
+            } else {
+                verify(mockedUserStoreManager, times(1)).renameGroup("123456", updatedGroupNameWithDomain);
+            }
+            if (patchOperations.containsKey("remove")) {
+                verify(mockedUserStoreManager, times(1)).updateUserListOfRoleWithID(anyString(), any(), any());
+            }
+            verify(mockedUserStoreManager, times(1)).updateGroupName(currentGroupName, updatedGroupName);
+
+            if (isUniqueGroupIdEnabled || patchOperations.isEmpty()) {
+                assertEquals(mockedGroupHandler.constructed().size(), 0);
+            } else {
+                assertEquals(mockedGroupHandler.constructed().size(), 1);
+            }
+        }
+    }
+
+    @DataProvider(name = "updateGroupDataProvider")
+    public Object[][] updateGroupDataProvider() throws BadRequestException, CharonException {
+
+        String currentGroupName = "CurrentGroupName";
+        String updatedGroupName = "UpdatedGroupName";
+
+        Group oldGroup = new Group();
+        oldGroup.setDisplayName(currentGroupName);
+        oldGroup.setId("123456");
+        oldGroup.setMember("1234", "user1", "https://wso2/scim2/Users/1234", "default");
+
+        Group newGroup1 = new Group();
+        newGroup1.setDisplayName(updatedGroupName);
+        newGroup1.setId("123456");
+        newGroup1.setMember("1234", "user1", "https://wso2/scim2/Users/1234", "default");
+
+        Group newGroup2 = new Group();
+        newGroup2.setDisplayName(currentGroupName);
+        newGroup2.setId("123456");
+        newGroup2.setMember("5678", "user2", "https://wso2/scim2/Users/5678", "default");
+
+        Group newGroup3 = new Group();
+        newGroup3.setDisplayName(updatedGroupName);
+        newGroup3.setId("123456");
+        newGroup3.setMember("5678", "user2", "https://wso2/scim2/Users/5678", "default");
+
+        Group newGroup4 = new Group();
+        newGroup4.setDisplayName(currentGroupName);
+        newGroup4.setId("123456");
+        newGroup4.setMember("1234", "user1", "https://wso2/scim2/Users/1234", "default");
+
+        return new Object[][]{
+                {true, oldGroup, newGroup1},
+                {false, oldGroup, newGroup1},
+                {false, oldGroup, newGroup2},
+                {false, oldGroup, newGroup3},
+                {true, oldGroup, newGroup4},
+                {false, oldGroup, newGroup4},
+        };
+    }
+
+    @Test(dataProvider = "updateGroupDataProvider")
+    public void testUpdateGroup(boolean isUniqueGroupIdEnabled, Group oldGroup, Group newGroup)
+            throws CharonException, BadRequestException, IdentityApplicationManagementException, UserStoreException {
+
+        String currentGroupName = oldGroup.getDisplayName();
+        String updatedGroupName = newGroup.getDisplayName();
+        String currentGroupNameWithDomain = "PRIMARY/" + currentGroupName;
+        String updatedGroupNameWithDomain = "PRIMARY/" + updatedGroupName;
+
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
+                .thenReturn(currentGroupNameWithDomain);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(updatedGroupName))
+                .thenReturn(updatedGroupNameWithDomain);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
+        when(IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
+
+        InboundProvisioningConfig inboundProvisioningConfig = new InboundProvisioningConfig();
+        inboundProvisioningConfig.setProvisioningUserStore("PRIMARY");
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setInboundProvisioningConfig(inboundProvisioningConfig);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(serviceProvider);
+
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(secondaryUserStoreManager);
+        when(mockedUserStoreManager.isUniqueGroupIdEnabled()).thenReturn(isUniqueGroupIdEnabled);
+        when(secondaryUserStoreManager.getUserIDFromProperties(USERNAME_LOCAL_CLAIM, "user1", "default"))
+                .thenReturn("1234");
+        when(secondaryUserStoreManager.getUserIDFromProperties(USERNAME_LOCAL_CLAIM, "user2", "default"))
+                .thenReturn("5678");
+
+        try (MockedConstruction<SCIMGroupHandler> mockedGroupHandler = mockConstruction(SCIMGroupHandler.class)) {
+            SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                    mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            scimUserManager.updateGroup(oldGroup, newGroup);
+
+            // Assert if mocks are called as expected.
+            if (currentGroupName.equals(updatedGroupName)) {
+                verify(mockedUserStoreManager, times(0)).renameGroup(
+                        "123456", updatedGroupNameWithDomain);
+            } else {
+                verify(mockedUserStoreManager, times(1)).renameGroup(
+                        "123456", updatedGroupNameWithDomain);
+            }
+
+            if (isUniqueGroupIdEnabled || oldGroup.equals(newGroup)) {
+                assertEquals(mockedGroupHandler.constructed().size(), 0);
+            } else {
+                assertEquals(mockedGroupHandler.constructed().size(), 1);
+            }
+        }
     }
 
     /**

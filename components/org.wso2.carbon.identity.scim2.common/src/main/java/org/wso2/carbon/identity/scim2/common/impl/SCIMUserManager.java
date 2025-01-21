@@ -28,6 +28,7 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpStatus;
+import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -180,6 +181,8 @@ public class SCIMUserManager implements UserManager {
     private static final String DISPLAY_ORDER_PROPERTY = "displayOrder";
     private static final String REGULAR_EXPRESSION_PROPERTY = "regEx";
     private static final String EXCLUDED_USER_STORES_PROPERTY = "excludedUserStores";
+    private static final String SUPPORTED_BY_DEFAULT_PROPERTY = "supportedByDefault";
+    private static final String ATTRIBUTE_PROFILES_PROPERTY = "profiles";
     private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
     private static final String LOCATION_CLAIM = "http://wso2.org/claims/location";
     private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
@@ -3524,6 +3527,9 @@ public class SCIMUserManager implements UserManager {
             List<PatchOperation> displayNameOperations = new ArrayList<>();
             List<PatchOperation> memberOperations = new ArrayList<>();
             String newGroupName = currentGroupName;
+            Date groupLastUpdatedTime = null;
+            String groupNameForIDNScim = SCIMCommonUtils.getGroupNameWithDomain(currentGroupName);
+
             for (List<PatchOperation> patchOperationList : patchOperations.values()) {
                 for (PatchOperation patchOperation : patchOperationList) {
                     if (StringUtils.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
@@ -3540,7 +3546,14 @@ public class SCIMUserManager implements UserManager {
 
             if (CollectionUtils.isNotEmpty(displayNameOperations)) {
                 newGroupName = (String) displayNameOperations.get(0).getValues();
-                setGroupDisplayName(groupId, currentGroupName, newGroupName);
+                String[] resolvedGroupNames = resolveGroupDomains(currentGroupName, newGroupName);
+                boolean groupUpdated = setGroupDisplayName(groupId, resolvedGroupNames[0], resolvedGroupNames[1]);
+                if (groupUpdated) {
+                    groupLastUpdatedTime = new Date();
+                    groupNameForIDNScim = resolvedGroupNames[1];
+                } else {
+                    groupNameForIDNScim = resolvedGroupNames[0];
+                }
             }
 
             Collections.sort(memberOperations);
@@ -3626,10 +3639,20 @@ public class SCIMUserManager implements UserManager {
                 carbonUM.updateUserListOfRoleWithID(newGroupName,
                         deletedMemberIdsFromUserstore.toArray(new String[0]),
                         addedMemberIdsFromUserstore.toArray(new String[0]));
+                groupLastUpdatedTime = new Date();
             }
 
             // Update the group name in UM_HYBRID_GROUP_ROLE table.
             carbonUM.updateGroupName(currentGroupName, newGroupName);
+
+            // Update the last modified time of the group.
+            if (!carbonUM.isUniqueGroupIdEnabled() && groupLastUpdatedTime != null) {
+                Map<String, String> attributes = new HashMap<>();
+                attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
+                        AttributeUtil.formatDateTime(groupLastUpdatedTime.toInstant()));
+                SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+                groupHandler.updateSCIMAttributes(groupNameForIDNScim, attributes);
+            }
         } catch (UserStoreException e) {
             if (e instanceof org.wso2.carbon.user.core.UserStoreException && (StringUtils
                     .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_WRITING_TO_DATABASE
@@ -3697,12 +3720,10 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private void setGroupDisplayName(String groupId, String oldGroupName, String newGroupName)
-            throws IdentityApplicationManagementException, CharonException, BadRequestException, IdentitySCIMException,
-            UserStoreException {
+    private String[] resolveGroupDomains(String oldGroupName, String newGroupName)
+            throws IdentityApplicationManagementException, CharonException, IdentitySCIMException {
 
         String userStoreDomainFromSP = getUserStoreDomainFromSP();
-
         String oldGroupDomain = IdentityUtil.extractDomainFromName(oldGroupName);
         if (userStoreDomainFromSP != null && !userStoreDomainFromSP.equalsIgnoreCase(oldGroupDomain)) {
             throw new CharonException("Group :" + oldGroupName + "is not belong to user store " +
@@ -3728,10 +3749,19 @@ public class SCIMUserManager implements UserManager {
         oldGroupName = SCIMCommonUtils.getGroupNameWithDomain(oldGroupName);
         newGroupName = SCIMCommonUtils.getGroupNameWithDomain(newGroupName);
 
+        return new String[] { oldGroupName, newGroupName };
+    }
+
+    private boolean setGroupDisplayName(String groupId, String oldGroupName, String newGroupName)
+            throws IdentityApplicationManagementException, IdentitySCIMException, UserStoreException {
+
         if (!StringUtils.equals(oldGroupName, newGroupName)) {
             // Update group name in carbon UM.
             carbonUM.renameGroup(groupId, newGroupName);
+            return true;
         }
+
+        return false;
     }
 
     @Override
@@ -3778,6 +3808,9 @@ public class SCIMUserManager implements UserManager {
 
     public boolean doUpdateGroup(Group oldGroup, Group newGroup) throws CharonException, IdentitySCIMException,
             BadRequestException, IdentityApplicationManagementException, org.wso2.carbon.user.core.UserStoreException {
+
+        Date groupLastUpdatedTime = null;
+        String groupNameForIDNScim = SCIMCommonUtils.getGroupNameWithDomain(oldGroup.getDisplayName());
 
         setGroupDisplayName(oldGroup, newGroup);
         if (log.isDebugEnabled()) {
@@ -3827,6 +3860,8 @@ public class SCIMUserManager implements UserManager {
             // Update group name in carbon UM
             carbonUM.renameGroup(oldGroup.getId(), newGroupDisplayName);
             updated = true;
+            groupLastUpdatedTime = new Date();
+            groupNameForIDNScim = SCIMCommonUtils.getGroupNameWithDomain(newGroupDisplayName);
         }
         // Update the group with added members and deleted members.
         if (isNotEmpty(addedMembers) || isNotEmpty(deletedMembers)) {
@@ -3834,7 +3869,18 @@ public class SCIMUserManager implements UserManager {
                     deletedMemberIdsFromUserstore.toArray(new String[0]),
                     addedMemberIdsFromUserstore.toArray(new String[0]));
             updated = true;
+            groupLastUpdatedTime = new Date();
         }
+
+        // Update the last modified time of the group.
+        if (!carbonUM.isUniqueGroupIdEnabled() && groupLastUpdatedTime != null) {
+            Map<String, String> attributes = new HashMap<>();
+            attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
+                    AttributeUtil.formatDateTime(groupLastUpdatedTime.toInstant()));
+            SCIMGroupHandler groupHandler = new SCIMGroupHandler(carbonUM.getTenantId());
+            groupHandler.updateSCIMAttributes(groupNameForIDNScim, attributes);
+        }
+
         return updated;
     }
 
@@ -5881,8 +5927,19 @@ public class SCIMUserManager implements UserManager {
 
     private boolean isSupportedByDefault(LocalClaim mappedLocalClaim) {
 
-        String supportedByDefault = mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
-        return Boolean.parseBoolean(supportedByDefault);
+        String globalSupportedByDefault =
+                mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY);
+
+        boolean profileSpecificSupportedByDefault = mappedLocalClaim.getClaimProperties().entrySet().stream()
+                .filter(entry -> StringUtils.startsWith(entry.getKey(), ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX))
+                .anyMatch(entry -> {
+                    String[] profilePropertyKeyArray = entry.getKey().split("\\.");
+                    return profilePropertyKeyArray.length == 3 &&
+                            StringUtils.endsWith(entry.getKey(), ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY) &&
+                            Boolean.parseBoolean(entry.getValue());
+                });
+
+        return Boolean.parseBoolean(globalSupportedByDefault) || profileSpecificSupportedByDefault;
     }
 
     private boolean isUsernameClaim(ExternalClaim scimClaim) {
@@ -6101,7 +6158,63 @@ public class SCIMUserManager implements UserManager {
                 attribute.addAttributeProperty(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY,
                         mappedLocalClaim.getClaimProperty(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD));
             }
+            if (mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY) != null) {
+                attribute.addAttributeProperty(SUPPORTED_BY_DEFAULT_PROPERTY,
+                        mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY));
+            }
+
+            // Add attribute profile properties.
+            for (Map.Entry<String, String> entry: mappedLocalClaim.getClaimProperties().entrySet()) {
+                if (StringUtils.startsWith(entry.getKey(), ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX)) {
+                    addAttributeProfilesProperty(attribute, entry.getKey(), entry.getValue());
+                }
+            }
         }
+    }
+
+    /**
+     * Helper method to insert attribute profile-related properties as a JSON object to attribute.
+     *
+     * @param attribute     Attribute object.
+     * @param propertyKey   Key of the property.
+     * @param propertyValue Value of the property.
+     */
+    private void addAttributeProfilesProperty(AbstractAttribute attribute, String propertyKey, String propertyValue) {
+
+        // Example key format: "Profiles.{profileName}.{propertyName}" - Profiles.console.SupportedByDefault.
+        String[] propertyKeyParts = propertyKey.split("\\.");
+        if (propertyKeyParts.length != 3) {
+            return;
+        }
+        String profileName = propertyKeyParts[1];
+        String profileProperty = propertyKeyParts[2];
+
+        JSONObject profilesObject = attribute.getAttributeJSONProperty(ATTRIBUTE_PROFILES_PROPERTY) != null
+                ? attribute.getAttributeJSONProperty(ATTRIBUTE_PROFILES_PROPERTY)
+                : new JSONObject();
+
+        if (!profilesObject.has(profileName)) {
+            profilesObject.put(profileName, new JSONObject());
+        }
+
+        JSONObject profileObject = profilesObject.getJSONObject(profileName);
+        switch(profileProperty) {
+            case ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY:
+                profileObject.put(SUPPORTED_BY_DEFAULT_PROPERTY, Boolean.parseBoolean(propertyValue));
+                break;
+            case ClaimConstants.REQUIRED_PROPERTY:
+                profileObject.put(SCIMConfigConstants.REQUIRED, Boolean.parseBoolean(propertyValue));
+                break;
+            case ClaimConstants.READ_ONLY_PROPERTY:
+                profileObject.put(SCIMConfigConstants.MUTABILITY, Boolean.parseBoolean(propertyValue)
+                        ? SCIMDefinitions.Mutability.READ_ONLY
+                        : SCIMDefinitions.Mutability.READ_WRITE);
+                break;
+            default:
+                break;
+        }
+
+        attribute.addAttributeJSONProperty(ATTRIBUTE_PROFILES_PROPERTY, profilesObject);
     }
 
     /**
