@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.lang.StringUtils;
+import org.json.JSONObject;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
@@ -50,6 +51,7 @@ import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
 import org.wso2.carbon.user.core.model.UniqueIDUserClaimSearchEntry;
+import org.wso2.charon3.core.config.SCIMConfigConstants;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -150,6 +152,8 @@ public class SCIMUserManagerTest {
     private static final String USER_SCHEMA_ADDRESS_WORK= "urn:ietf:params:scim:schemas:core:2.0:User:addresses.work";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
     private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
+    private static final String ATTRIBUTE_PROFILES_PROPERTY = "profiles";
+    private static final String SUPPORTED_BY_DEFAULT_PROPERTY = "supportedByDefault";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -1284,6 +1288,89 @@ public class SCIMUserManagerTest {
         // Third item is userName claim.
         assertEquals(list.get(2).getName(), "userName");
         assertFalse(list.get(2).getAttributeProperties().containsKey(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY));
+    }
+
+    @Test
+    public void testGetUserSchemaWithAttributeProfiles() throws Exception {
+
+        String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
+
+        String consoleProfile = "console";
+        String endUserProfile = "endUser";
+
+        Map<String, String> claimProperties1 = new HashMap<String, String>() {{
+            put("SupportedByDefault", "true");
+            put("ReadOnly", "true");
+            put("Required", "false");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY), "false");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.REQUIRED_PROPERTY), "false");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.REQUIRED_PROPERTY), "true");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.READ_ONLY_PROPERTY), "false");
+        }};
+
+        Map<String, String> claimProperties2 = new HashMap<String, String>() {{
+            put("SupportedByDefault", "false");
+            put("ReadOnly", "false");
+            put("Required", "false");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY), "true");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.READ_ONLY_PROPERTY), "true");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.REQUIRED_PROPERTY), "true");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.DISPLAY_NAME_PROPERTY), "invalid");
+        }};
+
+        List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim(EMAIL_ADDRESS_LOCAL_CLAIM, null, claimProperties1));
+            add(new LocalClaim(GIVEN_NAME_LOCAL_CLAIM, null, claimProperties2));
+        }};
+
+        List<ExternalClaim> externalClaimList = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":emails", EMAIL_ADDRESS_LOCAL_CLAIM));
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":name.givenName", GIVEN_NAME_LOCAL_CLAIM));
+        }};
+
+        when(mockClaimMetadataManagementService.getExternalClaims(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimList);
+        when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(localClaimList);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        List<Attribute> userAttributes = scimUserManager.getUserSchema();
+        
+        assertEquals(userAttributes.size(), 2);
+
+        // Emails - Simple attribute.
+        assertEquals(userAttributes.get(0).getName(), "emails");
+        assertTrue(userAttributes.get(0).getAttributeJSONProperties().containsKey(ATTRIBUTE_PROFILES_PROPERTY));
+
+        JSONObject profiles1 = userAttributes.get(0).getAttributeJSONProperties().get(ATTRIBUTE_PROFILES_PROPERTY);
+        assertTrue(profiles1.has(consoleProfile));
+        assertTrue(profiles1.has(endUserProfile));
+        assertTrue(((JSONObject) profiles1.get(consoleProfile)).has(SUPPORTED_BY_DEFAULT_PROPERTY));
+        assertTrue(((JSONObject) profiles1.get(consoleProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertTrue(((JSONObject) profiles1.get(endUserProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertTrue(((JSONObject) profiles1.get(endUserProfile)).has(SCIMConfigConstants.MUTABILITY));
+
+        // Given name - Complex attribute.
+        assertEquals(userAttributes.get(1).getName(), "name");
+        assertFalse(userAttributes.get(1).getAttributeProperties().containsKey(ATTRIBUTE_PROFILES_PROPERTY));
+        assertTrue(userAttributes.get(1).getSubAttribute("givenName").getAttributeJSONProperties()
+                .containsKey(ATTRIBUTE_PROFILES_PROPERTY));
+
+        JSONObject profiles2 = userAttributes.get(1).getSubAttribute("givenName").getAttributeJSONProperties()
+                .get(ATTRIBUTE_PROFILES_PROPERTY);
+        assertTrue(profiles2.has(consoleProfile));
+        assertTrue(profiles2.has(endUserProfile));
+        assertTrue(((JSONObject) profiles2.get(consoleProfile)).has(SUPPORTED_BY_DEFAULT_PROPERTY));
+        assertTrue(((JSONObject) profiles2.get(consoleProfile)).has(SCIMConfigConstants.MUTABILITY));
+        assertTrue(((JSONObject) profiles2.get(endUserProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertTrue(((JSONObject) profiles2.get(endUserProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertFalse(((JSONObject) profiles2.get(endUserProfile)).has(ClaimConstants.DISPLAY_NAME_PROPERTY));
+    }
+
+    private String buildAttributeProfileProperty(String profileName, String property) {
+
+        return ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX + profileName + "." + property;
     }
 
     @Test(dataProvider = "groupPermission")
