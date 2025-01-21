@@ -346,6 +346,6 @@ public class SCIMGroupHandler {
     public void updateSCIMAttributes(String groupName, Map<String, String> attributes) throws IdentitySCIMException {
 
         GroupDAO groupDAO = new GroupDAO();
-        groupDAO.updateSCIMGroupAttributesWithUpdatedColumn(tenantId, groupName, attributes);
+        groupDAO.updateSCIMGroupAttributes(tenantId, groupName, attributes);
     }
 }

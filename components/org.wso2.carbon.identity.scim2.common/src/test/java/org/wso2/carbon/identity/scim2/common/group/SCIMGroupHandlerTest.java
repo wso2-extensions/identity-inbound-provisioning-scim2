@@ -347,7 +347,7 @@ public class SCIMGroupHandlerTest {
         try (MockedConstruction<GroupDAO> mockedConstruction = Mockito.mockConstruction(GroupDAO.class)) {
             new SCIMGroupHandler(1).updateSCIMAttributes("GROUP_NAME", attributes);
             verify(mockedConstruction.constructed().get(0))
-                    .updateSCIMGroupAttributesWithUpdatedColumn(1, "GROUP_NAME", attributes);
+                    .updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
         }
     }
 }
