@@ -53,6 +53,7 @@ import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
 import org.wso2.carbon.user.core.model.UniqueIDUserClaimSearchEntry;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
+import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -133,7 +134,10 @@ import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.charon3.core.schema.SCIMConstants.CUSTOM_EXTENSION_SCHEMA_URI;
+import static org.wso2.charon3.core.schema.SCIMConstants.ENTERPRISE_USER_SCHEMA_URI;
 
 /*
  * Unit tests for SCIMUserManager
@@ -215,6 +219,7 @@ public class SCIMUserManagerTest {
     @Mock
     private RolePermissionManagementService mockedRolePermissionManagementService;
     private MockedStatic<SCIMUserSchemaExtensionBuilder> scimUserSchemaExtensionBuilder;
+    private MockedStatic<SCIMSystemSchemaExtensionBuilder> scimSystemSchemaExtensionBuilder;
     private MockedStatic<IdentityUtil> identityUtil;
     private MockedStatic<SCIMCommonUtils> scimCommonUtils;
     private MockedStatic<AttributeMapper> attributeMapper;
@@ -236,11 +241,17 @@ public class SCIMUserManagerTest {
         applicationManagementServiceMockedStatic = mockStatic(ApplicationManagementService.class);
         scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
         scimUserSchemaExtensionBuilder = mockStatic(SCIMUserSchemaExtensionBuilder.class);
+        scimSystemSchemaExtensionBuilder = mockStatic(SCIMSystemSchemaExtensionBuilder.class);
         claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);
         resourceManagerUtil = mockStatic(ResourceManagerUtil.class);
         SCIMUserSchemaExtensionBuilder mockSCIMUserSchemaExtensionBuilder = mock(SCIMUserSchemaExtensionBuilder.class);
+        SCIMSystemSchemaExtensionBuilder mockSCIMSystemSchemaExtensionBuilder = mock(SCIMSystemSchemaExtensionBuilder.class);
         scimUserSchemaExtensionBuilder.when(SCIMUserSchemaExtensionBuilder::getInstance).thenReturn(mockSCIMUserSchemaExtensionBuilder);
         when(mockSCIMUserSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
+        when(mockedSCIMAttributeSchema.getURI()).thenReturn(ENTERPRISE_USER_SCHEMA_URI)
+                .thenReturn(CUSTOM_EXTENSION_SCHEMA_URI);
+        scimSystemSchemaExtensionBuilder.when(SCIMSystemSchemaExtensionBuilder::getInstance).thenReturn(mockSCIMSystemSchemaExtensionBuilder);
+        when(mockSCIMSystemSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
     }
 
     @AfterMethod
@@ -252,6 +263,7 @@ public class SCIMUserManagerTest {
         applicationManagementServiceMockedStatic.close();
         scimCommonComponentHolder.close();
         scimUserSchemaExtensionBuilder.close();
+        scimSystemSchemaExtensionBuilder.close();
         claimMetadataHandler.close();
         resourceManagerUtil.close();
     }
@@ -1188,7 +1200,7 @@ public class SCIMUserManagerTest {
                         MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimMap);
         when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(localClaimMap);
-        scimCommonUtils.when(() -> SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(true);
+        scimCommonUtils.when(() -> SCIMCommonUtils.isUserExtensionEnabled()).thenReturn(true);
 
         SCIMUserSchemaExtensionBuilder sb = spy(new SCIMUserSchemaExtensionBuilder());
         scimUserSchemaExtensionBuilder.when(() -> SCIMUserSchemaExtensionBuilder.getInstance()).thenReturn(sb);
@@ -1204,10 +1216,10 @@ public class SCIMUserManagerTest {
     @Test
     public void testGetEnterpriseUserSchemaWhenDisabled() throws Exception {
 
-        scimCommonUtils.when(() -> SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(false);
+        scimCommonUtils.when(SCIMCommonUtils::isUserExtensionEnabled).thenReturn(false);
         SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        assertEquals(userManager.getEnterpriseUserSchema(), null);
+        assertNull(userManager.getEnterpriseUserSchema());
     }
 
     @Test

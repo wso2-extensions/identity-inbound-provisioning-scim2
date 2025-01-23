@@ -49,6 +49,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
+import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
@@ -61,8 +62,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static org.wso2.charon3.core.schema.SCIMConstants.CUSTOM_USER_SCHEMA_URI;
 
 /**
  * This class is to be used as a Util class for SCIM common things.
@@ -451,10 +450,16 @@ public class SCIMCommonUtils {
 
             // Get the extension claims, if there are any extensions enabled.
             if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
-                Map<String, String> extensionClaims = ClaimMetadataHandler.getInstance()
+                Map<String, String> enterpriseExtensionClaims = ClaimMetadataHandler.getInstance()
                         .getMappingsMapFromOtherDialectToCarbon(SCIMUserSchemaExtensionBuilder.getInstance()
                                 .getExtensionSchema().getURI(), null, tenantDomain, false);
-                scimToLocalClaimMap.putAll(extensionClaims);
+                scimToLocalClaimMap.putAll(enterpriseExtensionClaims);
+            }
+            if (SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+                Map<String, String> systemExtensionClaims = ClaimMetadataHandler.getInstance()
+                        .getMappingsMapFromOtherDialectToCarbon(SCIMSystemSchemaExtensionBuilder.getInstance()
+                                .getExtensionSchema().getURI(), null, tenantDomain, false);
+                scimToLocalClaimMap.putAll(systemExtensionClaims);
             }
 
             String userTenantDomain = getTenantDomain();
@@ -614,11 +619,24 @@ public class SCIMCommonUtils {
      * Check if SCIM enterprise user extension has been enabled.
      *
      * @return True if enterprise user extension enabled
+     * @deprecated Use {@link #isUserExtensionEnabled()} instead.
      */
+    @Deprecated
     public static boolean isEnterpriseUserExtensionEnabled() {
 
         return Boolean.parseBoolean(SCIMConfigProcessor.getInstance()
-                .getProperty(SCIMCommonConstants.ENTERPRISE_USER_EXTENSION_ENABLED));
+                .getProperty(SCIMCommonConstants.USER_SCHEMA_EXTENSION_ENABLED));
+    }
+
+    /**
+     * Check if SCIM enterprise user extension has been enabled.
+     *
+     * @return True if enterprise user extension enabled
+     */
+    public static boolean isUserExtensionEnabled() {
+
+        return Boolean.parseBoolean(SCIMConfigProcessor.getInstance()
+                .getProperty(SCIMCommonConstants.USER_SCHEMA_EXTENSION_ENABLED));
     }
 
     /**
@@ -728,7 +746,17 @@ public class SCIMCommonUtils {
         if (StringUtils.isNotBlank(customSchemaURI)) {
             return customSchemaURI;
         }
-        return CUSTOM_USER_SCHEMA_URI;
+        return SCIMConstants.CUSTOM_EXTENSION_SCHEMA_URI;
+    }
+
+    public static boolean isExtensionSchemasListingEnabledInResourceTypesAPI() {
+
+        String isExtensionSchemasListingEnabled =
+                SCIMConfigProcessor.getInstance().getProperty(SCIMCommonConstants.LIST_USER_EXTENSION_SCHEMAS_ENABLED);
+        if (StringUtils.isNotBlank(isExtensionSchemasListingEnabled)) {
+            return Boolean.parseBoolean(isExtensionSchemasListingEnabled);
+        }
+        return true;
     }
 
     /**

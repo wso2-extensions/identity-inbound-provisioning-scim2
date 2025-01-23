@@ -47,6 +47,7 @@ public class SCIMCommonConstants {
     public static final String SCIM_USER_CLAIM_DIALECT = "urn:ietf:params:scim:schemas:core:2.0:User";
     public static final String SCIM_ENTERPRISE_USER_CLAIM_DIALECT =
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
+    public static final String SCIM_SYSTEM_USER_CLAIM_DIALECT = "urn:scim:wso2:schema";
 
     public static final String EQ = "eq";
     public static final String NE = "ne";
@@ -78,7 +79,10 @@ public class SCIMCommonConstants {
     public static final String BULK_MAX_OPERATIONS = "bulk-maxOperations";
     public static final String BULK_MAX_PAYLOAD_SIZE = "bulk-maxPayloadSize";
     public static final String FILTER_MAX_RESULTS = "filter-maxResults";
+    @Deprecated
     public static final String ENTERPRISE_USER_EXTENSION_ENABLED = "user-schema-extension-enabled";
+    public static final String USER_SCHEMA_EXTENSION_ENABLED = "user-schema-extension-enabled";
+    public static final String LIST_USER_EXTENSION_SCHEMAS_ENABLED = "list-user-extension-schemas-enabled";
     public static final String PAGINATION_DEFAULT_COUNT = "pagination-default-count";
     public static final String CUSTOM_USER_SCHEMA_ENABLED = "custom-user-schema-enabled";
     public static final String CUSTOM_USER_SCHEMA_URI = "custom-user-schema-uri";

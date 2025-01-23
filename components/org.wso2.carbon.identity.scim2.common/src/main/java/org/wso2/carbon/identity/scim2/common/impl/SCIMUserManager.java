@@ -87,6 +87,7 @@ import org.wso2.charon3.core.attributes.ComplexAttribute;
 import org.wso2.charon3.core.attributes.MultiValuedAttribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
+import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -371,7 +372,7 @@ public class SCIMUserManager implements UserManager {
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
             // Sometimes client exceptions are wrapped in the super class.
-            // Therefore checking for possible client exception.
+            // Therefore, checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
             if (ex instanceof UserStoreClientException) {
                 String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName())
@@ -523,7 +524,7 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug("Deleting user: " + userId);
         }
-        //get the user name of the user with this id
+        // Get the username of the user with this id.
         org.wso2.carbon.user.core.common.User coreUser = null;
         String userName = null;
         try {
@@ -2368,6 +2369,10 @@ public class SCIMUserManager implements UserManager {
                 String extensionURI = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI();
                 attributes.putAll(getMappedAttributes(extensionURI, domainName));
             }
+            if (SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+                String extensionURI = SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI();
+                attributes.putAll(getMappedAttributes(extensionURI, domainName));
+            }
             attributes.putAll(getMappedAttributes(getCustomSchemaURI(), domainName));
 
         } else {
@@ -2375,6 +2380,7 @@ public class SCIMUserManager implements UserManager {
                 ClaimMapping[] userClaims;
                 ClaimMapping[] coreClaims;
                 ClaimMapping[] extensionClaims = null;
+                ClaimMapping[] systemClaims = null;
                 ClaimMapping[] customClaims = null;
 
                 coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
@@ -2382,6 +2388,10 @@ public class SCIMUserManager implements UserManager {
                 if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
                     extensionClaims = carbonClaimManager.getAllClaimMappings(
                             SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
+                }
+                if (SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+                    systemClaims = carbonClaimManager.getAllClaimMappings(
+                            SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
                 }
 
                 customClaims = carbonClaimManager.getAllClaimMappings(getCustomSchemaURI());
@@ -2393,6 +2403,11 @@ public class SCIMUserManager implements UserManager {
                 }
                 if (extensionClaims != null) {
                     for (ClaimMapping claim : extensionClaims) {
+                        attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
+                    }
+                }
+                if (systemClaims != null) {
+                    for (ClaimMapping claim : systemClaims) {
                         attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
                     }
                 }
@@ -5764,7 +5779,7 @@ public class SCIMUserManager implements UserManager {
 
         List<Attribute> enterpriseUserSchemaAttributesList = null;
 
-        if (SCIMCommonUtils.isEnterpriseUserExtensionEnabled()) {
+        if (SCIMCommonUtils.isUserExtensionEnabled()) {
             Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
                     getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT,
                             tenantDomain);
@@ -5772,7 +5787,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap);
+                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, true, false);
 
             enterpriseUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -5785,6 +5800,37 @@ public class SCIMUserManager implements UserManager {
             }
         }
         return enterpriseUserSchemaAttributesList;
+    }
+
+    /**
+     * Returns the schema of the system user extension in SCIM 2.0.
+     *
+     * @return List of attributes of system user extension
+     * @throws CharonException Error while retrieving schema attribute details.
+     */
+    @Override
+    public List<Attribute> getSystemUserSchema() throws CharonException {
+
+        List<Attribute> systemUserSchemaAttributesList = null;
+
+        if (SCIMCommonUtils.isUserExtensionEnabled()) {
+            Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
+                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT, tenantDomain);
+
+            Map<String, Attribute> filteredAttributeMap =
+                    getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
+            Map<String, Attribute> hierarchicalAttributeMap =
+                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, false, true);
+
+            systemUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
+
+            if (log.isDebugEnabled()) {
+                logSchemaAttributes(systemUserSchemaAttributesList);
+            }
+        } else {
+            log.debug("System user schema support disabled.");
+        }
+        return systemUserSchemaAttributesList;
     }
 
     /**
@@ -5856,7 +5902,7 @@ public class SCIMUserManager implements UserManager {
 
             if (isSupportedByDefault(mappedLocalClaim) || isUsernameClaim(scimClaim)) {
                 // Return only the schema of supported-by-default claims and the username claim.
-                Attribute schemaAttribute = getSchemaAttributes(scimClaim, mappedLocalClaim, false);
+                Attribute schemaAttribute = getSchemaAttributes(scimClaim, mappedLocalClaim);
                 filteredFlatAttributeMap.put(schemaAttribute.getName(), schemaAttribute);
             }
         }
@@ -5875,8 +5921,8 @@ public class SCIMUserManager implements UserManager {
 
         return scimClaimToLocalClaimMap.entrySet().stream()
                 .filter(entry -> isSupportedByDefault(entry.getValue()))
-                .map(e -> getSchemaAttributes(e.getKey(), e.getValue(), true))
-                .collect(Collectors.toMap(attr -> attr.getName(), Function.identity()));
+                .map(e -> getSchemaAttributes(e.getKey(), e.getValue()))
+                .collect(Collectors.toMap(Attribute::getName, Function.identity()));
     }
 
     private boolean isSupportedByDefault(LocalClaim mappedLocalClaim) {
@@ -5908,15 +5954,26 @@ public class SCIMUserManager implements UserManager {
      * @param mappedLocalClaim
      * @return
      */
-    private Attribute getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim,
-                                          boolean isExtensionAttr) {
+    private Attribute getSchemaAttributes(ExternalClaim scimClaim, LocalClaim mappedLocalClaim) {
 
         String name = scimClaim.getClaimURI();
-        String claimDielectURI = scimClaim.getClaimDialectURI();
+        String claimDialectURI = scimClaim.getClaimDialectURI();
+        boolean isExtensionAttr = false;
+        boolean isSystemSchemaAttr = false;
         boolean isCustomSchemaAttr = false;
         boolean isComplexCustomAttr = false;
+
+        if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null
+                && SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI().equals(claimDialectURI)) {
+            isExtensionAttr = true;
+        }
+        if (SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema() != null
+                && SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI()
+                .equals(claimDialectURI)) {
+            isSystemSchemaAttr = true;
+        }
         if (getCustomSchemaURI() != null) {
-            isCustomSchemaAttr = getCustomSchemaURI().equalsIgnoreCase(claimDielectURI);
+            isCustomSchemaAttr = getCustomSchemaURI().equalsIgnoreCase(claimDialectURI);
         }
         if (mappedLocalClaim != null && mappedLocalClaim.getClaimProperties() != null) {
             for (Map.Entry<String, String> claimProperty : mappedLocalClaim.getClaimProperties().entrySet()) {
@@ -5939,7 +5996,7 @@ public class SCIMUserManager implements UserManager {
             attribute = new SimpleAttribute(name, null);
         }
 
-        populateBasicAttributes(mappedLocalClaim, attribute, isExtensionAttr, isCustomSchemaAttr);
+        populateBasicAttributes(mappedLocalClaim, attribute, isExtensionAttr, isSystemSchemaAttr, isCustomSchemaAttr);
 
         return attribute;
     }
@@ -6013,11 +6070,11 @@ public class SCIMUserManager implements UserManager {
     /**
      * Populates basic Charon Attributes details using the claim metadata.
      *
-     * @param mappedLocalClaim
-     * @param attribute
+     * @param mappedLocalClaim Mapped local claim.
+     * @param attribute        Charon Attribute.
      */
     private void populateBasicAttributes(LocalClaim mappedLocalClaim, AbstractAttribute attribute, boolean
-            isEnterpriseExtensionAttr, boolean isCustomSchemaAttr) {
+            isEnterpriseExtensionAttr, boolean isSystemSchemaAttr, boolean isCustomSchemaAttr) {
 
         boolean isMultivaluedCustomAttr = false;
         String customAttrDataType = null;
@@ -6053,9 +6110,12 @@ public class SCIMUserManager implements UserManager {
             attribute.setType(SCIMDefinitions.DataType.COMPLEX);
         } else if (customAttrDataType != null) {
             attribute.setType(getCustomAttrDataType(customAttrDataType));
-        } else if (isEnterpriseExtensionAttr) {
-            AttributeSchema attributeSchema = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
-                    .getSubAttributeSchema(attribute.getName());
+        } else if (isEnterpriseExtensionAttr || isSystemSchemaAttr) {
+            AttributeSchema attributeSchema = isEnterpriseExtensionAttr
+                    ? SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                        .getSubAttributeSchema(attribute.getName())
+                    : SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                        .getSubAttributeSchema(attribute.getName());
             if (attributeSchema != null && attributeSchema.getType() != null) {
                 attribute.setType(attributeSchema.getType());
             } else {
@@ -6163,11 +6223,11 @@ public class SCIMUserManager implements UserManager {
      * @param filteredFlatAttributeMap
      * @return
      */
-    private Map<String, Attribute> buildHierarchicalAttributeMapForEnterpriseSchema(Map<String, Attribute>
-                                                                                            filteredFlatAttributeMap)
-            throws CharonException {
+    private Map<String, Attribute> buildHierarchicalAttributeMapForEnterpriseSchema(
+            Map<String, Attribute> filteredFlatAttributeMap, boolean isEnterpriseExtensionAttr,
+            boolean isSystemExtensionAttr) throws CharonException {
 
-        return buildHierarchicalAttributeMap(filteredFlatAttributeMap, true);
+        return buildHierarchicalAttributeMap(filteredFlatAttributeMap, isEnterpriseExtensionAttr, isSystemExtensionAttr);
     }
 
     /**
@@ -6181,7 +6241,7 @@ public class SCIMUserManager implements UserManager {
                                                                                           filteredFlatAttributeMap)
             throws CharonException {
 
-        return buildHierarchicalAttributeMap(filteredFlatAttributeMap, false);
+        return buildHierarchicalAttributeMap(filteredFlatAttributeMap, false, false);
     }
 
     /**
@@ -6191,7 +6251,7 @@ public class SCIMUserManager implements UserManager {
      * @return
      */
     private Map<String, Attribute> buildHierarchicalAttributeMap(Map<String, Attribute> filteredFlatAttributeMap,
-                                                                 boolean isEnterpriseExtensionAttr)
+                                                                 boolean isEnterpriseExtensionAttr, boolean isSystemSchemaAttr)
             throws CharonException {
 
         Map<String, Attribute> simpleAttributeMap = new HashMap<>();
@@ -6203,7 +6263,7 @@ public class SCIMUserManager implements UserManager {
 
             if (attributeName.contains(".")) {
                 ComplexAttribute parentAttribute = handleSubAttribute(attribute, filteredFlatAttributeMap,
-                        complexAttributeMap, isEnterpriseExtensionAttr);
+                        complexAttributeMap, isEnterpriseExtensionAttr, isSystemSchemaAttr);
                 complexAttributeMap.put(parentAttribute.getName(), parentAttribute);
             } else {
                 simpleAttributeMap.put(attributeName, attribute);
@@ -6224,7 +6284,7 @@ public class SCIMUserManager implements UserManager {
      */
     private ComplexAttribute handleSubAttribute(Attribute attribute, Map<String, Attribute> flatAttributeMap,
                                                 Map<String, ComplexAttribute> complexAttributeMap,
-                                                boolean isEnterpriseExtensionAttr)
+                                                boolean isEnterpriseExtensionAttr, boolean isSystemSchemaAttr)
             throws CharonException {
 
         String attributeName = attribute.getName();
@@ -6239,7 +6299,8 @@ public class SCIMUserManager implements UserManager {
 
         if (parentAttribute == null) {
             parentAttribute = new ComplexAttribute(parentAttributeName);
-            populateBasicAttributes(null, parentAttribute, isEnterpriseExtensionAttr, false);
+            populateBasicAttributes(null, parentAttribute, isEnterpriseExtensionAttr,
+                    isSystemSchemaAttr, false);
             complexAttributeMap.put(parentAttributeName, parentAttribute);
         }
 
@@ -6501,7 +6562,7 @@ public class SCIMUserManager implements UserManager {
         Map<String, Attribute> filteredAttributeMap
                 = getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
         Map<String, Attribute> hierarchicalAttributeMap =
-                buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap);
+                buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, false, false);
 
         customUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
