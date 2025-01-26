@@ -5509,6 +5509,13 @@ public class SCIMUserManager implements UserManager {
             }
         }
         /*
+        If the newClaimList has a claim with empty value and the claim is not exist in the oldClaimList, remove that
+        claim from newClaimList.
+         */
+        newClaimList.entrySet()
+                .removeIf(entry -> entry.getValue().isEmpty() && !oldClaimList.containsKey(entry.getKey()));
+
+        /*
         Prepare user claims expect multi-valued claims to be added, deleted and modified.
         Remove simple multi-valued claims URIS from existing claims and updated user's claims.
         oldClaimList and newClaimList are not modifying to reuse for NotImplemented exception.
