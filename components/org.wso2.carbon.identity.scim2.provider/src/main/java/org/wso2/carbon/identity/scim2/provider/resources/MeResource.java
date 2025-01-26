@@ -18,6 +18,8 @@
 package org.wso2.carbon.identity.scim2.provider.resources;
 
 
+import org.wso2.carbon.identity.core.context.model.Flow;
+import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
@@ -155,6 +157,7 @@ public class MeResource extends AbstractResource {
                                @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
+        updateIdentityContext();
         String userId = SupportUtils.getAuthenticatedUserId();
         try {
             // content-type header is compulsory in post request.
@@ -201,6 +204,7 @@ public class MeResource extends AbstractResource {
                               @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                               String resourceString) {
 
+        updateIdentityContext();
         String userId = SupportUtils.getAuthenticatedUserId();
         try {
             // content-type header is compulsory in post request.
@@ -238,5 +242,18 @@ public class MeResource extends AbstractResource {
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
         }
+    }
+
+    /**
+     * This is used to set the flow and initiator in the identity context.
+     * These values will be used in the pre update password action.
+     */
+    private void updateIdentityContext() {
+
+        Flow flow = new Flow.Builder()
+                .name(Flow.Name.PASSWORD_UPDATE)
+                .initiatingPersona(Flow.InitiatingPersona.USER)
+                .build();
+        IdentityContext.getThreadLocalIdentityContext().setFlow(flow);
     }
 }
