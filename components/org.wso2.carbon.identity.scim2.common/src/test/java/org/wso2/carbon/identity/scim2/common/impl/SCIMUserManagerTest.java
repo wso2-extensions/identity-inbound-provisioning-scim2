@@ -26,6 +26,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -2067,6 +2068,54 @@ public class SCIMUserManagerTest {
                 assertEquals(mockedGroupHandler.constructed().size(), 1);
             }
         }
+    }
+
+    @Test(dataProvider = "syncedUserAttributesData")
+    public void testGetSyncedUserAttributes(Map<String, String> scimToLocalMappings,
+                                            Map<String, String> expectedSyncedAttributes,
+                                            boolean shouldThrowException) throws CharonException {
+
+        SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        if (shouldThrowException) {
+            scimCommonUtils.when(SCIMCommonUtils::getSCIMtoLocalMappings)
+                    .thenThrow(new org.wso2.carbon.user.core.UserStoreException("Database error"));
+            Assert.expectThrows(CharonException.class, userManager::getSyncedUserAttributes);
+        } else {
+            scimCommonUtils.when(SCIMCommonUtils::getSCIMtoLocalMappings).thenReturn(scimToLocalMappings);
+            Map<String, String> actualSyncedAttributes = userManager.getSyncedUserAttributes();
+            Assert.assertEquals(actualSyncedAttributes, expectedSyncedAttributes);
+        }
+    }
+
+    @DataProvider(name = "syncedUserAttributesData")
+    public Object[][] syncedUserAttributesData() {
+
+        Map<String, String> scimToLocalMappings1 = new HashMap<>();
+        scimToLocalMappings1.put("urn:scim:User:emails", "email");
+        scimToLocalMappings1.put("urn:scim:User:workEmail", "email");
+        scimToLocalMappings1.put("urn:scim:User:phone", "phoneNumber");
+        scimToLocalMappings1.put("urn:scim:User:mobile", "phoneNumber");
+        scimToLocalMappings1.put("urn:scim:User:username", "username");
+
+        Map<String, String> expectedSyncedAttributes1 = new HashMap<>();
+        expectedSyncedAttributes1.put("urn:scim:User:emails", "urn:scim:User:workEmail");
+        expectedSyncedAttributes1.put("urn:scim:User:workEmail", "urn:scim:User:emails");
+        expectedSyncedAttributes1.put("urn:scim:User:phone", "urn:scim:User:mobile");
+        expectedSyncedAttributes1.put("urn:scim:User:mobile", "urn:scim:User:phone");
+
+        Map<String, String> scimToLocalMappings2 = new HashMap<>();
+        scimToLocalMappings2.put("urn:scim:User:emails", "email");
+        scimToLocalMappings2.put("urn:scim:User:phone", "phoneNumber");
+        scimToLocalMappings2.put("urn:scim:User:username", "username");
+
+        Map<String, String> expectedSyncedAttributes2 = Collections.emptyMap();
+
+        return new Object[][]{
+                {scimToLocalMappings1, expectedSyncedAttributes1, false},
+                {scimToLocalMappings2, expectedSyncedAttributes2, false},
+                {null, null, true}
+        };
     }
 
     /**
