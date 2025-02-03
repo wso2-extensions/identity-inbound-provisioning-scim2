@@ -503,7 +503,7 @@ public class AttributeMapper {
         } else if (parentAttributeURI != null) {
 
             if (parentAttributeURI.equals(attributeEntry.getKey())) {
-                parentAttributeURI = attributeEntry.getKey().replace(":" + attributeNames[1], "");
+                parentAttributeURI = removeAttributeNameFromURI(attributeEntry.getKey(), attributeNames[1]);
             }
             AttributeSchema parentAttributeSchema = getAttributeSchema(userManager, parentAttributeURI, scimObjectType);
 
@@ -918,5 +918,27 @@ public class AttributeMapper {
                 break;
         }
         return resourceSchema;
+    }
+
+    /**
+     * Remove the attribute name from the URI.
+     *
+     * @param uri           Attribute URI.
+     * @param attributeName Attribute name.
+     * @return URI without the attribute name.
+     */
+    private static String removeAttributeNameFromURI(String uri, String attributeName) {
+
+        if (StringUtils.isBlank(uri) || StringUtils.isBlank(attributeName)) {
+            return uri;
+        }
+
+        String suffix = ":" + attributeName;
+        int lastIndex = uri.lastIndexOf(suffix);
+        if (lastIndex != -1 && lastIndex + suffix.length() == uri.length()) {
+            return uri.substring(0, lastIndex);
+        }
+
+        return uri;
     }
 }
