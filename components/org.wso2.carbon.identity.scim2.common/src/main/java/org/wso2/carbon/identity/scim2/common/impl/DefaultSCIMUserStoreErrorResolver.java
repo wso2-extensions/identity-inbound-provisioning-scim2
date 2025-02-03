@@ -46,7 +46,9 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
             return new SCIMUserStoreException(msg, HttpStatus.SC_NOT_FOUND);
         } else if (e.getMessage().contains(ERROR_CODE_EXISTING_ROLE_NAME) ||
                 (e instanceof org.wso2.carbon.user.core.UserStoreClientException &&
-                ((UserStoreClientException) e).getErrorCode().contains(ERROR_CODE_GROUP_ALREADY_EXISTS.getCode()))) {
+                        ((UserStoreClientException) e).getErrorCode() != null &&
+                        ((UserStoreClientException) e).getErrorCode()
+                                .contains(ERROR_CODE_GROUP_ALREADY_EXISTS.getCode()))) {
             String groupName = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim().split("\\s+")[0];
             String msg =
                     "Group name: " + groupName + " is already there in the system. Please pick another group name.";
