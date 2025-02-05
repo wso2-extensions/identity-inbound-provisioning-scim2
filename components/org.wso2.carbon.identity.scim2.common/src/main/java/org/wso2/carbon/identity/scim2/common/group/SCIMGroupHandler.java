@@ -335,17 +335,4 @@ public class SCIMGroupHandler {
         GroupDAO groupDAO = new GroupDAO();
         return groupDAO.getGroupNameList(attributeName, searchAttribute, this.tenantId, domainName);
     }
-
-    /**
-     * Update SCIM attributes of the group.
-     *
-     * @param groupName     The display name of the group.
-     * @param attributes    The attributes to be updated.
-     * @throws IdentitySCIMException IdentitySCIMException when updating the SCIM Group information.
-     */
-    public void updateSCIMAttributes(String groupName, Map<String, String> attributes) throws IdentitySCIMException {
-
-        GroupDAO groupDAO = new GroupDAO();
-        groupDAO.updateSCIMGroupAttributes(tenantId, groupName, attributes);
-    }
 }

@@ -337,17 +337,4 @@ public class SCIMGroupHandlerTest {
         assertNotNull(new SCIMGroupHandler(1).listSCIMRoles());
     }
 
-    @Test
-    public void testUpdateSCIMAttributes() throws IdentitySCIMException {
-
-        Map<String, String> attributes = new HashMap<String, String>();
-        attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.created", "2017-10-10T10:10:10Z");
-        attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.lastModified", "2017-10-10T10:10:10Z");
-
-        try (MockedConstruction<GroupDAO> mockedConstruction = Mockito.mockConstruction(GroupDAO.class)) {
-            new SCIMGroupHandler(1).updateSCIMAttributes("GROUP_NAME", attributes);
-            verify(mockedConstruction.constructed().get(0))
-                    .updateSCIMGroupAttributes(1, "GROUP_NAME", attributes);
-        }
-    }
 }
