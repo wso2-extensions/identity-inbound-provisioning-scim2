@@ -608,21 +608,53 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws BadRequestException {
 
         String searchFilter;
+        String formattedAttributeValue = formatSearchAttributeValue(filterOperation, attributeValue);
+        
         switch (attributeName) {
             case SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI:
-                searchFilter = ROLE_NAME_FILTER_ATTRIBUTE + " " + filterOperation + " " + attributeValue;
+                searchFilter = ROLE_NAME_FILTER_ATTRIBUTE + " " + filterOperation + " " + formattedAttributeValue;
                 break;
             case SCIMConstants.RoleSchemaConstants.AUDIENCE_VALUE_URI:
-                searchFilter = ROLE_AUDIENCE_ID_FILTER_ATTRIBUTE + " " + filterOperation + " " + attributeValue;
+                searchFilter = ROLE_AUDIENCE_ID_FILTER_ATTRIBUTE + " " + filterOperation + " " + formattedAttributeValue;
                 break;
             case SCIMConstants.RoleSchemaConstants.AUDIENCE_TYPE_URI:
-                searchFilter = ROLE_AUDIENCE_TYPE_FILTER_ATTRIBUTE + " " + filterOperation + " " + attributeValue;
+                searchFilter = ROLE_AUDIENCE_TYPE_FILTER_ATTRIBUTE + " " + filterOperation + " " + formattedAttributeValue;
                 break;
             default:
                 String errorMessage = "Filtering based on attribute: " + attributeName + " is not supported.";
                 throw new BadRequestException(errorMessage);
         }
         return searchFilter;
+    }
+
+    /**
+     * Format the attribute value for search based on the filter operation.
+     *
+     * @param filterOperation Filter operation
+     * @param attributeValue  Value of the attribute
+     * @return Formatted attribute value for search
+     */
+    private String formatSearchAttributeValue(String filterOperation, String attributeValue) {
+
+        // Handle empty or null values
+        if (StringUtils.isBlank(attributeValue)) {
+            return "''";
+        }
+
+        // Escape special characters in the attribute value
+        String escapedValue = attributeValue.replace("'", "''");
+
+        // Format the search attribute value based on the filter operation
+        switch (filterOperation.toLowerCase()) {
+            case SCIMCommonConstants.CO:
+                return "'%" + escapedValue + "%'";
+            case SCIMCommonConstants.SW:
+                return "'" + escapedValue + "%'";
+            case SCIMCommonConstants.EW:
+                return "'%" + escapedValue + "'";
+            default:
+                return "'" + escapedValue + "'";
+        }
     }
 
     private List<RoleV2> getScimRolesList(List<Role> roles, List<String> requiredAttributes)
