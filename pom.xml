@@ -298,7 +298,7 @@
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.8.12</identity.governance.version>
-        <charon.version>4.0.30</charon.version>
+        <charon.version>4.0.33</charon.version>
         <org.wso2.carbon.identity.organization.management.core.version>1.0.76
         </org.wso2.carbon.identity.organization.management.core.version>
         <org.wso2.carbon.identity.handler.event.account.lock.version>1.8.13
