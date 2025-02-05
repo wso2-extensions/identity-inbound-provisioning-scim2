@@ -45,7 +45,12 @@ import org.wso2.charon3.core.objects.plainobjects.RolesV2GetResponse;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
+import org.wso2.charon3.core.utils.codeutils.Node;
+import org.wso2.charon3.core.utils.codeutils.FilterTreeManager;
+import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
+import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -95,10 +100,13 @@ public class SCIMRoleManagerV2Test {
 
     private MockedStatic<IdentityUtil> identityUtil;
 
+    private static SCIMResourceTypeSchema schema;
+
     @BeforeClass
-    public void setUpClass() {
+    public void setUpClass() throws Exception {
 
         initMocks(this);
+        schema = SCIMResourceSchemaManager.getInstance().getRoleResourceV2Schema();
     }
 
     @BeforeMethod
@@ -110,6 +118,7 @@ public class SCIMRoleManagerV2Test {
 
     @AfterMethod
     public void tearDown() {
+
         identityUtil.close();
     }
 
@@ -414,5 +423,104 @@ public class SCIMRoleManagerV2Test {
                 assertTrue(roles.get(1).getRoleProperties().isEmpty());
             }
         }
+    }
+
+    @DataProvider(name = "roleFilteringData")
+    public Object[][] getRoleFilteringData() {
+
+        return new Object[][]{
+            {
+                "displayName eq admin",
+                "name eq 'admin'",
+                new Role[]{
+                        createMockRole(ROLE_ID, "admin"),
+                        createMockRole(ROLE_ID_2, "administrator")
+                }
+            },
+            {
+                "displayName sw sys",
+                "name sw 'sys%'",
+                new Role[]{
+                        createMockRole(ROLE_ID, "sysadmin"),
+                        createMockRole(ROLE_ID_2, "system_admin")
+                }
+            },
+            {
+                "displayName ew admin",
+                "name ew '%admin'",
+                new Role[]{
+                        createMockRole(ROLE_ID, "sysadmin"),
+                        createMockRole(ROLE_ID_2, "domain_admin")
+                }
+            },
+            {
+                "displayName co min",
+                "name co '%min%'",
+                new Role[]{
+                        createMockRole(ROLE_ID, "administrator"),
+                        createMockRole(ROLE_ID_2, "adminuser")
+                }
+            },
+            {
+                "displayName ew or",
+                "name ew '%or'",
+                new Role[]{
+                        createMockRole(ROLE_ID, "administrator"),
+                }
+            },
+            {
+                    "displayName co and",
+                    "name co '%and%'",
+                    new Role[]{
+                            createMockRole(ROLE_ID, "brand_admin"),
+                    }
+            }
+        };
+    }
+
+    @Test(dataProvider = "roleFilteringData")
+    public void testListRolesWithFiltering(String filterExpression, String expectedSQLFilter, Role[] mockRoles)
+            throws Exception {
+
+        try (MockedStatic<SCIMCommonUtils> mockedSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+
+            for (Role role : mockRoles) {
+                mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getSCIMRoleV2URL(role.getId()))
+                        .thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + role.getId());
+            }
+
+            when(roleManagementService.getRoles(eq(expectedSQLFilter), any(), any(), any(), any(),
+                    eq(SAMPLE_TENANT_DOMAIN), any())).thenReturn(Arrays.asList(mockRoles));
+
+            Node filterNode = buildNode(filterExpression, schema);
+            RolesV2GetResponse response = scimRoleManagerV2.listRolesWithGET(
+                    filterNode, 1, 10, null, null, null);
+
+            // Verify results
+            List<RoleV2> returnedRoles = response.getRoles();
+            assertEquals(returnedRoles.size(), mockRoles.length,
+                    "Returned roles size should match for filter: " + filterExpression);
+            for (int i = 0; i < mockRoles.length; i++) {
+                assertEquals(returnedRoles.get(i).getDisplayName(), mockRoles[i].getName(),
+                        "Role name should match for filter: " + filterExpression);
+            }
+        }
+    }
+
+    private Role createMockRole(String id, String name) {
+
+        Role role = new Role();
+        role.setId(id);
+        role.setName(name);
+        return role;
+    }
+
+    private Node buildNode(String filter, SCIMResourceTypeSchema schema) throws BadRequestException, IOException {
+
+        if (filter != null) {
+            FilterTreeManager filterTreeManager = new FilterTreeManager(filter, schema);
+            return filterTreeManager.buildTree();
+        }
+        return null;
     }
 }
