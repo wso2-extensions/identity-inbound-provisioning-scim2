@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -3646,7 +3646,8 @@ public class SCIMUserManager implements UserManager {
             carbonUM.updateGroupName(currentGroupName, newGroupName);
 
             // Update the last modified time of the group.
-            if (!carbonUM.isUniqueGroupIdEnabled() && groupLastUpdatedTime != null) {
+            if (!isSecondaryUserStoreDomain(userStoreDomainForGroup) &&
+                    !carbonUM.isUniqueGroupIdEnabled() && groupLastUpdatedTime != null) {
                 Map<String, String> attributes = new HashMap<>();
                 attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
                         AttributeUtil.formatDateTime(groupLastUpdatedTime.toInstant()));
@@ -4570,6 +4571,20 @@ public class SCIMUserManager implements UserManager {
     private boolean isNotInternalOrApplicationGroup(String userStoreDomain) {
 
         return !isInternalOrApplicationGroup(userStoreDomain);
+    }
+
+    /**
+     * Checks if the given user store domain is a secondary user store.
+     *
+     * @param userStoreDomain The user store domain to check.
+     * @return {@code true} if it is a secondary user store; {@code false} otherwise.
+     */
+    private boolean isSecondaryUserStoreDomain(String userStoreDomain) {
+
+        return StringUtils.isNotBlank(userStoreDomain) &&
+                !SCIMCommonConstants.DEFAULT.equalsIgnoreCase(userStoreDomain) &&
+                !SCIMCommonConstants.PRIMARY.equalsIgnoreCase(userStoreDomain) &&
+                isNotInternalOrApplicationGroup(userStoreDomain);
     }
 
     /**
