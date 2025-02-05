@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -51,6 +51,7 @@ import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -698,7 +699,6 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         }
 
         try {
-            //TODO:set last update date
             SCIMGroupHandler scimGroupHandler = new SCIMGroupHandler(userStoreManager.getTenantId());
 
             String domainName = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
@@ -711,6 +711,17 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 scimGroupHandler.updateRoleName(roleNameWithDomain, newRoleNameWithDomain);
             } catch (IdentitySCIMException e) {
                 throw new UserStoreException("Error updating group information in SCIM Tables.", e);
+            }
+
+            // Update the last modified time of the group.
+            Date groupLastUpdatedTime = new Date();
+            Map<String, String> attributes = new HashMap<>();
+            attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
+                    AttributeUtil.formatDateTime(groupLastUpdatedTime.toInstant()));
+            try {
+                scimGroupHandler.updateSCIMAttributes(newRoleNameWithDomain, attributes);
+            } catch (IdentitySCIMException e) {
+                throw new UserStoreException("Failed to update group's last modified date in SCIM tables.", e);
             }
             return true;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
