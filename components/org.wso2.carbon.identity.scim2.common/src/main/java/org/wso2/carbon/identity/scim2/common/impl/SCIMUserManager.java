@@ -6894,4 +6894,37 @@ public class SCIMUserManager implements UserManager {
         // When required users are retrieved and limit is set to zero, skip iterating the user stores.
         return limit > 0;
     }
+
+    /**
+     * Method to get the scim attributes mapped to a single local claim.
+     *
+     * @return Map of scim attributes mapped to a single local claim.
+     * @throws CharonException
+     */
+    public Map<String, String> getSyncedUserAttributes() throws CharonException {
+
+        try {
+            Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
+            Map<String, List<String>> localToScimMappings = new HashMap<>();
+            Map<String, String> syncedAttributes = new HashMap<>();
+
+            scimToLocalMappings.forEach((scimAttribute, localAttribute) ->
+                    localToScimMappings.computeIfAbsent(localAttribute, k -> new ArrayList<>()).add(scimAttribute)
+            );
+            localToScimMappings.values().stream()
+                    .filter(scimAttributes -> scimAttributes.size() > 1)
+                    .forEach(scimAttributes -> {
+                        for (int i = 0; i < scimAttributes.size(); i++) {
+                            for (int j = i + 1; j < scimAttributes.size(); j++) {
+                                syncedAttributes.put(scimAttributes.get(i), scimAttributes.get(j));
+                                syncedAttributes.put(scimAttributes.get(j), scimAttributes.get(i));
+                            }
+                        }
+                    });
+
+            return syncedAttributes;
+        } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            throw new CharonException("Error while retrieving scim to local mappings.", e);
+        }
+    }
 }
