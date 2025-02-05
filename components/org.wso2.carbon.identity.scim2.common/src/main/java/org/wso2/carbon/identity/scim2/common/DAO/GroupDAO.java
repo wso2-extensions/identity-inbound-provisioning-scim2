@@ -289,38 +289,16 @@ public class GroupDAO {
         }
     }
 
-    /**
-     * Update SCIM group attributes.
-     *
-     * @param tenantId      Tenant id.
-     * @param roleName      Group name.
-     * @param attributes    Attributes to be updated.
-     * @throws IdentitySCIMException If an error occurred while updating the attributes.
-     */
     public void updateSCIMGroupAttributes(int tenantId, String roleName,
                                           Map<String, String> attributes) throws IdentitySCIMException {
 
-        doUpdateSCIMGroupAttributes(tenantId, roleName, attributes, SQLQueries.UPDATE_ATTRIBUTES_SQL);
-    }
-
-    /**
-     * Do update SCIM group attributes.
-     *
-     * @param tenantId      Tenant id.
-     * @param roleName      Group name.
-     * @param attributes    Attributes to be updated.
-     * @param sqlQuery      SQL query to update the attributes.
-     * @throws IdentitySCIMException If an error occurred while updating the attributes.
-     */
-    private void doUpdateSCIMGroupAttributes(int tenantId, String roleName, Map<String, String> attributes,
-                                             String sqlQuery) throws IdentitySCIMException {
-
-        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
 
         if (isExistingGroup(SCIMCommonUtils.getGroupNameWithDomain(roleName), tenantId)) {
             try {
-                prepStmt = connection.prepareStatement(sqlQuery);
+                prepStmt = connection.prepareStatement(SQLQueries.UPDATE_ATTRIBUTES_SQL);
+
                 prepStmt.setInt(2, tenantId);
                 prepStmt.setString(3, roleName);
 
@@ -330,16 +308,19 @@ public class GroupDAO {
                         prepStmt.setString(4, entry.getKey());
                         prepStmt.setString(1, entry.getValue());
                         prepStmt.addBatch();
+
                     } else {
                         throw new IdentitySCIMException("Error when adding SCIM Attribute: "
-                                + entry.getKey() + " An attribute with the same name doesn't exists.");
+                                + entry.getKey()
+                                + " An attribute with the same name doesn't exists.");
                     }
                 }
-                int[] returnCount = prepStmt.executeBatch();
+                int[] return_count = prepStmt.executeBatch();
                 if (log.isDebugEnabled()) {
-                    log.debug("No. of records updated for updating SCIM Group : " + returnCount.length);
+                    log.debug("No. of records updated for updating SCIM Group : " + return_count.length);
                 }
                 connection.commit();
+
             } catch (SQLException e) {
                 throw new IdentitySCIMException("Error updating the SCIM Group Attributes.", e);
             } finally {
