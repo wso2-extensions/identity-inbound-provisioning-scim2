@@ -439,7 +439,7 @@ public class SCIMRoleManagerV2Test {
             },
             {
                 "displayName sw sys",
-                "name sw 'sys%'",
+                "name sw 'sys'",
                 new Role[]{
                         createMockRole(ROLE_ID, "sysadmin"),
                         createMockRole(ROLE_ID_2, "system_admin")
@@ -447,7 +447,7 @@ public class SCIMRoleManagerV2Test {
             },
             {
                 "displayName ew admin",
-                "name ew '%admin'",
+                "name ew 'admin'",
                 new Role[]{
                         createMockRole(ROLE_ID, "sysadmin"),
                         createMockRole(ROLE_ID_2, "domain_admin")
@@ -455,7 +455,7 @@ public class SCIMRoleManagerV2Test {
             },
             {
                 "displayName co min",
-                "name co '%min%'",
+                "name co 'min'",
                 new Role[]{
                         createMockRole(ROLE_ID, "administrator"),
                         createMockRole(ROLE_ID_2, "adminuser")
@@ -463,17 +463,17 @@ public class SCIMRoleManagerV2Test {
             },
             {
                 "displayName ew or",
-                "name ew '%or'",
+                "name ew 'or'",
                 new Role[]{
                         createMockRole(ROLE_ID, "administrator"),
                 }
             },
             {
-                    "displayName co and",
-                    "name co '%and%'",
-                    new Role[]{
-                            createMockRole(ROLE_ID, "brand_admin"),
-                    }
+                "displayName co and",
+                "name co 'and'",
+                new Role[]{
+                        createMockRole(ROLE_ID, "brand_admin"),
+                }
             }
         };
     }
