@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -43,7 +43,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
 
 /**
  * This is for managing SCIM specific attributes related to Group resource in Identity_SCIM_GROUP
@@ -334,5 +333,18 @@ public class SCIMGroupHandler {
 
         GroupDAO groupDAO = new GroupDAO();
         return groupDAO.getGroupNameList(attributeName, searchAttribute, this.tenantId, domainName);
+    }
+
+    /**
+     * Update SCIM attributes of the group.
+     *
+     * @param groupName     The display name of the group.
+     * @param attributes    The attributes to be updated.
+     * @throws IdentitySCIMException IdentitySCIMException when updating the SCIM Group information.
+     */
+    public void updateSCIMAttributes(String groupName, Map<String, String> attributes) throws IdentitySCIMException {
+
+        GroupDAO groupDAO = new GroupDAO();
+        groupDAO.updateSCIMGroupAttributes(tenantId, groupName, attributes);
     }
 }
