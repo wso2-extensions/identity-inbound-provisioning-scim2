@@ -1472,6 +1472,9 @@ public class SCIMUserManager implements UserManager {
         domainName = resolveDomainName(domainName, node);
         int totalResults = 0;
         try {
+            if (limit == 0) {
+                limit = getMaxLimit(domainName);
+            }
             // Check which APIs should the filter needs to follow.
             if (isUseLegacyAPIs(limit)) {
                 users = filterUsersUsingLegacyAPIs(node, limit, offset, domainName);
@@ -1548,6 +1551,9 @@ public class SCIMUserManager implements UserManager {
 
     private int getMaxLimitForTotalResults(String domainName) {
 
+        if (StringUtils.isEmpty(domainName)) {
+            domainName = getPrimaryUserStoreDomain();
+        }
         int maxLimit = getMaxLimit(domainName);
         if (isJDBCUSerStore(domainName) && !SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
             maxLimit = Integer.MAX_VALUE;
@@ -1615,11 +1621,7 @@ public class SCIMUserManager implements UserManager {
         String filterOperation = node.getOperation();
         String attributeValue = node.getValue();
 
-        String primaryUSDomain = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.
-                RealmConfig.PROPERTY_DOMAIN_NAME);
-        if (StringUtils.isEmpty(primaryUSDomain)) {
-            primaryUSDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
-        }
+        String primaryUSDomain = getPrimaryUserStoreDomain();
         if ((isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled()) && !StringUtils
                 .contains(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
             return primaryUSDomain;
@@ -1718,22 +1720,16 @@ public class SCIMUserManager implements UserManager {
         // Set filter values.
         String attributeName = ((ExpressionNode) node).getAttributeValue();
         String filterOperation = ((ExpressionNode) node).getOperation();
-        String attributeValue = ((ExpressionNode) node).getValue();
 
         /*
         If there is a domain and if the domain separator is not found in the attribute value, append the domain
         with the domain separator in front of the new attribute value.
          */
-        attributeValue = UserCoreUtil.addDomainToName(((ExpressionNode) node).getValue(), domainName);
+        String attributeValue = UserCoreUtil.addDomainToName(((ExpressionNode) node).getValue(), domainName);
 
         try {
             List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
-            Set<org.wso2.carbon.user.core.common.User> users;
-            if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled()) {
-                users = getUserListOfGroups(roleNames);
-            } else {
-                users = getUserListOfRoles(roleNames);
-            }
+            Set<org.wso2.carbon.user.core.common.User> users = getUserListOfRoles(roleNames);
             users = paginateUsers(users, limit, offset);
             return users;
         } catch (UserStoreException e) {
@@ -1763,7 +1759,8 @@ public class SCIMUserManager implements UserManager {
             throws CharonException, BadRequestException {
 
         // Filter users when filter by group.
-        if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
+        if (!SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
+                SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
             return filterUsersByGroup(node, offset, limit, domainName);
         }
 
@@ -2064,11 +2061,8 @@ public class SCIMUserManager implements UserManager {
         // Sorting the secondary user stores to maintain an order fo domains so that pagination is consistent.
         Collections.sort(domainsOfUserStores);
 
-        String primaryUSDomain = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.
-                RealmConfig.PROPERTY_DOMAIN_NAME);
-        if (StringUtils.isEmpty(primaryUSDomain)) {
-            primaryUSDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
-        }
+        String primaryUSDomain = getPrimaryUserStoreDomain();
+
         // Append the primary domain name to the front of the domain list since the first iteration of multiple
         // domain filtering should happen for the primary user store.
         domainsOfUserStores.add(0, primaryUSDomain);
@@ -2168,7 +2162,6 @@ public class SCIMUserManager implements UserManager {
                                                         String domainName) throws CharonException, BadRequestException {
 
         List<User> filteredUserDetails;
-        int maxLimit = getMaxLimitForTotalResults(domainName);
 
         int totalResults = 0;
         PaginatedUserResponse paginatedUserResult;
@@ -2178,25 +2171,27 @@ public class SCIMUserManager implements UserManager {
             paginatedUserResult = getMultiAttributeFilteredUsersWithMaxLimit(node, offset, sortBy, sortOrder, domainName, limit,
                     true);
         } else {
-            paginatedUserResult = getMultiAttributeFilteredUsersWithMaxLimit(node, offset, sortBy, sortOrder, domainName, maxLimit,
-                    false);
+            int maxLimit = getMaxLimit(domainName);
+            paginatedUserResult = getMultiAttributeFilteredUsersWithMaxLimit(node, offset, sortBy, sortOrder,
+                    domainName, maxLimit, false);
         }
         filteredUserDetails = getFilteredUserDetails(new LinkedHashSet<>(paginatedUserResult.getFilteredUsers()),
                 requiredAttributes);
 
+        int maxLimitForTotalResults = getMaxLimitForTotalResults(domainName);
         // Check that total user count matching the client query needs to be calculated.
         if (paginatedUserResult.getTotalResults() > 0) {
             /* If the total result is provided with the paginated user result, give the priority instead of calculating
                 user total count. */
             totalResults = paginatedUserResult.getTotalResults();
-            if (totalResults > maxLimit && SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
-                totalResults = maxLimit;
+            if (totalResults > maxLimitForTotalResults && SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                totalResults = maxLimitForTotalResults;
             }
         } else {
             if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC() ||
                     SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
                 // Get total users based on the filter query.
-                totalResults += getMultiAttributeFilteredUsersCount(node, 1, domainName, maxLimit);
+                totalResults += getMultiAttributeFilteredUsersCount(node, 1, domainName, maxLimitForTotalResults);
 
             } else {
                 totalResults += paginatedUserResult.getFilteredUsers().size();
@@ -2263,11 +2258,7 @@ public class SCIMUserManager implements UserManager {
 
         int givenMax = UserCoreConstants.MAX_USER_ROLE_LIST;
         if (StringUtils.isEmpty(domainName)) {
-            domainName = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.RealmConfig.
-                    PROPERTY_DOMAIN_NAME);
-            if (StringUtils.isEmpty(domainName)) {
-                domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
-            }
+            domainName = getPrimaryUserStoreDomain();
             if (log.isDebugEnabled()) {
                 log.debug("Primary user store DomainName picked as " + domainName);
             }
@@ -2479,11 +2470,7 @@ public class SCIMUserManager implements UserManager {
 
         try {
             if (StringUtils.isEmpty(domainName)) {
-                domainName = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.RealmConfig.
-                        PROPERTY_DOMAIN_NAME);
-                if (StringUtils.isEmpty(domainName)) {
-                    domainName = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
-                }
+                domainName = getPrimaryUserStoreDomain();
                 if (log.isDebugEnabled()) {
                     log.debug("Primary user store DomainName picked as " + domainName);
                 }
@@ -3370,11 +3357,7 @@ public class SCIMUserManager implements UserManager {
      */
     private String getDomainWithFilterProperties(ExpressionNode node) {
 
-        String primaryUSDomain = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.
-                RealmConfig.PROPERTY_DOMAIN_NAME);
-        if (StringUtils.isEmpty(primaryUSDomain)) {
-            primaryUSDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
-        }
+        String primaryUSDomain = getPrimaryUserStoreDomain();
         if (isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled()) {
             return primaryUSDomain;
         } else if (isFilteringEnhancementsEnabled()) {
@@ -6813,14 +6796,10 @@ public class SCIMUserManager implements UserManager {
             AbstractUserStoreManager tempCarbonUM = carbonUM;
             // If domain name are not given, then perform filtering on all available user stores.
             while (tempCarbonUM != null && maxLimit > 0) {
-                // If carbonUM is not an instance of Abstract User Store Manger we can't get the domain name.
-                if (tempCarbonUM instanceof AbstractUserStoreManager) {
-                    domainName =
-                            tempCarbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.RealmConfig.
-                                    PROPERTY_DOMAIN_NAME);
-                    filteredUsersCount +=
-                            getMultiAttributeFilteredUsersCountFromSingleDomain(node, offset, domainName, maxLimit);
-                }
+                domainName = tempCarbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.RealmConfig.
+                                PROPERTY_DOMAIN_NAME);
+                filteredUsersCount +=
+                        getMultiAttributeFilteredUsersCountFromSingleDomain(node, offset, domainName, maxLimit);
                 // If secondary user store manager assigned to carbonUM then global variable carbonUM will contains the
                 // secondary user store manager.
                 tempCarbonUM = (AbstractUserStoreManager) tempCarbonUM.getSecondaryUserStoreManager();
@@ -6926,5 +6905,15 @@ public class SCIMUserManager implements UserManager {
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             throw new CharonException("Error while retrieving scim to local mappings.", e);
         }
+    }
+
+    private String getPrimaryUserStoreDomain() {
+
+        String primaryUSDomain = carbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.
+                RealmConfig.PROPERTY_DOMAIN_NAME);
+        if (StringUtils.isEmpty(primaryUSDomain)) {
+            primaryUSDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
+        }
+        return primaryUSDomain;
     }
 }
