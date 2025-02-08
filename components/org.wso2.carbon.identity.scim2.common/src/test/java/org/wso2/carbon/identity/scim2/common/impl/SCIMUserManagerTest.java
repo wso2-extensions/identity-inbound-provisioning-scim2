@@ -638,8 +638,8 @@ public class SCIMUserManagerTest {
     }
 
     @Test
-    public void testFilteringUsersOfGroupWithGET() throws UserStoreException, IOException, BadRequestException,
-            NotImplementedException, CharonException {
+    public void testFilteringUsersOfGroupWithGET() throws org.wso2.carbon.user.api.UserStoreException,
+            IOException, BadRequestException, NotImplementedException, CharonException {
 
         String domain = "PRIMARY";
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
@@ -660,18 +660,15 @@ public class SCIMUserManagerTest {
         when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(mockedJDBCUserStoreManager);
         when(mockedJDBCUserStoreManager.isSCIMEnabled()).thenReturn(true);
         scimCommonUtils.when(SCIMCommonUtils::isGroupBasedUserFilteringImprovementsEnabled).thenReturn(true);
+
         when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(new String[]{"admin"});
-        when(mockedUserStoreManager.getUserCountForGroup(anyString())).thenReturn(filteredUsers.size());
-        when(mockedUserStoreManager.getUserListOfGroupWithID(anyString())).thenReturn(filteredUsers);
 
-        UniqueIDUserClaimSearchEntry uniqueIDUserClaimSearchEntry = new UniqueIDUserClaimSearchEntry();
-        List<UniqueIDUserClaimSearchEntry> uniqueIDUserClaimSearchEntries = new ArrayList<>();
-        uniqueIDUserClaimSearchEntries.add(uniqueIDUserClaimSearchEntry);
-        when(mockedUserStoreManager.getUsersClaimValuesWithID(any(), any(), nullable(String.class)))
-                .thenReturn(uniqueIDUserClaimSearchEntries);
+        ClaimMapping[] claimMappings = getTestClaimMappings();
+        when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(claimMappings);
+        when(mockedUserStoreManager.getUserListWithID(any(), anyString(), anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsers);
 
-        UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, null, null, null, domain, new HashMap<>());
+        UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, filteredUsers.size(), null, null, domain, new HashMap<>());
         assertEquals(result.getUsers().size(), filteredUsers.size());
 
     }
