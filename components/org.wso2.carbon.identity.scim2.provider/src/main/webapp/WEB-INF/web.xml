@@ -175,6 +175,28 @@
     </servlet-mapping>
 
     <servlet>
+        <servlet-name>meResourceOrgPerspective</servlet-name>
+        <servlet-class>
+            org.apache.cxf.jaxrs.servlet.CXFNonSpringJaxrsServlet
+        </servlet-class>
+        <load-on-startup>1</load-on-startup>
+        <init-param>
+            <param-name>hide-service-list-page</param-name>
+            <param-value>true</param-value>
+        </init-param>
+        <init-param>
+            <param-name>jaxrs.serviceClasses</param-name>
+            <param-value>
+                org.wso2.carbon.identity.scim2.provider.resources.MeResource
+            </param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>meResourceOrgPerspective</servlet-name>
+        <url-pattern>/o/Me/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
         <servlet-name>serviceProviderConfigResource</servlet-name>
         <servlet-class>
             org.apache.cxf.jaxrs.servlet.CXFNonSpringJaxrsServlet
