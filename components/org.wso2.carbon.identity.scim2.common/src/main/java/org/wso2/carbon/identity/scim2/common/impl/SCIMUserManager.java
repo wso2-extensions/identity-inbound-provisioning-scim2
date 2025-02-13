@@ -142,6 +142,7 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATT
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildSystemSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
         .isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
@@ -6517,6 +6518,25 @@ public class SCIMUserManager implements UserManager {
             logSchemaAttributes(customUserSchemaAttributesList);
         }
         return customUserSchemaAttributesList;
+    }
+
+    /**
+     * Returns SCIM2 system AttributeSchema of the tenant.
+     *
+     * @return Returns scim2 system schema
+     * @throws CharonException
+     */
+    @Override
+    public AttributeSchema getCustomAttributeSchemaInSystemExtension() throws CharonException {
+
+        if (tenantDomain != null) {
+            try {
+                return buildSystemSchema(carbonUM.getTenantId());
+            } catch (UserStoreException e) {
+                throw new CharonException("Error while building scim custom schema", e);
+            }
+        }
+        return null;
     }
 
     /**
