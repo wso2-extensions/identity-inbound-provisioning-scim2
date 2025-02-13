@@ -25,7 +25,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.IdPGroup;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -82,12 +86,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_PERMISSION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
-import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_MANAGEMENT_ERROR_CODE_PREFIX;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 
 /**
@@ -126,6 +130,23 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 String error = "Role with id: " + role.getId() + " already exists in the tenantDomain: "
                         + tenantDomain;
                 throw new ConflictException(error);
+            }
+
+            if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equals(role.
+                    getAudienceType())) {
+                ServiceProvider app = ApplicationManagementService.getInstance().getApplicationByResourceId(
+                        role.getAudienceValue(), tenantDomain);
+                if (app == null) {
+                    throw new BadRequestException("Invalid audience value. Audience value should be valid " +
+                            "application ID");
+                }
+
+                if (app.getSpProperties() != null && Arrays.stream(app.getSpProperties())
+                        .anyMatch(property -> ApplicationConstants.IS_FRAGMENT_APP.equals(property.getName())
+                                && Boolean.parseBoolean(property.getValue()))) {
+                    throw new BadRequestException("Role creation for shared applications is not allowed at " +
+                            "organization level.");
+                }
             }
             List<String> permissionValues = role.getPermissionValues();
             List<Permission> permissionList = new ArrayList<>();
@@ -191,6 +212,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throw new CharonException(
                     String.format("Error occurred while retrieving IdP groups for role: %s", role.getDisplayName()),
                     e);
+        } catch (IdentityApplicationManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while retrieving application relevant for role: %s audience.",
+                            role.getDisplayName()), e);
+        } catch (OrganizationManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while checking the organization status of the tenant: %s",
+                            tenantDomain), e);
         }
     }
 
