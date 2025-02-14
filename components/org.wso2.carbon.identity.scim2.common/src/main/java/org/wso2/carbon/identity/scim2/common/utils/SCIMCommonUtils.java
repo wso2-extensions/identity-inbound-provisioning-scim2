@@ -937,6 +937,26 @@ public class SCIMCommonUtils {
         }
     }
 
+    /**
+     * Returns SCIM2 system AttributeSchema of the tenant.
+     *
+     * @param tenantId  Tenant ID.
+     * @return scim2 system schema.
+     * @throws CharonException If an error occurred in retrieving custom schema.
+     */
+    public static AttributeSchema buildSystemSchema(int tenantId) throws CharonException {
+
+        try {
+            SCIMCustomSchemaProcessor scimCustomSchemaProcessor = new SCIMCustomSchemaProcessor();
+            List<SCIMCustomAttribute> attributes =
+                    scimCustomSchemaProcessor.getCustomAttributes(IdentityTenantUtil.getTenantDomain(tenantId),
+                            SCIMConstants.SYSTEM_USER_SCHEMA_URI);
+            return SCIMSystemSchemaExtensionBuilder.getInstance().buildSystemSchemaExtension(attributes);
+        } catch (InternalErrorException | IdentitySCIMException e) {
+            throw new CharonException("Error while building scim system schema", e);
+        }
+    }
+
     public static void updateEveryOneRoleV2MetaData(int tenantId) {
 
         // Handle everyone role creation also here if legacy runtime is disabled.
