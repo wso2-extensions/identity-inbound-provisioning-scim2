@@ -951,10 +951,7 @@ public class SCIMCommonUtils {
             List<SCIMCustomAttribute> attributes =
                     scimCustomSchemaProcessor.getCustomAttributes(IdentityTenantUtil.getTenantDomain(tenantId),
                             SCIMConstants.SYSTEM_USER_SCHEMA_URI);
-            AttributeSchema attributeSchema = SCIMSystemSchemaExtensionBuilder.getInstance()
-                    .buildSystemSchemaExtension(attributes);
-            SCIMCustomAttributeSchemaCache.getInstance().addSCIMCustomAttributeSchema(tenantId, attributeSchema);
-            return attributeSchema;
+            return SCIMSystemSchemaExtensionBuilder.getInstance().buildSystemSchemaExtension(attributes);
         } catch (InternalErrorException | IdentitySCIMException e) {
             throw new CharonException("Error while building scim system schema", e);
         }
