@@ -433,14 +433,14 @@ public class UserResource extends AbstractResource {
 
         if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
             Flow flow = new Flow.Builder()
-                    .name(Flow.Name.PASSWORD_UPDATE)
+                    .name(Flow.Name.PROFILE_UPDATE)
                     .initiatingPersona(Flow.InitiatingPersona.ADMIN)
                     .build();
             IdentityContext.getThreadLocalIdentityContext().setFlow(flow);
         }
         if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
             Flow flow = new Flow.Builder()
-                    .name(Flow.Name.PASSWORD_UPDATE)
+                    .name(Flow.Name.PROFILE_UPDATE)
                     .initiatingPersona(Flow.InitiatingPersona.APPLICATION)
                     .build();
             IdentityContext.getThreadLocalIdentityContext().setFlow(flow);

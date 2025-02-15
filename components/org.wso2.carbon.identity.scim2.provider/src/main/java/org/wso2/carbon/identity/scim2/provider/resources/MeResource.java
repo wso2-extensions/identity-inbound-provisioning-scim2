@@ -251,7 +251,7 @@ public class MeResource extends AbstractResource {
     private void updateIdentityContext() {
 
         Flow flow = new Flow.Builder()
-                .name(Flow.Name.PASSWORD_UPDATE)
+                .name(Flow.Name.PROFILE_UPDATE)
                 .initiatingPersona(Flow.InitiatingPersona.USER)
                 .build();
         IdentityContext.getThreadLocalIdentityContext().setFlow(flow);
