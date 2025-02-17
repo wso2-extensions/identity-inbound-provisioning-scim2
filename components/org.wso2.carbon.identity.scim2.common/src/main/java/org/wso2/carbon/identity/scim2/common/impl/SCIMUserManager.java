@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
@@ -1183,6 +1184,7 @@ public class SCIMUserManager implements UserManager {
             }
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreClientException e) {
+            handleAndThrowClientExceptionForActionFailure(e);
             String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
@@ -1367,6 +1369,7 @@ public class SCIMUserManager implements UserManager {
             }
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreException e) {
+            handleAndThrowClientExceptionForActionFailure(e);
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw resolveError(e, "Error while updating attributes of user: " +
                     maskIfRequired(user.getUserName()));
@@ -1383,6 +1386,14 @@ public class SCIMUserManager implements UserManager {
         } catch (CharonException e) {
             throw new CharonException("Error occurred while trying to update the user: " +
                     maskIfRequired(user.getUserName()), e);
+        }
+    }
+
+    private void handleAndThrowClientExceptionForActionFailure(UserStoreException e) throws BadRequestException {
+
+        if (e instanceof UserStoreClientException && UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED
+                .equals(((UserStoreClientException) e).getErrorCode())) {
+            throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
         }
     }
 
