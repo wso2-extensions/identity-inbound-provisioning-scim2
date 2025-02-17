@@ -26,8 +26,10 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
 
 /**
@@ -67,11 +69,11 @@ public class SCIMClaimOperationEventHandler extends AbstractEventHandler {
         String claimDialectUri =
                 (String) event.getEventProperties().get(IdentityEventConstants.EventProperty.CLAIM_DIALECT_URI);
         if (!getCustomSchemaURI().equalsIgnoreCase(claimDialectUri) &&
+                !SCIM_SYSTEM_USER_CLAIM_DIALECT.equals(claimDialectUri) &&
                 !WSO2_CARBON_DIALECT.equalsIgnoreCase(claimDialectUri)) {
             if (log.isDebugEnabled()) {
                 String message = "The event triggered in the tenant %s is not related to either local dialect or " +
-                        "SCIM2 custom schema dialect. Hence, we skip the logic of clearing the " +
-                        "SCIMCustomAttributeSchema cache";
+                        "SCIM2 system or custom schema dialect. Hence, we skip the logic of clearing the cache.";
                 log.debug(String.format(message, tenantId));
             }
             return;
@@ -86,6 +88,14 @@ public class SCIMClaimOperationEventHandler extends AbstractEventHandler {
             return;
         }
 
+        if (SCIM_SYSTEM_USER_CLAIM_DIALECT.equalsIgnoreCase(claimDialectUri)) {
+            SCIMSystemAttributeSchemaCache.getInstance().clearSCIMSystemAttributeSchemaByTenant(tenantId);
+        } else if (getCustomSchemaURI().equalsIgnoreCase(claimDialectUri)) {
+            SCIMCustomAttributeSchemaCache.getInstance().clearSCIMCustomAttributeSchemaByTenant(tenantId);
+        }
+
+        // It is a local claim update. Clear both caches.
+        SCIMSystemAttributeSchemaCache.getInstance().clearSCIMSystemAttributeSchemaByTenant(tenantId);
         SCIMCustomAttributeSchemaCache.getInstance().clearSCIMCustomAttributeSchemaByTenant(tenantId);
     }
 
