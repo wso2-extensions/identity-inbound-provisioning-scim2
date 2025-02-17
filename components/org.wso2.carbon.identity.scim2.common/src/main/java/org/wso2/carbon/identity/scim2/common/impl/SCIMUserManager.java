@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagemen
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
@@ -6541,6 +6542,11 @@ public class SCIMUserManager implements UserManager {
     public AttributeSchema getCustomAttributeSchemaInSystemExtension() throws CharonException {
 
         if (tenantDomain != null) {
+            AttributeSchema schema = SCIMSystemAttributeSchemaCache.getInstance().
+                    getSCIMSystemAttributeSchemaByTenant(IdentityTenantUtil.getTenantId(tenantDomain));
+            if (schema != null) {
+                return schema;
+            }
             try {
                 return buildSystemSchema(carbonUM.getTenantId());
             } catch (UserStoreException e) {

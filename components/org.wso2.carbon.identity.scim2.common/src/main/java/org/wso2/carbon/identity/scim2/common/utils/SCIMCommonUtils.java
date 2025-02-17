@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.organization.management.service.util.Organizatio
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
@@ -951,7 +952,10 @@ public class SCIMCommonUtils {
             List<SCIMCustomAttribute> attributes =
                     scimCustomSchemaProcessor.getCustomAttributes(IdentityTenantUtil.getTenantDomain(tenantId),
                             SCIMConstants.SYSTEM_USER_SCHEMA_URI);
-            return SCIMSystemSchemaExtensionBuilder.getInstance().buildSystemSchemaExtension(attributes);
+            AttributeSchema attributeSchema = SCIMSystemSchemaExtensionBuilder.getInstance()
+                    .buildSystemSchemaExtension(attributes);
+            SCIMSystemAttributeSchemaCache.getInstance().addSCIMSystemAttributeSchema(tenantId, attributeSchema);
+            return attributeSchema;
         } catch (InternalErrorException | IdentitySCIMException e) {
             throw new CharonException("Error while building scim system schema", e);
         }
