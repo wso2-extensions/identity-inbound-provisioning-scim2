@@ -31,6 +31,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.testng.collections.CollectionUtils;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
@@ -49,6 +50,7 @@ import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.user.action.service.constant.UserActionError;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
 import org.wso2.carbon.user.core.model.UniqueIDUserClaimSearchEntry;
@@ -110,6 +112,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import javax.servlet.http.HttpServletResponse;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -1249,6 +1253,54 @@ public class SCIMUserManagerTest {
         }
 
         assertTrue(hasExpectedBehaviour, "UserName claim update is not properly handled.");
+    }
+
+    @Test
+    public void testUpdateUserWithActionFailure() throws Exception {
+
+        User oldUser = new User();
+        oldUser.setUserName("oldUser");
+
+        User newUser = new User();
+        newUser.setUserName("oldUser");
+        newUser.setId("oldUserId");
+        newUser.setPassword("newPassword");
+
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        doReturn(oldUser).when(scimUserManager).getUser(anyString(), anyMap());
+
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+
+        UserStoreClientException exceptionFromAction = new UserStoreClientException("Compromised password",
+                UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED);
+        doReturn(true).when(mockedUserStoreManager).isExistingUserWithID(anyString());
+        doThrow(exceptionFromAction).when(mockedUserStoreManager).updateCredentialByAdminWithID(anyString(), any());
+
+        try {
+            scimUserManager.updateUser(newUser, Collections.emptyMap());
+        } catch (Exception e) {
+            assertTrue(e instanceof BadRequestException);
+            BadRequestException badRequestException = (BadRequestException) e;
+            assertEquals(badRequestException.getScimType(), ResponseCodeConstants.INVALID_VALUE);
+            assertEquals(badRequestException.getDetail(), "Compromised password");
+            assertEquals(badRequestException.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
+        }
+
+        try {
+            scimUserManager.updateUser(newUser, Collections.emptyMap(), Collections.emptyList());
+        } catch (Exception e) {
+            assertTrue(e instanceof BadRequestException);
+            BadRequestException badRequestException = (BadRequestException) e;
+            assertEquals(badRequestException.getScimType(), ResponseCodeConstants.INVALID_VALUE);
+            assertEquals(badRequestException.getDetail(), "Compromised password");
+            assertEquals(badRequestException.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
+        }
     }
 
     @Test
