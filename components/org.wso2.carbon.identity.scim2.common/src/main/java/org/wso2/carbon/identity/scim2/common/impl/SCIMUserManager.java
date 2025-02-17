@@ -1183,7 +1183,7 @@ public class SCIMUserManager implements UserManager {
             }
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreClientException e) {
-            handleActionFailure(e);
+            handleAndThrowClientExceptionForActionFailure(e);
             String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
@@ -1368,7 +1368,7 @@ public class SCIMUserManager implements UserManager {
             }
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreException e) {
-            handleActionFailure(e);
+            handleAndThrowClientExceptionForActionFailure(e);
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw resolveError(e, "Error while updating attributes of user: " +
                     maskIfRequired(user.getUserName()));
@@ -1388,7 +1388,7 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private void handleActionFailure(UserStoreException e) throws BadRequestException {
+    private void handleAndThrowClientExceptionForActionFailure(UserStoreException e) throws BadRequestException {
 
         if (e instanceof UserStoreClientException && ((UserStoreClientException) e).getErrorCode()
                 .equals(UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED)) {
