@@ -35,6 +35,8 @@
             <class name="org.wso2.carbon.identity.scim2.common.impl.IdentityResourceURLBuilderTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.impl.DefaultSCIMUserStoreErrorResolverTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.impl.SCIMRoleManagerV2Test"/>
+            <class name="org.wso2.carbon.identity.scim2.common.handlers.SCIMClaimOperationEventHandlerTest"/>
+            <class name="org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCacheTest"/>
         </classes>
     </test>
 
