@@ -54,6 +54,13 @@ public class SCIMClaimOperationEventHandler extends AbstractEventHandler {
     private static final Log log = LogFactory.getLog(SCIMClaimOperationEventHandler.class);
     public static final String WSO2_CARBON_DIALECT = "http://wso2.org/claims";
 
+    private static final Set<String> scimClaimDialects = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            SCIM_CORE_CLAIM_DIALECT,
+            SCIM_USER_CLAIM_DIALECT,
+            SCIM_ENTERPRISE_USER_CLAIM_DIALECT,
+            SCIM_SYSTEM_USER_CLAIM_DIALECT
+    )));
+
     /**
      * This handles the claim related operations that are subscribed and clear the SCIMCustomAttributeSchema which
      * contains the all the custom attributes belong to the custom schema of the tenant.
@@ -130,12 +137,6 @@ public class SCIMClaimOperationEventHandler extends AbstractEventHandler {
                 .get(IdentityEventConstants.EventProperty.CLAIM_DIALECT_URI);
         String externalClaimUri = (String) event.getEventProperties()
                 .get(IdentityEventConstants.EventProperty.EXTERNAL_CLAIM_URI);
-        Set<String> scimClaimDialects = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-                SCIM_CORE_CLAIM_DIALECT,
-                SCIM_USER_CLAIM_DIALECT,
-                SCIM_ENTERPRISE_USER_CLAIM_DIALECT,
-                SCIM_SYSTEM_USER_CLAIM_DIALECT
-        )));
 
         /*
          * All spec-defined claims might not be added to dialects as external claims. All supported claims can be found
@@ -149,6 +150,12 @@ public class SCIMClaimOperationEventHandler extends AbstractEventHandler {
 
         IdentityUtil.threadLocalProperties.get().remove(ClaimConstants.EXTERNAL_CLAIM_ADDITION_NOT_ALLOWED_FOR_DIALECT);
         if (scimClaimDialects.contains(claimDialectUri)) {
+            /*
+             * If the claim dialect is a spec-defined SCIM dialect or system schema, then we need to prevent adding
+             * custom external claims to it. Otherwise, it could lead to a spec violation or conflict.
+             * Here, by setting the thread local property, we communicate to the ClaimMetadataManagementService
+             * that claim addition should be prevented.
+             */
             IdentityUtil.threadLocalProperties.get()
                     .put(ClaimConstants.EXTERNAL_CLAIM_ADDITION_NOT_ALLOWED_FOR_DIALECT, true);
         }
