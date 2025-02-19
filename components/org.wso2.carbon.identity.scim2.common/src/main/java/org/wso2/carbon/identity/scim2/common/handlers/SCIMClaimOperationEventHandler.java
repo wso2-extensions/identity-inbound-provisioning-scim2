@@ -147,6 +147,7 @@ public class SCIMClaimOperationEventHandler extends AbstractEventHandler {
             return;
         }
 
+        IdentityUtil.threadLocalProperties.get().remove(ClaimConstants.EXTERNAL_CLAIM_ADDITION_NOT_ALLOWED_FOR_DIALECT);
         if (scimClaimDialects.contains(claimDialectUri)) {
             IdentityUtil.threadLocalProperties.get()
                     .put(ClaimConstants.EXTERNAL_CLAIM_ADDITION_NOT_ALLOWED_FOR_DIALECT, true);
