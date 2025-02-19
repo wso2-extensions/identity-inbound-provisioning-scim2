@@ -148,7 +148,6 @@ public class SCIMClaimOperationEventHandler extends AbstractEventHandler {
             return;
         }
 
-        IdentityUtil.threadLocalProperties.get().remove(ClaimConstants.EXTERNAL_CLAIM_ADDITION_NOT_ALLOWED_FOR_DIALECT);
         if (scimClaimDialects.contains(claimDialectUri)) {
             /*
              * If the claim dialect is a spec-defined SCIM dialect or system schema, then we need to prevent adding
