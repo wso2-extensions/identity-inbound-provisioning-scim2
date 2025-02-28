@@ -18,14 +18,12 @@
 
 package org.wso2.carbon.identity.scim2.common.listener;
 
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mockStatic;
-import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
 import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -39,10 +37,25 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
+import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.Group;
+import org.wso2.carbon.user.core.model.ExpressionCondition;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+import static org.wso2.carbon.user.core.UserStoreConfigConstants.GROUP_NAME_ATTRIBUTE;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
 /**
- * Test class for SCIMGroupResolver.
+ * Test class for GroupDAO.
  */
+@WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbscripts/identity.sql"})
 public class SCIMGroupResolverTest {
 
     private static final String DEFAULT_USER_STORE_DOMAIN = "PRIMARY";
@@ -58,16 +71,20 @@ public class SCIMGroupResolverTest {
     private MockedStatic<IdentityTenantUtil> mockIdentityTenantUtil;
     private MockedStatic<IdentityUtil> mockIdentityUtil;
     private GroupDAO groupDAO;
+    private SCIMGroupResolver scimGroupResolver;
+    private AbstractUserStoreManager userStoreManager;
 
     /**
-     * Setup the test environment for SCIMGroupResolverTest.
+     * Setup the test environment for GroupDAOTest.
      */
     @BeforeClass
     public void setup() throws IdentitySCIMException {
 
         mockIdentityTenantUtil = mockStatic(IdentityTenantUtil.class);
         mockIdentityUtil = mockStatic(IdentityUtil.class);
+        userStoreManager = mock(AbstractUserStoreManager.class);
         groupDAO = new GroupDAO();
+        scimGroupResolver = new SCIMGroupResolver();
         setupInitConfigurations();
         createTestGroups();
     }
@@ -76,39 +93,67 @@ public class SCIMGroupResolverTest {
     public Object[][] groupListDataProviderWithFilter() {
 
         return new Object[][] {
-                {SUPER_TENANT_ID, INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "Group%", GROUP_COUNT},
-                {SUPER_TENANT_ID, INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "Group1%", 1},
-                {SUPER_TENANT_ID, INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "%ou%", GROUP_COUNT},
-                {SUPER_TENANT_ID, INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "%oup1%", 1},
-                {SUPER_TENANT_ID, INTERNAL_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "%oup1", 1},
-                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "Group%",
-                        GROUP_COUNT},
-                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "Group1%", 1},
-                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "%ou%", GROUP_COUNT},
-                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "%oup1%", 1},
-                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "%oup1", 1},
-                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "Group%",
-                        GROUP_COUNT},
-                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "Group1%", 1},
-                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "%ou%",
-                        GROUP_COUNT},
-                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "%oup1%", 1},
-                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN + CarbonConstants.DOMAIN_SEPARATOR + "%oup1", 1},
-                {SUPER_TENANT_ID, "%ou%", GROUP_COUNT * 3},
-                {SUPER_TENANT_ID, "Group%", 0},
-                {SUPER_TENANT_ID, "%oup1", GROUP_COUNT},
-                {SUPER_TENANT_ID, "oup1", 0},
-                {SUPER_TENANT_ID, "", 0}
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.SW, "Group", GROUP_COUNT},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.SW, "Group1", 1},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.SW, "invalid-group", 0},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.SW, "", GROUP_COUNT},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.CO, "ou", GROUP_COUNT},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.CO, "oup1", 1},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.CO, "invalid-group", 0},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.CO, "", GROUP_COUNT},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.EW, "oup1", 1},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.EW, "invalid-group", 0},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.EW, "", GROUP_COUNT},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.EQ, "Group1", 1},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.EQ, "invalid-group", 0},
+                {SUPER_TENANT_ID, INTERNAL_DOMAIN, SCIMCommonConstants.EQ, "", 0},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.SW, "Group", GROUP_COUNT},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.SW, "Group1", 1},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.SW, "invalid-group", 0},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.SW, "", GROUP_COUNT},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.CO, "ou", GROUP_COUNT},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.CO, "oup1", 1},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.CO, "invalid-group", 0},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.CO, "", GROUP_COUNT},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.EW, "oup1", 1},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.EW, "invalid-group", 0},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.EW, "", GROUP_COUNT},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.EQ, "Group1", 1},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.EQ, "invalid-group", 0},
+                {SUPER_TENANT_ID, DEFAULT_USER_STORE_DOMAIN, SCIMCommonConstants.EQ, "", 0},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.SW, "Group", GROUP_COUNT},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.SW, "Group1", 1},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.SW, "invalid-group", 0},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.SW, "", GROUP_COUNT},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.CO, "ou", GROUP_COUNT},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.CO, "oup1", 1},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.CO, "invalid-group", 0},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.CO, "", GROUP_COUNT},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.EW, "oup1", 1},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.EW, "invalid-group", 0},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.EW, "", GROUP_COUNT},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.EQ, "Group1", 1},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.EQ, "invalid-group", 0},
+                {SUPER_TENANT_ID, SECONDARY_USER_STORE_DOMAIN, SCIMCommonConstants.EQ, "", 0},
+                {SUPER_TENANT_ID, null, SCIMCommonConstants.CO, "ou", GROUP_COUNT * 3},
+                {SUPER_TENANT_ID, null, SCIMCommonConstants.SW, "Group", 0},
+                {SUPER_TENANT_ID, null, SCIMCommonConstants.EW, "oup1", GROUP_COUNT},
+                {SUPER_TENANT_ID, null, SCIMCommonConstants.EQ, "Group1", 0},
+                {SUPER_TENANT_ID, null, SCIMCommonConstants.CO, "", GROUP_COUNT * 3}
         };
     }
 
-
     @Test(description = "Test list group names with display name filter.",
             dataProvider = "GroupListDataProviderWithFilter")
-    public void testListGroupNameWithDisplayNameFilter(int tenantId, String filter, int expectedGroupCount)
-            throws IdentitySCIMException {
+    public void testListGroupNameWithDisplayNameFilter(int tenantId, String domain, String operation, String value,
+                                                       int expectedGroupCount) throws UserStoreException {
 
-        Assert.assertEquals(groupDAO.getGroupNameList(tenantId, filter).length, expectedGroupCount);
+        ExpressionCondition expressionCondition = new ExpressionCondition(operation, GROUP_NAME_ATTRIBUTE, value);
+        when(userStoreManager.getTenantId()).thenReturn(tenantId);
+        when(userStoreManager.isUniqueGroupIdEnabled()).thenReturn(false);
+        List<Group> groupList = new ArrayList<>();
+        scimGroupResolver.listGroups(expressionCondition, 0, 0, domain, "", "", groupList, userStoreManager);
+        Assert.assertEquals(groupList.size(), expectedGroupCount);
     }
 
     /**
