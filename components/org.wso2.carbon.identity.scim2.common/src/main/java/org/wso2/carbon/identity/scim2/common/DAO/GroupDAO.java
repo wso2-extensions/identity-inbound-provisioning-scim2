@@ -601,7 +601,7 @@ public class GroupDAO {
             throws IdentitySCIMException {
 
         List<String> roleList = new ArrayList<>();
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             try (PreparedStatement prepStmt = connection.prepareStatement(
                     SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ROLE_NAME)) {
                 prepStmt.setInt(1, tenantId);
