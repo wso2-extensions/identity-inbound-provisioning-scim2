@@ -590,6 +590,41 @@ public class GroupDAO {
     }
 
     /**
+     * List the groups created from SCIM with the group name filter.
+     *
+     * @param tenantId        Tenant ID.
+     * @param groupNameFilter Group name filter to be applied.
+     * @return List of SCIM group names.
+     * @throws IdentitySCIMException If an error occurred while reading the SCIM Group information.
+     */
+    public String[] getGroupNameList(Integer tenantId, String groupNameFilter)
+            throws IdentitySCIMException {
+
+        List<String> roleList = new ArrayList<>();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ROLE_NAME)) {
+                prepStmt.setInt(1, tenantId);
+                prepStmt.setString(2, groupNameFilter);
+
+                try (ResultSet rSet = prepStmt.executeQuery()) {
+                    while (rSet.next()) {
+                        String roleName = rSet.getString(1);
+                        if (StringUtils.isNotEmpty(roleName)) {
+                            // Remove the primary domain name from roleNames.
+                            roleList.add(removePrimaryDomainName(roleName));
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.",
+                    e);
+        }
+        return roleList.toArray(new String[0]);
+    }
+
+    /**
      * Remove the primary domain name from the display names of groups in the primary user store to maintain
      * consistency.
      *

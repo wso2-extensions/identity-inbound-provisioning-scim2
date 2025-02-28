@@ -264,6 +264,12 @@
                 <version>${org.slf4j.verison}</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${h2database.version}</version>
+                <scope>test</scope>
+            </dependency>
             <!-- Pax Logging -->
             <dependency>
                 <groupId>org.ops4j.pax.logging</groupId>
@@ -298,7 +304,7 @@
         <cxf-bundle.version>3.3.7</cxf-bundle.version>
         <inbound.auth.oauth.version>6.5.3</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
-        <carbon.kernel.version>4.10.24</carbon.kernel.version>
+        <carbon.kernel.version>4.10.42</carbon.kernel.version>
         <identity.framework.version>7.8.7</identity.framework.version>
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
@@ -348,6 +354,7 @@
         <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
         <mockito.version>5.3.1</mockito.version>
         <mockito-testng.version>0.5.2</mockito-testng.version>
+        <h2database.version>2.2.224</h2database.version>
         <!-- Pax Logging Version -->
         <pax.logging.api.version>1.10.1</pax.logging.api.version>
 
