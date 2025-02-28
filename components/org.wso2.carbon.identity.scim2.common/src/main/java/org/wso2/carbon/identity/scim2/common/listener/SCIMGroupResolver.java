@@ -533,7 +533,7 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         String attributeValue;
         if (isFilterByGroupName) {
             String nameWithDomain = expressionCondition.getAttributeValue();
-            if (!nameWithDomain.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
+            if (!nameWithDomain.contains(CarbonConstants.DOMAIN_SEPARATOR) && StringUtils.isNotBlank(domain)) {
                 nameWithDomain = domain + CarbonConstants.DOMAIN_SEPARATOR + nameWithDomain;
             }
             attributeValue = buildSearchAttributeValue(attributeName, expressionCondition.getOperation(),
