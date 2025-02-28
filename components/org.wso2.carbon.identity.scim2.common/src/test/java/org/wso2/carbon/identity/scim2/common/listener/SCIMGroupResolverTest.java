@@ -53,7 +53,7 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
 /**
- * Test class for GroupDAO.
+ * Test class for SCIMGroupResolver.
  */
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbscripts/identity.sql"})
 public class SCIMGroupResolverTest {
@@ -75,7 +75,7 @@ public class SCIMGroupResolverTest {
     private AbstractUserStoreManager userStoreManager;
 
     /**
-     * Setup the test environment for GroupDAOTest.
+     * Setup the test environment for SCIMGroupResolverTest.
      */
     @BeforeClass
     public void setup() throws IdentitySCIMException {
@@ -143,9 +143,9 @@ public class SCIMGroupResolverTest {
         };
     }
 
-    @Test(description = "Test list group names with display name filter.",
+    @Test(description = "Test list groups with display name filter.",
             dataProvider = "GroupListDataProviderWithFilter")
-    public void testListGroupNameWithDisplayNameFilter(int tenantId, String domain, String operation, String value,
+    public void testListGroupsWithDisplayNameFilter(int tenantId, String domain, String operation, String value,
                                                        int expectedGroupCount) throws UserStoreException {
 
         ExpressionCondition expressionCondition = new ExpressionCondition(operation, GROUP_NAME_ATTRIBUTE, value);
