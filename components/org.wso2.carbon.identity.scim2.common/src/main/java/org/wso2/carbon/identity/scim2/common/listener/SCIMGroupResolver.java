@@ -528,8 +528,10 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         }
         ExpressionCondition expressionCondition = (ExpressionCondition) condition;
         String attributeName = resolveGroupAttributeWithSCIMSchema(expressionCondition.getAttributeName(), tenantId);
+        boolean isFilterByGroupName =
+                StringUtils.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI, attributeName);
         String attributeValue;
-        if (StringUtils.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI, attributeName)) {
+        if (isFilterByGroupName) {
             String nameWithDomain = expressionCondition.getAttributeValue();
             if (!nameWithDomain.contains(CarbonConstants.DOMAIN_SEPARATOR)) {
                 nameWithDomain = domain + CarbonConstants.DOMAIN_SEPARATOR + nameWithDomain;
@@ -543,7 +545,7 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         GroupDAO groupDAO = new GroupDAO();
         try {
             String[] groupNames;
-            if (StringUtils.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI, attributeName)) {
+            if (isFilterByGroupName) {
                 groupNames = groupDAO.getGroupNameList(tenantId, attributeValue);
             } else {
                 groupNames = groupDAO.getGroupNameList(attributeName, attributeValue, tenantId, domain);
