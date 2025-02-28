@@ -618,7 +618,6 @@ public class GroupDAO {
                 }
             }
         } catch (SQLException e) {
-            log.error("Error when executing the SQL : " + SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ROLE_NAME);
             throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.",
                     e);
         }
