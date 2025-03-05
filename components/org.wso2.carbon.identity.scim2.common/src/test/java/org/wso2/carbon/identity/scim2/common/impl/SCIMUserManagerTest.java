@@ -625,9 +625,44 @@ public class SCIMUserManagerTest {
         ClaimMapping[] claimMappings = getTestClaimMappings();
         when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(claimMappings);
 
+        String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
+
+        AttributeMapping givenNameAttributePrimary = new AttributeMapping("PRIMARY", "http://wso2.org/claims/givenname");
+        AttributeMapping givenNameAttributeSecondary = new AttributeMapping("SECONDARY", "http://wso2.org/claims/givenname");
+        List<AttributeMapping> givenNameAttributeList = new ArrayList<>();
+        givenNameAttributeList.add(givenNameAttributePrimary);
+        givenNameAttributeList.add(givenNameAttributeSecondary);
+
+        AttributeMapping emailAttributePrimary = new AttributeMapping("PRIMARY", "http://wso2.org/claims/emailaddress");
+        AttributeMapping emailAttributeSecondary = new AttributeMapping("SECONDARY", "http://wso2.org/claims/emailaddress");
+        List<AttributeMapping> emailAttributeList = new ArrayList<>();
+        emailAttributeList.add(emailAttributePrimary);
+        emailAttributeList.add(emailAttributeSecondary);
+
+        Map<String, String> supportedByDefaultProperties = new HashMap<String, String>() {{
+            put("SupportedByDefault", "true");
+            put("ReadOnly", "true");
+        }};
+
+        List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim(GIVEN_NAME_LOCAL_CLAIM, givenNameAttributeList, supportedByDefaultProperties));
+            add(new LocalClaim(EMAIL_ADDRESS_LOCAL_CLAIM, emailAttributeList, supportedByDefaultProperties));
+        }};
+
+        List<ExternalClaim> externalClaimList = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":name.givenName", GIVEN_NAME_LOCAL_CLAIM));
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":emails", EMAIL_ADDRESS_LOCAL_CLAIM));
+        }};
+
+        when(mockClaimMetadataManagementService.getLocalClaims(anyString())).thenReturn(localClaimList);
+        when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString()))
+                .thenReturn(externalClaimList);
+
         HashMap<String, Boolean> requiredClaimsMap = new HashMap<>();
         requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
-        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, "carbon.super");
 
         Node node = null;
         if (StringUtils.isNotBlank(filter)) {

@@ -1406,9 +1406,9 @@ public class SCIMUserManager implements UserManager {
     private int handleLimitEqualsNULL(Integer limit) {
 
         // Limit equal to null implies return all users. Return all users scenario handled by the following methods by
-        // expecting count as zero.
+        // expecting count as integer max value.
         if (limit == null) {
-            limit = 0;
+            limit = Integer.MAX_VALUE;
         }
         return limit;
     }
@@ -3051,8 +3051,6 @@ public class SCIMUserManager implements UserManager {
         startIndex = handleStartIndexEqualsNULL(startIndex);
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        } else if (startIndex != 1 && count != null) {
-            throw new NotImplementedException("Pagination is not supported");
         } else if (rootNode != null) {
             return filterGroups(rootNode, startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
         } else {
@@ -3096,6 +3094,7 @@ public class SCIMUserManager implements UserManager {
 
         GroupsGetResponse groupsResponse = new GroupsGetResponse(0, Collections.emptyList());
         List<Group> groupList = new ArrayList<>();
+        int totalGroupCount;
         try {
             Set<String> groupNames;
             if (carbonUM.isRoleAndGroupSeparationEnabled()) {
@@ -3103,6 +3102,25 @@ public class SCIMUserManager implements UserManager {
             } else {
                 groupNames = getRoleNamesForGroupsEndpoint(domainName);
             }
+
+            totalGroupCount = groupNames.size();
+            // Adjust startIndex and endIndex to ensure they are within bounds
+            if (startIndex > 0) {
+                if (startIndex > totalGroupCount) {
+                    startIndex = totalGroupCount;
+                } else {
+                    startIndex -= 1;
+                }
+            } else {
+                startIndex = 0;
+            }
+            int endIndex;
+            if (count == null) {
+                endIndex = totalGroupCount;
+            } else {
+                endIndex = Math.min(startIndex + count, groupNames.size());
+            }
+            groupNames = new HashSet<>(new ArrayList<>(groupNames).subList(startIndex, endIndex));
 
             for (String groupName : groupNames) {
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(groupName);
@@ -3154,7 +3172,7 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentitySCIMException | BadRequestException e) {
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
-        groupsResponse.setTotalGroups(groupList.size());
+        groupsResponse.setTotalGroups(totalGroupCount);
         groupsResponse.setGroups(groupList);
         return groupsResponse;
     }
@@ -3222,19 +3240,15 @@ public class SCIMUserManager implements UserManager {
     private Set<String> getGroupNamesForGroupsEndpoint(String domainName)
             throws UserStoreException, IdentitySCIMException {
 
-        if (StringUtils.isEmpty(domainName)) {
-            Set<String> groupsList = new HashSet<>(Arrays.asList(carbonUM.getRoleNames()));
-            // Remove roles.
-            groupsList.removeIf(SCIMCommonUtils::isHybridRole);
-            return groupsList;
-        } else {
+        String searchValue = SCIMCommonConstants.ANY;
+        if (StringUtils.isNotEmpty(domainName)) {
             // If the domain is specified create a attribute value with the domain name.
-            String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
-            // Retrieve roles using the above attribute value.
-            List<String> roleList = Arrays
-                    .asList(carbonUM.getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true, true));
-            return new HashSet<>(roleList);
+            searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
         }
+        // Retrieve roles using the above attribute value.
+        List<String> roleList = Arrays
+                .asList(carbonUM.getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true, true));
+        return new HashSet<>(roleList);
     }
 
     /**
@@ -3311,22 +3325,38 @@ public class SCIMUserManager implements UserManager {
                 groupsList.removeIf(SCIMCommonUtils::isHybridRole);
             }
 
-            if (groupsList != null) {
-                for (String groupName : groupsList) {
-                    if (groupName != null && carbonUM.isExistingRole(groupName, false)) {
-                        // Skip internal roles.
-                        if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(groupName) || UserCoreUtil
-                                .isEveryoneRole(groupName, carbonUM.getRealmConfiguration())) {
-                            continue;
-                        }
-                        Group group = getRoleWithDefaultAttributes(groupName, requiredAttributes);
-                        if (group != null && group.getId() != null) {
-                            filteredGroups.add(group);
-                        }
-                    } else {
-                        // Returning null will send a resource not found error to client by Charon.
-                        return new GroupsGetResponse(0, null);
+            int totalGroupCount = groupsList.size();
+            // Adjust startIndex and endIndex to ensure they are within bounds
+            if (startIndex > 0) {
+                if (startIndex > totalGroupCount) {
+                    startIndex = totalGroupCount;
+                } else {
+                    startIndex -= 1;
+                }
+            } else {
+                startIndex = 0;
+            }
+            int endIndex;
+            if (count < 0) {
+                count = 0;
+            }
+            endIndex = Math.min(startIndex + count, groupsList.size());
+            groupsList = groupsList.subList(startIndex, endIndex);
+
+            for (String groupName : groupsList) {
+                if (groupName != null && carbonUM.isExistingRole(groupName, false)) {
+                    // Skip internal roles.
+                    if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(groupName) || UserCoreUtil
+                            .isEveryoneRole(groupName, carbonUM.getRealmConfiguration())) {
+                        continue;
                     }
+                    Group group = getRoleWithDefaultAttributes(groupName, requiredAttributes);
+                    if (group != null && group.getId() != null) {
+                        filteredGroups.add(group);
+                    }
+                } else {
+                    // Returning null will send a resource not found error to client by Charon.
+                    return new GroupsGetResponse(0, null);
                 }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
