@@ -438,6 +438,22 @@ public class SCIMUserManagerTest {
         };
     }
 
+    @DataProvider(name = "groupPagination")
+    public Object[][] groupWithPagination() throws Exception {
+
+        return new Object[][]{
+                // start Index = 1, count = 2, results = 2, total = 6
+                {1, 2, 2, 6},
+                // start Index = 2, count = not specified, results = 5, total = 6
+                {2, null, 5, 6},
+                // start Index = not specified, count = not specified, results = 6, total = 6
+                {null, null, 6, 6},
+                // start Index = 7, count = 1, results = 0, total = 6
+                {7, 1, 0, 6}
+
+        };
+    }
+
     @Test(dataProvider = "groupNameWithFilters")
     public void testListGroupsWithFilter(String filter, String roleName, String userStoreDomain) throws Exception {
 
@@ -500,7 +516,31 @@ public class SCIMUserManagerTest {
                 null, requiredAttributes);
 
         assertEquals(groupsResponse.getGroups().size(), 1);
+    }
 
+    @Test(dataProvider = "groupPagination")
+    public void testListGroups(Integer startIndex, Integer count, Integer results, Integer totalResult)
+            throws Exception {
+
+        String[] groups = new String[]{"group1", "group2", "group3", "group4", "group5", "group6"};
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(groups);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+
+        when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
+        for (String group : groups) {
+            when(mockedUserStoreManager.getGroupByGroupName(group, null)).
+                    thenReturn(buildUserCoreGroupResponse(group, "123456789", null));
+        }
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(null, startIndex, count, null, null,
+                null, null);
+
+        assertEquals(groupsResponse.getGroups().size(), results);
+        assertEquals(groupsResponse.getTotalGroups(), totalResult);
     }
 
     @Test(dataProvider = "listUser")
