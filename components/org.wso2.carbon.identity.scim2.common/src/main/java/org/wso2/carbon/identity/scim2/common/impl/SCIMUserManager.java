@@ -1406,9 +1406,9 @@ public class SCIMUserManager implements UserManager {
     private int handleLimitEqualsNULL(Integer limit) {
 
         // Limit equal to null implies return all users. Return all users scenario handled by the following methods by
-        // expecting count as integer max value.
+        // expecting count as zero.
         if (limit == null) {
-            limit = Integer.MAX_VALUE;
+            limit = 0;
         }
         return limit;
     }
@@ -3259,7 +3259,9 @@ public class SCIMUserManager implements UserManager {
             throws NotImplementedException, CharonException, BadRequestException {
 
         // Handle count equals NULL scenario.
-        count = handleLimitEqualsNULL(count);
+        if (count == null) {
+            count = Integer.MAX_VALUE;
+        }
         if (rootNode instanceof ExpressionNode) {
             return filterGroupsBySingleAttribute((ExpressionNode) rootNode, startIndex, count, sortBy, sortOrder,
                     domainName, requiredAttributes);
@@ -3306,6 +3308,7 @@ public class SCIMUserManager implements UserManager {
         // value.
         domainName = resolveDomain(domainName, node);
         List<Group> filteredGroups = new ArrayList<>();
+        int totalGroupCount;
         try {
             List<String> groupsList = new ArrayList<>(getGroupList(node, domainName));
 
@@ -3314,7 +3317,7 @@ public class SCIMUserManager implements UserManager {
                 groupsList.removeIf(SCIMCommonUtils::isHybridRole);
             }
 
-            int totalGroupCount = groupsList.size();
+            totalGroupCount = groupsList.size();
             // Adjust startIndex and endIndex to ensure they are within bounds
             if (count < 0) {
                 count = 0;
@@ -3322,6 +3325,10 @@ public class SCIMUserManager implements UserManager {
 
             startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
             int endIndex = Math.min(startIndex + count, totalGroupCount);
+            // startIndex + count can cause integer overflow.
+            if (endIndex < 0) {
+                endIndex = totalGroupCount;
+            }
 
             groupsList = groupsList.subList(startIndex, endIndex);
 
@@ -3349,7 +3356,7 @@ public class SCIMUserManager implements UserManager {
             throw resolveError(e, "Error in filtering group with filter: " + attributeName + " + " +
                     filterOperation + " + " + attributeValue);
         }
-        return new GroupsGetResponse(filteredGroups.size(), filteredGroups);
+        return new GroupsGetResponse(totalGroupCount, filteredGroups);
     }
 
     /**
