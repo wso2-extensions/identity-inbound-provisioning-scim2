@@ -3033,8 +3033,6 @@ public class SCIMUserManager implements UserManager {
         startIndex = (startIndex < 1 ? 1 : startIndex);
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        } else if (startIndex != 1 && count >= 0) {
-            throw new NotImplementedException("Pagination is not supported");
         } else if (rootNode != null) {
             return filterGroups(rootNode, startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
         } else {
@@ -3105,22 +3103,13 @@ public class SCIMUserManager implements UserManager {
 
             totalGroupCount = groupNames.size();
             // Adjust startIndex and endIndex to ensure they are within bounds
-            if (startIndex > 0) {
-                if (startIndex > totalGroupCount) {
-                    startIndex = totalGroupCount;
-                } else {
-                    startIndex -= 1;
-                }
-            } else {
-                startIndex = 0;
-            }
-            int endIndex;
-            if (count == null) {
-                endIndex = totalGroupCount;
-            } else {
-                endIndex = Math.min(startIndex + count, groupNames.size());
-            }
-            groupNames = new HashSet<>(new ArrayList<>(groupNames).subList(startIndex, endIndex));
+            startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
+            int endIndex = (count == null) ? totalGroupCount : Math.min(startIndex + count, totalGroupCount);
+
+            groupNames = groupNames.stream()
+                    .skip(startIndex)
+                    .limit(endIndex - startIndex)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
 
             for (String groupName : groupNames) {
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(groupName);
@@ -3327,20 +3316,13 @@ public class SCIMUserManager implements UserManager {
 
             int totalGroupCount = groupsList.size();
             // Adjust startIndex and endIndex to ensure they are within bounds
-            if (startIndex > 0) {
-                if (startIndex > totalGroupCount) {
-                    startIndex = totalGroupCount;
-                } else {
-                    startIndex -= 1;
-                }
-            } else {
-                startIndex = 0;
-            }
-            int endIndex;
             if (count < 0) {
                 count = 0;
             }
-            endIndex = Math.min(startIndex + count, groupsList.size());
+
+            startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
+            int endIndex = Math.min(startIndex + count, totalGroupCount);
+
             groupsList = groupsList.subList(startIndex, endIndex);
 
             for (String groupName : groupsList) {
