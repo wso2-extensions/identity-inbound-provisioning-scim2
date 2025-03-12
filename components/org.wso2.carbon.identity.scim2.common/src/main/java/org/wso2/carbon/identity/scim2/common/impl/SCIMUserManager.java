@@ -3049,6 +3049,8 @@ public class SCIMUserManager implements UserManager {
         startIndex = handleStartIndexEqualsNULL(startIndex);
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
+        } else if (count != null && count == 0) {
+            return new GroupsGetResponse(0, Collections.emptyList());
         } else if (rootNode != null) {
             return filterGroups(rootNode, startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
         } else {
@@ -3259,9 +3261,7 @@ public class SCIMUserManager implements UserManager {
             throws NotImplementedException, CharonException, BadRequestException {
 
         // Handle count equals NULL scenario.
-        if (count == null) {
-            count = Integer.MAX_VALUE;
-        }
+        count = handleLimitEqualsNULL(count);
         if (rootNode instanceof ExpressionNode) {
             return filterGroupsBySingleAttribute((ExpressionNode) rootNode, startIndex, count, sortBy, sortOrder,
                     domainName, requiredAttributes);
@@ -3319,16 +3319,9 @@ public class SCIMUserManager implements UserManager {
 
             totalGroupCount = groupsList.size();
             // Adjust startIndex and endIndex to ensure they are within bounds
-            if (count < 0) {
-                count = 0;
-            }
-
             startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
-            int endIndex = Math.min(startIndex + count, totalGroupCount);
-            // startIndex + count can cause integer overflow.
-            if (endIndex < 0) {
-                endIndex = totalGroupCount;
-            }
+            int endIndex = (count == 0 || count > Integer.MAX_VALUE - startIndex) ?
+                    totalGroupCount : Math.min(startIndex + count, totalGroupCount);
 
             groupsList = groupsList.subList(startIndex, endIndex);
 
