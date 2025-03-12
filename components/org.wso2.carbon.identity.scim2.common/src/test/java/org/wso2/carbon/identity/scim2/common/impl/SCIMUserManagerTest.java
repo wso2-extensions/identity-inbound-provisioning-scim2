@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.AttributeMapping;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -143,6 +144,7 @@ import static org.wso2.charon3.core.schema.SCIMConstants.ENTERPRISE_USER_SCHEMA_
 /*
  * Unit tests for SCIMUserManager
  */
+@WithCarbonHome
 public class SCIMUserManagerTest {
 
     private static final String USERNAME_LOCAL_CLAIM = "http://wso2.org/claims/username";
@@ -449,7 +451,11 @@ public class SCIMUserManagerTest {
                 // start Index = not specified, count = not specified, results = 6, total = 6
                 {null, null, 6, 6},
                 // start Index = 7, count = 1, results = 0, total = 6
-                {7, 1, 0, 6}
+                {7, 1, 0, 6},
+                // start Index = Maximum Value, count = 2, results = 0, total = 6
+                {Integer.MAX_VALUE, 2, 0, 6},
+                // start Index = 3, count = Maximum Value, results = 5, total = 6
+                {3, Integer.MAX_VALUE, 4, 6}
 
         };
     }
@@ -519,7 +525,49 @@ public class SCIMUserManagerTest {
     }
 
     @Test(dataProvider = "groupPagination")
-    public void testListGroups(Integer startIndex, Integer count, Integer results, Integer totalResult)
+    public void testFilterGroupsWithPagination(Integer startIndex, Integer count, Integer results, Integer totalResult)
+            throws Exception {
+
+        org.wso2.carbon.user.core.common.Group[] groupsArray = {
+                buildUserCoreGroupResponse("group1", "1", "dummyDomain"),
+                buildUserCoreGroupResponse("group2", "2", "dummyDomain"),
+                buildUserCoreGroupResponse("group3", "3", "dummyDomain"),
+                buildUserCoreGroupResponse("group4", "4", "dummyDomain"),
+                buildUserCoreGroupResponse("group5", "5", "dummyDomain"),
+                buildUserCoreGroupResponse("group6", "6", "dummyDomain")
+        };
+        String[] groups = new String[]{"group1", "group2", "group3", "group4", "group5", "group6"};
+
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), eq(false), eq(true), eq(true))).thenReturn(groups);
+        when(mockedUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockRealmConfig);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(any())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        List<org.wso2.carbon.user.core.common.User> users = new ArrayList<>();
+        users.add(mock(org.wso2.carbon.user.core.common.User.class));
+        when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(users);
+        when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(Arrays.asList(groups.clone()));
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+        userCoreUtil = mockStatic(UserCoreUtil.class);
+        userCoreUtil.when(() -> UserCoreUtil.isEveryoneRole(anyString(), eq(mockedRealmConfig))).thenReturn(false);
+
+        for (org.wso2.carbon.user.core.common.Group group : groupsArray) {
+            when(mockedUserStoreManager.getGroupByGroupName(group.getGroupName(), null)).thenReturn(
+                    buildUserCoreGroupResponse(group.getGroupName(), group.getGroupID(), group.getUserStoreDomain()));
+        }
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(
+                new ExpressionNode("filter urn:ietf:params:scim:schemas:core:2.0:Group:displayName co group"), startIndex, count, null, null, null, null);
+
+        assertEquals(groupsResponse.getGroups().size(), results);
+        assertEquals(groupsResponse.getTotalGroups(), totalResult);
+        userCoreUtil.close();
+    }
+
+    @Test(dataProvider = "groupPagination")
+    public void testListGroupsWithPagination(Integer startIndex, Integer count, Integer results, Integer totalResult)
             throws Exception {
 
         String[] groups = new String[]{"group1", "group2", "group3", "group4", "group5", "group6"};
