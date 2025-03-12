@@ -3231,15 +3231,18 @@ public class SCIMUserManager implements UserManager {
     private Set<String> getGroupNamesForGroupsEndpoint(String domainName)
             throws UserStoreException, IdentitySCIMException {
 
-        String searchValue = SCIMCommonConstants.ANY;
-        if (StringUtils.isNotEmpty(domainName)) {
-            // If the domain is specified create a attribute value with the domain name.
-            searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
+        if (StringUtils.isEmpty(domainName)) {
+            Set<String> groupsList = new HashSet<>(Arrays.asList(carbonUM.getRoleNames()));
+            // Remove roles.
+            groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+            return groupsList;
+        } else {
+            String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
+            // Retrieve roles using the above attribute value.
+            List<String> roleList = Arrays
+                    .asList(carbonUM.getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true, true));
+            return new HashSet<>(roleList);
         }
-        // Retrieve roles using the above attribute value.
-        List<String> roleList = Arrays
-                .asList(carbonUM.getRoleNames(searchValue, MAX_ITEM_LIMIT_UNLIMITED, true, true, true));
-        return new HashSet<>(roleList);
     }
 
     /**

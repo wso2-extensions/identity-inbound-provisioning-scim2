@@ -537,6 +537,7 @@ public class SCIMUserManagerTest {
                 buildUserCoreGroupResponse("group6", "6", "dummyDomain")
         };
         String[] groups = new String[]{"group1", "group2", "group3", "group4", "group5", "group6"};
+        Node node = new ExpressionNode("filter urn:ietf:params:scim:schemas:core:2.0:Group:displayName co group");
 
         mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), eq(false), eq(true), eq(true))).thenReturn(groups);
@@ -558,8 +559,8 @@ public class SCIMUserManagerTest {
         }
 
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(
-                new ExpressionNode("filter urn:ietf:params:scim:schemas:core:2.0:Group:displayName co group"), startIndex, count, null, null, null, null);
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(node, startIndex, count,
+                null, null, "PRIMARY", null);
 
         assertEquals(groupsResponse.getGroups().size(), results);
         assertEquals(groupsResponse.getTotalGroups(), totalResult);
@@ -583,9 +584,11 @@ public class SCIMUserManagerTest {
             when(mockedUserStoreManager.getGroupByGroupName(group, null)).
                     thenReturn(buildUserCoreGroupResponse(group, "123456789", null));
         }
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(null, startIndex, count, null, null,
-                null, null);
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(null, startIndex, count,
+                null, null, "PRIMARY", null);
 
         assertEquals(groupsResponse.getGroups().size(), results);
         assertEquals(groupsResponse.getTotalGroups(), totalResult);
