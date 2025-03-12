@@ -440,7 +440,7 @@ public class SCIMUserManagerTest {
         };
     }
 
-    @DataProvider(name = "groupPagination")
+    @DataProvider(name = "groupWithPagination")
     public Object[][] groupWithPagination() throws Exception {
 
         return new Object[][]{
@@ -524,7 +524,7 @@ public class SCIMUserManagerTest {
         assertEquals(groupsResponse.getGroups().size(), 1);
     }
 
-    @Test(dataProvider = "groupPagination")
+    @Test(dataProvider = "groupWithPagination")
     public void testFilterGroupsWithPagination(Integer startIndex, Integer count, Integer results, Integer totalResult)
             throws Exception {
 
@@ -566,7 +566,7 @@ public class SCIMUserManagerTest {
         userCoreUtil.close();
     }
 
-    @Test(dataProvider = "groupPagination")
+    @Test(dataProvider = "groupWithPagination")
     public void testListGroupsWithPagination(Integer startIndex, Integer count, Integer results, Integer totalResult)
             throws Exception {
 
