@@ -33,7 +33,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.Permission;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -51,7 +51,6 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;

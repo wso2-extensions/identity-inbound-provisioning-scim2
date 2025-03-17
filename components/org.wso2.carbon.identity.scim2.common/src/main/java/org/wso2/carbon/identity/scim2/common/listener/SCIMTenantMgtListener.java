@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.core.AbstractIdentityTenantMgtListener;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.stratos.common.exception.StratosException;

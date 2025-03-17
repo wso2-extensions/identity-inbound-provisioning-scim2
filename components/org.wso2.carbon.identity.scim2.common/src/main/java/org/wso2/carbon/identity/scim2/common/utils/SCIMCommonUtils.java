@@ -42,7 +42,7 @@ import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCach
 import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;

@@ -31,7 +31,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.stratos.common.util.ClaimsMgtUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserRealm;
