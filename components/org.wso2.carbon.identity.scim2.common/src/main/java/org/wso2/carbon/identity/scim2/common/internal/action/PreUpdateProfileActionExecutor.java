@@ -62,7 +62,7 @@ public class PreUpdateProfileActionExecutor {
     private static final Log LOG = LogFactory.getLog(PreUpdateProfileActionExecutor.class);
 
     /**
-     * Triggers the execution of pre update profile extension
+     * Triggers the execution of pre update profile extension at profile update with PUT
      *
      * @param user                   SCIMUserObject reference that updates
      * @param userClaimsToBeModified Collection of new claims and existing claims that updates in the profile
@@ -100,7 +100,7 @@ public class PreUpdateProfileActionExecutor {
     }
 
     /**
-     * Triggers the execution of pre update profile extension
+     * Triggers the execution of pre update profile extension at profile update with PATCH
      *
      * @param user                                             SCIMUserObject reference that updates
      * @param userClaimsExcludingMultiValuedClaimsToBeModified Collection of new claims and existing claims that
