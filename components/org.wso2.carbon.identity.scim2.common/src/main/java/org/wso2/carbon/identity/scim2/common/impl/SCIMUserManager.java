@@ -57,11 +57,13 @@ import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.action.PreUpdateProfileActionExecutor;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
+import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
@@ -174,6 +176,7 @@ public class SCIMUserManager implements UserManager {
     private String tenantDomain;
     private ClaimMetadataManagementService claimMetadataManagementService;
     private String primaryIdentifierClaim;
+    private PreUpdateProfileActionExecutor preUpdateProfileActionExecutor;
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
     private static final String SERVICE_PROVIDER = "serviceProvider";
@@ -210,6 +213,7 @@ public class SCIMUserManager implements UserManager {
         this.carbonUM = (AbstractUserStoreManager) carbonUserStoreManager;
         this.tenantDomain = tenantDomain;
         this.claimMetadataManagementService = claimMetadataManagementService;
+        this.preUpdateProfileActionExecutor = new PreUpdateProfileActionExecutor();
     }
 
     @Override
@@ -1394,6 +1398,13 @@ public class SCIMUserManager implements UserManager {
         if (e instanceof UserStoreClientException && UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED
                 .equals(((UserStoreClientException) e).getErrorCode())) {
             throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+        }
+
+        if (e instanceof UserActionExecutionClientException) {
+            UserActionExecutionClientException userActionExecutionClientException =
+                    (UserActionExecutionClientException) e;
+            throw new BadRequestException(userActionExecutionClientException.getDescription(),
+                    userActionExecutionClientException.getError());
         }
     }
 
@@ -5407,6 +5418,11 @@ public class SCIMUserManager implements UserManager {
             }
         }
 
+        // Combine the claims to be added and modified.
+        userClaimsToBeModified.putAll(userClaimsToBeAdded);
+
+        preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted);
+
         // Remove user claims.
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
             if (!isImmutableClaim(entry.getKey())) {
@@ -5415,7 +5431,6 @@ public class SCIMUserManager implements UserManager {
         }
 
         // Update user claims.
-        userClaimsToBeModified.putAll(userClaimsToBeAdded);
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
     }
 
@@ -5498,6 +5513,13 @@ public class SCIMUserManager implements UserManager {
             }
         }
 
+        // Combine the claims to be added and modified.
+        userClaimsToBeModified.putAll(userClaimsToBeAdded);
+
+        preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted,
+                simpleMultiValuedClaimsToBeAdded,
+                simpleMultiValuedClaimsToBeRemoved, oldClaimList);
+
         // Remove user claims.
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
             if (!isImmutableClaim(entry.getKey())) {
@@ -5506,7 +5528,6 @@ public class SCIMUserManager implements UserManager {
         }
 
         // Update user claims.
-        userClaimsToBeModified.putAll(userClaimsToBeAdded);
         if (MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) &&
                 MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
             // If no multi-valued attribute is modified.
