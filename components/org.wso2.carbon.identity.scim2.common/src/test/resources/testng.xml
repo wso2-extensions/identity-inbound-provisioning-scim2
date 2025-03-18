@@ -17,9 +17,9 @@
   -->
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
 
-<suite name="Identity-connector-facebook-test-suite" object-factory="org.powermock.modules.testng.PowerMockObjectFactory">
+<suite name="org.wso2.carbon.identity.scim2.common" object-factory="org.powermock.modules.testng.PowerMockObjectFactory">
 
-    <test name="facebook-authenticator-all" preserve-order="true" parallel="false">
+    <test name="scim2-common-tests-all" preserve-order="true" parallel="false">
         <classes>
             <class name="org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtilsTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.utils.AttributeMapperTest"/>
@@ -38,6 +38,7 @@
             <class name="org.wso2.carbon.identity.scim2.common.handlers.SCIMClaimOperationEventHandlerTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCacheTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.listener.SCIMGroupResolverTest"/>
+            <class name="org.wso2.carbon.identity.scim2.common.internal.action.PreUpdateProfileActionExecutorTest"/>
         </classes>
     </test>
 

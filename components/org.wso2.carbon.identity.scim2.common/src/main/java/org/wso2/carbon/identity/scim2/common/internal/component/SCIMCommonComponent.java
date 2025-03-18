@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.scim2.common.internal;
+package org.wso2.carbon.identity.scim2.common.internal.component;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,6 +28,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
@@ -46,6 +47,7 @@ import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMConfigProcessor;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
 import org.wso2.carbon.user.core.listener.GroupResolver;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
@@ -59,7 +61,6 @@ import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
-import org.wso2.carbon.idp.mgt.IdpManager;
 
 import java.io.File;
 
@@ -415,6 +416,33 @@ public class SCIMCommonComponent {
     protected void unsetConfigurationManager(ConfigurationManager configurationManager) {
 
         SCIMCommonComponentHolder.setConfigurationManager(null);
+    }
+
+    @Reference(
+            name = "action.executor.service",
+            service = ActionExecutorService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetActionExecutorService"
+    )
+    /**
+     * Set the ActionExecutorService.
+     *
+     * @param actionExecutorService ActionExecutorService instance.
+     */
+    protected void setActionExecutorService(ActionExecutorService actionExecutorService) {
+
+        SCIMCommonComponentHolder.setActionExecutorService(actionExecutorService);
+    }
+
+    /**
+     * Unset the ActionExecutorService.
+     *
+     * @param actionExecutorService ActionExecutorService instance.
+     */
+    protected void unsetActionExecutorService(ActionExecutorService actionExecutorService) {
+
+        SCIMCommonComponentHolder.setActionExecutorService(null);
     }
 
     @Deactivate

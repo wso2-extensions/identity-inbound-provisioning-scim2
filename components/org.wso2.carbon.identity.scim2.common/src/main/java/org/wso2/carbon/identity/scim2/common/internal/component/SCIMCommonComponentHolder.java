@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,17 +16,18 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.scim2.common.internal;
+package org.wso2.carbon.identity.scim2.common.internal.component;
 
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.mgt.RolePermissionManagementService;
-import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -34,7 +35,6 @@ import java.util.List;
 
 /**
  * SCIM service holder class.
- *
  */
 public class SCIMCommonComponentHolder {
 
@@ -47,6 +47,7 @@ public class SCIMCommonComponentHolder {
     private static IdpManager idpManager;
     private static IdentityEventService identityEventService;
     private static ConfigurationManager configurationManager;
+    private static ActionExecutorService actionExecutorService;
     private static final List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
 
     /**
@@ -92,6 +93,7 @@ public class SCIMCommonComponentHolder {
 
     /**
      * Get claim metadata management service.
+     *
      * @return
      */
     public static ClaimMetadataManagementService getClaimManagementService() {
@@ -149,7 +151,6 @@ public class SCIMCommonComponentHolder {
 
         return roleManagementServiceV2;
     }
-
 
     /**
      * Get {@link OrganizationManager}.
@@ -246,5 +247,25 @@ public class SCIMCommonComponentHolder {
     public static void setConfigurationManager(ConfigurationManager configurationManager) {
 
         SCIMCommonComponentHolder.configurationManager = configurationManager;
+    }
+
+    /**
+     * Get the ActionExecutorService.
+     *
+     * @return ActionExecutorService instance.
+     */
+    public static ActionExecutorService getActionExecutorService() {
+
+        return actionExecutorService;
+    }
+
+    /**
+     * Set the ActionExecutorService.
+     *
+     * @param actionExecutorService ActionExecutorService instance.
+     */
+    public static void setActionExecutorService(ActionExecutorService actionExecutorService) {
+
+        SCIMCommonComponentHolder.actionExecutorService = actionExecutorService;
     }
 }
