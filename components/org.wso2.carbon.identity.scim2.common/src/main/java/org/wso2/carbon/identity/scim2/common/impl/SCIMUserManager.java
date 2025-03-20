@@ -168,6 +168,7 @@ public class SCIMUserManager implements UserManager {
     private static final int MAX_ITEM_LIMIT_UNLIMITED = -1;
     private static final String ENABLE_PAGINATED_USER_STORE = "SCIM.EnablePaginatedUserStore";
     private static final String SERVICE_PROVIDER = "serviceProvider";
+    private static final String CHANGE_PASSWORD_BY_ADMIN = "changePasswordByAdmin";
     private final String SERVICE_PROVIDER_TENANT_DOMAIN = "serviceProviderTenantDomain";
 
     // Additional wso2 user schema properties.
@@ -1301,8 +1302,13 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
-                carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
-                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
+                try {
+                    IdentityUtil.threadLocalProperties.get().put(CHANGE_PASSWORD_BY_ADMIN, true);
+                    carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
+                    publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
+                } finally {
+                    IdentityUtil.threadLocalProperties.get().remove(CHANGE_PASSWORD_BY_ADMIN);
+                }
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect, allSimpleMultiValuedClaimsList);
