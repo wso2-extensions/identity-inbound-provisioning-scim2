@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolv
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
+import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
@@ -102,6 +103,8 @@ import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.security.PrivilegedActionException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -161,6 +164,10 @@ public class SCIMUserManagerTest {
     private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
     private static final String ATTRIBUTE_PROFILES_PROPERTY = "profiles";
     private static final String SUPPORTED_BY_DEFAULT_PROPERTY = "supportedByDefault";
+
+    private static final String TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE = "Compromised password";
+    private static final String TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION =
+            "The provided password is compromised. Provide something different.";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -1275,18 +1282,27 @@ public class SCIMUserManagerTest {
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
 
-        UserStoreClientException exceptionFromAction = new UserStoreClientException("Compromised password",
-                UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED);
+        UserActionExecutionClientException userActionExecutionClientException = new UserActionExecutionClientException(
+                UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED,
+                TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE,
+                TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION);
+        PrivilegedActionException privilegedActionException =
+                new PrivilegedActionException(userActionExecutionClientException);
+        InvocationTargetException invocationTargetException = new InvocationTargetException(privilegedActionException);
+        UserStoreClientException userStoreClientException = new UserStoreClientException(
+                TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE,
+                UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED, invocationTargetException);
         doReturn(true).when(mockedUserStoreManager).isExistingUserWithID(anyString());
-        doThrow(exceptionFromAction).when(mockedUserStoreManager).updateCredentialByAdminWithID(anyString(), any());
+        doThrow(userStoreClientException)
+                .when(mockedUserStoreManager).updateCredentialByAdminWithID(anyString(), any());
 
         try {
             scimUserManager.updateUser(newUser, Collections.emptyMap());
         } catch (Exception e) {
             assertTrue(e instanceof BadRequestException);
             BadRequestException badRequestException = (BadRequestException) e;
-            assertEquals(badRequestException.getScimType(), ResponseCodeConstants.INVALID_VALUE);
-            assertEquals(badRequestException.getDetail(), "Compromised password");
+            assertEquals(badRequestException.getScimType(), TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE);
+            assertEquals(badRequestException.getDetail(), TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION);
             assertEquals(badRequestException.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
         }
 
@@ -1295,8 +1311,8 @@ public class SCIMUserManagerTest {
         } catch (Exception e) {
             assertTrue(e instanceof BadRequestException);
             BadRequestException badRequestException = (BadRequestException) e;
-            assertEquals(badRequestException.getScimType(), ResponseCodeConstants.INVALID_VALUE);
-            assertEquals(badRequestException.getDetail(), "Compromised password");
+            assertEquals(badRequestException.getScimType(), TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE);
+            assertEquals(badRequestException.getDetail(), TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION);
             assertEquals(badRequestException.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
         }
     }
