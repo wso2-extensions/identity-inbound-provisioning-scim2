@@ -712,7 +712,15 @@ public class SCIMUserManager implements UserManager {
         if (StringUtils.isNotEmpty(domainName)) {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName);
-                totalUsers = getTotalUsers(domainName);
+                if (SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+                    int maxLimit = Integer.MAX_VALUE;
+                    if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                        maxLimit = getMaxLimit(domainName);
+                    }
+                    totalUsers = getUsersCountForListUsers(1, maxLimit, domainName);
+                } else {
+                    totalUsers = getTotalUsers(domainName);
+                }
             } else {
                 coreUsers = listUsernamesUsingLegacyAPIs(domainName);
                 if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
@@ -722,7 +730,15 @@ public class SCIMUserManager implements UserManager {
         } else {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernamesAcrossAllDomains(offset, limit, sortBy, sortOrder);
-                totalUsers += getTotalUsersFromAllUserStores();
+                if (SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+                    int maxLimit = Integer.MAX_VALUE;
+                    if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                        maxLimit = getMaxLimit(domainName);
+                    }
+                    totalUsers = getUsersCountForListUsers(1, maxLimit, domainName);
+                } else {
+                    totalUsers = getTotalUsersFromAllUserStores();
+                }
             } else {
                 coreUsers = listUsernamesAcrossAllDomainsUsingLegacyAPIs();
                 if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
@@ -1846,6 +1862,38 @@ public class SCIMUserManager implements UserManager {
             }
         }
         return count;
+    }
+
+    /**
+     * Method to get the count of users from multiple domains.
+     *
+     * @param offset   The starting index for counting users.
+     * @param maxLimit The maximum number of users to be counted.
+     * @return The total count of users  across all specified domains.
+     * @throws CharonException     Error while filtering the users.
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value.
+     */
+    private int getUsersCountForListUsers(int offset, int maxLimit, String domainName)
+            throws CharonException, BadRequestException {
+
+        ExpressionCondition condition = new ExpressionCondition(ExpressionOperation.SW.toString(),
+                ExpressionAttribute.USERNAME.toString(), "");
+        if (StringUtils.isNotEmpty(domainName)) {
+            return getFilteredUserCountFromSingleDomain(condition, offset, maxLimit, domainName);
+        } else {
+            // Filter users when the domain is not set in the request. Then filter through multiple domains.
+            String[] userStoreDomainNames = getDomainNames();
+            int filteredUsersCount = 0;
+            for (String userStoreDomainName : userStoreDomainNames) {
+                try {
+                    filteredUsersCount +=
+                            getFilteredUserCountFromSingleDomain(condition, offset, maxLimit, userStoreDomainName);
+                } catch (CharonException e) {
+                    log.error("Error occurred while getting the users count for domain: " + userStoreDomainName, e);
+                }
+            }
+            return filteredUsersCount;
+        }
     }
 
     /**
