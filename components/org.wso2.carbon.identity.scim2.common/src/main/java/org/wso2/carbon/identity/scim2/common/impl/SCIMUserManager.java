@@ -1411,9 +1411,17 @@ public class SCIMUserManager implements UserManager {
 
     private void handleAndThrowClientExceptionForActionFailure(UserStoreException e) throws BadRequestException {
 
+        /* Note that UserActionExecutionClientException has been wrapped multiple times at this point and needs to be
+         unwrapped accordingly. Since there is a possibility of altering the error stack and not constructing the
+         failure response correctly, integration tests are added to detect any regressions.
+         */
         if (e instanceof UserStoreClientException && UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED
-                .equals(((UserStoreClientException) e).getErrorCode())) {
-            throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                .equals(((UserStoreClientException) e).getErrorCode()) &&
+                e.getCause().getCause().getCause() instanceof UserActionExecutionClientException) {
+            UserActionExecutionClientException userActionExecutionClientException =
+                    (UserActionExecutionClientException) e.getCause().getCause().getCause();
+            throw new BadRequestException(userActionExecutionClientException.getDescription(),
+                    userActionExecutionClientException.getError());
         }
 
         if (e instanceof UserActionExecutionClientException) {
