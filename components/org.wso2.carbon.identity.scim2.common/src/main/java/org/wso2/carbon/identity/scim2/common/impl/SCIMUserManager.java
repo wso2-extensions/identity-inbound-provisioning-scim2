@@ -190,6 +190,8 @@ public class SCIMUserManager implements UserManager {
     private static final String SUPPORTED_BY_DEFAULT_PROPERTY = "supportedByDefault";
     private static final String ATTRIBUTE_PROFILES_PROPERTY = "profiles";
     private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
+    private static final String ROLES_CLAIM = "http://wso2.org/claims/roles";
+    private static final String GROUPS_CLAIM = "http://wso2.org/claims/groups";
     private static final String LOCATION_CLAIM = "http://wso2.org/claims/location";
     private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
     private static final String RESOURCE_TYPE_CLAIM = "http://wso2.org/claims/resourceType";
@@ -1179,6 +1181,9 @@ public class SCIMUserManager implements UserManager {
             Map<String, String> oldClaimList = carbonUM.getUserClaimValuesWithID(user.getId(),
                     requiredClaimsInLocalDialect.toArray(new String[0]), null);
 
+            oldClaimList.remove(USERNAME_CLAIM);
+            oldClaimList.remove(ROLES_CLAIM);
+            oldClaimList.remove(GROUPS_CLAIM);
             oldClaimList.remove(LOCATION_CLAIM);
             oldClaimList.remove(LAST_MODIFIED_CLAIM);
             oldClaimList.remove(RESOURCE_TYPE_CLAIM);
@@ -1363,6 +1368,9 @@ public class SCIMUserManager implements UserManager {
             Map<String, String> oldClaimList = carbonUM.getUserClaimValuesWithID(user.getId(),
                     requiredClaimsInLocalDialect.toArray(new String[0]), null);
 
+            oldClaimList.remove(USERNAME_CLAIM);
+            oldClaimList.remove(ROLES_CLAIM);
+            oldClaimList.remove(GROUPS_CLAIM);
             oldClaimList.remove(LOCATION_CLAIM);
             oldClaimList.remove(LAST_MODIFIED_CLAIM);
             oldClaimList.remove(RESOURCE_TYPE_CLAIM);
@@ -5426,14 +5434,8 @@ public class SCIMUserManager implements UserManager {
         Map<String, String> claimMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
 
         return claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.ID_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.USER_NAME_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.ROLES_URI + "."
-                        + SCIMConstants.DEFAULT)) ||
                 claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.CREATED_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) ||
                 claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.GROUP_URI)) ||
                 claim.contains(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI_PREFIX);
     }
 
