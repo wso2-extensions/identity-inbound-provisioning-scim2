@@ -707,7 +707,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     throw new NotFoundException(e.getMessage());
                 } else if (StringUtils.equals(RoleConstants.Error.ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
                     throw new ConflictException(e.getMessage());
-                } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode())) {
+                } else if (StringUtils.equals(OPERATION_FORBIDDEN.getCode(), e.getErrorCode()) ||
+                        StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
                     throw new BadRequestException(e.getMessage());
                 }
                 throw new CharonException(
