@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 LLC. (http://www.wso2.org)
+ * Copyright (c) 2017-2025, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -33,12 +33,13 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.api.Permission;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.common.UserStore;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -59,6 +60,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 
@@ -76,6 +78,7 @@ public class SCIMUserOperationListenerTest {
     private String profile = "testProfile";
     private String claimURI = "http://wso2.org/claims/country";
     private String claimValue = "dummyValue";
+    private String domainName = "testDomain";
     private boolean isAuthenticated = true;
     SCIMUserOperationListener scimUserOperationListener;
 
@@ -283,12 +286,13 @@ public class SCIMUserOperationListenerTest {
 
     @DataProvider(name = "testDoPostAddRoleData")
     public Object[][] testDoPostAddRoleData() {
+
         return new Object[][]{
-                {true, true, true, "testDomain"},
+                {true, true, true, domainName},
                 {true, true, false, null},
-                {false, false, true, "testDomain"},
-                {true, false, false, "testDomain"},
-                {false, true, true, "testDomain"}
+                {false, false, true, domainName},
+                {true, false, false, domainName},
+                {false, true, true, domainName}
         };
     }
 
@@ -311,7 +315,8 @@ public class SCIMUserOperationListenerTest {
 
     @Test(expectedExceptions = UserStoreException.class)
     public void testDoPostAddRole2() throws Exception {
-        mockTestEnvironment(true, true, "testDomain");
+
+        mockTestEnvironment(true, true, domainName);
         try (MockedConstruction<GroupDAO> mockedGroupDAO = Mockito.mockConstruction(GroupDAO.class,
                 (mock, context) -> {
                     when(mock.isExistingGroup(anyString(), anyInt()))
@@ -331,7 +336,8 @@ public class SCIMUserOperationListenerTest {
 
     @Test(expectedExceptions = UserStoreException.class)
     public void testDoPreDeleteRole2() throws Exception {
-        mockTestEnvironment(true, true, "testDomain");
+
+        mockTestEnvironment(true, true, domainName);
         try (MockedConstruction<GroupDAO> mockedGroupDAO = Mockito.mockConstruction(GroupDAO.class,
                 (mock, context) -> {
                     when(mock.isExistingGroup(nullable(String.class), anyInt()))
@@ -353,12 +359,13 @@ public class SCIMUserOperationListenerTest {
 
     @DataProvider(name = "testDoPostUpdateRoleNameData")
     public Object[][] testDoPostUpdateRoleNameData() {
+
         return new Object[][]{
-                {true, true, "testDomain"},
+                {true, true, domainName},
                 {true, true, null},
-                {false, false, "testDomain"},
-                {true, false, "testDomain"},
-                {false, true, "testDomain"}
+                {false, false, domainName},
+                {true, false, domainName},
+                {false, true, domainName}
         };
     }
 
@@ -383,13 +390,52 @@ public class SCIMUserOperationListenerTest {
 
     @Test(expectedExceptions = UserStoreException.class)
     public void testDoPostUpdateRoleName2() throws Exception {
-        mockTestEnvironment(true, true, "testDomain");
+
+        mockTestEnvironment(true, true, domainName);
         try (MockedConstruction<GroupDAO> mockedGroupDAO = Mockito.mockConstruction(GroupDAO.class,
                 (mock, context) -> {
                     when(mock.isExistingGroup(anyString(), anyInt()))
                             .thenThrow(new IdentitySCIMException("IdentitySCIMException"));
                 })) {
             scimUserOperationListener.doPostUpdateRoleName(roleName, roleName, userStoreManager);
+        }
+    }
+
+    @DataProvider(name = "testDoPostUpdateRoleNameForUniqueGroupIdFlag")
+    public Object[][] testDoPostUpdateRoleNameForUniqueGroupIdFlag() {
+
+        return new Object[][]{
+                {true}, {false}
+        };
+    }
+
+    @Test(dataProvider = "testDoPostUpdateRoleNameForUniqueGroupIdFlag")
+    public void testDoPostUpdateRoleNameForUniqueGroupIdFlag(boolean isUniqueGroupIdEnabled) throws Exception {
+
+        try (MockedConstruction<GroupDAO> mockedGroupDAO = Mockito.mockConstruction(GroupDAO.class,
+                (mock, context) -> {
+                    when(mock.isExistingGroup(anyString(), anyInt())).thenReturn(true);
+                })) {
+            AbstractUserStoreManager mockUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
+            when(mockUserStoreManager.isSCIMEnabled()).thenReturn(true);
+            when(mockUserStoreManager.isUniqueGroupIdEnabled()).thenReturn(isUniqueGroupIdEnabled);
+            when(scimUserOperationListener.isEnable()).thenReturn(true);
+
+            userCoreUtil.when(() -> UserCoreUtil.addDomainToName(anyString(), anyString()))
+                    .thenReturn(domainName);
+
+            assertTrue(scimUserOperationListener.doPostUpdateRoleName(roleName, roleName, mockUserStoreManager));
+
+            GroupDAO groupDAO = mockedGroupDAO.constructed().stream()
+                    .findFirst()
+                    .orElse(null);
+
+            if (isUniqueGroupIdEnabled) {
+                assertNull(groupDAO, "GroupDAO instance should have not been created");
+            } else {
+                assertNotNull(groupDAO, "GroupDAO instance should have been created");
+                Mockito.verify(groupDAO, Mockito.times(1)).updateRoleName(anyInt(), anyString(), anyString());
+            }
         }
     }
 

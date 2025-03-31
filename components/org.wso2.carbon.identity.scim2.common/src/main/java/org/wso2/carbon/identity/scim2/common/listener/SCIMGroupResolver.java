@@ -528,11 +528,28 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         }
         ExpressionCondition expressionCondition = (ExpressionCondition) condition;
         String attributeName = resolveGroupAttributeWithSCIMSchema(expressionCondition.getAttributeName(), tenantId);
-        String attributeValue = buildSearchAttributeValue(attributeName, expressionCondition.getOperation(),
-                expressionCondition.getAttributeValue(), SQL_FILTERING_DELIMITER);
+        boolean isFilterByGroupName =
+                StringUtils.equals(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI, attributeName);
+        String attributeValue;
+        if (isFilterByGroupName) {
+            String nameWithDomain = expressionCondition.getAttributeValue();
+            if (!nameWithDomain.contains(CarbonConstants.DOMAIN_SEPARATOR) && StringUtils.isNotBlank(domain)) {
+                nameWithDomain = domain + CarbonConstants.DOMAIN_SEPARATOR + nameWithDomain;
+            }
+            attributeValue = buildSearchAttributeValue(attributeName, expressionCondition.getOperation(),
+                    nameWithDomain, SQL_FILTERING_DELIMITER);
+        } else {
+            attributeValue = buildSearchAttributeValue(attributeName, expressionCondition.getOperation(),
+                    expressionCondition.getAttributeValue(), SQL_FILTERING_DELIMITER);
+        }
         GroupDAO groupDAO = new GroupDAO();
         try {
-            String[] groupNames = groupDAO.getGroupNameList(attributeName, attributeValue, tenantId, domain);
+            String[] groupNames;
+            if (isFilterByGroupName) {
+                groupNames = groupDAO.getGroupNameList(tenantId, attributeValue);
+            } else {
+                groupNames = groupDAO.getGroupNameList(attributeName, attributeValue, tenantId, domain);
+            }
             if (ArrayUtils.isEmpty(groupNames)) {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("No groups found for the filter in userstore: %s in tenant: %s", domain,

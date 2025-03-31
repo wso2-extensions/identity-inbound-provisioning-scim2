@@ -1,7 +1,7 @@
 # This workflow will build the project on pull requests with tests
 # Uses:
-#   OS: ubuntu-lates
-#   JDK: Adopt JDK 11 and Adopt JDK 17
+#   OS: ubuntu-latest
+#   JDK: Temurin JDK 11 and Adopt JDK 17
 
 name: PR Builder
 
@@ -25,15 +25,15 @@ jobs:
         java-version: [ 11, 17 ]
         
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Adopt JDK 11 and 17
-        uses: actions/setup-java@v2
+      - uses: actions/checkout@v4
+      - name: Set up Temurin JDK 11 and 17
+        uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java-version }}
-          distribution: "adopt"
+          distribution: "temurin"
       - name: Cache local Maven repository
         id: cache-maven-m2
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         env:
           cache-name: cache-m2
         with:
@@ -46,3 +46,12 @@ jobs:
       - name: Build with Maven
         run: mvn clean install -U -B
 
+      - name: Generate coverage report
+        run: mvn test jacoco:report
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files : target/site/jacoco/jacoco.xml
+          flags: unit

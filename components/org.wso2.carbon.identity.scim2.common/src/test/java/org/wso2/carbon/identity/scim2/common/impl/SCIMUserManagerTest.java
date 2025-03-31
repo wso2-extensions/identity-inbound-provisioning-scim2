@@ -19,18 +19,19 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.lang.StringUtils;
+import org.json.JSONObject;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
-import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -40,13 +41,21 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.model.AttributeMapping;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
+import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.user.core.UserStoreClientException;
+import org.wso2.carbon.user.core.common.PaginatedUserResponse;
+import org.wso2.charon3.core.config.SCIMConfigConstants;
+import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -91,8 +100,12 @@ import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
 import org.wso2.charon3.core.utils.codeutils.FilterTreeManager;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.security.PrivilegedActionException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -101,6 +114,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import javax.servlet.http.HttpServletResponse;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -120,12 +135,17 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.charon3.core.schema.SCIMConstants.CUSTOM_EXTENSION_SCHEMA_URI;
+import static org.wso2.charon3.core.schema.SCIMConstants.ENTERPRISE_USER_SCHEMA_URI;
 
 /*
  * Unit tests for SCIMUserManager
  */
+@WithCarbonHome
 public class SCIMUserManagerTest {
 
     private static final String USERNAME_LOCAL_CLAIM = "http://wso2.org/claims/username";
@@ -142,9 +162,19 @@ public class SCIMUserManagerTest {
     private static final String ADDRESS_LOCAL_CLAIM = "http://wso2.org/claims/addresses";
     private static final String USER_SCHEMA_ADDRESS_HOME = "urn:ietf:params:scim:schemas:core:2.0:User:addresses.home";
     private static final String USER_SCHEMA_ADDRESS_WORK= "urn:ietf:params:scim:schemas:core:2.0:User:addresses.work";
+    private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
+    private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
+    private static final String ATTRIBUTE_PROFILES_PROPERTY = "profiles";
+    private static final String SUPPORTED_BY_DEFAULT_PROPERTY = "supportedByDefault";
+
+    private static final String TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE = "Compromised password";
+    private static final String TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION =
+            "The provided password is compromised. Provide something different.";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
+    @Mock
+    private JDBCUserStoreManager mockedJDBCUserStoreManager;
 
     @Mock
     private ClaimManager mockedClaimManager;
@@ -192,8 +222,12 @@ public class SCIMUserManagerTest {
     private SCIMGroupHandler mockedSCIMGroupHandler;
 
     @Mock
+    private ConfigurationManager mockedConfigurationManager;
+
+    @Mock
     private RolePermissionManagementService mockedRolePermissionManagementService;
     private MockedStatic<SCIMUserSchemaExtensionBuilder> scimUserSchemaExtensionBuilder;
+    private MockedStatic<SCIMSystemSchemaExtensionBuilder> scimSystemSchemaExtensionBuilder;
     private MockedStatic<IdentityUtil> identityUtil;
     private MockedStatic<SCIMCommonUtils> scimCommonUtils;
     private MockedStatic<AttributeMapper> attributeMapper;
@@ -215,11 +249,17 @@ public class SCIMUserManagerTest {
         applicationManagementServiceMockedStatic = mockStatic(ApplicationManagementService.class);
         scimCommonComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
         scimUserSchemaExtensionBuilder = mockStatic(SCIMUserSchemaExtensionBuilder.class);
+        scimSystemSchemaExtensionBuilder = mockStatic(SCIMSystemSchemaExtensionBuilder.class);
         claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);
         resourceManagerUtil = mockStatic(ResourceManagerUtil.class);
         SCIMUserSchemaExtensionBuilder mockSCIMUserSchemaExtensionBuilder = mock(SCIMUserSchemaExtensionBuilder.class);
+        SCIMSystemSchemaExtensionBuilder mockSCIMSystemSchemaExtensionBuilder = mock(SCIMSystemSchemaExtensionBuilder.class);
         scimUserSchemaExtensionBuilder.when(SCIMUserSchemaExtensionBuilder::getInstance).thenReturn(mockSCIMUserSchemaExtensionBuilder);
         when(mockSCIMUserSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
+        when(mockedSCIMAttributeSchema.getURI()).thenReturn(ENTERPRISE_USER_SCHEMA_URI)
+                .thenReturn(CUSTOM_EXTENSION_SCHEMA_URI);
+        scimSystemSchemaExtensionBuilder.when(SCIMSystemSchemaExtensionBuilder::getInstance).thenReturn(mockSCIMSystemSchemaExtensionBuilder);
+        when(mockSCIMSystemSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
     }
 
     @AfterMethod
@@ -231,6 +271,7 @@ public class SCIMUserManagerTest {
         applicationManagementServiceMockedStatic.close();
         scimCommonComponentHolder.close();
         scimUserSchemaExtensionBuilder.close();
+        scimSystemSchemaExtensionBuilder.close();
         claimMetadataHandler.close();
         resourceManagerUtil.close();
     }
@@ -404,6 +445,26 @@ public class SCIMUserManagerTest {
         };
     }
 
+    @DataProvider(name = "groupWithPagination")
+    public Object[][] groupWithPagination() throws Exception {
+
+        return new Object[][]{
+                // start Index = 1, count = 2, results = 2, total = 6
+                {1, 2, 2, 6},
+                // start Index = 2, count = not specified, results = 5, total = 6
+                {2, null, 5, 6},
+                // start Index = not specified, count = not specified, results = 6, total = 6
+                {null, null, 6, 6},
+                // start Index = 7, count = 1, results = 0, total = 6
+                {7, 1, 0, 6},
+                // start Index = Maximum Value, count = 2, results = 0, total = 6
+                {Integer.MAX_VALUE, 2, 0, 6},
+                // start Index = 3, count = Maximum Value, results = 5, total = 6
+                {3, Integer.MAX_VALUE, 4, 6}
+
+        };
+    }
+
     @Test(dataProvider = "groupNameWithFilters")
     public void testListGroupsWithFilter(String filter, String roleName, String userStoreDomain) throws Exception {
 
@@ -466,7 +527,76 @@ public class SCIMUserManagerTest {
                 null, requiredAttributes);
 
         assertEquals(groupsResponse.getGroups().size(), 1);
+    }
 
+    @Test(dataProvider = "groupWithPagination")
+    public void testFilterGroupsWithPagination(Integer startIndex, Integer count, Integer results, Integer totalResult)
+            throws Exception {
+
+        org.wso2.carbon.user.core.common.Group[] groupsArray = {
+                buildUserCoreGroupResponse("group1", "1", "dummyDomain"),
+                buildUserCoreGroupResponse("group2", "2", "dummyDomain"),
+                buildUserCoreGroupResponse("group3", "3", "dummyDomain"),
+                buildUserCoreGroupResponse("group4", "4", "dummyDomain"),
+                buildUserCoreGroupResponse("group5", "5", "dummyDomain"),
+                buildUserCoreGroupResponse("group6", "6", "dummyDomain")
+        };
+        String[] groups = new String[]{"group1", "group2", "group3", "group4", "group5", "group6"};
+        Node node = new ExpressionNode("filter urn:ietf:params:scim:schemas:core:2.0:Group:displayName co group");
+
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), eq(false), eq(true), eq(true))).thenReturn(groups);
+        when(mockedUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockRealmConfig);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(any())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        List<org.wso2.carbon.user.core.common.User> users = new ArrayList<>();
+        users.add(mock(org.wso2.carbon.user.core.common.User.class));
+        when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(users);
+        when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(Arrays.asList(groups.clone()));
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+        userCoreUtil = mockStatic(UserCoreUtil.class);
+        userCoreUtil.when(() -> UserCoreUtil.isEveryoneRole(anyString(), eq(mockedRealmConfig))).thenReturn(false);
+
+        for (org.wso2.carbon.user.core.common.Group group : groupsArray) {
+            when(mockedUserStoreManager.getGroupByGroupName(group.getGroupName(), null)).thenReturn(
+                    buildUserCoreGroupResponse(group.getGroupName(), group.getGroupID(), group.getUserStoreDomain()));
+        }
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(node, startIndex, count,
+                null, null, "PRIMARY", null);
+
+        assertEquals(groupsResponse.getGroups().size(), results);
+        assertEquals(groupsResponse.getTotalGroups(), totalResult);
+        userCoreUtil.close();
+    }
+
+    @Test(dataProvider = "groupWithPagination")
+    public void testListGroupsWithPagination(Integer startIndex, Integer count, Integer results, Integer totalResult)
+            throws Exception {
+
+        String[] groups = new String[]{"group1", "group2", "group3", "group4", "group5", "group6"};
+        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
+        when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(groups);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+
+        when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
+        for (String group : groups) {
+            when(mockedUserStoreManager.getGroupByGroupName(group, null)).
+                    thenReturn(buildUserCoreGroupResponse(group, "123456789", null));
+        }
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(null, startIndex, count,
+                null, null, "PRIMARY", null);
+
+        assertEquals(groupsResponse.getGroups().size(), results);
+        assertEquals(groupsResponse.getTotalGroups(), totalResult);
     }
 
     @Test(dataProvider = "listUser")
@@ -573,6 +703,9 @@ public class SCIMUserManagerTest {
                 .thenReturn(filteredUsers);
         when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsers);
+        when(mockedUserStoreManager.getPaginatedUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
+                anyInt(), nullable(String.class), nullable(String.class)))
+                .thenReturn(new PaginatedUserResponse(filteredUsers));
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
         when(mockedUserStoreManager.getSecondaryUserStoreManager("PRIMARY")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
@@ -588,9 +721,44 @@ public class SCIMUserManagerTest {
         ClaimMapping[] claimMappings = getTestClaimMappings();
         when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(claimMappings);
 
+        String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
+
+        AttributeMapping givenNameAttributePrimary = new AttributeMapping("PRIMARY", "http://wso2.org/claims/givenname");
+        AttributeMapping givenNameAttributeSecondary = new AttributeMapping("SECONDARY", "http://wso2.org/claims/givenname");
+        List<AttributeMapping> givenNameAttributeList = new ArrayList<>();
+        givenNameAttributeList.add(givenNameAttributePrimary);
+        givenNameAttributeList.add(givenNameAttributeSecondary);
+
+        AttributeMapping emailAttributePrimary = new AttributeMapping("PRIMARY", "http://wso2.org/claims/emailaddress");
+        AttributeMapping emailAttributeSecondary = new AttributeMapping("SECONDARY", "http://wso2.org/claims/emailaddress");
+        List<AttributeMapping> emailAttributeList = new ArrayList<>();
+        emailAttributeList.add(emailAttributePrimary);
+        emailAttributeList.add(emailAttributeSecondary);
+
+        Map<String, String> supportedByDefaultProperties = new HashMap<String, String>() {{
+            put("SupportedByDefault", "true");
+            put("ReadOnly", "true");
+        }};
+
+        List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim(GIVEN_NAME_LOCAL_CLAIM, givenNameAttributeList, supportedByDefaultProperties));
+            add(new LocalClaim(EMAIL_ADDRESS_LOCAL_CLAIM, emailAttributeList, supportedByDefaultProperties));
+        }};
+
+        List<ExternalClaim> externalClaimList = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":name.givenName", GIVEN_NAME_LOCAL_CLAIM));
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":emails", EMAIL_ADDRESS_LOCAL_CLAIM));
+        }};
+
+        when(mockClaimMetadataManagementService.getLocalClaims(anyString())).thenReturn(localClaimList);
+        when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString()))
+                .thenReturn(externalClaimList);
+
         HashMap<String, Boolean> requiredClaimsMap = new HashMap<>();
         requiredClaimsMap.put("urn:ietf:params:scim:schemas:core:2.0:User:userName", false);
-        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, "carbon.super");
 
         Node node = null;
         if (StringUtils.isNotBlank(filter)) {
@@ -602,6 +770,42 @@ public class SCIMUserManagerTest {
         UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, null, null, null, null,
                 requiredClaimsMap);
         assertEquals(result.getUsers().size(), expectedResultCount);
+    }
+
+    @Test
+    public void testFilteringUsersOfGroupWithGET() throws org.wso2.carbon.user.api.UserStoreException,
+            IOException, BadRequestException, NotImplementedException, CharonException {
+
+        String domain = "PRIMARY";
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+        FilterTreeManager filterTreeManager = new FilterTreeManager("groups eq admin", schema);
+        Node node = filterTreeManager.buildTree();
+
+        org.wso2.carbon.user.core.common.User testUser1 = new org.wso2.carbon.user.core.common.User(UUID.randomUUID()
+                .toString(), "testUser1", "testUser1");
+        testUser1.setUserStoreDomain("PRIMARY");
+        List<org.wso2.carbon.user.core.common.User> filteredUsers = new ArrayList<>();
+        filteredUsers.add(testUser1);
+
+        scimCommonUtils.when(() -> SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap())).thenReturn(new HashMap<String, String>() {{
+            put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c");
+        }});
+
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(mockedJDBCUserStoreManager);
+        when(mockedJDBCUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        scimCommonUtils.when(SCIMCommonUtils::isGroupBasedUserFilteringImprovementsEnabled).thenReturn(true);
+
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(new String[]{"admin"});
+
+        ClaimMapping[] claimMappings = getTestClaimMappings();
+        when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(claimMappings);
+        when(mockedUserStoreManager.getUserListWithID(any(), anyString(), anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsers);
+
+        UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, filteredUsers.size(), null, null, domain, new HashMap<>());
+        assertEquals(result.getUsers().size(), filteredUsers.size());
+
     }
 
     @DataProvider(name = "userInfoForFiltering")
@@ -643,8 +847,8 @@ public class SCIMUserManagerTest {
 
     @Test(dataProvider = "getDataForFilterUsersWithPagination")
     public void testFilteringUsersWithGETWithPagination(List<org.wso2.carbon.user.core.common.User> users, String filter,
-                                                        List<org.wso2.carbon.user.core.common.User> filteredUsersWithPagination,
-                                                        List<org.wso2.carbon.user.core.common.User> filteredUsersWithoutPagination,
+                                                        PaginatedUserResponse filteredUsersWithPagination,
+                                                        PaginatedUserResponse filteredUsersWithoutPagination,
                                                         boolean isConsiderTotalRecordsForTotalResultOfLDAPEnabled,
                                                         boolean isConsiderMaxLimitForTotalResultEnabled,
                                                         String domain, int count, int configuredMaxLimit, int expectedResultCount,
@@ -666,14 +870,27 @@ public class SCIMUserManagerTest {
 
         mockedUserStoreManager = mock(AbstractUserStoreManager.class);
 
-        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(count),
+        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
+                anyInt(), nullable(String.class), nullable(String.class)))
+                .thenReturn(filteredUsersWithPagination.getFilteredUsers());
+
+        when(mockedUserStoreManager.getPaginatedUserListWithID(any(Condition.class), anyString(), anyString(), eq(count),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithPagination);
 
-        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(configuredMaxLimit),
+        when(mockedUserStoreManager.getPaginatedUserListWithID(any(Condition.class), anyString(), anyString(), eq(configuredMaxLimit),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithoutPagination);
 
-        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(users.size()),
+        when(mockedUserStoreManager.getPaginatedUserListWithID(any(Condition.class), anyString(), anyString(), eq(Integer.MAX_VALUE),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithoutPagination);
+
+        when(mockedUserStoreManager.getUsersCount(any(Condition.class), anyString(), anyString(), eq(count),
+                anyInt(), anyBoolean())).thenReturn(filteredUsersWithPagination.getFilteredUsers().size());
+
+        when(mockedUserStoreManager.getUsersCount(any(Condition.class), anyString(), anyString(), eq(configuredMaxLimit),
+                anyInt(), anyBoolean())).thenReturn(filteredUsersWithoutPagination.getFilteredUsers().size());
+
+        when(mockedUserStoreManager.getUsersCount(any(Condition.class), anyString(), anyString(), eq(Integer.MAX_VALUE),
+                anyInt(), anyBoolean())).thenReturn(filteredUsersWithoutPagination.getFilteredUsers().size());
 
         when(mockedUserStoreManager.getRoleListOfUserWithID(anyString())).thenReturn(new ArrayList<>());
 
@@ -827,87 +1044,87 @@ public class SCIMUserManagerTest {
                 // value of the 'totalResult'.
 
                 {users, "name.givenName eq testUser",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                             add(testUser3);
-                        }},
+                        }}),
                         true, false, "PRIMARY", 2, 4, 2, 3},
                 {users, "name.givenName eq testUser",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                             add(testUser3);
-                        }},
+                        }}),
                         false, false, "PRIMARY", 2, 4, 2, 2},
 
                 {users, "name.givenName eq testUser",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                             add(testUser3);
-                        }},
+                        }}),
                         true, false, "SECONDARY", 2, 4, 2, 3},
                 {users, "name.givenName eq testUser",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
                             add(testUser2);
                             add(testUser3);
-                        }},
+                        }}),
                         true, true, "SECONDARY", 2, 4, 2, 3},
 
                 {users, "name.givenName sw testUser and name.givenName co New",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
                             add(testUser5);
-                        }},
+                        }}),
                         true, false, "PRIMARY", 1, 4, 1, 2},
                 {users, "name.givenName sw testUser and name.givenName co New",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
                             add(testUser5);
-                        }},
+                        }}),
                         false, false, "PRIMARY", 1, 4, 1, 1},
 
                 {users, "name.givenName sw testUser and name.givenName co New",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
                             add(testUser5);
-                        }},
+                        }}),
                         true, false, "SECONDARY", 1, 4, 1, 2},
                 {users, "name.givenName sw testUser and name.givenName co New",
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
-                        }},
-                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser4);
                             add(testUser5);
-                        }},
+                        }}),
                         false, false, "SECONDARY", 1, 4, 1, 2},
 
         };
@@ -1112,7 +1329,7 @@ public class SCIMUserManagerTest {
                         MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimMap);
         when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(localClaimMap);
-        scimCommonUtils.when(() -> SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(true);
+        scimCommonUtils.when(() -> SCIMCommonUtils.isUserExtensionEnabled()).thenReturn(true);
 
         SCIMUserSchemaExtensionBuilder sb = spy(new SCIMUserSchemaExtensionBuilder());
         scimUserSchemaExtensionBuilder.when(() -> SCIMUserSchemaExtensionBuilder.getInstance()).thenReturn(sb);
@@ -1128,10 +1345,10 @@ public class SCIMUserManagerTest {
     @Test
     public void testGetEnterpriseUserSchemaWhenDisabled() throws Exception {
 
-        scimCommonUtils.when(() -> SCIMCommonUtils.isEnterpriseUserExtensionEnabled()).thenReturn(false);
+        scimCommonUtils.when(SCIMCommonUtils::isUserExtensionEnabled).thenReturn(false);
         SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        assertEquals(userManager.getEnterpriseUserSchema(), null);
+        assertNull(userManager.getEnterpriseUserSchema());
     }
 
     @Test
@@ -1170,6 +1387,63 @@ public class SCIMUserManagerTest {
     }
 
     @Test
+    public void testUpdateUserWithActionFailure() throws Exception {
+
+        User oldUser = new User();
+        oldUser.setUserName("oldUser");
+
+        User newUser = new User();
+        newUser.setUserName("oldUser");
+        newUser.setId("oldUserId");
+        newUser.setPassword("newPassword");
+
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        doReturn(oldUser).when(scimUserManager).getUser(anyString(), anyMap());
+
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+
+        UserActionExecutionClientException userActionExecutionClientException = new UserActionExecutionClientException(
+                UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED,
+                TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE,
+                TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION);
+        PrivilegedActionException privilegedActionException =
+                new PrivilegedActionException(userActionExecutionClientException);
+        InvocationTargetException invocationTargetException = new InvocationTargetException(privilegedActionException);
+        UserStoreClientException userStoreClientException = new UserStoreClientException(
+                TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE,
+                UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED, invocationTargetException);
+        doReturn(true).when(mockedUserStoreManager).isExistingUserWithID(anyString());
+        doThrow(userStoreClientException)
+                .when(mockedUserStoreManager).updateCredentialByAdminWithID(anyString(), any());
+
+        try {
+            scimUserManager.updateUser(newUser, Collections.emptyMap());
+        } catch (Exception e) {
+            assertTrue(e instanceof BadRequestException);
+            BadRequestException badRequestException = (BadRequestException) e;
+            assertEquals(badRequestException.getScimType(), TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE);
+            assertEquals(badRequestException.getDetail(), TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION);
+            assertEquals(badRequestException.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
+        }
+
+        try {
+            scimUserManager.updateUser(newUser, Collections.emptyMap(), Collections.emptyList());
+        } catch (Exception e) {
+            assertTrue(e instanceof BadRequestException);
+            BadRequestException badRequestException = (BadRequestException) e;
+            assertEquals(badRequestException.getScimType(), TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE);
+            assertEquals(badRequestException.getDetail(), TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION);
+            assertEquals(badRequestException.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
+        }
+    }
+
+    @Test
     public void testGetUserSchema() throws Exception {
 
         String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
@@ -1177,6 +1451,8 @@ public class SCIMUserManagerTest {
         Map<String, String> supportedByDefaultProperties = new HashMap<String, String>() {{
             put("SupportedByDefault", "true");
             put("ReadOnly", "true");
+            put(ClaimConstants.SHARED_PROFILE_VALUE_RESOLVING_METHOD,
+                    ClaimConstants.SharedProfileValueResolvingMethod.FROM_ORIGIN.getName());
         }};
 
         List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
@@ -1201,6 +1477,102 @@ public class SCIMUserManagerTest {
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         List<Attribute> list = scimUserManager.getUserSchema();
         assertEquals(list.size(), 3);
+        // First item is emails claim.
+        assertEquals(list.get(0).getName(), "emails");
+        assertEquals(list.get(0).getAttributeProperties().get(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY),
+                ClaimConstants.SharedProfileValueResolvingMethod.FROM_ORIGIN.getName());
+        // Second item is name claim.
+        assertEquals(list.get(1).getName(), "name");
+        assertFalse(list.get(1).getAttributeProperties().containsKey(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY));
+        assertEquals(list.get(1).getSubAttribute("givenName").getAttributeProperties()
+                        .get(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY),
+                ClaimConstants.SharedProfileValueResolvingMethod.FROM_ORIGIN.getName());
+        // Third item is userName claim.
+        assertEquals(list.get(2).getName(), "userName");
+        assertFalse(list.get(2).getAttributeProperties().containsKey(SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY));
+    }
+
+    @Test
+    public void testGetUserSchemaWithAttributeProfiles() throws Exception {
+
+        String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
+
+        String consoleProfile = "console";
+        String endUserProfile = "endUser";
+
+        Map<String, String> claimProperties1 = new HashMap<String, String>() {{
+            put("SupportedByDefault", "true");
+            put("ReadOnly", "true");
+            put("Required", "false");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY), "false");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.REQUIRED_PROPERTY), "false");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.REQUIRED_PROPERTY), "true");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.READ_ONLY_PROPERTY), "false");
+        }};
+
+        Map<String, String> claimProperties2 = new HashMap<String, String>() {{
+            put("SupportedByDefault", "false");
+            put("ReadOnly", "false");
+            put("Required", "false");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY), "true");
+            put(buildAttributeProfileProperty(consoleProfile, ClaimConstants.READ_ONLY_PROPERTY), "true");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.REQUIRED_PROPERTY), "true");
+            put(buildAttributeProfileProperty(endUserProfile, ClaimConstants.DISPLAY_NAME_PROPERTY), "invalid");
+        }};
+
+        List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim(EMAIL_ADDRESS_LOCAL_CLAIM, null, claimProperties1));
+            add(new LocalClaim(GIVEN_NAME_LOCAL_CLAIM, null, claimProperties2));
+        }};
+
+        List<ExternalClaim> externalClaimList = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":emails", EMAIL_ADDRESS_LOCAL_CLAIM));
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":name.givenName", GIVEN_NAME_LOCAL_CLAIM));
+        }};
+
+        when(mockClaimMetadataManagementService.getExternalClaims(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimList);
+        when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(localClaimList);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        List<Attribute> userAttributes = scimUserManager.getUserSchema();
+        
+        assertEquals(userAttributes.size(), 2);
+
+        // Emails - Simple attribute.
+        assertEquals(userAttributes.get(0).getName(), "emails");
+        assertTrue(userAttributes.get(0).getAttributeJSONProperties().containsKey(ATTRIBUTE_PROFILES_PROPERTY));
+
+        JSONObject profiles1 = userAttributes.get(0).getAttributeJSONProperties().get(ATTRIBUTE_PROFILES_PROPERTY);
+        assertTrue(profiles1.has(consoleProfile));
+        assertTrue(profiles1.has(endUserProfile));
+        assertTrue(((JSONObject) profiles1.get(consoleProfile)).has(SUPPORTED_BY_DEFAULT_PROPERTY));
+        assertTrue(((JSONObject) profiles1.get(consoleProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertTrue(((JSONObject) profiles1.get(endUserProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertTrue(((JSONObject) profiles1.get(endUserProfile)).has(SCIMConfigConstants.MUTABILITY));
+
+        // Given name - Complex attribute.
+        assertEquals(userAttributes.get(1).getName(), "name");
+        assertFalse(userAttributes.get(1).getAttributeProperties().containsKey(ATTRIBUTE_PROFILES_PROPERTY));
+        assertTrue(userAttributes.get(1).getSubAttribute("givenName").getAttributeJSONProperties()
+                .containsKey(ATTRIBUTE_PROFILES_PROPERTY));
+
+        JSONObject profiles2 = userAttributes.get(1).getSubAttribute("givenName").getAttributeJSONProperties()
+                .get(ATTRIBUTE_PROFILES_PROPERTY);
+        assertTrue(profiles2.has(consoleProfile));
+        assertTrue(profiles2.has(endUserProfile));
+        assertTrue(((JSONObject) profiles2.get(consoleProfile)).has(SUPPORTED_BY_DEFAULT_PROPERTY));
+        assertTrue(((JSONObject) profiles2.get(consoleProfile)).has(SCIMConfigConstants.MUTABILITY));
+        assertTrue(((JSONObject) profiles2.get(endUserProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertTrue(((JSONObject) profiles2.get(endUserProfile)).has(SCIMConfigConstants.REQUIRED));
+        assertFalse(((JSONObject) profiles2.get(endUserProfile)).has(ClaimConstants.DISPLAY_NAME_PROPERTY));
+    }
+
+    private String buildAttributeProfileProperty(String profileName, String property) {
+
+        return ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX + profileName + "." + property;
     }
 
     @Test(dataProvider = "groupPermission")
@@ -1479,6 +1851,10 @@ public class SCIMUserManagerTest {
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
         doReturn(usersGetResponse).when(scimUserManager)
                 .listUsersWithGET(any(), any(), any(), nullable(String.class), nullable(String.class), nullable(String.class), anyMap());
+        when(SCIMCommonComponentHolder.getConfigurationManager()).thenReturn(mockedConfigurationManager);
+        Resource resource = getResource();
+        when(mockedConfigurationManager.getResourceByTenantId( anyInt(), anyString(),
+                anyString() )).thenReturn(resource);
         UsersGetResponse users = scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
         assertEquals(users, usersGetResponse);
     }
@@ -1668,6 +2044,54 @@ public class SCIMUserManagerTest {
         // This method is for testing of throwing BadRequestException, hence no assertion.
     }
 
+    @Test(dataProvider = "syncedUserAttributesData")
+    public void testGetSyncedUserAttributes(Map<String, String> scimToLocalMappings,
+                                            Map<String, String> expectedSyncedAttributes,
+                                            boolean shouldThrowException) throws CharonException {
+
+        SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        if (shouldThrowException) {
+            scimCommonUtils.when(SCIMCommonUtils::getSCIMtoLocalMappings)
+                    .thenThrow(new org.wso2.carbon.user.core.UserStoreException("Database error"));
+            Assert.expectThrows(CharonException.class, userManager::getSyncedUserAttributes);
+        } else {
+            scimCommonUtils.when(SCIMCommonUtils::getSCIMtoLocalMappings).thenReturn(scimToLocalMappings);
+            Map<String, String> actualSyncedAttributes = userManager.getSyncedUserAttributes();
+            Assert.assertEquals(actualSyncedAttributes, expectedSyncedAttributes);
+        }
+    }
+
+    @DataProvider(name = "syncedUserAttributesData")
+    public Object[][] syncedUserAttributesData() {
+
+        Map<String, String> scimToLocalMappings1 = new HashMap<>();
+        scimToLocalMappings1.put("urn:scim:User:emails", "email");
+        scimToLocalMappings1.put("urn:scim:User:workEmail", "email");
+        scimToLocalMappings1.put("urn:scim:User:phone", "phoneNumber");
+        scimToLocalMappings1.put("urn:scim:User:mobile", "phoneNumber");
+        scimToLocalMappings1.put("urn:scim:User:username", "username");
+
+        Map<String, String> expectedSyncedAttributes1 = new HashMap<>();
+        expectedSyncedAttributes1.put("urn:scim:User:emails", "urn:scim:User:workEmail");
+        expectedSyncedAttributes1.put("urn:scim:User:workEmail", "urn:scim:User:emails");
+        expectedSyncedAttributes1.put("urn:scim:User:phone", "urn:scim:User:mobile");
+        expectedSyncedAttributes1.put("urn:scim:User:mobile", "urn:scim:User:phone");
+
+        Map<String, String> scimToLocalMappings2 = new HashMap<>();
+        scimToLocalMappings2.put("urn:scim:User:emails", "email");
+        scimToLocalMappings2.put("urn:scim:User:phone", "phoneNumber");
+        scimToLocalMappings2.put("urn:scim:User:username", "username");
+
+        Map<String, String> expectedSyncedAttributes2 = Collections.emptyMap();
+
+        return new Object[][]{
+                {scimToLocalMappings1, expectedSyncedAttributes1, false},
+                {scimToLocalMappings2, expectedSyncedAttributes2, false},
+                {null, null, true}
+        };
+    }
+
     /**
      * Build a group object with the given params to mock the userstore response.
      *
@@ -1684,5 +2108,24 @@ public class SCIMUserManagerTest {
         group.setGroupID(groupId);
         group.setUserStoreDomain(domainName);
         return group;
+    }
+
+    private List<org.wso2.carbon.identity.configuration.mgt.core.model.Attribute> getResourceAttribute() {
+
+        org.wso2.carbon.identity.configuration.mgt.core.model.Attribute attribute =
+                new org.wso2.carbon.identity.configuration.mgt.core.model.Attribute();
+        attribute.setKey("userResponseMaxLimit");
+        attribute.setValue("100");
+
+        List<org.wso2.carbon.identity.configuration.mgt.core.model.Attribute> attributes = new ArrayList<>();
+        attributes.add(attribute);
+        return attributes;
+    }
+
+    private Resource getResource() {
+        Resource resource = new Resource();
+        resource.setResourceName(MAX_LIMIT_RESOURCE_NAME);
+        resource.setAttributes(getResourceAttribute());
+        return resource;
     }
 }

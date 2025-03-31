@@ -46,7 +46,10 @@ public class DefaultSCIMUserStoreErrorResolverTest {
                 {new UserStoreException("error: 30007"), HttpStatus.SC_NOT_FOUND},
                 {new org.wso2.carbon.user.core.UserStoreException("error", "32102"), HttpStatus.SC_BAD_REQUEST},
                 {new org.wso2.carbon.user.core.UserStoreClientException("error", "32103"), HttpStatus.SC_BAD_REQUEST},
-                {new org.wso2.carbon.user.core.UserStoreClientException("error", "321xx"), HttpStatus.SC_BAD_REQUEST}
+                {new org.wso2.carbon.user.core.UserStoreClientException("error", "321xx"), HttpStatus.SC_BAD_REQUEST},
+                {new org.wso2.carbon.user.core.UserStoreClientException("30012 - error", "xxx"), HttpStatus.SC_CONFLICT},
+                {new org.wso2.carbon.user.core.UserStoreClientException("error", "65019"), HttpStatus.SC_CONFLICT},
+                {new org.wso2.carbon.user.core.UserStoreClientException("error"), HttpStatus.SC_BAD_REQUEST},
         };
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -39,9 +39,10 @@ import org.wso2.carbon.identity.organization.management.service.util.Organizatio
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -49,6 +50,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
+import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
@@ -61,8 +63,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static org.wso2.charon3.core.schema.SCIMConstants.CUSTOM_USER_SCHEMA_URI;
 
 /**
  * This class is to be used as a Util class for SCIM common things.
@@ -451,10 +451,16 @@ public class SCIMCommonUtils {
 
             // Get the extension claims, if there are any extensions enabled.
             if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
-                Map<String, String> extensionClaims = ClaimMetadataHandler.getInstance()
+                Map<String, String> enterpriseExtensionClaims = ClaimMetadataHandler.getInstance()
                         .getMappingsMapFromOtherDialectToCarbon(SCIMUserSchemaExtensionBuilder.getInstance()
                                 .getExtensionSchema().getURI(), null, tenantDomain, false);
-                scimToLocalClaimMap.putAll(extensionClaims);
+                scimToLocalClaimMap.putAll(enterpriseExtensionClaims);
+            }
+            if (SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+                Map<String, String> systemExtensionClaims = ClaimMetadataHandler.getInstance()
+                        .getMappingsMapFromOtherDialectToCarbon(SCIMSystemSchemaExtensionBuilder.getInstance()
+                                .getExtensionSchema().getURI(), null, tenantDomain, false);
+                scimToLocalClaimMap.putAll(systemExtensionClaims);
             }
 
             String userTenantDomain = getTenantDomain();
@@ -614,11 +620,24 @@ public class SCIMCommonUtils {
      * Check if SCIM enterprise user extension has been enabled.
      *
      * @return True if enterprise user extension enabled
+     * @deprecated Use {@link #isUserExtensionEnabled()} instead.
      */
+    @Deprecated
     public static boolean isEnterpriseUserExtensionEnabled() {
 
         return Boolean.parseBoolean(SCIMConfigProcessor.getInstance()
-                .getProperty(SCIMCommonConstants.ENTERPRISE_USER_EXTENSION_ENABLED));
+                .getProperty(SCIMCommonConstants.USER_SCHEMA_EXTENSION_ENABLED));
+    }
+
+    /**
+     * Check if SCIM enterprise user extension has been enabled.
+     *
+     * @return True if enterprise user extension enabled
+     */
+    public static boolean isUserExtensionEnabled() {
+
+        return Boolean.parseBoolean(SCIMConfigProcessor.getInstance()
+                .getProperty(SCIMCommonConstants.USER_SCHEMA_EXTENSION_ENABLED));
     }
 
     /**
@@ -666,6 +685,24 @@ public class SCIMCommonUtils {
     }
 
     /**
+     * Checks if the configuration in identity.xml enables appending the error code to the error detail.
+     * By default, this feature is enabled.
+     *
+     * @return Returns true by default. If the configuration is present, its value is returned.
+     */
+    public static boolean isErrorCodeForPasswordPolicyViolationEnabled() {
+
+        String configValue =
+                IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_ERROR_CODE_FOR_PASSWORD_POLICY_VIOLATION);
+
+        if (configValue == null) {
+            return true;
+        }
+
+        return Boolean.parseBoolean(configValue);
+    }
+
+    /**
      * Get mapped local claim for specified external claim.
      *
      * @param externalClaim
@@ -710,7 +747,17 @@ public class SCIMCommonUtils {
         if (StringUtils.isNotBlank(customSchemaURI)) {
             return customSchemaURI;
         }
-        return CUSTOM_USER_SCHEMA_URI;
+        return SCIMConstants.CUSTOM_EXTENSION_SCHEMA_URI;
+    }
+
+    public static boolean isExtensionSchemasListingEnabledInResourceTypesAPI() {
+
+        String isExtensionSchemasListingEnabled =
+                SCIMConfigProcessor.getInstance().getProperty(SCIMCommonConstants.LIST_USER_EXTENSION_SCHEMAS_ENABLED);
+        if (StringUtils.isNotBlank(isExtensionSchemasListingEnabled)) {
+            return Boolean.parseBoolean(isExtensionSchemasListingEnabled);
+        }
+        return true;
     }
 
     /**
@@ -891,6 +938,29 @@ public class SCIMCommonUtils {
         }
     }
 
+    /**
+     * Returns SCIM2 system AttributeSchema of the tenant.
+     *
+     * @param tenantId  Tenant ID.
+     * @return scim2 system schema.
+     * @throws CharonException If an error occurred in retrieving custom schema.
+     */
+    public static AttributeSchema buildSystemSchema(int tenantId) throws CharonException {
+
+        try {
+            SCIMCustomSchemaProcessor scimCustomSchemaProcessor = new SCIMCustomSchemaProcessor();
+            List<SCIMCustomAttribute> attributes =
+                    scimCustomSchemaProcessor.getCustomAttributes(IdentityTenantUtil.getTenantDomain(tenantId),
+                            SCIMConstants.SYSTEM_USER_SCHEMA_URI);
+            AttributeSchema attributeSchema = SCIMSystemSchemaExtensionBuilder.getInstance()
+                    .buildSystemSchemaExtension(attributes);
+            SCIMSystemAttributeSchemaCache.getInstance().addSCIMSystemAttributeSchema(tenantId, attributeSchema);
+            return attributeSchema;
+        } catch (InternalErrorException | IdentitySCIMException e) {
+            throw new CharonException("Error while building scim system schema", e);
+        }
+    }
+
     public static void updateEveryOneRoleV2MetaData(int tenantId) {
 
         // Handle everyone role creation also here if legacy runtime is disabled.
@@ -965,5 +1035,41 @@ public class SCIMCommonUtils {
         } catch (OrganizationManagementException e) {
             throw new CharonException("Error occurred while checking the organization state.", e);
         }
+    }
+
+    /**
+     * Validate the count query parameter.
+     *
+     * @param count Requested item count.
+     * @return Validated count parameter.
+     */
+    public static int validateCountParameter(Integer count) {
+
+        int maximumItemsPerPage = IdentityUtil.getMaximumItemPerPage();
+        if (count > maximumItemsPerPage) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Given limit exceeds the maximum limit. Therefore the limit is set to %s.",
+                        maximumItemsPerPage));
+            }
+            return maximumItemsPerPage;
+        }
+
+        return count;
+    }
+
+    /**
+     * Read the SCIM User Endpoint Consider Server Wide config and returns it.
+     *
+     * @return If SCIM User Endpoint Consider Server Wise Config is enabled.
+     */
+    public static boolean isConsiderServerWideUserEndpointMaxLimitEnabled() {
+
+        String considerServerWideUserEndpointMaxLimitProperty =
+                IdentityUtil.getProperty(SCIMCommonConstants.CONSIDER_SERVER_WIDE_MAX_LIMIT_ENABLED);
+
+        if (StringUtils.isBlank(considerServerWideUserEndpointMaxLimitProperty)) {
+            return true;
+        }
+        return Boolean.parseBoolean(considerServerWideUserEndpointMaxLimitProperty);
     }
 }

@@ -25,7 +25,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.IdPGroup;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -38,9 +42,11 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.IdpGroup;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.UserIDResolver;
-import org.wso2.carbon.identity.scim2.common.internal.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
@@ -73,18 +79,19 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_PERMISSION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
-import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_MANAGEMENT_ERROR_CODE_PREFIX;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 
 /**
@@ -100,6 +107,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private final String GROUPS = "groups";
     private final String PERMISSIONS = "permissions";
     private final String ASSOCIATED_APPLICATIONS = "associatedApplications";
+    private final String PROPERTIES = "properties";
     private RoleManagementService roleManagementService;
     private String tenantDomain;
     private Set<String> systemRoles;
@@ -117,15 +125,28 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, ConflictException, NotImplementedException, BadRequestException {
 
         try {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role creation is not allowed for organizations.",
-                        ResponseCodeConstants.INVALID_VALUE);
-            }
             // Check if the role already exists.
             if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
                 String error = "Role with id: " + role.getId() + " already exists in the tenantDomain: "
                         + tenantDomain;
                 throw new ConflictException(error);
+            }
+
+            if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equals(role.
+                    getAudienceType())) {
+                ServiceProvider app = ApplicationManagementService.getInstance().getApplicationByResourceId(
+                        role.getAudienceValue(), tenantDomain);
+                if (app == null) {
+                    throw new BadRequestException("Invalid audience value. Audience value should be valid " +
+                            "application ID");
+                }
+
+                if (app.getSpProperties() != null && Arrays.stream(app.getSpProperties())
+                        .anyMatch(property -> ApplicationConstants.IS_FRAGMENT_APP.equals(property.getName())
+                                && Boolean.parseBoolean(property.getValue()))) {
+                    throw new BadRequestException("Role creation for shared applications is not allowed at " +
+                            "organization level.");
+                }
             }
             List<String> permissionValues = role.getPermissionValues();
             List<Permission> permissionList = new ArrayList<>();
@@ -191,6 +212,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throw new CharonException(
                     String.format("Error occurred while retrieving IdP groups for role: %s", role.getDisplayName()),
                     e);
+        } catch (IdentityApplicationManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while retrieving application relevant for role: %s audience.",
+                            role.getDisplayName()), e);
+        } catch (OrganizationManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while checking the organization status of the tenant: %s",
+                            tenantDomain), e);
         }
     }
 
@@ -214,6 +243,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             if (systemRoles.contains(role.getName())) {
                 scimRole.setSystemRole(true);
             }
+            List<MultiValuedComplexType> roleProperties =
+                    convertRolePropertiesToMultiValuedComplexType(role.getRoleProperties());
+            scimRole.setRoleProperties(roleProperties);
             // Set permissions.
             List<MultiValuedComplexType> permissions =
                     convertPermissionsToMultiValuedComplexType(role.getPermissions());
@@ -310,11 +342,25 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return permissionValues;
     }
 
+    private List<MultiValuedComplexType> convertRolePropertiesToMultiValuedComplexType(List<RoleProperty> roleProperties) {
+
+        List<MultiValuedComplexType> rolePropertyValues = new ArrayList<>();
+        if (roleProperties != null) {
+            for (RoleProperty roleProperty : roleProperties) {
+                MultiValuedComplexType rolePropertyComplexObject = new MultiValuedComplexType();
+                rolePropertyComplexObject.setValue(roleProperty.getValue());
+                rolePropertyComplexObject.setDisplay(roleProperty.getName());
+                rolePropertyValues.add(rolePropertyComplexObject);
+            }
+        }
+        return rolePropertyValues;
+    }
+
     public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
 
         try {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role deletion is not allowed for organizations.",
+            if (isSharedRole(roleID)) {
+                throw new BadRequestException("Shared role deletion is not allowed.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             roleManagementService.deleteRole(roleID, tenantDomain);
@@ -408,16 +454,16 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
 
         if (CollectionUtils.isNotEmpty(displayNameOperations)) {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role name modification is not allowed for organizations.",
+            if (isSharedRole(roleId)) {
+                throw new BadRequestException("Role name modification is not allowed for shared roles.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             String newRoleName = (String) displayNameOperations.get(displayNameOperations.size() - 1).getValues();
             updateRoleName(roleId, currentRoleName, newRoleName);
         }
         if (CollectionUtils.isNotEmpty(permissionOperations)) {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role's permission change is not allowed for organizations.",
+            if (isSharedRole(roleId)) {
+                throw new BadRequestException("Role permission modification is not allowed for shared roles.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             updatePermissions(roleId, permissionOperations);
@@ -475,16 +521,22 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             LOG.debug(String.format("Filtering roles from search filter: %s", searchFilter));
         }
         List<Role> roles;
+        int roleCount;
+        List<RoleV2> scimRoles;
         try {
             roles = roleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain,
                     requiredAttributes);
+            scimRoles = getScimRolesList(roles, requiredAttributes);
+            roleCount = roleManagementService.getRolesCount(searchFilter, tenantDomain);
+            if (roleCount == 0) {
+                roleCount = scimRoles.size();
+            }
         } catch (IdentityRoleManagementException e) {
             throw new CharonException(
                     String.format("Error occurred while listing roles based on the search filter: %s", searchFilter),
                     e);
         }
-        List<RoleV2> scimRoles = getScimRolesList(roles, requiredAttributes);
-        return new RolesV2GetResponse(scimRoles.size(), scimRoles);
+        return new RolesV2GetResponse(roleCount, scimRoles);
     }
 
     private String buildSearchFilter(Node node) throws BadRequestException {
@@ -676,6 +728,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                         scimRole.setAssociatedApplications(associatedApps);
                     }
                 }
+                if (requiredAttributes.contains(PROPERTIES)) {
+                    // Set role properties.
+                    List<MultiValuedComplexType> roleProperties =
+                            convertRolePropertiesToMultiValuedComplexType(role.getRoleProperties());
+                    if (CollectionUtils.isNotEmpty(roleProperties)) {
+                        scimRole.setRoleProperties(roleProperties);
+                    }
+                }
             }
             scimRoles.add(scimRole);
         }
@@ -697,8 +757,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         if (!StringUtils.equals(oldRoleDisplayName, newRoleDisplayName)) {
             // Update role name.
             try {
-                if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                    throw new BadRequestException("Role name update is not allowed for organizations.",
+                if (isSharedRole(roleId)) {
+                    throw new BadRequestException("Role name update is not allowed for shared roles.",
                             ResponseCodeConstants.INVALID_VALUE);
                 }
                 roleManagementService.updateRoleName(oldRole.getId(), newRoleDisplayName, tenantDomain);
@@ -822,8 +882,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         // Update the role with added permissions and deleted permissions.
         if (isNotEmpty(deletePermissionValuesList) || isNotEmpty(addedPermissionValuesList)) {
-            if (!isRoleModificationAllowedForTenant(tenantDomain)) {
-                throw new BadRequestException("Role's permission modification is not allowed for organizations.",
+            if (isSharedRole(oldRole.getId())) {
+                throw new BadRequestException("Role's permission modification is not allowed for shared roles.",
                         ResponseCodeConstants.INVALID_VALUE);
             }
             if (LOG.isDebugEnabled()) {
@@ -924,8 +984,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                                 permissionOperation, permissionObject, permissionListOfRole);
                     }
                 }
-                prepareReplacedPermissionLists(permissionListOfRole, addedPermissions, deletedPermissions,
-                        replacedPermissions);
+                if (SCIMConstants.OperationalConstants.REPLACE.equals(
+                        permissionOperation.getOperation().toLowerCase(Locale.ENGLISH))) {
+                    prepareReplacedPermissionLists(permissionListOfRole, addedPermissions, deletedPermissions,
+                            replacedPermissions);
+                }
             }
             if (isNotEmpty(addedPermissions) || isNotEmpty(deletedPermissions)) {
                 doUpdatePermissions(roleId, addedPermissions, deletedPermissions);
@@ -1420,5 +1483,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         IdpGroup convertedGroup = new IdpGroup(idpGroup.getIdpGroupId(), idpGroup.getIdpId());
         convertedGroup.setGroupName(idpGroup.getIdpGroupName());
         return convertedGroup;
+    }
+
+    private boolean isSharedRole(String roleId) throws CharonException {
+
+        try {
+            return RoleManagementUtils.isSharedRole(roleId, tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            throw new CharonException("Error while checking whether the role is a shared role.", e);
+        }
     }
 }

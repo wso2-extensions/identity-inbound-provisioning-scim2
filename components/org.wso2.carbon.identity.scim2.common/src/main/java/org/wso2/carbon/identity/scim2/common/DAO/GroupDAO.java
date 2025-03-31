@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -289,16 +289,38 @@ public class GroupDAO {
         }
     }
 
+    /**
+     * Update SCIM group attributes.
+     *
+     * @param tenantId      Tenant id.
+     * @param roleName      Group name.
+     * @param attributes    Attributes to be updated.
+     * @throws IdentitySCIMException If an error occurred while updating the attributes.
+     */
     public void updateSCIMGroupAttributes(int tenantId, String roleName,
                                           Map<String, String> attributes) throws IdentitySCIMException {
 
-        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        doUpdateSCIMGroupAttributes(tenantId, roleName, attributes, SQLQueries.UPDATE_ATTRIBUTES_SQL);
+    }
+
+    /**
+     * Do update SCIM group attributes.
+     *
+     * @param tenantId      Tenant id.
+     * @param roleName      Group name.
+     * @param attributes    Attributes to be updated.
+     * @param sqlQuery      SQL query to update the attributes.
+     * @throws IdentitySCIMException If an error occurred while updating the attributes.
+     */
+    private void doUpdateSCIMGroupAttributes(int tenantId, String roleName, Map<String, String> attributes,
+                                             String sqlQuery) throws IdentitySCIMException {
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement prepStmt = null;
 
         if (isExistingGroup(SCIMCommonUtils.getGroupNameWithDomain(roleName), tenantId)) {
             try {
-                prepStmt = connection.prepareStatement(SQLQueries.UPDATE_ATTRIBUTES_SQL);
-
+                prepStmt = connection.prepareStatement(sqlQuery);
                 prepStmt.setInt(2, tenantId);
                 prepStmt.setString(3, roleName);
 
@@ -308,19 +330,16 @@ public class GroupDAO {
                         prepStmt.setString(4, entry.getKey());
                         prepStmt.setString(1, entry.getValue());
                         prepStmt.addBatch();
-
                     } else {
                         throw new IdentitySCIMException("Error when adding SCIM Attribute: "
-                                + entry.getKey()
-                                + " An attribute with the same name doesn't exists.");
+                                + entry.getKey() + " An attribute with the same name doesn't exists.");
                     }
                 }
-                int[] return_count = prepStmt.executeBatch();
+                int[] returnCount = prepStmt.executeBatch();
                 if (log.isDebugEnabled()) {
-                    log.debug("No. of records updated for updating SCIM Group : " + return_count.length);
+                    log.debug("No. of records updated for updating SCIM Group : " + returnCount.length);
                 }
                 connection.commit();
-
             } catch (SQLException e) {
                 throw new IdentitySCIMException("Error updating the SCIM Group Attributes.", e);
             } finally {
@@ -564,6 +583,41 @@ public class GroupDAO {
             }
         } catch (SQLException e) {
             log.error("Error when executing the SQL : " + sqlQuery);
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.",
+                    e);
+        }
+        return roleList.toArray(new String[0]);
+    }
+
+    /**
+     * List the groups created from SCIM with the group name filter.
+     *
+     * @param tenantId        Tenant ID.
+     * @param groupNameFilter Group name filter to be applied.
+     * @return List of SCIM group names.
+     * @throws IdentitySCIMException If an error occurred while reading the SCIM Group information.
+     */
+    public String[] getGroupNameList(Integer tenantId, String groupNameFilter)
+            throws IdentitySCIMException {
+
+        List<String> roleList = new ArrayList<>();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement prepStmt = connection.prepareStatement(
+                    SQLQueries.LIST_SCIM_GROUPS_SQL_BY_ROLE_NAME)) {
+                prepStmt.setInt(1, tenantId);
+                prepStmt.setString(2, groupNameFilter);
+
+                try (ResultSet rSet = prepStmt.executeQuery()) {
+                    while (rSet.next()) {
+                        String roleName = rSet.getString(1);
+                        if (StringUtils.isNotEmpty(roleName)) {
+                            // Remove the primary domain name from roleNames.
+                            roleList.add(removePrimaryDomainName(roleName));
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
             throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.",
                     e);
         }

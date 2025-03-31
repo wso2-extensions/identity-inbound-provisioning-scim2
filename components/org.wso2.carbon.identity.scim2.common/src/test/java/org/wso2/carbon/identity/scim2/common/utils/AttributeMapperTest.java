@@ -18,36 +18,68 @@
 
 package org.wso2.carbon.identity.scim2.common.utils;
 
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.charon3.core.attributes.Attribute;
+import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.encoder.JSONDecoder;
+import org.wso2.charon3.core.extensions.UserManager;
+import org.wso2.charon3.core.objects.AbstractSCIMObject;
+import org.wso2.charon3.core.objects.SCIMObject;
 import org.wso2.charon3.core.objects.User;
+import org.wso2.charon3.core.schema.AttributeSchema;
+import org.wso2.charon3.core.schema.SCIMAttributeSchema;
+import org.wso2.charon3.core.schema.SCIMDefinitions;
 import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_COMPLEX_MULTIVALUED_ATTRIBUTE_SUPPORT_ENABLED;
 
 public class AttributeMapperTest {
 
+    @Mock
+    private UserManager userManager;
+    @Mock
+    private SCIMResourceTypeSchema scimResourceTypeSchema;
+
+    private MockedStatic<IdentityUtil> mockedIdentityUtil;
+
     @BeforeMethod
     public void setUp() throws Exception {
+
         initMocks(this);
 
+        mockedIdentityUtil = mockStatic(IdentityUtil.class);
     }
 
     @AfterMethod
     public void tearDown() throws Exception {
 
+        mockedIdentityUtil.close();
     }
 
     @Test
     public void testGetClaimsMap() throws Exception {
+
         String scimObjectString = "{\"schemas\":[\"urn:ietf:params:scim:schemas:core:2.0:User\"]," +
                 "\"id\":\"1819c223-7f76-453a-919d-413851904641\",\"externalId\":\"702984\",\"userName\":\"paul\"," +
                 "\"name\":{\"formatted\":\"Ms.BarbaraJJensen,III\",\"familyName\":\"Jensen\"," +
@@ -74,6 +106,7 @@ public class AttributeMapperTest {
 
     @Test
     public void testConstructSCIMObjectFromAttributes() throws Exception {
+
         Map<String, String> attributes = new HashMap<>();
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:User:emails.home", "paul@abc.com");
         attributes.put("urn:ietf:params:scim:schemas:core:2.0:meta.resourceType", "User");
@@ -119,4 +152,163 @@ public class AttributeMapperTest {
 
     }
 
+    @Test
+    public void testConstructSCIMObjectFromAttributesOfLevelTwo() throws Exception {
+
+        String dialectURI = "urn:ietf:params:scim:schemas:custom:User";
+        String attributeName = "custom";
+        String attributeURI = dialectURI + ":" + attributeName;
+        String attributeValue = "test";
+
+        Map.Entry<String, String> attributeEntry =
+                new AbstractMap.SimpleEntry<>(attributeURI, attributeValue);
+        String[] attributeNames = {dialectURI, attributeName};
+        SCIMObject scimObject = new AbstractSCIMObject();
+        int scimObjectType = 1; // User schema.
+
+        mockedIdentityUtil.when(() -> IdentityUtil.getProperty(SCIM_COMPLEX_MULTIVALUED_ATTRIBUTE_SUPPORT_ENABLED))
+                .thenReturn(Boolean.FALSE.toString());
+
+        AttributeSchema attributeSchema = SCIMAttributeSchema.createSCIMAttributeSchema(
+                attributeURI,
+                attributeName,
+                SCIMDefinitions.DataType.STRING,
+                false,
+                "Custom attribute",
+                false,
+                false,
+                SCIMDefinitions.Mutability.READ_WRITE,
+                SCIMDefinitions.Returned.DEFAULT,
+                SCIMDefinitions.Uniqueness.NONE,
+                null,
+                null,
+                null);
+
+        AttributeSchema parentAttributeSchema = SCIMAttributeSchema.createSCIMAttributeSchema(
+                dialectURI,
+                dialectURI,
+                SCIMDefinitions.DataType.COMPLEX,
+                false,
+                "Custom schema",
+                false,
+                false,
+                SCIMDefinitions.Mutability.READ_WRITE,
+                SCIMDefinitions.Returned.DEFAULT,
+                SCIMDefinitions.Uniqueness.NONE,
+                null,
+                null,
+                new ArrayList<>(Collections.singletonList(attributeSchema)));
+
+        try (MockedStatic<SCIMResourceSchemaManager> localMockedSCIMResourceSchemaManager =
+                     Mockito.mockStatic(SCIMResourceSchemaManager.class)) {
+
+            SCIMResourceSchemaManager localScimResourceSchemaManager = mock(SCIMResourceSchemaManager.class);
+            localMockedSCIMResourceSchemaManager.when(SCIMResourceSchemaManager::getInstance)
+                    .thenReturn(localScimResourceSchemaManager);
+            when(localScimResourceSchemaManager.getUserResourceSchema(eq(userManager)))
+                    .thenReturn(scimResourceTypeSchema);
+            when(scimResourceTypeSchema.getAttributesList()).thenReturn(
+                    new ArrayList<>(Collections.singletonList(parentAttributeSchema))
+                                                                       );
+            AttributeMapper.constructSCIMObjectFromAttributesOfLevelTwo(userManager, attributeEntry, scimObject,
+                    attributeNames, scimObjectType);
+        }
+
+        Attribute parentAttribute = scimObject.getAttributeList().get(dialectURI);
+        Assert.assertNotNull(parentAttribute);
+
+        Attribute subAttributes = parentAttribute.getSubAttribute(attributeName);
+        Assert.assertNotNull(subAttributes);
+        Assert.assertNotNull(((SimpleAttribute) subAttributes).getValue(), attributeValue);
+    }
+
+    @Test
+    public void testConstructSCIMObjectFromAttributesOfLevelThree() throws Exception {
+
+        String dialectURI = "urn:ietf:params:scim:schemas:custom:User";
+        String instructorAttributeName = "instructor";
+        String instructorURI = dialectURI + ":" + instructorAttributeName;
+        String attributeName = "name";
+        String attributeURI = instructorURI + "." + attributeName;
+        String attributeValue = "john";
+
+        Map.Entry<String, String> attributeEntry =
+                new AbstractMap.SimpleEntry<>(attributeURI, attributeValue);
+        String[] attributeNames = {dialectURI, instructorAttributeName, attributeName};
+        SCIMObject scimObject = new AbstractSCIMObject();
+        int scimObjectType = 1; // User schema.
+
+        mockedIdentityUtil.when(() -> IdentityUtil.getProperty(SCIM_COMPLEX_MULTIVALUED_ATTRIBUTE_SUPPORT_ENABLED))
+                .thenReturn(Boolean.FALSE.toString());
+
+        AttributeSchema instructorNameSchema = SCIMAttributeSchema.createSCIMAttributeSchema(
+                attributeURI,
+                attributeName,
+                SCIMDefinitions.DataType.STRING,
+                false,
+                "Instructor Name",
+                false,
+                false,
+                SCIMDefinitions.Mutability.READ_WRITE,
+                SCIMDefinitions.Returned.DEFAULT,
+                SCIMDefinitions.Uniqueness.NONE,
+                null,
+                null,
+                null);
+
+        AttributeSchema instructorSchema = SCIMAttributeSchema.createSCIMAttributeSchema(
+                instructorURI,
+                instructorURI,
+                SCIMDefinitions.DataType.COMPLEX,
+                false,
+                "Instructor attribute",
+                false,
+                false,
+                SCIMDefinitions.Mutability.READ_WRITE,
+                SCIMDefinitions.Returned.DEFAULT,
+                SCIMDefinitions.Uniqueness.NONE,
+                null,
+                null,
+                new ArrayList<>(Collections.singletonList(instructorNameSchema)));
+
+        AttributeSchema parentAttributeSchema = SCIMAttributeSchema.createSCIMAttributeSchema(
+                dialectURI,
+                dialectURI,
+                SCIMDefinitions.DataType.COMPLEX,
+                false,
+                "Custom schema",
+                false,
+                false,
+                SCIMDefinitions.Mutability.READ_WRITE,
+                SCIMDefinitions.Returned.DEFAULT,
+                SCIMDefinitions.Uniqueness.NONE,
+                null,
+                null,
+                new ArrayList<>(Collections.singletonList(instructorSchema)));
+
+        try (MockedStatic<SCIMResourceSchemaManager> localMockedSCIMResourceSchemaManager =
+                     Mockito.mockStatic(SCIMResourceSchemaManager.class)) {
+
+            SCIMResourceSchemaManager localScimResourceSchemaManager = mock(SCIMResourceSchemaManager.class);
+            localMockedSCIMResourceSchemaManager.when(SCIMResourceSchemaManager::getInstance)
+                    .thenReturn(localScimResourceSchemaManager);
+            when(localScimResourceSchemaManager.getUserResourceSchema(eq(userManager)))
+                    .thenReturn(scimResourceTypeSchema);
+            when(scimResourceTypeSchema.getAttributesList()).thenReturn(
+                    new ArrayList<>(Collections.singletonList(parentAttributeSchema))
+                                                                       );
+            AttributeMapper.constructSCIMObjectFromAttributesOfLevelThree(userManager, attributeEntry, scimObject,
+                    attributeNames, scimObjectType);
+        }
+
+        Attribute parentAttribute = scimObject.getAttributeList().get(dialectURI);
+        Assert.assertNotNull(parentAttribute);
+
+        Attribute instructorAttribute = parentAttribute.getSubAttribute(instructorAttributeName);
+        Assert.assertNotNull(instructorAttribute);
+
+        Attribute instructorNameAttribute = instructorAttribute.getSubAttribute(attributeName);
+        Assert.assertNotNull(instructorNameAttribute);
+        Assert.assertNotNull(((SimpleAttribute) instructorNameAttribute).getValue(), attributeValue);
+    }
 }

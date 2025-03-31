@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.scim2.provider.resources;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.context.model.Flow;
+import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
@@ -282,6 +284,7 @@ public class UserResource extends AbstractResource {
                                String resourceString) {
 
         try {
+            updateIdentityContext();
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -331,6 +334,7 @@ public class UserResource extends AbstractResource {
 
 
         try {
+            updateIdentityContext();
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -419,5 +423,27 @@ public class UserResource extends AbstractResource {
         }
 
         return count;
+    }
+
+    /**
+     * This is used to set the flow and initiator in the identity context.
+     * These values will be used in the pre update password action.
+     */
+    private void updateIdentityContext() {
+
+        if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
+            Flow flow = new Flow.Builder()
+                    .name(Flow.Name.PROFILE_UPDATE)
+                    .initiatingPersona(Flow.InitiatingPersona.ADMIN)
+                    .build();
+            IdentityContext.getThreadLocalIdentityContext().setFlow(flow);
+        }
+        if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
+            Flow flow = new Flow.Builder()
+                    .name(Flow.Name.PROFILE_UPDATE)
+                    .initiatingPersona(Flow.InitiatingPersona.APPLICATION)
+                    .build();
+            IdentityContext.getThreadLocalIdentityContext().setFlow(flow);
+        }
     }
 }

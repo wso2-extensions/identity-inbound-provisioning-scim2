@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.scim2.common.utils;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -503,7 +504,7 @@ public class AttributeMapper {
         } else if (parentAttributeURI != null) {
 
             if (parentAttributeURI.equals(attributeEntry.getKey())) {
-                parentAttributeURI = attributeEntry.getKey().replace(":" + attributeNames[1], "");
+                parentAttributeURI = removeAttributeNameFromURI(attributeEntry.getKey(), attributeNames[1]);
             }
             AttributeSchema parentAttributeSchema = getAttributeSchema(userManager, parentAttributeURI, scimObjectType);
 
@@ -689,7 +690,7 @@ public class AttributeMapper {
         String subAttributeURI = attributeEntry.getKey().replace("." + attributeNames[2], "");
         AttributeSchema subAttributeSchema = getAttributeSchema(userManager, subAttributeURI, scimObjectType);
 
-        String parentAttributeURI = subAttributeURI.replace(":" + attributeNames[1], "");
+        String parentAttributeURI = removeAttributeNameFromURI(subAttributeURI, attributeNames[1]);
         AttributeSchema attributeSchema = getAttributeSchema(userManager, parentAttributeURI, scimObjectType);
 
         // Differentiate between sub attribute of Complex attribute and a Multivalued attribute with complex value.
@@ -918,5 +919,27 @@ public class AttributeMapper {
                 break;
         }
         return resourceSchema;
+    }
+
+    /**
+     * Remove the attribute name from the URI.
+     *
+     * @param uri           Attribute URI.
+     * @param attributeName Attribute name.
+     * @return URI without the attribute name.
+     */
+    private static String removeAttributeNameFromURI(String uri, String attributeName) {
+
+        if (StringUtils.isBlank(uri) || StringUtils.isBlank(attributeName)) {
+            return uri;
+        }
+
+        String suffix = ":" + attributeName;
+        int lastIndex = uri.lastIndexOf(suffix);
+        if (lastIndex != -1 && lastIndex + suffix.length() == uri.length()) {
+            return uri.substring(0, lastIndex);
+        }
+
+        return uri;
     }
 }

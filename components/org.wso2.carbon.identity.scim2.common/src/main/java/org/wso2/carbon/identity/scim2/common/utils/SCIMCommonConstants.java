@@ -47,6 +47,7 @@ public class SCIMCommonConstants {
     public static final String SCIM_USER_CLAIM_DIALECT = "urn:ietf:params:scim:schemas:core:2.0:User";
     public static final String SCIM_ENTERPRISE_USER_CLAIM_DIALECT =
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
+    public static final String SCIM_SYSTEM_USER_CLAIM_DIALECT = "urn:scim:wso2:schema";
 
     public static final String EQ = "eq";
     public static final String NE = "ne";
@@ -78,7 +79,10 @@ public class SCIMCommonConstants {
     public static final String BULK_MAX_OPERATIONS = "bulk-maxOperations";
     public static final String BULK_MAX_PAYLOAD_SIZE = "bulk-maxPayloadSize";
     public static final String FILTER_MAX_RESULTS = "filter-maxResults";
+    @Deprecated
     public static final String ENTERPRISE_USER_EXTENSION_ENABLED = "user-schema-extension-enabled";
+    public static final String USER_SCHEMA_EXTENSION_ENABLED = "user-schema-extension-enabled";
+    public static final String LIST_USER_EXTENSION_SCHEMAS_ENABLED = "list-user-extension-schemas-enabled";
     public static final String PAGINATION_DEFAULT_COUNT = "pagination-default-count";
     public static final String CUSTOM_USER_SCHEMA_ENABLED = "custom-user-schema-enabled";
     public static final String CUSTOM_USER_SCHEMA_URI = "custom-user-schema-uri";
@@ -86,6 +90,7 @@ public class SCIMCommonConstants {
 
     public static final java.lang.String ASK_PASSWORD_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:askPassword";
     public static final java.lang.String VERIFY_EMAIL_URI = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:verifyEmail";
+    public static final String ENABLE_ERROR_CODE_FOR_PASSWORD_POLICY_VIOLATION = "SCIM2.EnableErrorCodeForPasswordPolicyViolation";
 
     // Identity recovery claims
     public static final String ASK_PASSWORD_CLAIM = "http://wso2.org/claims/identity/askPassword";
@@ -114,6 +119,8 @@ public class SCIMCommonConstants {
             "SCIM2.RemoveDuplicateUsersInUsersResponse";
     public static final String SCIM2_COMPLEX_MULTI_ATTRIBUTE_FILTERING_ENABLED =
             "SCIM2MultiAttributeFiltering.UsePagination";
+    public static final String CONSIDER_SERVER_WIDE_MAX_LIMIT_ENABLED=
+            "SCIM2.ConsiderServerWideUserEndpointMaxLimit";
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
@@ -157,6 +164,8 @@ public class SCIMCommonConstants {
         groupAttributeSchemaMap.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI,
                 UserStoreConfigConstants.GROUP_LAST_MODIFIED_DATE_ATTRIBUTE);
         groupAttributeSchemaMap.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, "GroupLocation");
+        groupAttributeSchemaMap.put(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI,
+                UserStoreConfigConstants.GROUP_NAME_ATTRIBUTE);
     }
 
     /**

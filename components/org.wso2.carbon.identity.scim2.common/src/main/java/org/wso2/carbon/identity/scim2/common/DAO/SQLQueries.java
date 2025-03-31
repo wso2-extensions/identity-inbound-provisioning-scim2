@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -15,7 +15,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.scim2.common.DAO;
+
 /**
  * SQL Queries for SCIM_IDENTITY_TABLE which persists SCIM_GROUP info.
  */
@@ -42,7 +44,7 @@ public class SQLQueries {
             "SELECT TENANT_ID, ROLE_NAME, ATTR_NAME FROM IDN_SCIM_GROUP WHERE IDN_SCIM_GROUP.TENANT_ID=? AND " +
                     "IDN_SCIM_GROUP.ROLE_NAME=? AND IDN_SCIM_GROUP.ATTR_NAME=? AND IDN_SCIM_GROUP.AUDIENCE_REF_ID=?";
     public static final String UPDATE_ATTRIBUTES_SQL =
-            "UPDATE IDN_SCIM_GROUP SET UM_ATTR_VALUE=? WHERE TENANT_ID=? AND ROLE_NAME=? AND ATTR_NAME=?";
+            "UPDATE IDN_SCIM_GROUP SET ATTR_VALUE=? WHERE TENANT_ID=? AND ROLE_NAME=? AND ATTR_NAME=?";
     public static final String UPDATE_GROUP_NAME_SQL =
             "UPDATE IDN_SCIM_GROUP SET ROLE_NAME=? WHERE TENANT_ID=? AND ROLE_NAME=?";
     public static final String DELETE_GROUP_SQL =
@@ -56,5 +58,8 @@ public class SQLQueries {
     public static final String LIST_SCIM_GROUPS_SQL_BY_ATT_AND_ATT_VALUE_AND_ROLE_NAME =
             "SELECT ROLE_NAME FROM IDN_SCIM_GROUP WHERE IDN_SCIM_GROUP.TENANT_ID=? AND "
                     + "IDN_SCIM_GROUP.ATTR_NAME=? AND ATTR_VALUE LIKE ? AND IDN_SCIM_GROUP.ROLE_NAME LIKE ?";
+    public static final String LIST_SCIM_GROUPS_SQL_BY_ROLE_NAME =
+            "SELECT DISTINCT ROLE_NAME FROM IDN_SCIM_GROUP WHERE IDN_SCIM_GROUP.TENANT_ID = ? AND "
+                    + "IDN_SCIM_GROUP.ROLE_NAME LIKE ?";
     private SQLQueries(){}
 }
