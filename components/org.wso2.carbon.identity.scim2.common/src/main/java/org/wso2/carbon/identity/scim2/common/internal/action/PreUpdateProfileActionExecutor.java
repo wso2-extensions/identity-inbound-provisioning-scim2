@@ -66,6 +66,7 @@ public class PreUpdateProfileActionExecutor {
             "http://wso2.org/claims/identity/accountLocked",
             "http://wso2.org/claims/identity/accountDisabled"
     );
+
     /**
      * Triggers the execution of pre update profile extension at profile update with PUT
      *
@@ -319,10 +320,11 @@ public class PreUpdateProfileActionExecutor {
                 !MapUtils.isEmpty(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
                 !MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) ||
                 !MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
-            return !onlyContainsIdentityClaims(userClaimsExcludingMultiValuedClaimsToBeModified,
-                    userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
-                   !onlyContainsIdentityClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeAdded,
-                           simpleMultiValuedClaimsToBeRemoved);
+
+            return !onlyContainsIdentityClaims(userClaimsExcludingMultiValuedClaimsToBeModified) ||
+                    !onlyContainsIdentityClaims(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
+                    !onlyContainsIdentityClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeAdded) ||
+                    !onlyContainsIdentityClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeRemoved);
         } else {
             return false;
         }
@@ -332,27 +334,26 @@ public class PreUpdateProfileActionExecutor {
                                  Map<String, String> userClaimsToBeDeleted) {
 
         if (!MapUtils.isEmpty(userClaimsToBeModified) || !MapUtils.isEmpty(userClaimsToBeDeleted)) {
-            return !onlyContainsIdentityClaims(userClaimsToBeDeleted, userClaimsToBeModified);
+            return !onlyContainsIdentityClaims(userClaimsToBeDeleted) ||
+                    !onlyContainsIdentityClaims(userClaimsToBeModified);
         } else {
             return false;
         }
     }
 
-    private boolean onlyContainsIdentityClaims(Map<String, String>... maps) {
-        return java.util.Arrays.stream(maps)
-                .flatMap(map -> map.keySet().stream())
+    private boolean onlyContainsIdentityClaims(Map<String, String> map) {
+
+        return map.keySet().stream()
                 .allMatch(key -> key.startsWith(IDENTITY_CLAIM_URI_PREFIX))
-                && java.util.Arrays.stream(maps)
-                .flatMap(map -> map.keySet().stream())
+                && map.keySet().stream()
                 .noneMatch(ALLOWED_IDENTITY_CLAIMS::contains);
     }
 
-    private boolean onlyContainsIdentityClaimsInMultiValuedClaims(Map<String, List<String>>... maps) {
-        return java.util.Arrays.stream(maps)
-                .flatMap(map -> map.keySet().stream())
+    private boolean onlyContainsIdentityClaimsInMultiValuedClaims(Map<String, List<String>> map) {
+
+        return map.keySet().stream()
                 .allMatch(key -> key.startsWith(IDENTITY_CLAIM_URI_PREFIX))
-                && java.util.Arrays.stream(maps)
-                .flatMap(map -> map.keySet().stream())
+                && map.keySet().stream()
                 .noneMatch(ALLOWED_IDENTITY_CLAIMS::contains);
     }
 }
