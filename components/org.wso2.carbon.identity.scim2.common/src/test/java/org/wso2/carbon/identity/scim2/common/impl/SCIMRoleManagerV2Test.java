@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.scim2.common.impl;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -58,9 +57,9 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -155,27 +154,38 @@ public class SCIMRoleManagerV2Test {
         }
     }
 
+    @DataProvider(name = "roleNameUpdateExceptions")
+    public Object[][] roleNameUpdateExceptions() {
 
-    @Test(expectedExceptions = BadRequestException.class)
-    public void testDoUpdateRoleNameException() throws Exception {
+        return new Object[][] {
+                {new IdentityRoleManagementException("RMA-60001", "Role not found"), BadRequestException.class},
+                {new IdentityRoleManagementException("RMA-60009", "Role name update is forbidden"), BadRequestException.class}
+        };
+    }
 
-        RoleV2 oldRole = org.mockito.Mockito.mock(RoleV2.class);
-        RoleV2 newRole = org.mockito.Mockito.mock(RoleV2.class);
+    @Test(dataProvider = "roleNameUpdateExceptions", expectedExceptions = BadRequestException.class)
+    public void testInvalidRequestOnRoleNameUpdate(IdentityRoleManagementException identityException, Class<? extends Throwable> expectedException) throws Exception {
 
-        when(oldRole.getDisplayName()).thenReturn("OldName");
-        when(newRole.getDisplayName()).thenReturn("NewName");
-        when(oldRole.getId()).thenReturn("roleId");
+        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
+             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class);
+             MockedStatic<OrganizationManagementUtil> mockOrganizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
 
-        Mockito.mockStatic(OrganizationManagementUtil.class);
-        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+            RoleV2 oldRole = mock(RoleV2.class);
+            RoleV2 newRole = mock(RoleV2.class);
 
-        IdentityRoleManagementException identityException =
-                new IdentityRoleManagementException("RMA-60001", "Role not found");
-        doThrow(identityException)
-                .when(roleManagementService)
-                .updateRoleName("roleId", "NewName", "carbon.super");
+            when(oldRole.getDisplayName()).thenReturn(ROLE_NAME);
+            when(newRole.getDisplayName()).thenReturn(ROLE_NAME_2);
+            when(oldRole.getId()).thenReturn(ROLE_ID);
 
-        scimRoleManagerV2.updateRole(oldRole, newRole);
+            when(RoleManagementUtils.isSharedRole(ROLE_ID, SAMPLE_TENANT_DOMAIN)).thenReturn(false);
+            when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+
+            doThrow(identityException).when(roleManagementService)
+                    .updateRoleName(ROLE_ID, ROLE_NAME_2, SAMPLE_TENANT_DOMAIN);
+
+            scimRoleManagerV2.updateRole(oldRole, newRole);
+        }
     }
 
     @Test
