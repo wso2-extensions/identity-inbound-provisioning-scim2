@@ -176,6 +176,7 @@ public class SCIMRoleManagerV2Test {
                 .updateRoleName("roleId", "NewName", "carbon.super");
 
         scimRoleManagerV2.updateRole(oldRole, newRole);
+    }
 
     @Test
     public void testPatchRoleWithAddPermissions()
