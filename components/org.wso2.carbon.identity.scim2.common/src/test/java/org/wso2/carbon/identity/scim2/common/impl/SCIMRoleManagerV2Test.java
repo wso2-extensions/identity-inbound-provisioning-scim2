@@ -20,13 +20,14 @@ package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.charon3.core.exceptions.BadRequestException;
@@ -34,6 +35,7 @@ import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
 import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
+import org.wso2.charon3.core.objects.RoleV2;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
@@ -43,6 +45,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -120,5 +124,27 @@ public class SCIMRoleManagerV2Test {
             assertEquals(ResponseCodeConstants.INVALID_VALUE, e.getScimType());
             assertEquals("Group id is required to update group of the role.", e.getDetail());
         }
+    }
+
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testDoUpdateRoleNameException() throws Exception {
+
+        RoleV2 oldRole = org.mockito.Mockito.mock(RoleV2.class);
+        RoleV2 newRole = org.mockito.Mockito.mock(RoleV2.class);
+
+        when(oldRole.getDisplayName()).thenReturn("OldName");
+        when(newRole.getDisplayName()).thenReturn("NewName");
+        when(oldRole.getId()).thenReturn("roleId");
+
+        Mockito.mockStatic(OrganizationManagementUtil.class);
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+
+        IdentityRoleManagementException identityException =
+                new IdentityRoleManagementException("RMA-60001", "Role not found");
+        doThrow(identityException)
+                .when(roleManagementService)
+                .updateRoleName("roleId", "NewName", "carbon.super");
+
+        scimRoleManagerV2.updateRole(oldRole, newRole);
     }
 }
