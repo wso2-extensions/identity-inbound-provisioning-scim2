@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.internal.action;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -60,6 +61,11 @@ import java.util.stream.Collectors;
 public class PreUpdateProfileActionExecutor {
 
     private static final Log LOG = LogFactory.getLog(PreUpdateProfileActionExecutor.class);
+    private static final String IDENTITY_CLAIM_URI_PREFIX = "http://wso2.org/claims/identity";
+    private static final List<String> ALLOWED_IDENTITY_CLAIMS = Arrays.asList(
+            "http://wso2.org/claims/identity/accountLocked",
+            "http://wso2.org/claims/identity/accountDisabled"
+    );
 
     /**
      * Triggers the execution of pre update profile extension at profile update with PUT
@@ -74,7 +80,8 @@ public class PreUpdateProfileActionExecutor {
 
         ActionExecutorService actionExecutorService = SCIMCommonComponentHolder.getActionExecutorService();
 
-        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)) {
+        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE) || !isExecutable(
+                userClaimsToBeModified, userClaimsToBeDeleted)) {
             return;
         }
 
@@ -126,7 +133,9 @@ public class PreUpdateProfileActionExecutor {
 
         ActionExecutorService actionExecutorService = SCIMCommonComponentHolder.getActionExecutorService();
 
-        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)) {
+        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE) || !isExecutable(
+                userClaimsExcludingMultiValuedClaimsToBeModified, userClaimsExcludingMultiValuedClaimsToBeDeleted,
+                simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved)) {
             return;
         }
 
@@ -300,5 +309,51 @@ public class PreUpdateProfileActionExecutor {
             throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
                     "Error while retrieving claim metadata for claim URI: " + claimUri, e);
         }
+    }
+
+    private boolean isExecutable(Map<String, String> userClaimsExcludingMultiValuedClaimsToBeModified,
+                                 Map<String, String> userClaimsExcludingMultiValuedClaimsToBeDeleted,
+                                 Map<String, List<String>> simpleMultiValuedClaimsToBeAdded,
+                                 Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved) {
+
+        if (!MapUtils.isEmpty(userClaimsExcludingMultiValuedClaimsToBeModified) ||
+                !MapUtils.isEmpty(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
+                !MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) ||
+                !MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
+
+            return !onlyContainsIdentityClaims(userClaimsExcludingMultiValuedClaimsToBeModified) ||
+                    !onlyContainsIdentityClaims(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
+                    !onlyContainsIdentityClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeAdded) ||
+                    !onlyContainsIdentityClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeRemoved);
+        } else {
+            return false;
+        }
+    }
+
+    private boolean isExecutable(Map<String, String> userClaimsToBeModified,
+                                 Map<String, String> userClaimsToBeDeleted) {
+
+        if (!MapUtils.isEmpty(userClaimsToBeModified) || !MapUtils.isEmpty(userClaimsToBeDeleted)) {
+            return !onlyContainsIdentityClaims(userClaimsToBeDeleted) ||
+                    !onlyContainsIdentityClaims(userClaimsToBeModified);
+        } else {
+            return false;
+        }
+    }
+
+    private boolean onlyContainsIdentityClaims(Map<String, String> map) {
+
+        return map.keySet().stream()
+                .allMatch(key -> key.startsWith(IDENTITY_CLAIM_URI_PREFIX))
+                && map.keySet().stream()
+                .noneMatch(ALLOWED_IDENTITY_CLAIMS::contains);
+    }
+
+    private boolean onlyContainsIdentityClaimsInMultiValuedClaims(Map<String, List<String>> map) {
+
+        return map.keySet().stream()
+                .allMatch(key -> key.startsWith(IDENTITY_CLAIM_URI_PREFIX))
+                && map.keySet().stream()
+                .noneMatch(ALLOWED_IDENTITY_CLAIMS::contains);
     }
 }
