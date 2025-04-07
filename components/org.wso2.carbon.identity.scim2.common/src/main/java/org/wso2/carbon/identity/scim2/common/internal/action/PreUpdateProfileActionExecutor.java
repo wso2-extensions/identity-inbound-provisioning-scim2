@@ -61,7 +61,7 @@ import java.util.stream.Collectors;
 public class PreUpdateProfileActionExecutor {
 
     private static final Log LOG = LogFactory.getLog(PreUpdateProfileActionExecutor.class);
-    private static final List<String> NOT_ALLOWED_IDENTITY_CLAIMS = Arrays.asList(
+    private static final List<String> EXCLUDED_IDENTITY_CLAIMS = Arrays.asList(
             "http://wso2.org/claims/identity/adminForcedPasswordReset",
             "http://wso2.org/claims/identity/askPassword",
             "http://wso2.org/claims/identity/verifyEmail",
@@ -322,13 +322,13 @@ public class PreUpdateProfileActionExecutor {
                 !MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) ||
                 !MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
 
-            return !onlyContainsNotAllowedIdentityClaims(userClaimsExcludingMultiValuedClaimsToBeModified) ||
-                    !onlyContainsNotAllowedIdentityClaims(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
-                    !onlyContainsNotAllowedIdentityClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeAdded) ||
-                    !onlyContainsNotAllowedIdentityClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeRemoved);
-        } else {
-            return false;
+            return containsAllowedClaims(userClaimsExcludingMultiValuedClaimsToBeModified) ||
+                    containsAllowedClaims(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
+                    containsAllowedClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeAdded) ||
+                    containsAllowedClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeRemoved);
         }
+
+        return false;
     }
 
     private boolean isExecutable(Map<String, String> userClaimsToBeModified,
@@ -336,23 +336,23 @@ public class PreUpdateProfileActionExecutor {
 
         if (!MapUtils.isEmpty(userClaimsToBeModified) || !MapUtils.isEmpty(userClaimsToBeDeleted)) {
 
-            return !onlyContainsNotAllowedIdentityClaims(userClaimsToBeDeleted) ||
-                    !onlyContainsNotAllowedIdentityClaims(userClaimsToBeModified);
-        } else {
-            return false;
+            return containsAllowedClaims(userClaimsToBeDeleted) ||
+                    containsAllowedClaims(userClaimsToBeModified);
         }
+
+        return false;
     }
 
-    private boolean onlyContainsNotAllowedIdentityClaims(Map<String, String> map) {
+    private boolean containsAllowedClaims(Map<String, String> map) {
 
-        return map.keySet().stream().allMatch(NOT_ALLOWED_IDENTITY_CLAIMS::contains);
+        return !map.keySet().stream().allMatch(EXCLUDED_IDENTITY_CLAIMS::contains);
     }
 
-    private boolean onlyContainsNotAllowedIdentityClaimsInMultiValuedClaims(Map<String, List<String>> map) {
+    private boolean containsAllowedClaimsInMultiValuedClaims(Map<String, List<String>> map) {
 
-        return map.keySet().stream().allMatch(NOT_ALLOWED_IDENTITY_CLAIMS::contains) ||
-                map.values().stream()
+        return !map.keySet().stream().allMatch(EXCLUDED_IDENTITY_CLAIMS::contains) &&
+                !map.values().stream()
                     .flatMap(List::stream)
-                    .allMatch(NOT_ALLOWED_IDENTITY_CLAIMS::contains);
+                    .allMatch(EXCLUDED_IDENTITY_CLAIMS::contains);
     }
 }
