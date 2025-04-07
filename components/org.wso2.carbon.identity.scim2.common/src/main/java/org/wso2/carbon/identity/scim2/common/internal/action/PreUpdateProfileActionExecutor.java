@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.internal.action;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -60,6 +61,12 @@ import java.util.stream.Collectors;
 public class PreUpdateProfileActionExecutor {
 
     private static final Log LOG = LogFactory.getLog(PreUpdateProfileActionExecutor.class);
+    private static final List<String> EXCLUDED_IDENTITY_CLAIMS = Arrays.asList(
+            "http://wso2.org/claims/identity/adminForcedPasswordReset",
+            "http://wso2.org/claims/identity/askPassword",
+            "http://wso2.org/claims/identity/verifyEmail",
+            "http://wso2.org/claims/identity/verifyMobile"
+    );
 
     /**
      * Triggers the execution of pre update profile extension at profile update with PUT
@@ -74,7 +81,8 @@ public class PreUpdateProfileActionExecutor {
 
         ActionExecutorService actionExecutorService = SCIMCommonComponentHolder.getActionExecutorService();
 
-        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)) {
+        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE) || !isExecutable(
+                userClaimsToBeModified, userClaimsToBeDeleted)) {
             return;
         }
 
@@ -126,7 +134,9 @@ public class PreUpdateProfileActionExecutor {
 
         ActionExecutorService actionExecutorService = SCIMCommonComponentHolder.getActionExecutorService();
 
-        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)) {
+        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE) || !isExecutable(
+                userClaimsExcludingMultiValuedClaimsToBeModified, userClaimsExcludingMultiValuedClaimsToBeDeleted,
+                simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved)) {
             return;
         }
 
@@ -300,5 +310,49 @@ public class PreUpdateProfileActionExecutor {
             throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
                     "Error while retrieving claim metadata for claim URI: " + claimUri, e);
         }
+    }
+
+    private boolean isExecutable(Map<String, String> userClaimsExcludingMultiValuedClaimsToBeModified,
+                                 Map<String, String> userClaimsExcludingMultiValuedClaimsToBeDeleted,
+                                 Map<String, List<String>> simpleMultiValuedClaimsToBeAdded,
+                                 Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved) {
+
+        if (!MapUtils.isEmpty(userClaimsExcludingMultiValuedClaimsToBeModified) ||
+                !MapUtils.isEmpty(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
+                !MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) ||
+                !MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
+
+            return containsAllowedClaims(userClaimsExcludingMultiValuedClaimsToBeModified) ||
+                    containsAllowedClaims(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
+                    containsAllowedClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeAdded) ||
+                    containsAllowedClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeRemoved);
+        }
+
+        return false;
+    }
+
+    private boolean isExecutable(Map<String, String> userClaimsToBeModified,
+                                 Map<String, String> userClaimsToBeDeleted) {
+
+        if (!MapUtils.isEmpty(userClaimsToBeModified) || !MapUtils.isEmpty(userClaimsToBeDeleted)) {
+
+            return containsAllowedClaims(userClaimsToBeDeleted) ||
+                    containsAllowedClaims(userClaimsToBeModified);
+        }
+
+        return false;
+    }
+
+    private boolean containsAllowedClaims(Map<String, String> map) {
+
+        return !map.keySet().stream().allMatch(EXCLUDED_IDENTITY_CLAIMS::contains);
+    }
+
+    private boolean containsAllowedClaimsInMultiValuedClaims(Map<String, List<String>> map) {
+
+        return !map.keySet().stream().allMatch(EXCLUDED_IDENTITY_CLAIMS::contains) &&
+                !map.values().stream()
+                    .flatMap(List::stream)
+                    .allMatch(EXCLUDED_IDENTITY_CLAIMS::contains);
     }
 }
