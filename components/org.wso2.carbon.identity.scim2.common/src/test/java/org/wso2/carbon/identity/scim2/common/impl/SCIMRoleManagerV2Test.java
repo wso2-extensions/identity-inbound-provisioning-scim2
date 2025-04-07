@@ -27,6 +27,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
@@ -53,10 +54,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -148,6 +151,40 @@ public class SCIMRoleManagerV2Test {
             assertEquals(BAD_REQUEST, e.getStatus());
             assertEquals(ResponseCodeConstants.INVALID_VALUE, e.getScimType());
             assertEquals("Group id is required to update group of the role.", e.getDetail());
+        }
+    }
+
+    @DataProvider(name = "roleNameUpdateExceptions")
+    public Object[][] roleNameUpdateExceptions() {
+
+        return new Object[][] {
+                {new IdentityRoleManagementException("RMA-60001", "Role not found"), BadRequestException.class},
+                {new IdentityRoleManagementException("RMA-60009", "Role name update is forbidden"), BadRequestException.class}
+        };
+    }
+
+    @Test(dataProvider = "roleNameUpdateExceptions", expectedExceptions = BadRequestException.class)
+    public void testInvalidRequestOnRoleNameUpdate(IdentityRoleManagementException identityException, Class<? extends Throwable> expectedException) throws Exception {
+
+        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
+             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class);
+             MockedStatic<OrganizationManagementUtil> mockOrganizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+
+            RoleV2 oldRole = mock(RoleV2.class);
+            RoleV2 newRole = mock(RoleV2.class);
+
+            when(oldRole.getDisplayName()).thenReturn(ROLE_NAME);
+            when(newRole.getDisplayName()).thenReturn(ROLE_NAME_2);
+            when(oldRole.getId()).thenReturn(ROLE_ID);
+
+            when(RoleManagementUtils.isSharedRole(ROLE_ID, SAMPLE_TENANT_DOMAIN)).thenReturn(false);
+            when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+
+            doThrow(identityException).when(roleManagementService)
+                    .updateRoleName(ROLE_ID, ROLE_NAME_2, SAMPLE_TENANT_DOMAIN);
+
+            scimRoleManagerV2.updateRole(oldRole, newRole);
         }
     }
 
