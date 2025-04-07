@@ -53,10 +53,7 @@ public class TestConstants {
         DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_CLAIM8("http://wso2.org/claims/claim8", true,
                 "value81,value80",
                 new String[]{}, "value81,value80,value82"),
-        EXCLUDED_SINGLEVALUE_IDENTITY_CLAIM1("http://wso2.org/claims/identity/adminForcedPasswordReset", false, "true", "false", null),
-        EXCLUDED_MULTIVALUE_IDENTITY_CLAIM_INPUT_VALUE_AS_STRING_LIST_CLAIM1("http://wso2.org/claims/identity/adminForcedPasswordReset", true,
-                                                         Arrays.asList("value1", "value2", "value3"),
-                new String[]{"value1", "value2", "value3"}, null);
+        EXCLUDED_SINGLEVALUE_IDENTITY_CLAIM1("http://wso2.org/claims/identity/adminForcedPasswordReset", false, "true", "false", null);
 
         private String claimURI;
         private boolean isMultiValued;

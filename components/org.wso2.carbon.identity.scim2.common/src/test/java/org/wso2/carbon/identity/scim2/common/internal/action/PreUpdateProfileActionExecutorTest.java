@@ -68,7 +68,18 @@ import static org.testng.Assert.fail;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.AssertJUnit.assertTrue;
 import static org.testng.internal.junit.ArrayAsserts.assertArrayEquals;
-import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.*;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_CLAIM8;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_MULTI_ATTRIBUTE_SEPARATOR_INCLUDED_SINGLEVALUE_CLAIM5;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_SINGLEVALUE_CLAIM4;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.EXCLUDED_SINGLEVALUE_IDENTITY_CLAIM1;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.NEW_MULTIVALUE_INPUT_VALUE_AS_STRING_CLAIM6;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.NEW_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM6;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.NEW_SINGLEVALUE_CLAIM1;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.UPDATING_MULTIVALUE_INPUT_VALUE_AS_STRING_CLAIM7;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.UPDATING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM7;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.UPDATING_MULTI_ATTRIBUTE_SEPARATOR_INCLUDED_SINGLEVALUE_CLAIM3;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.UPDATING_SINGLEVALUE_CLAIM2;
 
 /**
  * Test class for PreUpdateProfileActionExecutor.
