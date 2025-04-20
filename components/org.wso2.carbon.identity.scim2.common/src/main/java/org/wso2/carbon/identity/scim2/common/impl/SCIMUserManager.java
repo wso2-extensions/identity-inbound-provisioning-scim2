@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpStatus;
 import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -47,6 +48,12 @@ import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
@@ -65,6 +72,7 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.user.api.ClaimMapping;
+import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -3628,6 +3636,28 @@ public class SCIMUserManager implements UserManager {
             Collections.reverse(displayNameOperations);
 
             if (CollectionUtils.isNotEmpty(displayNameOperations)) {
+
+//                if (IdentityUtil.threadLocalProperties.get().get(OAuth2Constants.AUTHORIZED_SCOPES) != null) {
+//                    List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
+//                            OAuth2Constants.AUTHORIZED_SCOPES);
+//                    if (!authorizedScopes.contains("internal_group_mgt_metadata_update")) {
+//                        throw new BadRequestException("Don't have sufficient permission to perform the operation", null);
+//                    }
+//                }
+
+
+
+                OAuthAppDAO dao = new OAuthAppDAO();
+                String applicationName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationName();
+                OAuthAppDO appDTO = dao.getAppInformationByAppName(applicationName);
+                String consumerKey = appDTO.getOauthConsumerKey();
+                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, tenantDomain);
+                String appVersion = serviceProvider.getApplicationVersion();
+
+                SCIMFineGrainedScopeValidatorImpl scimFineGrainedScopeValidationService =
+                        new SCIMFineGrainedScopeValidatorImpl();
+                scimFineGrainedScopeValidationService.validate("group_mgt_metadata_update");
+
                 newGroupName = (String) displayNameOperations.get(0).getValues();
                 setGroupDisplayName(groupId, currentGroupName, newGroupName);
             }
@@ -3637,6 +3667,20 @@ public class SCIMUserManager implements UserManager {
             Set<String> deletedMembers = new HashSet<>();
             Set<Object> newlyAddedMemberIds = new HashSet<>();
             Set<Object> deletedMemberIds = new HashSet<>();
+
+            if (!memberOperations.isEmpty()) {
+
+                OAuthAppDAO dao = new OAuthAppDAO();
+                String applicationName = PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationName();
+                OAuthAppDO appDTO = dao.getAppInformationByAppName(applicationName);
+                String consumerKey = appDTO.getOauthConsumerKey();
+                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, tenantDomain);
+                String appVersion = serviceProvider.getApplicationVersion();
+
+                SCIMFineGrainedScopeValidatorImpl scimFineGrainedScopeValidationService =
+                        new SCIMFineGrainedScopeValidatorImpl();
+                scimFineGrainedScopeValidationService.validate("user_assignment_group");
+            }
 
             for (PatchOperation memberOperation : memberOperations) {
                 if (memberOperation.getValues() instanceof Map) {
@@ -3741,6 +3785,10 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException(e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
             throw new CharonException("Error retrieving User Store name. ", e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RuntimeException(e);
+        } catch (InvalidOAuthClientException e) {
+            throw new RuntimeException(e);
         }
     }
 

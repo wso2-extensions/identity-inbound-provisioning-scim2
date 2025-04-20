@@ -24,13 +24,19 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.identity.auth.service.ScopeThreadLocal;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.auth.service.handler.impl.OAuth2AccessTokenHandler;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.IdPGroup;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.auth.valve.util.APIErrorResponseHandler;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
@@ -49,6 +55,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -73,6 +80,7 @@ import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1055,6 +1063,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             Set<String> deletedIdpGroupIds = new HashSet<>();
             Set<String> replaceIdpGroupIds = new HashSet<>();
 
+            List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(OAuth2Constants.AUTHORIZED_SCOPES);
+
+            if (!authorizedScopes.contains("group_mgt_role_update")) {
+                throw new BadRequestException("user does not have permission to update groups of role");
+            }
+
             List<GroupBasicInfo> groupListOfRole = roleManagementService.getGroupListOfRole(roleId, tenantDomain);
             for (PatchOperation groupOperation : groupOperations) {
                 if (groupOperation.getValues() instanceof Map) {
@@ -1387,6 +1401,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 throw new CharonException("Error occurred while retrieving the role list of user.");
             }
 
+            if (IdentityUtil.threadLocalProperties.get().get(OAuth2Constants.AUTHORIZED_SCOPES) != null) {
+                List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
+                        OAuth2Constants.AUTHORIZED_SCOPES);
+                if (!authorizedScopes.contains("internal_user_mgt_update")) {
+                    throw new BadRequestException("Don't have sufficient permission to perform the operation", null);
+                }
+            }
+
             if (SCIMConstants.OperationalConstants.ADD.equals(memberOperation.getOperation()) &&
                     !roleList.contains(roleId)) {
                 removedMembers.remove(memberObject.get(SCIMConstants.RoleSchemaConstants.DISPLAY));
@@ -1492,5 +1514,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         } catch (IdentityRoleManagementException e) {
             throw new CharonException("Error while checking whether the role is a shared role.", e);
         }
+    }
+
+    private List<String> getAuthenticatedUserScopes() {
+
+        return ScopeThreadLocal.getAllowedScopes();
     }
 }
