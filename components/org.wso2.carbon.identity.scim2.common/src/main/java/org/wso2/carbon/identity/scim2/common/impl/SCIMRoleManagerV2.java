@@ -952,6 +952,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private void updateRoleName(String roleId, String oldRoleDisplayName, String newRoleDisplayName)
             throws CharonException, ConflictException, NotFoundException {
 
+//        if (SCIMCommonUtils.isFineGrainedScopeValidationEnabled()) {
+//            SCIMCommonUtils.doFineGrainedScopeValidation(SCIMCommonConstants.ROLE_UPDATE_NAME);
+//        }
+
         if (!StringUtils.equals(oldRoleDisplayName, newRoleDisplayName)) {
             try {
                 roleManagementService.updateRoleName(roleId, newRoleDisplayName, tenantDomain);
@@ -972,6 +976,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws BadRequestException, CharonException {
 
         try {
+            SCIMCommonUtils.validateFineGrainedScopeIfEnabled(SCIMCommonConstants.ROLE_UPDATE_PERMISSIONS);
+
             Collections.sort(permissionOperations);
             Set<String> addedPermissions = new HashSet<>();
             Set<String> deletedPermissions = new HashSet<>();
@@ -1049,6 +1055,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, BadRequestException {
 
         try {
+            SCIMCommonUtils.validateFineGrainedScopeIfEnabled(SCIMCommonConstants.GROUP_ASSIGNMENT_INTO_ROLE);
+
             Collections.sort(groupOperations);
 
             Set<String> givenAddedGroupIds = new HashSet<>();
@@ -1062,12 +1070,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             Set<String> addedIdpGroupIds = new HashSet<>();
             Set<String> deletedIdpGroupIds = new HashSet<>();
             Set<String> replaceIdpGroupIds = new HashSet<>();
-
-            List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(OAuth2Constants.AUTHORIZED_SCOPES);
-
-            if (!authorizedScopes.contains("group_mgt_role_update")) {
-                throw new BadRequestException("user does not have permission to update groups of role");
-            }
 
             List<GroupBasicInfo> groupListOfRole = roleManagementService.getGroupListOfRole(roleId, tenantDomain);
             for (PatchOperation groupOperation : groupOperations) {
@@ -1141,6 +1143,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
     private void updateUsers(String roleId, List<PatchOperation> memberOperations)
             throws BadRequestException, CharonException, ForbiddenException {
+
+        SCIMCommonUtils.validateFineGrainedScopeIfEnabled(SCIMCommonConstants.USER_ASSIGNMENT_INTO_ROLE);
 
         Collections.sort(memberOperations);
         Set<String> addedUsers = new HashSet<>();
@@ -1399,14 +1403,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 roleList = roleManagementService.getRoleIdListOfUser(userID, tenantDomain);
             } catch (IdentityRoleManagementException e) {
                 throw new CharonException("Error occurred while retrieving the role list of user.");
-            }
-
-            if (IdentityUtil.threadLocalProperties.get().get(OAuth2Constants.AUTHORIZED_SCOPES) != null) {
-                List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
-                        OAuth2Constants.AUTHORIZED_SCOPES);
-                if (!authorizedScopes.contains("internal_user_mgt_update")) {
-                    throw new BadRequestException("Don't have sufficient permission to perform the operation", null);
-                }
             }
 
             if (SCIMConstants.OperationalConstants.ADD.equals(memberOperation.getOperation()) &&

@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCach
 import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.impl.SCIMFineGrainedScopeValidatorImpl;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -52,6 +53,7 @@ import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.charon3.core.schema.AttributeSchema;
@@ -1071,5 +1073,31 @@ public class SCIMCommonUtils {
             return true;
         }
         return Boolean.parseBoolean(considerServerWideUserEndpointMaxLimitProperty);
+    }
+
+    public static boolean isFineGrainedScopeValidationEnabled() {
+
+        if(IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SERVICE_PROVIDER) != null){
+            return IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SERVICE_PROVIDER)
+                    .equals(SCIMCommonConstants.CONSOLE);
+        }
+        return false;
+    }
+
+    public static void doFineGrainedScopeValidation(String operation)
+            throws BadRequestException {
+
+        SCIMFineGrainedScopeValidatorImpl scimFineGrainedScopeValidationService =
+                new SCIMFineGrainedScopeValidatorImpl();
+        scimFineGrainedScopeValidationService.validate(operation);
+    }
+
+    public static void validateFineGrainedScopeIfEnabled(String operation)
+            throws BadRequestException{
+
+        if (isFineGrainedScopeValidationEnabled()) {
+            doFineGrainedScopeValidation(
+                    operation);
+        }
     }
 }

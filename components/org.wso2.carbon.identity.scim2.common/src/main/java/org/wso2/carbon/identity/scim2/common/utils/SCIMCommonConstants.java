@@ -39,6 +39,8 @@ public class SCIMCommonConstants {
     public static final String SERVICE_PROVIDER_CONFIG = "/ServiceProviderConfig";
     public static final String RESOURCE_TYPE = "/ResourceTypes";
     public static final String DEFAULT = "default";
+    public static final String SERVICE_PROVIDER = "serviceProvider";
+    public static final String CONSOLE = "Console";
 
     public static final int USER = 1;
     public static final int GROUP = 2;
@@ -153,6 +155,18 @@ public class SCIMCommonConstants {
     public static final String MAX_LENGTH = "maxLength";
     public static final String REQUIRED = "required";
 
+    // SCIM OPERATIONS
+    public static final String USER_ASSIGNMENT_INTO_GROUP = "user_assignment_into_group";
+    public static final String USER_ASSIGNMENT_INTO_ROLE = "user_assignment_into_role";
+    public static final String GROUP_ASSIGNMENT_INTO_ROLE = "group_assignment_into_role";
+    public static final String GROUP_METADATA_UPDATE = "group_metadata_update";
+    public static final String ROLE_UPDATE_PERMISSIONS = "role_update_permissions";
+    public static final String ROLE_UPDATE_NAME = "role_update_name";
+    public static final String USER_CREATION = "create_user";
+    public static final String USER_DELETION = "delete_user";
+    public static final String FILTER_USERS = "filter_users";
+    public static final String SEARCH_USERS = "search_users";
+    public static final String GET_USER_BY_ID = "get_user_by_id";
 
     private static final Map<String, String> groupAttributeSchemaMap = new HashMap<>();
 
