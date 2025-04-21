@@ -56,8 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -72,7 +71,7 @@ import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_MULTI_ATTRIBUTE_SEPARATOR_INCLUDED_SINGLEVALUE_CLAIM5;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_SINGLEVALUE_CLAIM4;
-import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.EXCLUDED_SINGLEVALUE_IDENTITY_CLAIM1;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.NEW_MULTIVALUE_INPUT_VALUE_AS_STRING_CLAIM6;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.NEW_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM6;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.NEW_SINGLEVALUE_CLAIM1;
@@ -242,7 +241,7 @@ public class PreUpdateProfileActionExecutorTest {
     }
 
     @Test
-    public void testSuccessExecutionForExcludedIdentityClaimUpdateExecutionAtPutOperation() throws Exception {
+    public void testSuccessExecutionForFlowInitiatorClaimUpdateExecutionAtPutOperation() throws Exception {
 
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
@@ -250,14 +249,15 @@ public class PreUpdateProfileActionExecutorTest {
         when(status.getStatus()).thenReturn(ActionExecutionStatus.Status.SUCCESS);
         when(actionExecutorService.execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any())).thenReturn(status);
 
-        LocalClaim newClaim = getMockedLocalClaim(EXCLUDED_SINGLEVALUE_IDENTITY_CLAIM1);
-        when(claimMetadataManagementService.getLocalClaim(eq(EXCLUDED_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI()), any(String.class)))
+        LocalClaim newClaim = getMockedLocalClaim(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1);
+        when(claimMetadataManagementService.getLocalClaim(eq(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI()), anyString()))
                 .thenReturn(Optional.of(newClaim));
+        when(newClaim.getFlowInitiator()).thenReturn(true);
 
         User user = getSCIMUser();
 
         Map<String, String> claimsToModify = new HashMap<>();
-        claimsToModify.put(EXCLUDED_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI(), EXCLUDED_SINGLEVALUE_IDENTITY_CLAIM1.getInputValueAsString());
+        claimsToModify.put(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI(), FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getInputValueAsString());
 
         Map<String, String> claimsToDelete = new HashMap<>();
 

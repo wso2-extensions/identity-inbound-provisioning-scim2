@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -61,12 +62,6 @@ import java.util.stream.Collectors;
 public class PreUpdateProfileActionExecutor {
 
     private static final Log LOG = LogFactory.getLog(PreUpdateProfileActionExecutor.class);
-    private static final List<String> EXCLUDED_IDENTITY_CLAIMS = Arrays.asList(
-            "http://wso2.org/claims/identity/adminForcedPasswordReset",
-            "http://wso2.org/claims/identity/askPassword",
-            "http://wso2.org/claims/identity/verifyEmail",
-            "http://wso2.org/claims/identity/verifyMobile"
-    );
 
     /**
      * Triggers the execution of pre update profile extension at profile update with PUT
@@ -315,44 +310,48 @@ public class PreUpdateProfileActionExecutor {
     private boolean isExecutable(Map<String, String> userClaimsExcludingMultiValuedClaimsToBeModified,
                                  Map<String, String> userClaimsExcludingMultiValuedClaimsToBeDeleted,
                                  Map<String, List<String>> simpleMultiValuedClaimsToBeAdded,
-                                 Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved) {
+                                 Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved)
+            throws UserStoreException {
 
         if (!MapUtils.isEmpty(userClaimsExcludingMultiValuedClaimsToBeModified) ||
                 !MapUtils.isEmpty(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
                 !MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) ||
                 !MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
 
-            return containsAllowedClaims(userClaimsExcludingMultiValuedClaimsToBeModified) ||
-                    containsAllowedClaims(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
-                    containsAllowedClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeAdded) ||
-                    containsAllowedClaimsInMultiValuedClaims(simpleMultiValuedClaimsToBeRemoved);
+            return hasAnyNonFlowInitiatorClaims(userClaimsExcludingMultiValuedClaimsToBeModified.keySet()) ||
+                    hasAnyNonFlowInitiatorClaims(userClaimsExcludingMultiValuedClaimsToBeDeleted.keySet()) ||
+                    hasAnyNonFlowInitiatorClaims(simpleMultiValuedClaimsToBeAdded.keySet()) ||
+                    hasAnyNonFlowInitiatorClaims(simpleMultiValuedClaimsToBeRemoved.keySet());
         }
 
         return false;
     }
 
     private boolean isExecutable(Map<String, String> userClaimsToBeModified,
-                                 Map<String, String> userClaimsToBeDeleted) {
+                                 Map<String, String> userClaimsToBeDeleted) throws UserStoreException {
 
         if (!MapUtils.isEmpty(userClaimsToBeModified) || !MapUtils.isEmpty(userClaimsToBeDeleted)) {
 
-            return containsAllowedClaims(userClaimsToBeDeleted) ||
-                    containsAllowedClaims(userClaimsToBeModified);
+            return hasAnyNonFlowInitiatorClaims(userClaimsToBeDeleted.keySet()) ||
+                    hasAnyNonFlowInitiatorClaims(userClaimsToBeModified.keySet());
         }
 
         return false;
     }
 
-    private boolean containsAllowedClaims(Map<String, String> map) {
+    private boolean hasAnyNonFlowInitiatorClaims(Set<String> claimUriList) throws UserStoreException {
 
-        return !map.keySet().stream().allMatch(EXCLUDED_IDENTITY_CLAIMS::contains);
-    }
-
-    private boolean containsAllowedClaimsInMultiValuedClaims(Map<String, List<String>> map) {
-
-        return !map.keySet().stream().allMatch(EXCLUDED_IDENTITY_CLAIMS::contains) &&
-                !map.values().stream()
-                    .flatMap(List::stream)
-                    .allMatch(EXCLUDED_IDENTITY_CLAIMS::contains);
+        ClaimMetadataManagementService claimMetadataManagementService = SCIMCommonComponentHolder
+                .getClaimManagementService();
+        String tenantDomain = IdentityContext.getThreadLocalIdentityContext().getTenantDomain();
+        for (String claimUri : claimUriList) {
+            try {
+                Optional<LocalClaim> localClaim = claimMetadataManagementService.getLocalClaim(claimUri, tenantDomain);
+                return localClaim.isPresent() && !localClaim.get().getFlowInitiator();
+            } catch (ClaimMetadataException e) {
+                throw new UserStoreException("Error while getting local claim", e);
+            }
+        }
+        return false;
     }
 }
