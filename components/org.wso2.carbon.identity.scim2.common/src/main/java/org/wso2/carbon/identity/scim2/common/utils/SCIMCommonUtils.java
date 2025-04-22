@@ -24,6 +24,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.authorization.framework.exception.AccessEvaluationException;
+import org.wso2.carbon.identity.authorization.framework.model.AuthorizationAction;
+import org.wso2.carbon.identity.authorization.framework.model.AuthorizationResource;
+import org.wso2.carbon.identity.authorization.framework.model.AccessEvaluationRequest;
+import org.wso2.carbon.identity.authorization.framework.model.AccessEvaluationResponse;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
@@ -34,6 +39,7 @@ import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.constants.AccountConstants;
+import org.wso2.carbon.identity.oauth2.finegrainedauthz.FineGrainedApiAccessEvaluationService;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
@@ -53,6 +59,7 @@ import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -1071,5 +1078,33 @@ public class SCIMCommonUtils {
             return true;
         }
         return Boolean.parseBoolean(considerServerWideUserEndpointMaxLimitProperty);
+    }
+
+    public static boolean isFineGrainedScopeValidationEnabled() {
+
+        if(IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SERVICE_PROVIDER) != null){
+            return IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SERVICE_PROVIDER)
+                    .equals(SCIMCommonConstants.CONSOLE);
+        }
+        return false;
+    }
+
+    public static void doFineGrainedApiAuthzIfEnabled(String resourceType, String operation)
+            throws ForbiddenException, AccessEvaluationException {
+
+        if (isFineGrainedScopeValidationEnabled()) {
+
+            FineGrainedApiAccessEvaluationService fineGrainedAPIAccessEvaluator = new
+                    FineGrainedApiAccessEvaluationService();
+            AuthorizationAction action = new AuthorizationAction(operation);
+            AuthorizationResource resource = new AuthorizationResource(resourceType);
+
+            AccessEvaluationRequest evaluationRequest = new AccessEvaluationRequest(null, action, resource);
+
+            AccessEvaluationResponse evaluationResponse = fineGrainedAPIAccessEvaluator.evaluate(evaluationRequest);
+            if (!evaluationResponse.getDecision()) {
+                throw new ForbiddenException("Operation in not permitted.");
+            }
+        }
     }
 }
