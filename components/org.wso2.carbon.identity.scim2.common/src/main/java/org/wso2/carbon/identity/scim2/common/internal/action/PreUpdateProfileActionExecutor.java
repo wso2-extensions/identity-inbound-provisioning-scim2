@@ -349,7 +349,7 @@ public class PreUpdateProfileActionExecutor {
                 Optional<LocalClaim> localClaim = claimMetadataManagementService.getLocalClaim(claimUri, tenantDomain);
                 return localClaim.isPresent() && !localClaim.get().getFlowInitiator();
             } catch (ClaimMetadataException e) {
-                throw new UserStoreException("Error while getting local claim", e);
+                throw new UserStoreException(String.format("Error while reading claim meta data of %s", claimUri), e);
             }
         }
         return false;

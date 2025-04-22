@@ -241,7 +241,7 @@ public class PreUpdateProfileActionExecutorTest {
     }
 
     @Test
-    public void testSuccessExecutionForFlowInitiatorClaimUpdateExecutionAtPutOperation() throws Exception {
+    public void testExecutionSkippedForFlowInitiatorClaimUpdateExecutionAtPutOperation() throws Exception {
 
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
@@ -250,14 +250,15 @@ public class PreUpdateProfileActionExecutorTest {
         when(actionExecutorService.execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any())).thenReturn(status);
 
         LocalClaim newClaim = getMockedLocalClaim(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1);
-        when(claimMetadataManagementService.getLocalClaim(eq(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI()), anyString()))
-                .thenReturn(Optional.of(newClaim));
+        when(claimMetadataManagementService.getLocalClaim(eq(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI()),
+                anyString())).thenReturn(Optional.of(newClaim));
         when(newClaim.getFlowInitiator()).thenReturn(true);
 
         User user = getSCIMUser();
 
         Map<String, String> claimsToModify = new HashMap<>();
-        claimsToModify.put(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI(), FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getInputValueAsString());
+        claimsToModify.put(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI(),
+                FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getInputValueAsString());
 
         Map<String, String> claimsToDelete = new HashMap<>();
 
