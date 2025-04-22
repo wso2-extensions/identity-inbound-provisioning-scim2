@@ -30,10 +30,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpStatus;
 import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.authorization.framework.exception.AccessEvaluationException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
@@ -221,6 +223,13 @@ public class SCIMUserManager implements UserManager {
     @Override
     public User createUser(User user, Map<String, Boolean> requiredAttributes)
             throws CharonException, ConflictException, BadRequestException, ForbiddenException {
+
+        try {
+            SCIMCommonUtils.doFineGrainedApiAuthzIfEnabled( SCIMCommonConstants.USER_RESOURCE_TYPE,
+                    SCIMCommonConstants.USER_CREATION);
+        } catch (AccessEvaluationException e) {
+            throw new CharonException("Error while evaluating fine grained authorization for user creation", e);
+        }
 
         String userStoreName = null;
         try {
@@ -522,13 +531,21 @@ public class SCIMUserManager implements UserManager {
                 throw resolveError(e, errMsg);
             }
         } catch (BadRequestException | NotImplementedException e) {
-           throw new CharonException("Error in getting user information from Carbon User Store", e);
+            throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return scimUser;
     }
 
     @Override
-    public void deleteUser(String userId) throws NotFoundException, CharonException, BadRequestException {
+    public void deleteUser(String userId) throws NotFoundException, CharonException, BadRequestException,
+            ForbiddenException {
+
+        try {
+            SCIMCommonUtils.doFineGrainedApiAuthzIfEnabled(SCIMCommonConstants.USER_RESOURCE_TYPE,
+                    SCIMCommonConstants.USER_DELETION);
+        } catch (AccessEvaluationException e) {
+            throw new CharonException("Error while evaluating fine grained authorization for user deletion", e);
+        }
 
         if (log.isDebugEnabled()) {
             log.debug("Deleting user: " + userId);
@@ -615,7 +632,7 @@ public class SCIMUserManager implements UserManager {
     @Override
     @Deprecated
     public UsersGetResponse listUsersWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
-                                         String domainName, Map<String, Boolean> requiredAttributes)
+                                             String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         if (sortBy != null || sortOrder != null) {
@@ -629,7 +646,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public UsersGetResponse listUsersWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
-                                         String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
+                                             String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         // Validate NULL value for startIndex.
@@ -647,7 +664,14 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public UsersGetResponse listUsersWithPost(SearchRequest searchRequest, Map<String, Boolean> requiredAttributes)
-            throws CharonException, NotImplementedException, BadRequestException {
+            throws CharonException, NotImplementedException, BadRequestException, ForbiddenException {
+
+        try {
+            SCIMCommonUtils.doFineGrainedApiAuthzIfEnabled(SCIMCommonConstants.USER_RESOURCE_TYPE,
+                    SCIMCommonConstants.SEARCH_USERS);
+        } catch (AccessEvaluationException e) {
+            throw new CharonException("Error while evaluating fine grained authorization for user search", e);
+        }
 
         int count = searchRequest.getCount();
 
@@ -703,7 +727,7 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse listUsers(Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                   String sortBy, String sortOrder, String domainName) throws CharonException,
+                                       String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
         List<User> scimUsers = new ArrayList<>();
@@ -1010,7 +1034,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error while retrieving users
      */
     private List<User> getUserDetails(Set<org.wso2.carbon.user.core.common.User> coreUsers,
-                                        Map<String, Boolean> requiredAttributes)
+                                      Map<String, Boolean> requiredAttributes)
             throws CharonException, BadRequestException {
 
         List<User> users = new ArrayList<>();
@@ -1471,7 +1495,7 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                     String sortBy, String sortOrder, String domainName) throws CharonException,
+                                         String sortBy, String sortOrder, String domainName) throws CharonException,
             BadRequestException {
 
         // Handle limit equals NULL scenario.
@@ -1509,8 +1533,8 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse filterUsersBySingleAttribute(ExpressionNode node, Map<String, Boolean> requiredAttributes,
-                                                      int offset, int limit, String sortBy, String sortOrder,
-                                                      String domainName) throws CharonException, BadRequestException {
+                                                          int offset, int limit, String sortBy, String sortOrder,
+                                                          String domainName) throws CharonException, BadRequestException {
 
         Set<org.wso2.carbon.user.core.common.User> users;
         List<User> filteredUsers = new ArrayList<>();
@@ -2246,8 +2270,8 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException
      */
     private UsersGetResponse getMultiAttributeFilteredUsers(Node node, Map<String, Boolean> requiredAttributes,
-                                                        int offset, int limit, String sortBy, String sortOrder,
-                                                        String domainName) throws CharonException, BadRequestException {
+                                                            int offset, int limit, String sortBy, String sortOrder,
+                                                            String domainName) throws CharonException, BadRequestException {
 
         List<User> filteredUserDetails;
 
@@ -2294,7 +2318,7 @@ public class SCIMUserManager implements UserManager {
 
 
     private PaginatedUserResponse getMultiAttributeFilteredUsersWithMaxLimit(Node node, int offset,
-                                           String sortBy, String sortOrder, String domainName, int maxLimit, boolean paginationRequested)
+                                                                             String sortBy, String sortOrder, String domainName, int maxLimit, boolean paginationRequested)
             throws CharonException, BadRequestException {
 
         if (StringUtils.isNotEmpty(domainName)) {
@@ -2687,7 +2711,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException
      */
     private List<User> getFilteredUserDetails(Set<org.wso2.carbon.user.core.common.User> users,
-                                                Map<String, Boolean> requiredAttributes)
+                                              Map<String, Boolean> requiredAttributes)
             throws CharonException, BadRequestException {
 
         List<User> filteredUsers = new ArrayList<>();
@@ -2824,7 +2848,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public void deleteMe(String userId) throws NotFoundException, CharonException, BadRequestException,
-            NotImplementedException {
+            NotImplementedException, ForbiddenException {
 
         deleteUser(userId);
     }
@@ -3101,7 +3125,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public GroupsGetResponse listGroupsWithGET(Node rootNode, int startIndex, int count, String sortBy, String sortOrder,
-                                          String domainName, Map<String, Boolean> requiredAttributes)
+                                               String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         // If the startIndex less than 1 should be interpreted as 1 according to the SCIM2 specification.
@@ -3117,7 +3141,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public GroupsGetResponse listGroupsWithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
-                                          String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
+                                               String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
         // Validate NULL value for startIndex.
@@ -3335,7 +3359,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException         Unknown node operation.
      */
     private GroupsGetResponse filterGroups(Node rootNode, int startIndex, Integer count, String sortBy, String sortOrder,
-                                      String domainName, Map<String, Boolean> requiredAttributes)
+                                           String domainName, Map<String, Boolean> requiredAttributes)
             throws NotImplementedException, CharonException, BadRequestException {
 
         // Handle count equals NULL scenario.
@@ -3365,8 +3389,8 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException Error in Filtering
      */
     private GroupsGetResponse filterGroupsBySingleAttribute(ExpressionNode node, int startIndex, int count, String sortBy,
-                                                       String sortOrder, String domainName,
-                                                       Map<String, Boolean> requiredAttributes)
+                                                            String sortOrder, String domainName,
+                                                            Map<String, Boolean> requiredAttributes)
             throws CharonException, BadRequestException {
 
         String attributeName = node.getAttributeValue();
@@ -3589,7 +3613,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public void patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations)
-            throws NotImplementedException, BadRequestException, CharonException, NotFoundException {
+            throws NotImplementedException, BadRequestException, CharonException, NotFoundException, ForbiddenException {
 
         doPatchGroup(groupId, currentGroupName, patchOperations);
     }
@@ -3597,14 +3621,14 @@ public class SCIMUserManager implements UserManager {
     @Override
     public Group patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations,
                             Map<String, Boolean> requiredAttributes) throws NotImplementedException,
-            BadRequestException, CharonException, NotFoundException {
+            BadRequestException, CharonException, NotFoundException, ForbiddenException {
 
         doPatchGroup(groupId, currentGroupName, patchOperations);
         return getGroup(groupId, requiredAttributes);
     }
 
     private void doPatchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations) throws
-            NotImplementedException, BadRequestException, CharonException, NotFoundException {
+            NotImplementedException, BadRequestException, CharonException, NotFoundException, ForbiddenException {
 
         if (log.isDebugEnabled()) {
             log.debug("Updating group: " + currentGroupName);
@@ -3628,6 +3652,10 @@ public class SCIMUserManager implements UserManager {
             Collections.reverse(displayNameOperations);
 
             if (CollectionUtils.isNotEmpty(displayNameOperations)) {
+
+                SCIMCommonUtils.doFineGrainedApiAuthzIfEnabled(SCIMCommonConstants.GROUP_RESOURCE_TYPE,
+                        SCIMCommonConstants.GROUP_METADATA_UPDATE);
+
                 newGroupName = (String) displayNameOperations.get(0).getValues();
                 setGroupDisplayName(groupId, currentGroupName, newGroupName);
             }
@@ -3637,6 +3665,11 @@ public class SCIMUserManager implements UserManager {
             Set<String> deletedMembers = new HashSet<>();
             Set<Object> newlyAddedMemberIds = new HashSet<>();
             Set<Object> deletedMemberIds = new HashSet<>();
+
+            if (CollectionUtils.isNotEmpty(memberOperations)) {
+                SCIMCommonUtils.doFineGrainedApiAuthzIfEnabled(SCIMCommonConstants.GROUP_RESOURCE_TYPE,
+                        SCIMCommonConstants.USER_ASSIGNMENT_INTO_GROUP);
+            }
 
             for (PatchOperation memberOperation : memberOperations) {
                 if (memberOperation.getValues() instanceof Map) {
@@ -3737,7 +3770,7 @@ public class SCIMUserManager implements UserManager {
                 throw new BadRequestException(ResponseCodeConstants.INVALID_VALUE);
             }
             throw resolveError(e, e.getMessage());
-        } catch (IdentitySCIMException e) {
+        } catch (IdentitySCIMException | AccessEvaluationException e) {
             throw new CharonException(e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
             throw new CharonException("Error retrieving User Store name. ", e);
@@ -4302,7 +4335,7 @@ public class SCIMUserManager implements UserManager {
             throw resolveError(e, "Error in getting user information for user: " +
                     coreUser.getDomainQualifiedUsername());
         } catch (CharonException | NotFoundException | IdentitySCIMException |
-                BadRequestException e) {
+                 BadRequestException e) {
             throw new CharonException("Error in getting user information for user: " +
                     coreUser.getDomainQualifiedUsername(), e);
         }
@@ -4528,7 +4561,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     private void setRolesOfUser(List<String> rolesOfUser, Map<String, Group> groupMetaAttributesCache,
-                                 org.wso2.carbon.user.core.common.User user,
+                                org.wso2.carbon.user.core.common.User user,
                                 User scimUser) throws org.wso2.carbon.user.core.UserStoreException, CharonException,
             IdentitySCIMException, BadRequestException {
 
@@ -5971,7 +6004,7 @@ public class SCIMUserManager implements UserManager {
      * @return List of filtered attributes.
      */
     private Map<String, Attribute> getFilteredSchemaAttributes(Map<ExternalClaim, LocalClaim>
-                                                                                     scimClaimToLocalClaimMap) {
+                                                                       scimClaimToLocalClaimMap) {
 
         return scimClaimToLocalClaimMap.entrySet().stream()
                 .filter(entry -> isSupportedByDefault(entry.getValue()))
@@ -6167,9 +6200,9 @@ public class SCIMUserManager implements UserManager {
         } else if (isEnterpriseExtensionAttr || isSystemSchemaAttr) {
             AttributeSchema attributeSchema = isEnterpriseExtensionAttr
                     ? SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
-                        .getSubAttributeSchema(attribute.getName())
+                    .getSubAttributeSchema(attribute.getName())
                     : SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema()
-                        .getSubAttributeSchema(attribute.getName());
+                    .getSubAttributeSchema(attribute.getName());
             if (attributeSchema != null && attributeSchema.getType() != null) {
                 attribute.setType(attributeSchema.getType());
             } else {
@@ -6928,7 +6961,7 @@ public class SCIMUserManager implements UserManager {
             // If domain name are not given, then perform filtering on all available user stores.
             while (tempCarbonUM != null && maxLimit > 0) {
                 domainName = tempCarbonUM.getRealmConfiguration().getUserStoreProperty(UserCoreConstants.RealmConfig.
-                                PROPERTY_DOMAIN_NAME);
+                        PROPERTY_DOMAIN_NAME);
                 filteredUsersCount +=
                         getMultiAttributeFilteredUsersCountFromSingleDomain(node, offset, domainName, maxLimit);
                 // If secondary user store manager assigned to carbonUM then global variable carbonUM will contains the

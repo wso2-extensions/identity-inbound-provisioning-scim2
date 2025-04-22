@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.common.model.IdPGroup;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.authorization.framework.exception.AccessEvaluationException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -73,6 +74,7 @@ import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -944,6 +946,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private void updateRoleName(String roleId, String oldRoleDisplayName, String newRoleDisplayName)
             throws CharonException, ConflictException, NotFoundException {
 
+//        if (SCIMCommonUtils.isFineGrainedScopeValidationEnabled()) {
+//            SCIMCommonUtils.doFineGrainedScopeValidation(SCIMCommonConstants.ROLE_UPDATE_NAME);
+//        }
+
         if (!StringUtils.equals(oldRoleDisplayName, newRoleDisplayName)) {
             try {
                 roleManagementService.updateRoleName(roleId, newRoleDisplayName, tenantDomain);
@@ -961,9 +967,13 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     private void updatePermissions(String roleId, List<PatchOperation> permissionOperations)
-            throws BadRequestException, CharonException {
+            throws BadRequestException, CharonException, ForbiddenException {
 
         try {
+
+            SCIMCommonUtils.doFineGrainedApiAuthzIfEnabled( "Role",
+                    SCIMCommonConstants.ROLE_UPDATE_PERMISSIONS);
+
             Collections.sort(permissionOperations);
             Set<String> addedPermissions = new HashSet<>();
             Set<String> deletedPermissions = new HashSet<>();
@@ -993,7 +1003,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             if (isNotEmpty(addedPermissions) || isNotEmpty(deletedPermissions)) {
                 doUpdatePermissions(roleId, addedPermissions, deletedPermissions);
             }
-        } catch (IdentityRoleManagementException e) {
+        } catch (IdentityRoleManagementException | AccessEvaluationException e) {
             throw new CharonException(
                     String.format("Error occurred while updating permissions for role with ID: %s", roleId), e);
         }
@@ -1038,9 +1048,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     private void updateGroups(String roleId, List<PatchOperation> groupOperations)
-            throws CharonException, BadRequestException {
+            throws CharonException, BadRequestException, ForbiddenException {
 
         try {
+            SCIMCommonUtils.doFineGrainedApiAuthzIfEnabled( "Role",
+                    SCIMCommonConstants.GROUP_ASSIGNMENT_INTO_ROLE);
+
             Collections.sort(groupOperations);
 
             Set<String> givenAddedGroupIds = new HashSet<>();
@@ -1084,7 +1097,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             List<IdPGroup> idpGroups = SCIMCommonComponentHolder.getIdpManagerService().getValidIdPGroupsByIdPGroupIds(
                     new ArrayList<>(givenUniqueGroupIds), tenantDomain);
             Set<String> idpGroupIds = idpGroups.stream().map(IdPGroup::getIdpGroupId).collect(Collectors.toSet());
-            
+
             Set<String> groupIdListOfRole =
                     groupListOfRole.stream().map(GroupBasicInfo::getId).collect(Collectors.toSet());
             List<IdpGroup> idpGroupListOfRole = roleManagementService.getIdpGroupListOfRole(roleId, tenantDomain);
@@ -1122,11 +1135,20 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throw new CharonException(
                     String.format("Error occurred while retrieving the IDP group list for role with ID: %s", roleId),
                     e);
+        } catch (AccessEvaluationException e) {
+            throw new CharonException("Error occured while updating the group list of the role.", e);
         }
     }
 
     private void updateUsers(String roleId, List<PatchOperation> memberOperations)
             throws BadRequestException, CharonException, ForbiddenException {
+
+        try{
+            SCIMCommonUtils.doFineGrainedApiAuthzIfEnabled( "Role",
+                    SCIMCommonConstants.USER_CREATION);
+        } catch (AccessEvaluationException e) {
+            throw new CharonException("Error occurred while updating the user list of the role.", e);
+        }
 
         Collections.sort(memberOperations);
         Set<String> addedUsers = new HashSet<>();
@@ -1424,7 +1446,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     private void prepareReplacedIdPGroupLists(List<IdpGroup> idpGroupListOfRole, Set<String> addedGroupIds,
-                                           Set<String> removedGroupsIds, Set<String> replacedGroupsIds) {
+                                              Set<String> removedGroupsIds, Set<String> replacedGroupsIds) {
 
         if (replacedGroupsIds.isEmpty()) {
             return;
