@@ -154,13 +154,15 @@ public class AdminAttributeUtil {
 
                     // Need to add the SCIM attributes for admin group.
                     String groupNameWithDomain = getAdminGroupName(adminRoleName, domainName);
-                    if (((AbstractUserStoreManager) userStoreManager).isUniqueGroupIdEnabled()) {
+                    if (((AbstractUserStoreManager) userStoreManager).isUniqueGroupIdEnabled() &&
+                            !((AbstractUserStoreManager) userStoreManager).isGroupIdDualWriteModeEnabled()) {
                         // If unique group ID is enabled, SCIM attributes are managed by the user store. Therefore,
                         // we do not need to update SCIM tables.
                         if (log.isDebugEnabled()) {
-                            log.debug(String.format("Unique group ID is enabled for user store. Therefore, SCIM " +
-                                    "attributes are managed by the user store. Hence, skipping the SCIM attribute " +
-                                    "update for group: %s in tenant with id: %s", groupNameWithDomain, tenantId));
+                            log.debug(String.format("Unique group ID is enabled and dual write is disabled for user " +
+                                    "store. Therefore, SCIM attributes are managed by the user store. Hence, " +
+                                    "skipping the SCIM attribute update for group: %s in tenant with id: %s",
+                                    groupNameWithDomain, tenantId));
                         }
                     } else if (userStoreManager.isExistingRole(groupNameWithDomain) &&
                             !scimGroupHandler.isGroupExisting(groupNameWithDomain)) {

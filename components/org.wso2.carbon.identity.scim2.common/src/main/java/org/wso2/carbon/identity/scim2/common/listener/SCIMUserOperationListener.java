@@ -686,13 +686,16 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
-            if (userStoreManager instanceof AbstractUserStoreManager &&
-                    ((AbstractUserStoreManager) userStoreManager).isUniqueGroupIdEnabled()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("UniqueGroupId is enabled. Skipping doPostUpdateRoleName in " +
-                            "SCIMUserOperationListener");
+                if (userStoreManager instanceof AbstractUserStoreManager) {
+                boolean isUniqueGroupIdEnabled = ((AbstractUserStoreManager)userStoreManager).isUniqueGroupIdEnabled();
+                boolean groupIdDualWriteModeDisabled = !((AbstractUserStoreManager)userStoreManager).isGroupIdDualWriteModeEnabled();
+                if (isUniqueGroupIdEnabled && groupIdDualWriteModeDisabled) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("UniqueGroupId is enabled and dual write mode for group Id is disabled. " +
+                                "Skipping doPostUpdateRoleName in SCIMUserOperationListener");
+                    }
+                    return true;
                 }
-                return true;
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Error while reading isScimEnabled from userstore manager", e);
