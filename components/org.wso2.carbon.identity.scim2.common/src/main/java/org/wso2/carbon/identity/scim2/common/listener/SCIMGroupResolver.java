@@ -80,8 +80,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         Group group = new Group(groupId, groupName);
         AbstractUserStoreManager abstractUserStoreManager = ((AbstractUserStoreManager) userStoreManager);
         boolean isGroupIdEnabled = abstractUserStoreManager.isUniqueGroupIdEnabled();
-        boolean groupIdDualWriteModeDisabled = !abstractUserStoreManager.isGroupIdDualWriteModeEnabled();
-        if (isGroupIdEnabled && groupIdDualWriteModeDisabled) {
+        boolean groupIdDualWriteModeEnabled = abstractUserStoreManager.isGroupIdDualWriteModeEnabled();
+        if (isGroupIdEnabled && !groupIdDualWriteModeEnabled) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
                                 "tenant %s since group id support is available in the userstore manager and " +
@@ -164,8 +164,8 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
 
         AbstractUserStoreManager abstractUserStoreManager = ((AbstractUserStoreManager) userStoreManager);
         boolean isGroupIdEnabled = abstractUserStoreManager.isUniqueGroupIdEnabled();
-        boolean isGroupIdDualWriteModeDisabled = !abstractUserStoreManager.isGroupIdDualWriteModeEnabled();
-        if (isGroupIdEnabled && isGroupIdDualWriteModeDisabled) {
+        boolean isGroupIdDualWriteModeEnabled = abstractUserStoreManager.isGroupIdDualWriteModeEnabled();
+        if (isGroupIdEnabled && !isGroupIdDualWriteModeEnabled) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
                                 "tenant %s since group id support is available in the userstore manager",
