@@ -160,8 +160,8 @@ public class AdminAttributeUtil {
                         // we do not need to update SCIM tables.
                         if (log.isDebugEnabled()) {
                             log.debug(String.format("Unique group ID is enabled and dual write is disabled for user " +
-                                    "store. Therefore, SCIM attributes are managed by the user store. Hence, " +
-                                    "skipping the SCIM attribute update for group: %s in tenant with id: %s",
+                                            "store. Therefore, SCIM attributes are managed by the user store. Hence, " +
+                                            "skipping the SCIM attribute update for group: %s in tenant with id: %s",
                                     groupNameWithDomain, tenantId));
                         }
                     } else if (userStoreManager.isExistingRole(groupNameWithDomain) &&

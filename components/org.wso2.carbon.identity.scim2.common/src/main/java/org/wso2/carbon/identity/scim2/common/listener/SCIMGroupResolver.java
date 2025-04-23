@@ -80,11 +80,11 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
         Group group = new Group(groupId, groupName);
         AbstractUserStoreManager abstractUserStoreManager = ((AbstractUserStoreManager) userStoreManager);
         boolean isGroupIdEnabled = abstractUserStoreManager.isUniqueGroupIdEnabled();
-        boolean groupIdDualWriteModeEnabled = abstractUserStoreManager.isGroupIdDualWriteModeEnabled();
-        if (isGroupIdEnabled && !groupIdDualWriteModeEnabled) {
+        boolean isGroupIdDualWriteModeEnabled = abstractUserStoreManager.isGroupIdDualWriteModeEnabled();
+        if (isGroupIdEnabled && !isGroupIdDualWriteModeEnabled) {
             if (log.isDebugEnabled()) {
-                log.debug(String.format("SCIMGroupResolver will not be executed for userstore: %s in " +
-                                "tenant %s since group id support is available in the userstore manager and " +
+                log.debug(String.format("SCIMGroupResolver will not be executed for user store: %s in " +
+                                "tenant %s since group id support is available in the user store manager and " +
                                 "dual write mode for group id is disabled.",
                         abstractUserStoreManager.getRealmConfiguration().getRealmProperty(PROPERTY_DOMAIN_NAME),
                         abstractUserStoreManager.getTenantId()));

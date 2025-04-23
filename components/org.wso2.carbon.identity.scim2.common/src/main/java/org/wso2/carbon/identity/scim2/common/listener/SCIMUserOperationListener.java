@@ -686,10 +686,10 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             if (!isEnable() || userStoreManager == null || !userStoreManager.isSCIMEnabled()) {
                 return true;
             }
-                if (userStoreManager instanceof AbstractUserStoreManager) {
-                boolean isUniqueGroupIdEnabled = ((AbstractUserStoreManager)userStoreManager).isUniqueGroupIdEnabled();
-                boolean groupIdDualWriteModeEnabled = ((AbstractUserStoreManager)userStoreManager).isGroupIdDualWriteModeEnabled();
-                if (isUniqueGroupIdEnabled && !groupIdDualWriteModeEnabled) {
+            if (userStoreManager instanceof AbstractUserStoreManager) {
+                boolean isUniqueGroupIdEnabled = ((AbstractUserStoreManager) userStoreManager).isUniqueGroupIdEnabled();
+                boolean isGroupIdDualWriteModeEnabled = ((AbstractUserStoreManager) userStoreManager).isGroupIdDualWriteModeEnabled();
+                if (isUniqueGroupIdEnabled && !isGroupIdDualWriteModeEnabled) {
                     if (log.isDebugEnabled()) {
                         log.debug("UniqueGroupId is enabled and dual write mode for group Id is disabled. " +
                                 "Skipping doPostUpdateRoleName in SCIMUserOperationListener");
