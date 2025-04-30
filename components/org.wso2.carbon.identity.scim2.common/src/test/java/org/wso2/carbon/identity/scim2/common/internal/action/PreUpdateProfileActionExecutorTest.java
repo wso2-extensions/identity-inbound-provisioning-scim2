@@ -56,10 +56,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
@@ -71,6 +71,7 @@ import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_MULTI_ATTRIBUTE_SEPARATOR_INCLUDED_SINGLEVALUE_CLAIM5;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.DELETING_SINGLEVALUE_CLAIM4;
+import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.NEW_MULTIVALUE_INPUT_VALUE_AS_STRING_CLAIM6;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.NEW_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM6;
 import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants.Claims.NEW_SINGLEVALUE_CLAIM1;
@@ -237,6 +238,51 @@ public class PreUpdateProfileActionExecutorTest {
             assertEquals(e.getDescription(), "errorDescription");
             assertEquals(e.getMessage(), "errorMessage. errorDescription");
         }
+    }
+
+    @Test
+    public void testExecutionSkippedForFlowInitiatorClaimUpdateExecutionAtPutOperation() throws Exception {
+
+        when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
+
+        ActionExecutionStatus status = mock(ActionExecutionStatus.class);
+        when(status.getStatus()).thenReturn(ActionExecutionStatus.Status.SUCCESS);
+        when(actionExecutorService.execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any())).thenReturn(status);
+
+        LocalClaim newClaim = getMockedLocalClaim(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1);
+        when(claimMetadataManagementService.getLocalClaim(eq(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI()),
+                anyString())).thenReturn(Optional.of(newClaim));
+        when(newClaim.getFlowInitiator()).thenReturn(true);
+
+        User user = getSCIMUser();
+
+        Map<String, String> claimsToModify = new HashMap<>();
+        claimsToModify.put(FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getClaimURI(),
+                FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getInputValueAsString());
+
+        Map<String, String> claimsToDelete = new HashMap<>();
+
+        preUpdateProfileActionExecutor.execute(user, claimsToModify, claimsToDelete);
+        verify(actionExecutorService, never()).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
+    }
+
+    @Test
+    public void testSuccessExecutionForNoClaimUpdateExecutionAtPutOperation() throws Exception {
+
+        when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
+
+        ActionExecutionStatus status = mock(ActionExecutionStatus.class);
+        when(status.getStatus()).thenReturn(ActionExecutionStatus.Status.SUCCESS);
+        when(actionExecutorService.execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any())).thenReturn(status);
+
+        User user = getSCIMUser();
+
+        Map<String, String> claimsToModify = new HashMap<>();
+
+        Map<String, String> claimsToDelete = new HashMap<>();
+
+        preUpdateProfileActionExecutor.execute(user, claimsToModify, claimsToDelete);
+        verify(actionExecutorService, never()).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
     }
 
     @Test
@@ -583,6 +629,38 @@ public class PreUpdateProfileActionExecutorTest {
         assertTrue(claims.containsKey(DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8.getClaimURI()));
         assertArrayEquals((String[]) claims.get(DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8.getClaimURI()),
                 DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8.getExpectedValueInDTOAsStringArray());
+    }
+
+    @Test
+    public void testSuccessExecutionForNoClaimUpdateExecutionAtPatchOperation() throws Exception {
+
+        when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
+
+        ActionExecutionStatus status = mock(ActionExecutionStatus.class);
+        when(status.getStatus()).thenReturn(ActionExecutionStatus.Status.SUCCESS);
+        when(actionExecutorService.execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any())).thenReturn(status);
+
+        User user = getSCIMUser();
+
+        // Setup updating and deleting claims maps to invoke the action execution method
+        Map<String, String> userClaimsExcludingMultiValuedClaimsToBeModified = new HashMap<>();
+
+        Map<String, String> userClaimsExcludingMultiValuedClaimsToBeDeleted = new HashMap<>();
+
+        Map<String, List<String>> simpleMultiValuedClaimsToBeAdded = new HashMap<>();
+
+        Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved = new HashMap<>();
+
+        Map<String, String> existingClaimsOfUser = new HashMap<>();
+
+        preUpdateProfileActionExecutor.execute(user,
+                userClaimsExcludingMultiValuedClaimsToBeModified,
+                userClaimsExcludingMultiValuedClaimsToBeDeleted,
+                simpleMultiValuedClaimsToBeAdded,
+                simpleMultiValuedClaimsToBeRemoved,
+                existingClaimsOfUser);
+
+        verify(actionExecutorService, never()).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
     }
 
     private static User getSCIMUser() throws CharonException, BadRequestException {

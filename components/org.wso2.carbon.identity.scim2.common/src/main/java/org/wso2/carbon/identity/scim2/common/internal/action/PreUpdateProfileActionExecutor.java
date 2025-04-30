@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.common.internal.action;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,6 +52,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -74,7 +76,8 @@ public class PreUpdateProfileActionExecutor {
 
         ActionExecutorService actionExecutorService = SCIMCommonComponentHolder.getActionExecutorService();
 
-        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)) {
+        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE) || !isExecutable(
+                userClaimsToBeModified, userClaimsToBeDeleted)) {
             return;
         }
 
@@ -126,7 +129,9 @@ public class PreUpdateProfileActionExecutor {
 
         ActionExecutorService actionExecutorService = SCIMCommonComponentHolder.getActionExecutorService();
 
-        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)) {
+        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE) || !isExecutable(
+                userClaimsExcludingMultiValuedClaimsToBeModified, userClaimsExcludingMultiValuedClaimsToBeDeleted,
+                simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved)) {
             return;
         }
 
@@ -300,5 +305,53 @@ public class PreUpdateProfileActionExecutor {
             throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
                     "Error while retrieving claim metadata for claim URI: " + claimUri, e);
         }
+    }
+
+    private boolean isExecutable(Map<String, String> userClaimsExcludingMultiValuedClaimsToBeModified,
+                                 Map<String, String> userClaimsExcludingMultiValuedClaimsToBeDeleted,
+                                 Map<String, List<String>> simpleMultiValuedClaimsToBeAdded,
+                                 Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved)
+            throws UserStoreException {
+
+        if (!MapUtils.isEmpty(userClaimsExcludingMultiValuedClaimsToBeModified) ||
+                !MapUtils.isEmpty(userClaimsExcludingMultiValuedClaimsToBeDeleted) ||
+                !MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) ||
+                !MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
+
+            return hasAnyNonFlowInitiatorClaims(userClaimsExcludingMultiValuedClaimsToBeModified.keySet()) ||
+                    hasAnyNonFlowInitiatorClaims(userClaimsExcludingMultiValuedClaimsToBeDeleted.keySet()) ||
+                    hasAnyNonFlowInitiatorClaims(simpleMultiValuedClaimsToBeAdded.keySet()) ||
+                    hasAnyNonFlowInitiatorClaims(simpleMultiValuedClaimsToBeRemoved.keySet());
+        }
+
+        return false;
+    }
+
+    private boolean isExecutable(Map<String, String> userClaimsToBeModified,
+                                 Map<String, String> userClaimsToBeDeleted) throws UserStoreException {
+
+        if (!MapUtils.isEmpty(userClaimsToBeModified) || !MapUtils.isEmpty(userClaimsToBeDeleted)) {
+
+            return hasAnyNonFlowInitiatorClaims(userClaimsToBeDeleted.keySet()) ||
+                    hasAnyNonFlowInitiatorClaims(userClaimsToBeModified.keySet());
+        }
+
+        return false;
+    }
+
+    private boolean hasAnyNonFlowInitiatorClaims(Set<String> claimUriList) throws UserStoreException {
+
+        ClaimMetadataManagementService claimMetadataManagementService = SCIMCommonComponentHolder
+                .getClaimManagementService();
+        String tenantDomain = IdentityContext.getThreadLocalIdentityContext().getTenantDomain();
+        for (String claimUri : claimUriList) {
+            try {
+                Optional<LocalClaim> localClaim = claimMetadataManagementService.getLocalClaim(claimUri, tenantDomain);
+                return localClaim.isPresent() && !localClaim.get().getFlowInitiator();
+            } catch (ClaimMetadataException e) {
+                throw new UserStoreException(String.format("Error while reading claim meta data of %s", claimUri), e);
+            }
+        }
+        return false;
     }
 }

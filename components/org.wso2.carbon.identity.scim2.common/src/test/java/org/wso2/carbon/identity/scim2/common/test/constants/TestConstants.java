@@ -52,7 +52,8 @@ public class TestConstants {
                 new String[]{"value80"}, "value81,value80,value82"),
         DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_CLAIM8("http://wso2.org/claims/claim8", true,
                 "value81,value80",
-                new String[]{}, "value81,value80,value82");
+                new String[]{}, "value81,value80,value82"),
+        FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1("http://wso2.org/claims/identity/adminForcedPasswordReset", false, "true", "false", null);
 
         private String claimURI;
         private boolean isMultiValued;

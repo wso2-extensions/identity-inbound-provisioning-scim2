@@ -190,6 +190,8 @@ public class SCIMUserManager implements UserManager {
     private static final String SUPPORTED_BY_DEFAULT_PROPERTY = "supportedByDefault";
     private static final String ATTRIBUTE_PROFILES_PROPERTY = "profiles";
     private static final String SHARED_PROFILE_VALUE_RESOLVING_METHOD_PROPERTY = "sharedProfileValueResolvingMethod";
+    private static final String ROLES_CLAIM = "http://wso2.org/claims/roles";
+    private static final String GROUPS_CLAIM = "http://wso2.org/claims/groups";
     private static final String LOCATION_CLAIM = "http://wso2.org/claims/location";
     private static final String LAST_MODIFIED_CLAIM = "http://wso2.org/claims/modified";
     private static final String RESOURCE_TYPE_CLAIM = "http://wso2.org/claims/resourceType";
@@ -712,7 +714,15 @@ public class SCIMUserManager implements UserManager {
         if (StringUtils.isNotEmpty(domainName)) {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName);
-                totalUsers = getTotalUsers(domainName);
+                if (SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+                    int maxLimit = Integer.MAX_VALUE;
+                    if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                        maxLimit = getMaxLimit(domainName);
+                    }
+                    totalUsers = getUsersCountForListUsers(1, maxLimit, domainName);
+                } else {
+                    totalUsers = getTotalUsers(domainName);
+                }
             } else {
                 coreUsers = listUsernamesUsingLegacyAPIs(domainName);
                 if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
@@ -722,7 +732,15 @@ public class SCIMUserManager implements UserManager {
         } else {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernamesAcrossAllDomains(offset, limit, sortBy, sortOrder);
-                totalUsers += getTotalUsersFromAllUserStores();
+                if (SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+                    int maxLimit = Integer.MAX_VALUE;
+                    if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+                        maxLimit = getMaxLimit(domainName);
+                    }
+                    totalUsers = getUsersCountForListUsers(1, maxLimit, domainName);
+                } else {
+                    totalUsers = getTotalUsersFromAllUserStores();
+                }
             } else {
                 coreUsers = listUsernamesAcrossAllDomainsUsingLegacyAPIs();
                 if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
@@ -1163,6 +1181,9 @@ public class SCIMUserManager implements UserManager {
             Map<String, String> oldClaimList = carbonUM.getUserClaimValuesWithID(user.getId(),
                     requiredClaimsInLocalDialect.toArray(new String[0]), null);
 
+            oldClaimList.remove(USERNAME_CLAIM);
+            oldClaimList.remove(ROLES_CLAIM);
+            oldClaimList.remove(GROUPS_CLAIM);
             oldClaimList.remove(LOCATION_CLAIM);
             oldClaimList.remove(LAST_MODIFIED_CLAIM);
             oldClaimList.remove(RESOURCE_TYPE_CLAIM);
@@ -1347,6 +1368,9 @@ public class SCIMUserManager implements UserManager {
             Map<String, String> oldClaimList = carbonUM.getUserClaimValuesWithID(user.getId(),
                     requiredClaimsInLocalDialect.toArray(new String[0]), null);
 
+            oldClaimList.remove(USERNAME_CLAIM);
+            oldClaimList.remove(ROLES_CLAIM);
+            oldClaimList.remove(GROUPS_CLAIM);
             oldClaimList.remove(LOCATION_CLAIM);
             oldClaimList.remove(LAST_MODIFIED_CLAIM);
             oldClaimList.remove(RESOURCE_TYPE_CLAIM);
@@ -1395,9 +1419,17 @@ public class SCIMUserManager implements UserManager {
 
     private void handleAndThrowClientExceptionForActionFailure(UserStoreException e) throws BadRequestException {
 
+        /* Note that UserActionExecutionClientException has been wrapped multiple times at this point and needs to be
+         unwrapped accordingly. Since there is a possibility of altering the error stack and not constructing the
+         failure response correctly, integration tests are added to detect any regressions.
+         */
         if (e instanceof UserStoreClientException && UserActionError.PRE_UPDATE_PASSWORD_ACTION_EXECUTION_FAILED
-                .equals(((UserStoreClientException) e).getErrorCode())) {
-            throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                .equals(((UserStoreClientException) e).getErrorCode()) &&
+                e.getCause().getCause().getCause() instanceof UserActionExecutionClientException) {
+            UserActionExecutionClientException userActionExecutionClientException =
+                    (UserActionExecutionClientException) e.getCause().getCause().getCause();
+            throw new BadRequestException(userActionExecutionClientException.getDescription(),
+                    userActionExecutionClientException.getError());
         }
 
         if (e instanceof UserActionExecutionClientException) {
@@ -1846,6 +1878,38 @@ public class SCIMUserManager implements UserManager {
             }
         }
         return count;
+    }
+
+    /**
+     * Method to get the count of users from multiple domains.
+     *
+     * @param offset   The starting index for counting users.
+     * @param maxLimit The maximum number of users to be counted.
+     * @return The total count of users  across all specified domains.
+     * @throws CharonException     Error while filtering the users.
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value.
+     */
+    private int getUsersCountForListUsers(int offset, int maxLimit, String domainName)
+            throws CharonException, BadRequestException {
+
+        ExpressionCondition condition = new ExpressionCondition(ExpressionOperation.SW.toString(),
+                ExpressionAttribute.USERNAME.toString(), "");
+        if (StringUtils.isNotEmpty(domainName)) {
+            return getFilteredUserCountFromSingleDomain(condition, offset, maxLimit, domainName);
+        } else {
+            // Filter users when the domain is not set in the request. Then filter through multiple domains.
+            String[] userStoreDomainNames = getDomainNames();
+            int filteredUsersCount = 0;
+            for (String userStoreDomainName : userStoreDomainNames) {
+                try {
+                    filteredUsersCount +=
+                            getFilteredUserCountFromSingleDomain(condition, offset, maxLimit, userStoreDomainName);
+                } catch (CharonException e) {
+                    log.error("Error occurred while getting the users count for domain: " + userStoreDomainName, e);
+                }
+            }
+            return filteredUsersCount;
+        }
     }
 
     /**
@@ -3044,8 +3108,6 @@ public class SCIMUserManager implements UserManager {
         startIndex = (startIndex < 1 ? 1 : startIndex);
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        } else if (startIndex != 1 && count >= 0) {
-            throw new NotImplementedException("Pagination is not supported");
         } else if (rootNode != null) {
             return filterGroups(rootNode, startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
         } else {
@@ -3062,8 +3124,8 @@ public class SCIMUserManager implements UserManager {
         startIndex = handleStartIndexEqualsNULL(startIndex);
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
-        } else if (startIndex != 1 && count != null) {
-            throw new NotImplementedException("Pagination is not supported");
+        } else if (count != null && count == 0) {
+            return new GroupsGetResponse(0, Collections.emptyList());
         } else if (rootNode != null) {
             return filterGroups(rootNode, startIndex, count, sortBy, sortOrder, domainName, requiredAttributes);
         } else {
@@ -3107,6 +3169,7 @@ public class SCIMUserManager implements UserManager {
 
         GroupsGetResponse groupsResponse = new GroupsGetResponse(0, Collections.emptyList());
         List<Group> groupList = new ArrayList<>();
+        int totalGroupCount;
         try {
             Set<String> groupNames;
             if (carbonUM.isRoleAndGroupSeparationEnabled()) {
@@ -3114,6 +3177,16 @@ public class SCIMUserManager implements UserManager {
             } else {
                 groupNames = getRoleNamesForGroupsEndpoint(domainName);
             }
+
+            totalGroupCount = groupNames.size();
+            // Adjust startIndex and endIndex to ensure they are within bounds
+            startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
+            int endIndex = (count == null) ? totalGroupCount : Math.min(startIndex + count, totalGroupCount);
+
+            groupNames = groupNames.stream()
+                    .skip(startIndex)
+                    .limit(endIndex - startIndex)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
 
             for (String groupName : groupNames) {
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(groupName);
@@ -3165,7 +3238,7 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentitySCIMException | BadRequestException e) {
             throw new CharonException("Error in retrieving SCIM Group information from database.", e);
         }
-        groupsResponse.setTotalGroups(groupList.size());
+        groupsResponse.setTotalGroups(totalGroupCount);
         groupsResponse.setGroups(groupList);
         return groupsResponse;
     }
@@ -3239,7 +3312,6 @@ public class SCIMUserManager implements UserManager {
             groupsList.removeIf(SCIMCommonUtils::isHybridRole);
             return groupsList;
         } else {
-            // If the domain is specified create a attribute value with the domain name.
             String searchValue = domainName + CarbonConstants.DOMAIN_SEPARATOR + SCIMCommonConstants.ANY;
             // Retrieve roles using the above attribute value.
             List<String> roleList = Arrays
@@ -3314,6 +3386,7 @@ public class SCIMUserManager implements UserManager {
         // value.
         domainName = resolveDomain(domainName, node);
         List<Group> filteredGroups = new ArrayList<>();
+        int totalGroupCount;
         try {
             List<String> groupsList = new ArrayList<>(getGroupList(node, domainName));
 
@@ -3322,22 +3395,28 @@ public class SCIMUserManager implements UserManager {
                 groupsList.removeIf(SCIMCommonUtils::isHybridRole);
             }
 
-            if (groupsList != null) {
-                for (String groupName : groupsList) {
-                    if (groupName != null && carbonUM.isExistingRole(groupName, false)) {
-                        // Skip internal roles.
-                        if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(groupName) || UserCoreUtil
-                                .isEveryoneRole(groupName, carbonUM.getRealmConfiguration())) {
-                            continue;
-                        }
-                        Group group = getRoleWithDefaultAttributes(groupName, requiredAttributes);
-                        if (group != null && group.getId() != null) {
-                            filteredGroups.add(group);
-                        }
-                    } else {
-                        // Returning null will send a resource not found error to client by Charon.
-                        return new GroupsGetResponse(0, null);
+            totalGroupCount = groupsList.size();
+            // Adjust startIndex and endIndex to ensure they are within bounds
+            startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
+            int endIndex = (count == 0 || count > Integer.MAX_VALUE - startIndex) ?
+                    totalGroupCount : Math.min(startIndex + count, totalGroupCount);
+
+            groupsList = groupsList.subList(startIndex, endIndex);
+
+            for (String groupName : groupsList) {
+                if (groupName != null && carbonUM.isExistingRole(groupName, false)) {
+                    // Skip internal roles.
+                    if (CarbonConstants.REGISTRY_ANONNYMOUS_ROLE_NAME.equals(groupName) || UserCoreUtil
+                            .isEveryoneRole(groupName, carbonUM.getRealmConfiguration())) {
+                        continue;
                     }
+                    Group group = getRoleWithDefaultAttributes(groupName, requiredAttributes);
+                    if (group != null && group.getId() != null) {
+                        filteredGroups.add(group);
+                    }
+                } else {
+                    // Returning null will send a resource not found error to client by Charon.
+                    return new GroupsGetResponse(0, null);
                 }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
@@ -3348,7 +3427,7 @@ public class SCIMUserManager implements UserManager {
             throw resolveError(e, "Error in filtering group with filter: " + attributeName + " + " +
                     filterOperation + " + " + attributeValue);
         }
-        return new GroupsGetResponse(filteredGroups.size(), filteredGroups);
+        return new GroupsGetResponse(totalGroupCount, filteredGroups);
     }
 
     /**
@@ -5355,14 +5434,8 @@ public class SCIMUserManager implements UserManager {
         Map<String, String> claimMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
 
         return claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.ID_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.USER_NAME_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.ROLES_URI + "."
-                        + SCIMConstants.DEFAULT)) ||
                 claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.CREATED_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.CommonSchemaConstants.LOCATION_URI)) ||
                 claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.FAMILY_NAME_URI)) ||
-                claim.equals(claimMappings.get(SCIMConstants.UserSchemaConstants.GROUP_URI)) ||
                 claim.contains(UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI_PREFIX);
     }
 
