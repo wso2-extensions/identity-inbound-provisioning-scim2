@@ -405,12 +405,16 @@ public class SCIMUserOperationListenerTest {
     public Object[][] testDoPostUpdateRoleNameForUniqueGroupIdFlag() {
 
         return new Object[][]{
-                {true}, {false}
+                {true, true},
+                {true, false},
+                {false, true},
+                {false, false}
         };
     }
 
     @Test(dataProvider = "testDoPostUpdateRoleNameForUniqueGroupIdFlag")
-    public void testDoPostUpdateRoleNameForUniqueGroupIdFlag(boolean isUniqueGroupIdEnabled) throws Exception {
+    public void testDoPostUpdateRoleNameForUniqueGroupIdFlag(boolean isUniqueGroupIdEnabled,
+                                                             boolean isGroupIdDualWriteModeEnabled) throws Exception {
 
         try (MockedConstruction<GroupDAO> mockedGroupDAO = Mockito.mockConstruction(GroupDAO.class,
                 (mock, context) -> {
@@ -419,6 +423,7 @@ public class SCIMUserOperationListenerTest {
             AbstractUserStoreManager mockUserStoreManager = Mockito.mock(AbstractUserStoreManager.class);
             when(mockUserStoreManager.isSCIMEnabled()).thenReturn(true);
             when(mockUserStoreManager.isUniqueGroupIdEnabled()).thenReturn(isUniqueGroupIdEnabled);
+            when(mockUserStoreManager.isGroupIdDualWriteModeEnabled()).thenReturn(isGroupIdDualWriteModeEnabled);
             when(scimUserOperationListener.isEnable()).thenReturn(true);
 
             userCoreUtil.when(() -> UserCoreUtil.addDomainToName(anyString(), anyString()))
@@ -430,7 +435,7 @@ public class SCIMUserOperationListenerTest {
                     .findFirst()
                     .orElse(null);
 
-            if (isUniqueGroupIdEnabled) {
+            if ((isUniqueGroupIdEnabled && !isGroupIdDualWriteModeEnabled)) {
                 assertNull(groupDAO, "GroupDAO instance should have not been created");
             } else {
                 assertNotNull(groupDAO, "GroupDAO instance should have been created");
