@@ -300,27 +300,12 @@ public class GroupDAO {
     public void updateSCIMGroupAttributes(int tenantId, String roleName,
                                           Map<String, String> attributes) throws IdentitySCIMException {
 
-        doUpdateSCIMGroupAttributes(tenantId, roleName, attributes, SQLQueries.UPDATE_ATTRIBUTES_SQL);
-    }
-
-    /**
-     * Do update SCIM group attributes.
-     *
-     * @param tenantId      Tenant id.
-     * @param roleName      Group name.
-     * @param attributes    Attributes to be updated.
-     * @param sqlQuery      SQL query to update the attributes.
-     * @throws IdentitySCIMException If an error occurred while updating the attributes.
-     */
-    private void doUpdateSCIMGroupAttributes(int tenantId, String roleName, Map<String, String> attributes,
-                                             String sqlQuery) throws IdentitySCIMException {
-
         Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement prepStmt = null;
 
         if (isExistingGroup(SCIMCommonUtils.getGroupNameWithDomain(roleName), tenantId)) {
             try {
-                prepStmt = connection.prepareStatement(sqlQuery);
+                prepStmt = connection.prepareStatement(SQLQueries.UPDATE_ATTRIBUTES_SQL);
                 prepStmt.setInt(2, tenantId);
                 prepStmt.setString(3, roleName);
 
