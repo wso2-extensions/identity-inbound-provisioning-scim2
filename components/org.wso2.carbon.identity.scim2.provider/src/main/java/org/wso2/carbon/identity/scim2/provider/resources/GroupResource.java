@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
@@ -394,6 +395,9 @@ public class GroupResource extends AbstractResource {
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, attribute);
         requestAttributes.put(SCIMProviderConstants.EXCLUDE_ATTRIBUTES, excludedAttributes);
         requestAttributes.put(SCIMProviderConstants.SEARCH, "0");
+
+        SupportUtils.updateIdentityContextFlow(Flow.Name.USER_GROUP_UPDATE);
+
         return processRequest(requestAttributes);
     }
 
