@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
+import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
@@ -66,6 +68,9 @@ public class BulkResource extends AbstractResource {
             // Obtain the role v2 manager.
             RoleV2Manager roleV2Manager = IdentitySCIMManager.getInstance().getRoleV2Manager();
 
+            IdentityContext.getThreadLocalIdentityContext()
+                    .setFlow(new Flow.Builder().name(Flow.Name.SCIM_BULK_RESOURCE_UPDATE).initiatingPersona(
+                            Flow.InitiatingPersona.ADMIN).build());
             // create charon-SCIM bulk endpoint and hand-over the request.
             BulkResourceManager bulkResourceManager = new BulkResourceManager();
             // Call for process bulk data.
