@@ -396,7 +396,7 @@ public class GroupResource extends AbstractResource {
         requestAttributes.put(SCIMProviderConstants.EXCLUDE_ATTRIBUTES, excludedAttributes);
         requestAttributes.put(SCIMProviderConstants.SEARCH, "0");
 
-        SupportUtils.updateIdentityContextFlow(Flow.Name.USER_GROUP_UPDATE);
+        SupportUtils.updateIdentityContextFlow(Flow.Name.GROUP_UPDATE);
 
         return processRequest(requestAttributes);
     }
