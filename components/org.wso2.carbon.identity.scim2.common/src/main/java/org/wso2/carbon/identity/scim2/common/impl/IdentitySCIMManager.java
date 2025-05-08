@@ -36,6 +36,7 @@ import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.extensions.RoleManager;
 import org.wso2.charon3.core.extensions.RoleV2Manager;
+import org.wso2.charon3.core.extensions.RoleV3Manager;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -92,6 +93,7 @@ public class IdentitySCIMManager {
         endpointURLs.put(SCIMConstants.GROUP_ENDPOINT, SCIMCommonUtils.getSCIMGroupURL());
         endpointURLs.put(SCIMConstants.ROLE_ENDPOINT, SCIMCommonUtils.getSCIMRoleURL());
         endpointURLs.put(SCIMConstants.ROLE_V2_ENDPOINT, SCIMCommonUtils.getSCIMRoleV2URL());
+        endpointURLs.put(SCIMConstants.ROLE_V3_ENDPOINT, SCIMCommonUtils.getSCIMRoleV3URL());
         endpointURLs.put(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT, SCIMCommonUtils
                 .getSCIMServiceProviderConfigURL());
         endpointURLs.put(SCIMConstants.RESOURCE_TYPE_ENDPOINT, SCIMCommonUtils.getSCIMResourceTypeURL());
@@ -163,6 +165,17 @@ public class IdentitySCIMManager {
         return new SCIMRoleManagerV2(SCIMCommonComponentHolder.getRoleManagementServiceV2(), tenantDomain);
     }
 
+    /**
+     * Obtain the RoleV3 manager.
+     *
+     * @return RoleV3Manager.
+     */
+    public RoleV3Manager getRoleV3Manager() {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        return new SCIMRoleManagerV3(SCIMCommonComponentHolder.getRoleManagementServiceV3(), tenantDomain);
+    }
+    
     /**
      * Resgister endpoint URLs in AbstractResourceEndpoint.
      */

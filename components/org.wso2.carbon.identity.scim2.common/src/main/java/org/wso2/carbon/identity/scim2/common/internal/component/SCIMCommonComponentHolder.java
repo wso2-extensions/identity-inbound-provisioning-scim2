@@ -43,6 +43,7 @@ public class SCIMCommonComponentHolder {
     private static RolePermissionManagementService rolePermissionManagementService;
     private static RoleManagementService roleManagementService;
     private static org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementServiceV2;
+    private static org.wso2.carbon.identity.role.v3.mgt.core.RoleManagementService roleManagementServiceV3;
     private static OrganizationManager organizationManager;
     private static IdpManager idpManager;
     private static IdentityEventService identityEventService;
@@ -150,6 +151,27 @@ public class SCIMCommonComponentHolder {
     public static org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService getRoleManagementServiceV2() {
 
         return roleManagementServiceV2;
+    }
+
+    /**
+     * Set role management service V2.
+     *
+     * @param roleManagementService RoleManagementServiceV2.
+     */
+    public static void setRoleManagementServiceV3(
+            org.wso2.carbon.identity.role.v3.mgt.core.RoleManagementService roleManagementService) {
+
+        SCIMCommonComponentHolder.roleManagementServiceV3 = roleManagementService;
+    }
+
+    /**
+     * Get role management service V3.
+     *
+     * @return RoleManagementServiceV3.
+     */
+    public static org.wso2.carbon.identity.role.v3.mgt.core.RoleManagementService getRoleManagementServiceV3() {
+
+        return roleManagementServiceV3;
     }
 
     /**

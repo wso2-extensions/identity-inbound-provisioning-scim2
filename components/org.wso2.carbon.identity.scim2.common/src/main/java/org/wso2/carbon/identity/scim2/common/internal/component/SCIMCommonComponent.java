@@ -301,6 +301,34 @@ public class SCIMCommonComponent {
     }
 
     /**
+     * Set role management service V3 implementation.
+     *
+     * @param roleManagementService RoleManagementServiceV3.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.role.v3.mgt.core.RoleManagementService",
+            service = org.wso2.carbon.identity.role.v3.mgt.core.RoleManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRoleManagementServiceV3")
+    protected void setRoleManagementServiceV3(org.wso2.carbon.identity.role.v3.mgt.core.RoleManagementService roleManagementService) {
+
+        SCIMCommonComponentHolder.setRoleManagementServiceV3(roleManagementService);
+        logger.debug("RoleManagementServiceV3 set in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Unset role management service V3 implementation.
+     *
+     * @param roleManagementService RoleManagementServiceV3
+     */
+    protected void unsetRoleManagementServiceV3(org.wso2.carbon.identity.role.v3.mgt.core.RoleManagementService roleManagementService) {
+
+        SCIMCommonComponentHolder.setRoleManagementServiceV3(null);
+        logger.debug("RoleManagementServiceV3 unset in SCIMCommonComponent bundle.");
+    }
+
+    /**
      * Set idp manager service implementation.
      *
      * @param idpManager Idp manager service.
