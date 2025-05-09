@@ -81,9 +81,11 @@ public class SCIMCommonComponent {
     protected void activate(ComponentContext ctx) {
 
         try {
+            logger.info("Activating SCIM Common component");
             String filePath = IdentityUtil.getIdentityConfigDirPath() + File.separator +
                     SCIMCommonConstants.CHARON_CONFIG_NAME;
 
+            logger.info("Loading SCIM configuration from: " + filePath);
             SCIMConfigProcessor scimConfigProcessor = SCIMConfigProcessor.getInstance();
             scimConfigProcessor.buildConfigFromFile(filePath);
 
@@ -92,51 +94,63 @@ public class SCIMCommonComponent {
                 String schemaFilePath =
                         CarbonUtils.getCarbonConfigDirPath() + File.separator +
                                 SCIMConfigConstants.SCIM_SCHEMA_EXTENSION_CONFIG;
+                logger.info("User schema extension enabled. Loading from: " + schemaFilePath);
                 SCIMUserSchemaExtensionBuilder.getInstance().buildUserSchemaExtension(schemaFilePath);
                 SCIMSystemSchemaExtensionBuilder.getInstance().buildSystemSchemaExtension(schemaFilePath);
+                logger.info("Successfully loaded user and system schema extensions");
+            } else if (logger.isDebugEnabled()) {
+                logger.debug("User schema extension is disabled");
             }
+            
             // If custom schema is enabled, read it root attribute URI from the file config if it is configured.
             if (SCIMCommonUtils.isCustomSchemaEnabled()) {
-                SCIMCustomSchemaExtensionBuilder.getInstance().setURI(SCIMCommonUtils.getCustomSchemaURI());
+                String customSchemaURI = SCIMCommonUtils.getCustomSchemaURI();
+                logger.info("Custom schema enabled with URI: " + customSchemaURI);
+                SCIMCustomSchemaExtensionBuilder.getInstance().setURI(customSchemaURI);
+            } else if (logger.isDebugEnabled()) {
+                logger.debug("Custom schema is disabled");
             }
 
             //register UserOperationEventListener implementation
             SCIMUserOperationListener scimUserOperationListener = new SCIMUserOperationListener();
             userOperationEventListenerServiceReg = ctx.getBundleContext()
                     .registerService(UserOperationEventListener.class, scimUserOperationListener, null);
+            logger.info("Registered SCIMUserOperationListener");
 
             //register scimTenantMgtListener implementation
             SCIMTenantMgtListener scimTenantMgtListener = new SCIMTenantMgtListener();
             tenantMgtListenerServiceReg = ctx.getBundleContext().registerService(TenantMgtListener.class,
                     scimTenantMgtListener, null);
+            logger.info("Registered SCIMTenantMgtListener");
 
             // Register claim operation event handler implementation.
             ctx.getBundleContext().registerService(AbstractEventHandler.class.getName(),
                     new SCIMClaimOperationEventHandler(), null);
-            if (logger.isDebugEnabled()) {
-                logger.debug("SCIMClaimOperationEventHandler is successfully registered.");
-            }
+            logger.info("Registered SCIMClaimOperationEventHandler");
 
             // Register default implementation of SCIMUserStoreErrorResolver
             ctx.getBundleContext().registerService(SCIMUserStoreErrorResolver.class.getName(),
                     new DefaultSCIMUserStoreErrorResolver(), null);
+            logger.info("Registered DefaultSCIMUserStoreErrorResolver");
 
             // Register default implementation of SCIMGroupResolver.
             ctx.getBundleContext().registerService(GroupResolver.class.getName(),
                     new SCIMGroupResolver(), null);
+            logger.info("Registered SCIMGroupResolver");
 
             //Update super tenant user/group attributes.
+            logger.info("Updating super tenant user/group attributes");
             AdminAttributeUtil.updateAdminUser(MultitenantConstants.SUPER_TENANT_ID, true);
             AdminAttributeUtil.updateAdminGroup(MultitenantConstants.SUPER_TENANT_ID);
             SCIMCommonUtils.updateEveryOneRoleV2MetaData(MultitenantConstants.SUPER_TENANT_ID);
             SCIMCommonUtils.updateSystemRoleV2MetaData(MultitenantConstants.SUPER_TENANT_ID);
-            if (logger.isDebugEnabled()) {
-                logger.debug("SCIM Common component activated successfully.");
-            }
+            logger.info("Successfully updated super tenant user/group attributes");
+            
+            logger.info("SCIM Common component activated successfully");
         } catch (CharonException e) {
-            logger.error("Error in reading information from identity tables at SCIMCommonComponentStartup.", e);
+            logger.error("Error in reading information from identity tables at SCIMCommonComponentStartup", e);
         } catch (InternalErrorException e) {
-            logger.error("Error in reading information from identity tables at SCIMCommonComponentStartup.", e);
+            logger.error("Error in reading information from identity tables at SCIMCommonComponentStartup", e);
         }
     }
 
@@ -447,13 +461,18 @@ public class SCIMCommonComponent {
 
     @Deactivate
     protected void deactivate(ComponentContext context) {
+        logger.info("Deactivating SCIM Common component");
 
         if (tenantMgtListenerServiceReg != null) {
             tenantMgtListenerServiceReg.unregister();
+            logger.info("Unregistered SCIMTenantMgtListener");
         }
 
         if (userOperationEventListenerServiceReg != null) {
             userOperationEventListenerServiceReg.unregister();
+            logger.info("Unregistered SCIMUserOperationListener");
         }
+        
+        logger.info("SCIM Common component deactivated successfully");
     }
 }

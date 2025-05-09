@@ -83,9 +83,15 @@ public class IdentitySCIMManager {
      * Perform initialization at the deployment of the webapp.
      */
     private void init() throws CharonException {
+        if (log.isDebugEnabled()) {
+            log.debug("Initializing IdentitySCIMManager");
+        }
 
         // This is necessary to instantiate here as we need to encode exceptions if they occur.
         encoder = new JSONEncoder();
+        if (log.isDebugEnabled()) {
+            log.debug("Created JSON encoder for SCIM responses");
+        }
 
         // Define endpoint urls to be used in Location Header.
         endpointURLs.put(SCIMConstants.USER_ENDPOINT, SCIMCommonUtils.getSCIMUserURL());
@@ -96,11 +102,23 @@ public class IdentitySCIMManager {
                 .getSCIMServiceProviderConfigURL());
         endpointURLs.put(SCIMConstants.RESOURCE_TYPE_ENDPOINT, SCIMCommonUtils.getSCIMResourceTypeURL());
 
+        if (log.isDebugEnabled()) {
+            log.debug("Defined SCIM endpoint URLs for: " + String.join(", ", endpointURLs.keySet()));
+        }
+
         // Register endpoint URLs in AbstractResourceEndpoint since they are called with in the API.
         registerEndpointURLs();
+        if (log.isDebugEnabled()) {
+            log.debug("Registered SCIM endpoint URLs in AbstractResourceEndpoint");
+        }
 
         // Register the charon related configurations.
         registerCharonConfig();
+        if (log.isDebugEnabled()) {
+            log.debug("Registered Charon configurations");
+        }
+        
+        log.info("IdentitySCIMManager initialized successfully");
     }
 
     /**
@@ -117,23 +135,41 @@ public class IdentitySCIMManager {
 
         SCIMUserManager scimUserManager = null;
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        
+        if (log.isDebugEnabled()) {
+            log.debug("Creating SCIM user manager for tenant domain: " + tenantDomain);
+        }
+        
         try {
             // Get super tenant context and get realm service which is an osgi service.
             RealmService realmService = SCIMCommonComponentHolder.getRealmService();
             if (realmService != null) {
                 int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+                
+                if (log.isDebugEnabled()) {
+                    log.debug("Resolved tenant ID: " + tenantId + " for tenant domain: " + tenantDomain);
+                }
+                
                 // Get tenant's user realm.
                 UserRealm userRealm = realmService.getTenantUserRealm(tenantId);
                 if (userRealm != null) {
                     scimUserManager = new SCIMUserManager((AbstractUserStoreManager) userRealm.getUserStoreManager(),
                             SCIMCommonComponentHolder.getClaimManagementService(), tenantDomain);
+                    
+                    if (log.isDebugEnabled()) {
+                        log.debug("Successfully created SCIM user manager for tenant domain: " + tenantDomain);
+                    }
+                } else {
+                    log.error("User realm is null for tenant ID: " + tenantId);
                 }
             } else {
-                String error = "Can not obtain carbon realm service..";
+                String error = "Cannot obtain carbon realm service";
+                log.error(error);
                 throw new CharonException(error);
             }
         } catch (UserStoreException e) {
             String error = "Error obtaining user realm for tenant: " + tenantDomain;
+            log.error(error, e);
             throw new CharonException(error, e);
         }
         return scimUserManager;

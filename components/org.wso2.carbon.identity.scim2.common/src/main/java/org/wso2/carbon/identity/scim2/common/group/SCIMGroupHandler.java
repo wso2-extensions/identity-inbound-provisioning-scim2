@@ -70,6 +70,10 @@ public class SCIMGroupHandler {
      */
     public void addMandatoryAttributes(String groupName)
             throws IdentitySCIMException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Adding mandatory SCIM attributes for group: " + groupName + " in tenant ID: " + tenantId);
+        }
+        
         Map<String, String> attributes = new HashMap<>();
         String id = UUID.randomUUID().toString();
         attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
@@ -78,9 +82,17 @@ public class SCIMGroupHandler {
         attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
 
         attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
-        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, SCIMCommonUtils.getSCIMGroupURL(id));
+        String locationURI = SCIMCommonUtils.getSCIMGroupURL(id);
+        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, locationURI);
+        
+        if (logger.isDebugEnabled()) {
+            logger.debug("Set SCIM ID: " + id + ", creation date: " + createdDate + 
+                    ", location URI: " + locationURI + " for group: " + groupName);
+        }
+        
         GroupDAO groupDAO = new GroupDAO();
         groupDAO.addSCIMGroupAttributes(tenantId, groupName, attributes);
+        logger.info("Successfully added mandatory SCIM attributes for group: " + groupName + " in tenant ID: " + tenantId);
     }
 
     /**
@@ -90,35 +102,68 @@ public class SCIMGroupHandler {
      * @throws IdentitySCIMException if any error occurs while adding admin role attributes.
      */
     public void addRoleV2MandatoryAttributes(String roleName) throws IdentitySCIMException {
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        
+        if (logger.isDebugEnabled()) {
+            logger.debug("Adding mandatory SCIM V2 attributes for role: " + roleName + 
+                    " in tenant domain: " + tenantDomain);
+        }
 
         Map<String, String> attributes = new HashMap<>();
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         String id;
         int roleAudienceRefId;
         try {
-            String orgId  = getOrganizationId(tenantDomain);
+            String orgId = getOrganizationId(tenantDomain);
+            String roleNameWithoutDomain = UserCoreUtil.removeDomainFromName(roleName);
+            
+            if (logger.isDebugEnabled()) {
+                logger.debug("Resolving role ID for role: " + roleNameWithoutDomain + 
+                        " in organization: " + orgId);
+            }
+            
             id = SCIMCommonComponentHolder.getRoleManagementServiceV2()
-                    .getRoleIdByName(UserCoreUtil.removeDomainFromName(roleName), RoleConstants.ORGANIZATION, orgId,
+                    .getRoleIdByName(roleNameWithoutDomain, RoleConstants.ORGANIZATION, orgId,
                             tenantDomain);
             roleAudienceRefId = RoleManagementUtils.resolveAudienceRefId(RoleConstants.ORGANIZATION, orgId);
         } catch (IdentityRoleManagementException e) {
+            logger.error("Error while resolving role ID for role: " + roleName + 
+                    " in tenant domain: " + tenantDomain, e);
             throw new IdentitySCIMException("Error while resolving " + roleName + " role id.", e);
         }
+        
         if (StringUtils.isBlank(id)) {
+            logger.error("Role ID not found for role: " + roleName + " in tenant domain: " + tenantDomain);
             throw new IdentitySCIMException("Role : " + roleName + " id not found.");
         }
+        
         if (roleAudienceRefId == -1) {
+            logger.error("Role audience ID not found for role: " + roleName + " in tenant domain: " + tenantDomain);
             throw new IdentitySCIMException("Role : " + roleName + " audience id not found.");
         }
+        
+        if (logger.isDebugEnabled()) {
+            logger.debug("Found role ID: " + id + ", audience ref ID: " + roleAudienceRefId + 
+                    " for role: " + roleName);
+        }
+        
         attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
 
         String createdDate = AttributeUtil.formatDateTime(Instant.now());
         attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
 
         attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
-        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, SCIMCommonUtils.getSCIMRoleV2URL(id));
+        String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(id);
+        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, locationURI);
+        
+        if (logger.isDebugEnabled()) {
+            logger.debug("Set SCIM ID: " + id + ", creation date: " + createdDate + 
+                    ", location URI: " + locationURI + " for role: " + roleName);
+        }
+        
         GroupDAO groupDAO = new GroupDAO();
         groupDAO.addSCIMRoleV2Attributes(tenantId, roleName, roleAudienceRefId, attributes);
+        logger.info("Successfully added mandatory SCIM V2 attributes for role: " + roleName + 
+                " in tenant domain: " + tenantDomain);
     }
 
     /**
@@ -129,16 +174,27 @@ public class SCIMGroupHandler {
      * @throws IdentitySCIMException if any error occurs while resolving organization id.
      */
     private String getOrganizationId(String tenantDomain) throws IdentitySCIMException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Resolving organization ID for tenant domain: " + tenantDomain);
+        }
 
         String orgId;
         try {
             orgId = SCIMCommonComponentHolder.getOrganizationManager().resolveOrganizationId(tenantDomain);
         } catch (OrganizationManagementException e) {
+            logger.error("Error while resolving organization ID for tenant domain: " + tenantDomain, e);
             throw new IdentitySCIMException("Error while resolving org id of tenant : " + tenantDomain, e);
         }
+        
         if (StringUtils.isBlank(orgId)) {
+            logger.error("Organization ID not found for tenant domain: " + tenantDomain);
             throw new IdentitySCIMException("Organization id not found for tenant : " + tenantDomain);
         }
+        
+        if (logger.isDebugEnabled()) {
+            logger.debug("Resolved organization ID: " + orgId + " for tenant domain: " + tenantDomain);
+        }
+        
         return orgId;
     }
 
@@ -223,26 +279,52 @@ public class SCIMGroupHandler {
     public Group getGroupWithAttributes(Group group, String groupName)
             throws IdentitySCIMException, CharonException, BadRequestException {
 
+        if (logger.isDebugEnabled()) {
+            logger.debug("Retrieving SCIM attributes for group: " + groupName + " in tenant ID: " + tenantId);
+        }
+
         GroupDAO groupDAO = new GroupDAO();
         Map<String, String> attributes = groupDAO.getSCIMGroupAttributes(tenantId, groupName);
 
         if (attributes.isEmpty()) {
             if (logger.isDebugEnabled()) {
-                logger.debug("The group: " + groupName + ", is not a SCIM group. Skipping..");
+                logger.debug("The group: " + groupName + " is not a SCIM group. Skipping attribute population.");
             }
             return group;
+        }
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Found " + attributes.size() + " SCIM attributes for group: " + groupName);
         }
 
         for (Map.Entry<String, String> entry : attributes.entrySet()) {
             if (SCIMConstants.CommonSchemaConstants.ID_URI.equals(entry.getKey())) {
                 group.setId(entry.getValue());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Set ID: " + entry.getValue() + " for group: " + groupName);
+                }
             } else if (SCIMConstants.CommonSchemaConstants.CREATED_URI.equals(entry.getKey())) {
-                group.setCreatedDate(Date.from(AttributeUtil.parseDateTime(entry.getValue())));
+                Date createdDate = Date.from(AttributeUtil.parseDateTime(entry.getValue()));
+                group.setCreatedDate(createdDate);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Set created date: " + createdDate + " for group: " + groupName);
+                }
             } else if (SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI.equals(entry.getKey())) {
-                group.setLastModified(Date.from(AttributeUtil.parseDateTime(entry.getValue())));
+                Date lastModified = Date.from(AttributeUtil.parseDateTime(entry.getValue()));
+                group.setLastModified(lastModified);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Set last modified date: " + lastModified + " for group: " + groupName);
+                }
             } else if (SCIMConstants.CommonSchemaConstants.LOCATION_URI.equals(entry.getKey())) {
-                group.setLocation(SCIMCommonUtils.getSCIMGroupURL(group.getId()));
+                String location = SCIMCommonUtils.getSCIMGroupURL(group.getId());
+                group.setLocation(location);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Set location: " + location + " for group: " + groupName);
+                }
             }
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("Successfully populated SCIM attributes for group: " + groupName);
         }
         return group;
     }
@@ -255,8 +337,22 @@ public class SCIMGroupHandler {
      * @throws IdentitySCIMException
      */
     public boolean isGroupExisting(String groupName) throws IdentitySCIMException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Checking if group exists: " + groupName + " in tenant ID: " + tenantId);
+        }
+        
         GroupDAO groupDAO = new GroupDAO();
-        return groupDAO.isExistingGroup(groupName, tenantId);
+        boolean exists = groupDAO.isExistingGroup(groupName, tenantId);
+        
+        if (logger.isDebugEnabled()) {
+            if (exists) {
+                logger.debug("Group exists: " + groupName + " in tenant ID: " + tenantId);
+            } else {
+                logger.debug("Group does not exist: " + groupName + " in tenant ID: " + tenantId);
+            }
+        }
+        
+        return exists;
     }
 
     /**
@@ -266,25 +362,38 @@ public class SCIMGroupHandler {
      * @throws IdentitySCIMException
      */
     public void deleteGroupAttributes(String groupName) throws IdentitySCIMException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Deleting SCIM attributes for group: " + groupName + " in tenant ID: " + tenantId);
+        }
+        
         GroupDAO groupDAO = new GroupDAO();
         if (groupDAO.isExistingGroup(groupName, this.tenantId)) {
             groupDAO.removeSCIMGroup(tenantId, groupName);
+            logger.info("Successfully deleted SCIM attributes for group: " + groupName + " in tenant ID: " + tenantId);
         } else {
             if (logger.isDebugEnabled()) {
-                logger.debug("Information for the group: " + groupName +
-                        " doesn't contain in the identity scim table.");
+                logger.debug("No SCIM attributes found for group: " + groupName + 
+                        " in the identity SCIM table for tenant ID: " + tenantId);
             }
         }
     }
 
     public void updateRoleName(String oldRoleName, String newRoleName)
             throws IdentitySCIMException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Updating role name from: " + oldRoleName + " to: " + newRoleName + 
+                    " in tenant ID: " + tenantId);
+        }
+        
         GroupDAO groupDAO = new GroupDAO();
         if (groupDAO.isExistingGroup(oldRoleName, this.tenantId)) {
             groupDAO.updateRoleName(this.tenantId, oldRoleName, newRoleName);
+            logger.info("Successfully updated role name from: " + oldRoleName + " to: " + 
+                    newRoleName + " in tenant ID: " + tenantId);
         } else {
-            throw new IdentitySCIMException("Non-existent group: " + oldRoleName +
-                    " is trying to be updated.");
+            String errorMsg = "Non-existent group: " + oldRoleName + " is trying to be updated.";
+            logger.error(errorMsg + " Tenant ID: " + tenantId);
+            throw new IdentitySCIMException(errorMsg);
         }
     }
 

@@ -494,12 +494,13 @@ public class GroupResource extends AbstractResource {
             }
             return SupportUtils.buildResponse(Objects.requireNonNull(scimResponse));
         } catch (BadRequestException e) {
-            logger.error("The Patch request is invalid. Unable to decode." + e);
+            logger.error("The Patch request is invalid. Unable to decode SCIM request: " + e.getMessage(), e);
             return SupportUtils.buildResponse(new SCIMResponse(ResponseCodeConstants.CODE_BAD_REQUEST,
                     "The Patch request is invalid.", responseHeaders));
         } catch (CharonException e) {
             return handleCharonException(e);
         } catch (UserStoreException | RolePermissionException e) {
+            logger.error("Error occurred when managing group permissions in user store: " + e.getMessage(), e);
             return handleCharonException(new CharonException("Error occurred when getting the permissions from server",
                     e));
         }
@@ -588,14 +589,33 @@ public class GroupResource extends AbstractResource {
 
         try {
             if (StringUtils.isNotEmpty(valueInRequest)) {
+                if (logger.isDebugEnabled()) {
+                    String sanitizedConstant = scimProviderConstant != null ? 
+                            scimProviderConstant.replace('\r', ' ').replace('\n', ' ') : "null";
+                    String sanitizedValue = valueInRequest != null ? 
+                            valueInRequest.replace('\r', ' ').replace('\n', ' ') : "null";
+                    logger.debug(String.format("Converting '%s' pagination parameter from string value '%s' to integer", 
+                            sanitizedConstant, sanitizedValue));
+                }
                 return Integer.valueOf(valueInRequest);
             } else {
+                if (logger.isDebugEnabled()) {
+                    String sanitizedConstant = scimProviderConstant != null ? 
+                            scimProviderConstant.replace('\r', ' ').replace('\n', ' ') : "null";
+                    logger.debug(String.format("No value provided for '%s' pagination parameter, returning null", 
+                            sanitizedConstant));
+                }
                 return null;
             }
         } catch (NumberFormatException e) {
+            String sanitizedValue = valueInRequest != null ? 
+                    valueInRequest.replace('\r', ' ').replace('\n', ' ') : "null";
+            String sanitizedConstant = scimProviderConstant != null ? 
+                    scimProviderConstant.replace('\r', ' ').replace('\n', ' ') : "null";
             String errorMessage = String
-                    .format("Invalid integer value: %s for %s parameter in the request.", valueInRequest,
-                            scimProviderConstant);
+                    .format("Invalid integer value: %s for %s parameter in the request.", 
+                            sanitizedValue, sanitizedConstant);
+            logger.warn(errorMessage);
             throw new CharonException(errorMessage, e);
         }
     }

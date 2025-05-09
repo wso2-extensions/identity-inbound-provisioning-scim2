@@ -49,6 +49,18 @@ import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.getTenan
 public class UserResource extends AbstractResource {
 
     private static final Log LOG = LogFactory.getLog(UserResource.class);
+    private static final String DEBUG_COUNT_LIMIT = "Given count parameter exceeds the maximum allowed limit. Setting count to maximum allowed value.";
+    private static final String INFO_COUNT_LIMIT = "Count limit exceeded in SCIM user list request. Adjusting count.";
+    private static final String DEBUG_ASK_PASSWORD = "Initializing ask password confirmation code thread local property";
+    private static final String INFO_ASK_PASSWORD = "Ask password flow detected in user creation. Initialized confirmation code thread local";
+    private static final String DEBUG_REMOVE_ASK_PASSWORD = "Removing ask password confirmation code thread local property";
+    private static final String DEBUG_SUPERADMIN_DELETE = "User attempted to delete SuperAdmin user.";
+    private static final String WARN_SUPERADMIN_DELETE = "Unauthorized attempt to delete SuperAdmin user detected";
+    private static final String DEBUG_SUPERADMIN_PATCH = "User attempted to modify SuperAdmin user via PATCH operation.";
+    private static final String WARN_SUPERADMIN_PATCH = "Unauthorized attempt to patch SuperAdmin user detected";
+    private static final String DEBUG_UPDATE_IDENTITY = "Updating identity context for profile update flow";
+    private static final String DEBUG_FLOW_ADMIN = "Set flow to PROFILE_UPDATE with ADMIN initiating persona";
+    private static final String DEBUG_FLOW_APP = "Set flow to PROFILE_UPDATE with APPLICATION initiating persona";
 
     @GET
     @Path("{id}")
@@ -159,7 +171,10 @@ public class UserResource extends AbstractResource {
                 String superAdminID = AdminAttributeUtil.getSuperAdminID();
                 String loggedInUser = SCIMCommonUtils.getLoggedInUserID();
                 if (superAdminID.equals(id) && !loggedInUser.equals(id)) {
-                    LOG.debug("Do not have permission to delete SuperAdmin user.");
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug(DEBUG_SUPERADMIN_DELETE + loggedInUser);
+                    }
+                    LOG.warn(WARN_SUPERADMIN_DELETE);
                     return Response.status(Response.Status.FORBIDDEN).build();
                 }
             }
@@ -359,7 +374,10 @@ public class UserResource extends AbstractResource {
                 String superAdminID = AdminAttributeUtil.getSuperAdminID();
                 String loggedInUser = SCIMCommonUtils.getLoggedInUserID();
                 if (superAdminID.equals(id) && !loggedInUser.equals(id)) {
-                    LOG.debug("Do not have permission to patch SuperAdmin user.");
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug(DEBUG_SUPERADMIN_PATCH + loggedInUser);
+                    }
+                    LOG.warn(WARN_SUPERADMIN_PATCH);
                     return Response.status(Response.Status.FORBIDDEN).build();
                 }
             }
@@ -390,9 +408,13 @@ public class UserResource extends AbstractResource {
     private void initializeAskPasswordConfirmationCodeThreadLocal(String resourceString) {
 
         if (SupportUtils.isAskPasswordFlow(resourceString)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(DEBUG_ASK_PASSWORD);
+            }
             IdentityUtil.threadLocalProperties.get()
                     .put(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY,
                             IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_INITIAL_VALUE);
+            LOG.info(INFO_ASK_PASSWORD);
         }
     }
 
@@ -400,9 +422,14 @@ public class UserResource extends AbstractResource {
      * Remove the ask password confirmation code thread local.
      */
     private void removeAskPasswordConfirmationCodeThreadLocal() {
-
-        IdentityUtil.threadLocalProperties.get()
-                .remove(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY);
+        if (IdentityUtil.threadLocalProperties.get()
+                .containsKey(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(DEBUG_REMOVE_ASK_PASSWORD);
+            }
+            IdentityUtil.threadLocalProperties.get()
+                    .remove(IdentityRecoveryConstants.AP_CONFIRMATION_CODE_THREAD_LOCAL_PROPERTY);
+        }
     }
 
     /**
@@ -416,9 +443,9 @@ public class UserResource extends AbstractResource {
         int maximumItemsPerPage = IdentityUtil.getMaximumItemPerPage();
         if (count > maximumItemsPerPage) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug(String.format("Given limit exceeds the maximum limit. Therefore the limit is set to %s.",
-                        maximumItemsPerPage));
+                LOG.debug(DEBUG_COUNT_LIMIT);
             }
+            LOG.info(INFO_COUNT_LIMIT);
             return maximumItemsPerPage;
         }
 
@@ -430,6 +457,9 @@ public class UserResource extends AbstractResource {
      * These values will be used in the pre update password action.
      */
     private void updateIdentityContext() {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(DEBUG_UPDATE_IDENTITY);
+        }
 
         if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
             Flow flow = new Flow.Builder()
@@ -437,6 +467,9 @@ public class UserResource extends AbstractResource {
                     .initiatingPersona(Flow.InitiatingPersona.ADMIN)
                     .build();
             IdentityContext.getThreadLocalIdentityContext().setFlow(flow);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(DEBUG_FLOW_ADMIN);
+            }
         }
         if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
             Flow flow = new Flow.Builder()
@@ -444,6 +477,9 @@ public class UserResource extends AbstractResource {
                     .initiatingPersona(Flow.InitiatingPersona.APPLICATION)
                     .build();
             IdentityContext.getThreadLocalIdentityContext().setFlow(flow);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(DEBUG_FLOW_APP);
+            }
         }
     }
 }

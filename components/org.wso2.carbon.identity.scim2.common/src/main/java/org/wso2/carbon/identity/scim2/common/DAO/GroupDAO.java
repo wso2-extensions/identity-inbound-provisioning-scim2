@@ -64,6 +64,9 @@ public class GroupDAO {
         Set<String> groups = new HashSet<>();
 
         try {
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieving all SCIM groups from database");
+            }
             //retrieve groups from the DB
             prepStmt = connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_SQL);
             prepStmt.setString(1, SCIMConstants.CommonSchemaConstants.ID_URI);
@@ -75,7 +78,11 @@ public class GroupDAO {
                     groups.add(group);
                 }
             }
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved " + groups.size() + " SCIM groups from database");
+            }
         } catch (SQLException e) {
+            log.error("Error when reading SCIM Group information from persistence store", e);
             throw new IdentitySCIMException("Error when reading the SCIM Group information from persistence store.", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
@@ -96,6 +103,9 @@ public class GroupDAO {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection();
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.LIST_SCIM_GROUPS_BY_TENANT_ID_SQL);) {
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieving SCIM groups for tenant ID: " + tenantId);
+            }
             prepStmt.setInt(1, tenantId);
             prepStmt.setString(2, SCIMConstants.CommonSchemaConstants.ID_URI);
             try (ResultSet resultSet = prepStmt.executeQuery();) {
@@ -107,7 +117,11 @@ public class GroupDAO {
                     }
                 }
             }
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved " + groups.size() + " SCIM groups for tenant ID: " + tenantId);
+            }
         } catch (SQLException e) {
+            log.error("Error when reading SCIM Group information for tenant ID: " + tenantId, e);
             throw new IdentitySCIMException("Error when reading the SCIM Group information from persistence store.", e);
         }
         return groups;
@@ -120,11 +134,15 @@ public class GroupDAO {
         ResultSet rSet = null;
 
         boolean isExistingGroup = false;
+        String groupNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(groupName);
 
         try {
+            if (log.isDebugEnabled()) {
+                log.debug("Checking if group exists: " + groupNameWithDomain + " for tenant ID: " + tenantId);
+            }
             prepStmt = connection.prepareStatement(SQLQueries.CHECK_EXISTING_ATTRIBUTE_SQL);
             prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, SCIMCommonUtils.getGroupNameWithDomain(groupName));
+            prepStmt.setString(2, groupNameWithDomain);
 
             // Specifically checking SCIM 2.0 ID attribute to avoid conflict with SCIM 1.1
             prepStmt.setString(3, SCIMConstants.CommonSchemaConstants.ID_URI);
@@ -132,9 +150,15 @@ public class GroupDAO {
             rSet = prepStmt.executeQuery();
             if (rSet.next()) {
                 isExistingGroup = true;
+                if (log.isDebugEnabled()) {
+                    log.debug("Group exists: " + groupNameWithDomain + " for tenant ID: " + tenantId);
+                }
+            } else if (log.isDebugEnabled()) {
+                log.debug("Group does not exist: " + groupNameWithDomain + " for tenant ID: " + tenantId);
             }
             connection.commit();
         } catch (SQLException e) {
+            log.error("Error when checking if group exists: " + groupNameWithDomain + " for tenant ID: " + tenantId, e);
             throw new IdentitySCIMException("Error when reading the group information from the persistence store.", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rSet, prepStmt);
@@ -148,19 +172,33 @@ public class GroupDAO {
         PreparedStatement prepStmt = null;
         ResultSet rSet = null;
         boolean isExistingAttribute = false;
+        String groupNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(groupName);
 
         try {
+            if (log.isDebugEnabled()) {
+                log.debug("Checking if attribute exists: " + attributeName + " for group: " + 
+                        groupNameWithDomain + " in tenant ID: " + tenantId);
+            }
             prepStmt = connection.prepareStatement(SQLQueries.CHECK_EXISTING_ATTRIBUTE_SQL);
             prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, SCIMCommonUtils.getGroupNameWithDomain(groupName));
+            prepStmt.setString(2, groupNameWithDomain);
             prepStmt.setString(3, attributeName);
 
             rSet = prepStmt.executeQuery();
             if (rSet.next()) {
                 isExistingAttribute = true;
+                if (log.isDebugEnabled()) {
+                    log.debug("Attribute exists: " + attributeName + " for group: " + 
+                            groupNameWithDomain + " in tenant ID: " + tenantId);
+                }
+            } else if (log.isDebugEnabled()) {
+                log.debug("Attribute does not exist: " + attributeName + " for group: " + 
+                        groupNameWithDomain + " in tenant ID: " + tenantId);
             }
             connection.commit();
         } catch (SQLException e) {
+            log.error("Error when checking if attribute exists: " + attributeName + " for group: " + 
+                    groupNameWithDomain + " in tenant ID: " + tenantId, e);
             throw new IdentitySCIMException("Error when reading the group attribute information from " +
                     "the persistence store.", e);
         } finally {
@@ -173,42 +211,61 @@ public class GroupDAO {
             throws IdentitySCIMException {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
+        String roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleName);
 
-        if (!isExistingGroup(SCIMCommonUtils.getGroupNameWithDomain(roleName), tenantId)) {
+        if (log.isDebugEnabled()) {
+            log.debug("Adding SCIM attributes for group: " + roleNameWithDomain + " in tenant ID: " + tenantId);
+        }
+
+        if (!isExistingGroup(roleNameWithDomain, tenantId)) {
             try {
                 prepStmt = connection.prepareStatement(SQLQueries.ADD_ATTRIBUTES_SQL);
                 prepStmt.setInt(1, tenantId);
                 prepStmt.setString(2, roleName);
 
                 for (Map.Entry<String, String> entry : attributes.entrySet()) {
-                    if (!isExistingAttribute(entry.getKey(),
-                            SCIMCommonUtils.getGroupNameWithDomain(roleName), tenantId)) {
+                    if (!isExistingAttribute(entry.getKey(), roleNameWithDomain, tenantId)) {
                         prepStmt.setString(3, entry.getKey());
                         prepStmt.setString(4, entry.getValue());
                         prepStmt.addBatch();
-
+                        if (log.isDebugEnabled()) {
+                            log.debug("Adding attribute: " + entry.getKey() + " with value: " + entry.getValue() + 
+                                    " for group: " + roleNameWithDomain + " in tenant ID: " + tenantId);
+                        }
                     } else {
-                        throw new IdentitySCIMException("Error when adding SCIM Attribute: "
-                                + entry.getKey()
-                                + " An attribute with the same name already exists.");
+                        String errorMsg = "Error when adding SCIM Attribute: " + entry.getKey() + 
+                                " An attribute with the same name already exists.";
+                        log.error(errorMsg + " Group: " + roleNameWithDomain + " in tenant ID: " + tenantId);
+                        throw new IdentitySCIMException(errorMsg);
                     }
                 }
                 prepStmt.executeBatch();
                 connection.commit();
+                log.info("Successfully added SCIM attributes for group: " + roleNameWithDomain + 
+                        " in tenant ID: " + tenantId);
             } catch (SQLException e) {
+                log.error("Error when adding SCIM attributes for group: " + roleNameWithDomain + 
+                        " in tenant ID: " + tenantId, e);
                 throw new IdentitySCIMException("Error when adding SCIM attributes for the group: "
                         + roleName, e);
             } finally {
                 IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
             }
         } else {
-            throw new IdentitySCIMException("Error when adding SCIM Attributes for the group: "
-                    + roleName + " A Group with the same name already exists.");
+            String errorMsg = "Error when adding SCIM Attributes for the group: " + roleName + 
+                    " A Group with the same name already exists.";
+            log.error(errorMsg + " Tenant ID: " + tenantId);
+            throw new IdentitySCIMException(errorMsg);
         }
     }
 
     public void addSCIMRoleV2Attributes(int tenantId, String roleName, int roleAudienceRefId,
                                         Map<String, String> attributes) throws IdentitySCIMException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding SCIM V2 attributes for role: " + roleName + " with audience ref ID: " + 
+                    roleAudienceRefId + " in tenant ID: " + tenantId);
+        }
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.ADD_ATTRIBUTES_WITH_AUDIENCE_SQL)) {
@@ -221,19 +278,35 @@ public class GroupDAO {
                     prepStmt.setString(4, entry.getKey());
                     prepStmt.setString(5, entry.getValue());
                     prepStmt.addBatch();
+                    if (log.isDebugEnabled()) {
+                        log.debug("Adding V2 attribute: " + entry.getKey() + " with value: " + entry.getValue() + 
+                                " for role: " + roleName + " in tenant ID: " + tenantId);
+                    }
                 } else {
-                    throw new IdentitySCIMException("Error when adding SCIM Attribute: " + entry.getKey() +
-                            ". An attribute with the same name already exists.");
+                    String errorMsg = "Error when adding SCIM Attribute: " + entry.getKey() +
+                            ". An attribute with the same name already exists.";
+                    log.error(errorMsg + " Role: " + roleName + " with audience ref ID: " + 
+                            roleAudienceRefId + " in tenant ID: " + tenantId);
+                    throw new IdentitySCIMException(errorMsg);
                 }
             }
             prepStmt.executeBatch();
+            log.info("Successfully added SCIM V2 attributes for role: " + roleName + 
+                    " with audience ref ID: " + roleAudienceRefId + " in tenant ID: " + tenantId);
         } catch (SQLException e) {
+            log.error("Error when adding SCIM V2 attributes for role: " + roleName + 
+                    " with audience ref ID: " + roleAudienceRefId + " in tenant ID: " + tenantId, e);
             throw new IdentitySCIMException("Error when adding SCIM meta data for the role : " + roleName, e);
         }
     }
 
     private boolean isExistingRoleV2Attribute(String attributeName, String roleName, int audienceRefId, int tenantId)
             throws IdentitySCIMException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Checking if V2 attribute exists: " + attributeName + " for role: " + roleName + 
+                    " with audience ref ID: " + audienceRefId + " in tenant ID: " + tenantId);
+        }
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt = connection.prepareStatement(
@@ -245,9 +318,19 @@ public class GroupDAO {
 
             ResultSet resultSet = prepStmt.executeQuery();
             if (resultSet.next()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("V2 attribute exists: " + attributeName + " for role: " + roleName + 
+                            " with audience ref ID: " + audienceRefId + " in tenant ID: " + tenantId);
+                }
                 return true;
             }
+            if (log.isDebugEnabled()) {
+                log.debug("V2 attribute does not exist: " + attributeName + " for role: " + roleName + 
+                        " with audience ref ID: " + audienceRefId + " in tenant ID: " + tenantId);
+            }
         } catch (SQLException e) {
+            log.error("Error when checking if V2 attribute exists: " + attributeName + " for role: " + 
+                    roleName + " with audience ref ID: " + audienceRefId + " in tenant ID: " + tenantId, e);
             throw new IdentitySCIMException("Error when reading the RoleV2 SCIM meta data from the persistence store.",
                     e);
         }
@@ -265,26 +348,47 @@ public class GroupDAO {
                                                                 Map<String, Map<String, String>> attributesList)
             throws IdentitySCIMException {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Adding SCIM attributes to hybrid roles created while SCIM was disabled. Tenant ID: " + tenantId + 
+                    ", Number of groups: " + attributesList.size());
+        }
+
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(); PreparedStatement prepStmt =
                 connection.prepareStatement(SQLQueries.ADD_ATTRIBUTES_SQL)) {
             prepStmt.setInt(1, tenantId);
             for (Map.Entry<String, Map<String, String>> entry : attributesList.entrySet()) {
-                prepStmt.setString(2, entry.getKey());
+                String groupName = entry.getKey();
+                String groupNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(groupName);
+                prepStmt.setString(2, groupName);
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Processing group: " + groupNameWithDomain + " with " + 
+                            entry.getValue().size() + " attributes");
+                }
+
                 for (Map.Entry<String, String> attributes : entry.getValue().entrySet()) {
-                    if (!isExistingAttribute(attributes.getKey(),
-                            SCIMCommonUtils.getGroupNameWithDomain(entry.getKey()), tenantId)) {
+                    if (!isExistingAttribute(attributes.getKey(), groupNameWithDomain, tenantId)) {
                         prepStmt.setString(3, attributes.getKey());
                         prepStmt.setString(4, attributes.getValue());
                         prepStmt.addBatch();
+                        if (log.isDebugEnabled()) {
+                            log.debug("Adding attribute: " + attributes.getKey() + " with value: " + 
+                                    attributes.getValue() + " for group: " + groupNameWithDomain);
+                        }
                     } else {
-                        throw new IdentitySCIMException("Error when adding SCIM Attribute: " + entry.getKey() +
-                                ". An attribute with the same name already exists.");
+                        String errorMsg = "Error when adding SCIM Attribute: " + attributes.getKey() +
+                                ". An attribute with the same name already exists.";
+                        log.error(errorMsg + " Group: " + groupNameWithDomain + " in tenant ID: " + tenantId);
+                        throw new IdentitySCIMException(errorMsg);
                     }
                 }
             }
             prepStmt.executeBatch();
             connection.commit();
+            log.info("Successfully added SCIM attributes to " + attributesList.size() + 
+                    " hybrid groups in tenant ID: " + tenantId);
         } catch (SQLException e) {
+            log.error("Error when adding SCIM attributes for hybrid groups in tenant ID: " + tenantId, e);
             throw new IdentitySCIMException("Error when adding SCIM attributes for hybrid groups.", e);
         }
     }
@@ -300,6 +404,9 @@ public class GroupDAO {
     public void updateSCIMGroupAttributes(int tenantId, String roleName,
                                           Map<String, String> attributes) throws IdentitySCIMException {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Updating SCIM attributes for group: " + roleName + " in tenant ID: " + tenantId);
+        }
         doUpdateSCIMGroupAttributes(tenantId, roleName, attributes, SQLQueries.UPDATE_ATTRIBUTES_SQL);
     }
 
@@ -317,54 +424,88 @@ public class GroupDAO {
 
         Connection connection = IdentityDatabaseUtil.getDBConnection(true);
         PreparedStatement prepStmt = null;
+        String roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleName);
 
-        if (isExistingGroup(SCIMCommonUtils.getGroupNameWithDomain(roleName), tenantId)) {
+        if (log.isDebugEnabled()) {
+            log.debug("Updating SCIM attributes for group: " + roleNameWithDomain + " in tenant ID: " + tenantId + 
+                    " with " + attributes.size() + " attributes");
+        }
+
+        if (isExistingGroup(roleNameWithDomain, tenantId)) {
             try {
                 prepStmt = connection.prepareStatement(sqlQuery);
                 prepStmt.setInt(2, tenantId);
                 prepStmt.setString(3, roleName);
 
                 for (Map.Entry<String, String> entry : attributes.entrySet()) {
-                    if (isExistingAttribute(entry.getKey(),
-                            SCIMCommonUtils.getGroupNameWithDomain(roleName), tenantId)) {
+                    if (isExistingAttribute(entry.getKey(), roleNameWithDomain, tenantId)) {
                         prepStmt.setString(4, entry.getKey());
                         prepStmt.setString(1, entry.getValue());
                         prepStmt.addBatch();
+                        if (log.isDebugEnabled()) {
+                            log.debug("Updating attribute: " + entry.getKey() + " with value: " + entry.getValue() + 
+                                    " for group: " + roleNameWithDomain);
+                        }
                     } else {
-                        throw new IdentitySCIMException("Error when adding SCIM Attribute: "
-                                + entry.getKey() + " An attribute with the same name doesn't exists.");
+                        String errorMsg = "Error when adding SCIM Attribute: " + entry.getKey() + 
+                                " An attribute with the same name doesn't exists.";
+                        log.error(errorMsg + " Group: " + roleNameWithDomain + " in tenant ID: " + tenantId);
+                        throw new IdentitySCIMException(errorMsg);
                     }
                 }
                 int[] returnCount = prepStmt.executeBatch();
                 if (log.isDebugEnabled()) {
-                    log.debug("No. of records updated for updating SCIM Group : " + returnCount.length);
+                    log.debug("No. of records updated for updating SCIM Group: " + roleNameWithDomain + 
+                            " in tenant ID: " + tenantId + ": " + returnCount.length);
                 }
                 connection.commit();
+                log.info("Successfully updated SCIM attributes for group: " + roleNameWithDomain + 
+                        " in tenant ID: " + tenantId);
             } catch (SQLException e) {
+                log.error("Error updating SCIM attributes for group: " + roleNameWithDomain + 
+                        " in tenant ID: " + tenantId, e);
                 throw new IdentitySCIMException("Error updating the SCIM Group Attributes.", e);
             } finally {
                 IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
             }
         } else {
-            throw new IdentitySCIMException("Error when updating SCIM Attributes for the group: "
-                    + roleName + " A Group with the same name doesn't exists.");
+            String errorMsg = "Error when updating SCIM Attributes for the group: " + roleName + 
+                    " A Group with the same name doesn't exists.";
+            log.error(errorMsg + " Tenant ID: " + tenantId);
+            throw new IdentitySCIMException(errorMsg);
         }
     }
 
     public void removeSCIMGroup(int tenantId, String roleName) throws IdentitySCIMException {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
+        String roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleName);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing SCIM group: " + roleNameWithDomain + " from tenant ID: " + tenantId);
+        }
 
         try {
             prepStmt = connection.prepareStatement(SQLQueries.DELETE_GROUP_SQL);
             prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, SCIMCommonUtils.getGroupNameWithDomain(roleName));
+            prepStmt.setString(2, roleNameWithDomain);
 
-            prepStmt.execute();
+            int rowCount = prepStmt.executeUpdate();
             connection.commit();
-
+            
+            if (log.isDebugEnabled()) {
+                log.debug("Removed " + rowCount + " entries for SCIM group: " + roleNameWithDomain + 
+                        " from tenant ID: " + tenantId);
+            }
+            
+            if (rowCount > 0) {
+                log.info("Successfully removed SCIM group: " + roleNameWithDomain + " from tenant ID: " + tenantId);
+            } else {
+                log.warn("No SCIM group attributes found to remove for group: " + roleNameWithDomain + 
+                        " in tenant ID: " + tenantId);
+            }
         } catch (SQLException e) {
-            log.error("Error when executing the SQL : " + SQLQueries.DELETE_GROUP_SQL);
+            log.error("Error when removing SCIM group: " + roleNameWithDomain + " from tenant ID: " + tenantId, e);
             throw new IdentitySCIMException("Error deleting the SCIM Group.", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
@@ -377,21 +518,38 @@ public class GroupDAO {
         PreparedStatement prepStmt = null;
         ResultSet rSet = null;
         Map<String, String> attributes = new HashMap<>();
+        String roleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(roleName);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving SCIM attributes for group: " + roleNameWithDomain + " in tenant ID: " + tenantId);
+        }
 
         try {
             prepStmt = connection.prepareStatement(SQLQueries.GET_ATTRIBUTES_SQL);
             prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, SCIMCommonUtils.getGroupNameWithDomain(roleName));
+            prepStmt.setString(2, roleNameWithDomain);
 
             rSet = prepStmt.executeQuery();
             while (rSet.next()) {
                 if (StringUtils.isNotEmpty(rSet.getString(1))) {
-                    attributes.put(rSet.getString(1), rSet.getString(2));
+                    String attributeName = rSet.getString(1);
+                    String attributeValue = rSet.getString(2);
+                    attributes.put(attributeName, attributeValue);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Retrieved attribute: " + attributeName + " with value: " + attributeValue + 
+                                " for group: " + roleNameWithDomain);
+                    }
                 }
             }
             connection.commit();
+            
+            if (log.isDebugEnabled()) {
+                log.debug("Retrieved " + attributes.size() + " SCIM attributes for group: " + 
+                        roleNameWithDomain + " in tenant ID: " + tenantId);
+            }
         } catch (SQLException e) {
-            log.error("Error when executing the SQL : " + SQLQueries.GET_ATTRIBUTES_SQL);
+            log.error("Error when retrieving SCIM attributes for group: " + roleNameWithDomain + 
+                    " in tenant ID: " + tenantId, e);
             throw new IdentitySCIMException("Error when reading the SCIM Group information from the " +
                     "persistence store.", e);
         } finally {
@@ -411,21 +569,40 @@ public class GroupDAO {
     public String getGroupIdByName(int tenantId, String groupName) throws IdentitySCIMException {
 
         String groupId = null;
+        String groupNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(groupName);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving group ID for group: " + groupNameWithDomain + " in tenant ID: " + tenantId);
+        }
+
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(true);
              PreparedStatement prepStmt = connection.prepareStatement(SQLQueries.GET_GROUP_ID_BY_NAME_SQL)) {
             prepStmt.setInt(1, tenantId);
-            prepStmt.setString(2, SCIMCommonUtils.getGroupNameWithDomain(groupName));
+            prepStmt.setString(2, groupNameWithDomain);
             prepStmt.setString(3, SCIMConstants.CommonSchemaConstants.ID_URI);
             try (ResultSet rs = prepStmt.executeQuery()) {
                 while (rs.next()) {
                     groupId = rs.getString(1);
                 }
             } catch (SQLException e) {
+                log.error("Error when querying group ID for group: " + groupNameWithDomain + 
+                        " in tenant ID: " + tenantId, e);
                 throw new IdentitySCIMException(String.format("Error when getting the SCIM Group information " +
                         "from the persistence store for group: %s in tenant: %s", groupName, tenantId), e);
             }
             connection.commit();
+            
+            if (groupId != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Retrieved group ID: " + groupId + " for group: " + groupNameWithDomain + 
+                            " in tenant ID: " + tenantId);
+                }
+            } else if (log.isDebugEnabled()) {
+                log.debug("No group ID found for group: " + groupNameWithDomain + " in tenant ID: " + tenantId);
+            }
         } catch (SQLException e) {
+            log.error("Error establishing database connection to retrieve group ID for group: " + 
+                    groupNameWithDomain + " in tenant ID: " + tenantId, e);
             throw new IdentitySCIMException(String.format("Error when getting the SCIM Group information from the " +
                     "persistence store for group: %s in tenant: %s", groupName, tenantId), e);
         }
@@ -439,6 +616,10 @@ public class GroupDAO {
         ResultSet rSet = null;
         String roleName = null;
 
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving group name for group ID: " + id + " in tenant ID: " + tenantId);
+        }
+
         try {
             prepStmt = connection.prepareStatement(SQLQueries.GET_GROUP_NAME_BY_ID_SQL);
             prepStmt.setInt(1, tenantId);
@@ -450,15 +631,39 @@ public class GroupDAO {
                 roleName = rSet.getString(1);
             }
             connection.commit();
+            
+            if (StringUtils.isNotEmpty(roleName)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Retrieved group name: " + roleName + " for group ID: " + id + 
+                            " in tenant ID: " + tenantId);
+                }
+            } else if (log.isDebugEnabled()) {
+                log.debug("No group name found for group ID: " + id + " in tenant ID: " + tenantId);
+            }
         } catch (SQLException e) {
+            log.error("Error when retrieving group name for group ID: " + id + " in tenant ID: " + tenantId, e);
             throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rSet, prepStmt);
         }
         // Verify whether the roleName is not empty, and it's not contain any prefix Application/Internal
         if (StringUtils.isNotEmpty(roleName) && !SCIMCommonUtils.isHybridRole(roleName)) {
-            return SCIMCommonUtils.getPrimaryFreeGroupName(roleName);
+            String primaryFreeGroupName = SCIMCommonUtils.getPrimaryFreeGroupName(roleName);
+            if (log.isDebugEnabled()) {
+                log.debug("Returning primary-domain-free group name: " + primaryFreeGroupName + 
+                        " for group ID: " + id);
+            }
+            return primaryFreeGroupName;
         }
+        
+        if (log.isDebugEnabled()) {
+            if (StringUtils.isEmpty(roleName)) {
+                log.debug("Group name is empty for group ID: " + id + " in tenant ID: " + tenantId);
+            } else if (SCIMCommonUtils.isHybridRole(roleName)) {
+                log.debug("Group: " + roleName + " is a hybrid role, not returning for group ID: " + id);
+            }
+        }
+        
         return null;
     }
 
@@ -466,27 +671,48 @@ public class GroupDAO {
             throws IdentitySCIMException {
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
+        String oldRoleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(oldRoleName);
+        String newRoleNameWithDomain = SCIMCommonUtils.getGroupNameWithDomain(newRoleName);
 
-        if (isExistingGroup(SCIMCommonUtils.getGroupNameWithDomain(oldRoleName), tenantId)) {
+        if (log.isDebugEnabled()) {
+            log.debug("Updating role name from: " + oldRoleNameWithDomain + " to: " + newRoleNameWithDomain + 
+                    " in tenant ID: " + tenantId);
+        }
+
+        if (isExistingGroup(oldRoleNameWithDomain, tenantId)) {
             try {
                 prepStmt = connection.prepareStatement(SQLQueries.UPDATE_GROUP_NAME_SQL);
 
-                prepStmt.setString(1, SCIMCommonUtils.getGroupNameWithDomain(newRoleName));
+                prepStmt.setString(1, newRoleNameWithDomain);
                 prepStmt.setInt(2, tenantId);
-                prepStmt.setString(3, SCIMCommonUtils.getGroupNameWithDomain(oldRoleName));
+                prepStmt.setString(3, oldRoleNameWithDomain);
 
                 int count = prepStmt.executeUpdate();
                 if (log.isDebugEnabled()) {
-                    log.debug("No. of records updated for updating SCIM Group : " + count);
+                    log.debug("Updated " + count + " records for group: " + oldRoleNameWithDomain + 
+                            " to new name: " + newRoleNameWithDomain + " in tenant ID: " + tenantId);
                 }
+                
+                if (count > 0) {
+                    log.info("Successfully updated role name from: " + oldRoleNameWithDomain + 
+                            " to: " + newRoleNameWithDomain + " in tenant ID: " + tenantId);
+                } else {
+                    log.warn("No records were updated when changing role name from: " + oldRoleNameWithDomain + 
+                            " to: " + newRoleNameWithDomain + " in tenant ID: " + tenantId);
+                }
+                
                 connection.commit();
             } catch (SQLException e) {
+                log.error("Error updating role name from: " + oldRoleNameWithDomain + " to: " + 
+                        newRoleNameWithDomain + " in tenant ID: " + tenantId, e);
                 throw new IdentitySCIMException("Error updating the SCIM Group Attributes", e);
             } finally {
                 IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
             }
         } else {
-            throw new IdentitySCIMException("Error when updating role name of the role: " + oldRoleName);
+            String errorMsg = "Error when updating role name of the role: " + oldRoleName;
+            log.error(errorMsg + ". Group does not exist in tenant ID: " + tenantId);
+            throw new IdentitySCIMException(errorMsg);
         }
     }
 
