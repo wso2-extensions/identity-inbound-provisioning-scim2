@@ -26,6 +26,9 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.ApplicationActor;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
@@ -233,5 +236,25 @@ public class SupportUtils {
             scimResponse.getHeaderParamMap().put(ASK_PASSWORD_CONFIRMATION_CODE_HEADER_NAME, confirmationCode);
         }
         return buildResponse(scimResponse);
+    }
+
+    /**
+     * This is used to set the flow and initiator in the identity context
+     * for the admin or application initiated flows. This method cannot be
+     * utilized for the user initiated flows.
+     *
+     * @param flowName The name of the flow to set in the identity context.
+     */
+    public static void updateIdentityContextFlow(Flow.Name flowName) {
+
+        if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
+            IdentityContext.getThreadLocalIdentityContext()
+                    .setFlow(new Flow.Builder().name(flowName).initiatingPersona(
+                            Flow.InitiatingPersona.APPLICATION).build());
+        } else if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
+            IdentityContext.getThreadLocalIdentityContext()
+                    .setFlow(new Flow.Builder().name(flowName).initiatingPersona(
+                            Flow.InitiatingPersona.ADMIN).build());
+        }
     }
 }
