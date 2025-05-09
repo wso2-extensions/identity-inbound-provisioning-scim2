@@ -239,7 +239,9 @@ public class SupportUtils {
     }
 
     /**
-     * This is used to set the flow and initiator in the identity context.
+     * This is used to set the flow and initiator in the identity context
+     * for the admin or application initiated flows. This method cannot be
+     * utilized for the user initiated flows.
      *
      * @param flowName The name of the flow to set in the identity context.
      */
@@ -249,7 +251,7 @@ public class SupportUtils {
             IdentityContext.getThreadLocalIdentityContext()
                     .setFlow(new Flow.Builder().name(flowName).initiatingPersona(
                             Flow.InitiatingPersona.APPLICATION).build());
-        } else {
+        } else if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
             IdentityContext.getThreadLocalIdentityContext()
                     .setFlow(new Flow.Builder().name(flowName).initiatingPersona(
                             Flow.InitiatingPersona.ADMIN).build());
