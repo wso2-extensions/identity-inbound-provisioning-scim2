@@ -42,6 +42,7 @@ public class BulkResource extends AbstractResource {
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                String resourceString) {
         try {
+
             SupportUtils.updateIdentityContextFlow(Flow.Name.BULK_RESOURCE_UPDATE);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -69,7 +70,6 @@ public class BulkResource extends AbstractResource {
 
             // create charon-SCIM bulk endpoint and hand-over the request.
             BulkResourceManager bulkResourceManager = new BulkResourceManager();
-
             // Call for process bulk data.
             SCIMResponse scimResponse =
                     bulkResourceManager.processBulkData(resourceString, userManager, roleManager, roleV2Manager);

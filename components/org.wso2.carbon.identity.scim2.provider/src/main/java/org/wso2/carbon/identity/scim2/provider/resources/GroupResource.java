@@ -388,7 +388,6 @@ public class GroupResource extends AbstractResource {
             return handleFormatNotSupportedException(e);
         }
 
-
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.ID, id);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, PATCH.class.getSimpleName());
