@@ -367,6 +367,7 @@ public class GroupResource extends AbstractResource {
                                String resourceString) {
 
         try {
+            SupportUtils.updateIdentityContextFlow(Flow.Name.GROUP_UPDATE);
             // content-type header is compulsory in patch request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -395,8 +396,6 @@ public class GroupResource extends AbstractResource {
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, attribute);
         requestAttributes.put(SCIMProviderConstants.EXCLUDE_ATTRIBUTES, excludedAttributes);
         requestAttributes.put(SCIMProviderConstants.SEARCH, "0");
-
-        SupportUtils.updateIdentityContextFlow(Flow.Name.GROUP_UPDATE);
 
         return processRequest(requestAttributes);
     }
