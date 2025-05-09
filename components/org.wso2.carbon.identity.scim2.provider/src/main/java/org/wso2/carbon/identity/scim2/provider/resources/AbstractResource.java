@@ -107,7 +107,11 @@ public class AbstractResource {
 
         // Log the internal server errors.
         if (e.getStatus() == 500) {
-            logger.error("Server error while handling the request.", e);
+            logger.error("Server error while handling the SCIM request.", e);
+        } else if (e.getStatus() == 404) {
+            logger.warn("Resource not found in the requested location: " + e.getMessage());
+        } else if (e.getStatus() == 401 || e.getStatus() == 403) {
+            logger.warn("Authorization failure for SCIM request: " + e.getMessage());
         }
 
         return SupportUtils.buildResponse(AbstractResourceManager.encodeSCIMException(e));
@@ -122,6 +126,8 @@ public class AbstractResource {
         if (logger.isDebugEnabled()) {
             logger.debug(e.getMessage(), e);
         }
+        
+        logger.warn("Unsupported format in SCIM request: " + e.getMessage());
 
         // use the default JSON encoder to build the error response.
         return SupportUtils.buildResponse(

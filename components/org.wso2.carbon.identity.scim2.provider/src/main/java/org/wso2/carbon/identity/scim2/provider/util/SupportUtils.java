@@ -149,7 +149,9 @@ public class SupportUtils {
             }
 
             SCIMCommonUtils.buildCustomSchema(tenantId);
+            log.info("Successfully built custom schema for tenant: " + tenantId);
         } catch (NotImplementedException | BadRequestException e) {
+            log.error("Error while building SCIM custom schema for tenant " + tenantId + ": " + e.getMessage(), e);
             throw new CharonException("Error while building scim custom schema", e);
         }
     }
@@ -180,18 +182,29 @@ public class SupportUtils {
             if (request.has(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT) &&
                     request.getJSONObject(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT)
                             .has(ASK_PASSWORD_KEY)) {
-                return Boolean.parseBoolean(
+                boolean isAskPassword = Boolean.parseBoolean(
                         request.getJSONObject(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT)
                                 .getString(ASK_PASSWORD_KEY));
+                if (isAskPassword && log.isDebugEnabled()) {
+                    log.debug("Ask password flow detected in enterprise user schema");
+                }
+                return isAskPassword;
             }
 
             String customSchemaURI = SCIMCommonUtils.getCustomSchemaURI();
             if (customSchemaURI != null && request.has(customSchemaURI) &&
                     request.getJSONObject(customSchemaURI).has(ASK_PASSWORD_KEY)) {
-                return Boolean.parseBoolean(request.getJSONObject(customSchemaURI).getString(ASK_PASSWORD_KEY));
+                boolean isAskPassword = Boolean.parseBoolean(request.getJSONObject(customSchemaURI).getString(ASK_PASSWORD_KEY));
+                if (isAskPassword && log.isDebugEnabled()) {
+                    log.debug("Ask password flow detected in custom schema: " + customSchemaURI);
+                }
+                return isAskPassword;
             }
 
         } catch (JSONException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error parsing JSON to determine ask password flow: " + e.getMessage());
+            }
             return false;
         }
 
@@ -230,7 +243,15 @@ public class SupportUtils {
 
         String confirmationCode = getAskPasswordConfirmationCodeThreadLocal();
         if (StringUtils.isNotEmpty(confirmationCode)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Adding ask password confirmation code to response header");
+            }
+            log.info("User created with ask password flow. Adding confirmation code to response header");
             scimResponse.getHeaderParamMap().put(ASK_PASSWORD_CONFIRMATION_CODE_HEADER_NAME, confirmationCode);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Ask password enabled but confirmation code is empty");
+            }
         }
         return buildResponse(scimResponse);
     }
