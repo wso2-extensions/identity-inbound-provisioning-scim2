@@ -1520,7 +1520,8 @@ public class SCIMUserManager implements UserManager {
                     node.getValue()));
         }
         // Check whether the filter operation is supported by the users endpoint.
-        if (isFilteringNotSupported(node.getOperation())) {
+        if (isFilteringNotSupported(node.getOperation()) &&
+                !node.getOperation().equalsIgnoreCase(SCIMCommonConstants.NE)) {
             String errorMessage =
                     "Filter operation: " + node.getOperation() + " is not supported for filtering in users endpoint.";
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_FILTER);
@@ -2401,6 +2402,8 @@ public class SCIMUserManager implements UserManager {
                 conditionOperation = ExpressionOperation.GE.toString();
             } else if (SCIMCommonConstants.LE.equals(operation)) {
                 conditionOperation = ExpressionOperation.LE.toString();
+            } else if (SCIMCommonConstants.NE.equals(operation)) {
+                conditionOperation = ExpressionOperation.NE.toString();
             } else {
                 conditionOperation = operation;
             }
