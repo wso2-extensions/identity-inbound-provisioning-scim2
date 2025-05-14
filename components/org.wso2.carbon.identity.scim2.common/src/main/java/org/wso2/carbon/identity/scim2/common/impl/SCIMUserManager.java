@@ -145,6 +145,7 @@ import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
+import static org.wso2.carbon.identity.password.policy.constants.PasswordPolicyConstants.ErrorMessages.ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildSystemSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
@@ -434,7 +435,8 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private void handleErrorsOnUserNameAndPasswordPolicy(Throwable e) throws BadRequestException {
+    private void handleErrorsOnUserNameAndPasswordPolicy(Throwable e)
+            throws BadRequestException, CharonException {
 
         int i = 0; // this variable is used to avoid endless loop if the e.getCause never becomes null.
         while (e != null && i < 10) {
@@ -463,6 +465,11 @@ public class SCIMUserManager implements UserManager {
                         (ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION.getCode())) ||
                         StringUtils.equals(errorCode, ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION.getCode())) {
                     throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                }
+                if (StringUtils.equals(errorCode, ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES.getCode())) {
+                    String message = "Error occurred while loading Password Policies. The configured password-pattern " +
+                            "regex is invalid. Please verify and correct your regex syntax.";
+                    throw new CharonException(message);
                 }
             }
             e = e.getCause();
