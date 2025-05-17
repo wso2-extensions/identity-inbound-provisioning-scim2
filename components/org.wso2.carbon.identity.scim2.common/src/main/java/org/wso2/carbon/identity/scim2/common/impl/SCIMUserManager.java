@@ -5580,7 +5580,7 @@ public class SCIMUserManager implements UserManager {
         // Get all new claims, which are only modifying the value of an existing claim.
         for (Map.Entry<String, String> eachNewClaim : newClaimListExcludingMultiValuedClaims.entrySet()) {
             if (oldClaimListExcludingMultiValuedClaims.containsKey(eachNewClaim.getKey()) &&
-                    !oldClaimListExcludingMultiValuedClaims.get(eachNewClaim.getKey())
+                    !oldClaimListExcludingMultiValuedClaims.get(eachNewClaim.getKey()).trim()
                             .equals(eachNewClaim.getValue())) {
                 userClaimsToBeModified.put(eachNewClaim.getKey(), eachNewClaim.getValue());
             }
