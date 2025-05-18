@@ -28,6 +28,7 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpStatus;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -6215,6 +6216,11 @@ public class SCIMUserManager implements UserManager {
             if (mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY) != null) {
                 attribute.addAttributeProperty(SUPPORTED_BY_DEFAULT_PROPERTY,
                         mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY));
+            }
+            if (StringUtils.isNotEmpty(mappedLocalClaim.getClaimProperty(ClaimConstants.CANONICAL_VALUES_PROPERTY))) {
+                JSONArray canonicalValues =
+                        new JSONArray(mappedLocalClaim.getClaimProperty(ClaimConstants.CANONICAL_VALUES_PROPERTY));
+                attribute.addAttributeJSONPropertyArray(ClaimConstants.CANONICAL_VALUES_PROPERTY, canonicalValues);
             }
 
             // Add attribute profile properties.
