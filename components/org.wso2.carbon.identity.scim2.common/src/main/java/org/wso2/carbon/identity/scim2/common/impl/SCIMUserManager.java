@@ -1137,6 +1137,11 @@ public class SCIMUserManager implements UserManager {
                 isExistingUser = carbonUM.isExistingUser(user.getUserName());
             }
 
+            if (log.isDebugEnabled()) {
+                log.debug("User existence check for user: " + user.getUserName() +
+                        ", exists: " + isExistingUser);
+            }
+
             if (!isExistingUser) {
                 throw new CharonException("User name is immutable in carbon user store.");
             }
@@ -1165,6 +1170,9 @@ public class SCIMUserManager implements UserManager {
             claims.remove(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI);
 
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            if (log.isDebugEnabled() && MapUtils.isEmpty(scimToLocalClaimsMap)) {
+                log.debug("SCIM to Local Claim mappings list is empty for user: " + user.getUserName());
+            }
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
             if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
@@ -5495,6 +5503,13 @@ public class SCIMUserManager implements UserManager {
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
 
         preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted);
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format(
+                    "Updating user claims for user '%s'. Claims to be added: %s, to be deleted: %s, to be modified: %s",
+                    user.getUserName(), userClaimsToBeAdded.keySet(), userClaimsToBeDeleted.keySet(),
+                    userClaimsToBeModified.keySet()));
+        }
 
         // Remove user claims.
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
