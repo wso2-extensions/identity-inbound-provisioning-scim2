@@ -1138,7 +1138,7 @@ public class SCIMUserManager implements UserManager {
             }
 
             if (log.isDebugEnabled()) {
-                log.debug("User existence check for user: " + user.getUserName() +
+                log.debug("User existence check for userID: " + user.getId() +
                         ", exists: " + isExistingUser);
             }
 
@@ -1171,7 +1171,7 @@ public class SCIMUserManager implements UserManager {
 
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             if (log.isDebugEnabled() && MapUtils.isEmpty(scimToLocalClaimsMap)) {
-                log.debug("SCIM to Local Claim mappings list is empty for user: " + user.getId());
+                log.debug("SCIM to Local Claim mappings list is empty for userID: " + user.getId());
             }
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
@@ -1361,7 +1361,7 @@ public class SCIMUserManager implements UserManager {
 
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             if (log.isDebugEnabled() && MapUtils.isEmpty(scimToLocalClaimsMap)) {
-                log.debug("SCIM to Local Claim mappings list is empty for user: " + user.getId());
+                log.debug("SCIM to Local Claim mappings list is empty for userID: " + user.getId());
             }
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
