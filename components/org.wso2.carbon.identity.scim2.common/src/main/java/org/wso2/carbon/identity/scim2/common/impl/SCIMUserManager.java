@@ -1360,6 +1360,9 @@ public class SCIMUserManager implements UserManager {
             claims.remove(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI);
 
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            if (log.isDebugEnabled() && MapUtils.isEmpty(scimToLocalClaimsMap)) {
+                log.debug("SCIM to Local Claim mappings list is empty for user: " + user.getUserName());
+            }
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
             if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
