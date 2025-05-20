@@ -1171,7 +1171,7 @@ public class SCIMUserManager implements UserManager {
 
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             if (log.isDebugEnabled() && MapUtils.isEmpty(scimToLocalClaimsMap)) {
-                log.debug("SCIM to Local Claim mappings list is empty for user: " + user.getUserName());
+                log.debug("SCIM to Local Claim mappings list is empty for user: " + user.getId());
             }
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
@@ -1361,7 +1361,7 @@ public class SCIMUserManager implements UserManager {
 
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
             if (log.isDebugEnabled() && MapUtils.isEmpty(scimToLocalClaimsMap)) {
-                log.debug("SCIM to Local Claim mappings list is empty for user: " + user.getUserName());
+                log.debug("SCIM to Local Claim mappings list is empty for user: " + user.getId());
             }
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
@@ -5510,7 +5510,7 @@ public class SCIMUserManager implements UserManager {
         if (log.isDebugEnabled()) {
             log.debug(String.format(
                     "Updating user claims for user '%s'. Claims to be added: %s, to be deleted: %s, to be modified: %s",
-                    user.getUserName(), userClaimsToBeAdded.keySet(), userClaimsToBeDeleted.keySet(),
+                    user.getId(), userClaimsToBeAdded.keySet(), userClaimsToBeDeleted.keySet(),
                     userClaimsToBeModified.keySet()));
         }
 
@@ -5610,6 +5610,13 @@ public class SCIMUserManager implements UserManager {
         preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted,
                 simpleMultiValuedClaimsToBeAdded,
                 simpleMultiValuedClaimsToBeRemoved, oldClaimList);
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format(
+                    "Updating user claims for user '%s'. Claims to be added: %s, to be deleted: %s, to be modified: %s",
+                    user.getId(), userClaimsToBeAdded.keySet(), userClaimsToBeDeleted.keySet(),
+                    userClaimsToBeModified.keySet()));
+        }
 
         // Remove user claims.
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
