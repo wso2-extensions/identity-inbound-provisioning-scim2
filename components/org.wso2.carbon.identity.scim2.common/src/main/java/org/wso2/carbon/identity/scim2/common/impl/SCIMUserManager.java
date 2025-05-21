@@ -1772,11 +1772,25 @@ public class SCIMUserManager implements UserManager {
     }
 
     private Set<org.wso2.carbon.user.core.common.User> filterUsersByGroup(Node node, int offset, int limit,
-                                                                          String domainName) throws CharonException {
+                                                                          String sortBy, String sortOrder,
+                                                                          String domainName)
+            throws CharonException, BadRequestException {
 
         // Set filter values.
         String attributeName = ((ExpressionNode) node).getAttributeValue();
         String filterOperation = ((ExpressionNode) node).getOperation();
+
+        // Handle “Not Equal” (ne) filter on the groups attribute.
+        if (SCIMCommonConstants.NE.equalsIgnoreCase(filterOperation)) {
+
+            if (StringUtils.isNotBlank(domainName)) {
+                // If a specific user-store domain is provided, filter only within that domain.
+                Condition condition = createConditionForSingleAttributeFilter(domainName, node);
+                return filterUsernames(condition, offset, limit, sortBy, sortOrder, domainName);
+            }
+            // No domain specified: iterate over all configured user-store domains
+            return filterUsersFromMultipleDomains(node, offset, limit, sortBy, sortOrder, null);
+        }
 
         /*
         If there is a domain and if the domain separator is not found in the attribute value, append the domain
@@ -1818,7 +1832,7 @@ public class SCIMUserManager implements UserManager {
         // Filter users when filter by group.
         if (!SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
                 SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
-            return filterUsersByGroup(node, offset, limit, domainName);
+            return filterUsersByGroup(node, offset, limit, sortBy, sortOrder, domainName);
         }
 
         // Filter users when the domain is specified in the request.
@@ -1847,6 +1861,20 @@ public class SCIMUserManager implements UserManager {
         String attributeName = ((ExpressionNode) node).getAttributeValue();
         String filterOperation = ((ExpressionNode) node).getOperation();
         String attributeValue = ((ExpressionNode) node).getValue();
+
+        // Handle “Not Equal” (ne) filter on the groups attribute.
+        if (SCIMCommonConstants.NE.equalsIgnoreCase(filterOperation)) {
+
+            int max = getMaxLimitForTotalResults(domainName);
+
+            if (StringUtils.isNotBlank(domainName)) {
+                // If a specific domain/user-store is provided, count matching users in that domain only.
+                Condition condition = createConditionForSingleAttributeFilter(domainName, node);
+                return getFilteredUserCountFromSingleDomain(condition, 1, max, domainName);
+            }
+            // No domain specified: count matching users across all configured user-stores.
+            return getFilteredUserCountFromMultipleDomains(node, 1, max, null);
+        }
 
         /*
         If there is a domain and if the domain separator is not found in the attribute value, append the domain
@@ -6807,7 +6835,7 @@ public class SCIMUserManager implements UserManager {
             throws CharonException, BadRequestException {
 
         if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
-            return filterUsersByGroup(node, offset, maxLimit, domainName).size();
+            return filterUsersByGroup(node, offset, maxLimit, null, null, domainName).size();
         }
         if (StringUtils.isNotEmpty(domainName)) {
             Condition condition = createConditionForSingleAttributeFilter(domainName, node);
