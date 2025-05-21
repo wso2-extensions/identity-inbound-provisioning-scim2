@@ -39,6 +39,7 @@ public class SCIMCommonConstants {
     public static final String SERVICE_PROVIDER_CONFIG = "/ServiceProviderConfig";
     public static final String RESOURCE_TYPE = "/ResourceTypes";
     public static final String DEFAULT = "default";
+    public static final String AUTHORIZED_SCOPES = "authorizedScopes";
 
     public static final int USER = 1;
     public static final int GROUP = 2;
