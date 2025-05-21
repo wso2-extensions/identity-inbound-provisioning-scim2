@@ -254,6 +254,20 @@ public class SCIMUserManager implements UserManager {
     public User createUser(User user, Map<String, Boolean> requiredAttributes)
             throws CharonException, ConflictException, BadRequestException, ForbiddenException {
 
+        List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
+                SCIMCommonConstants.AUTHORIZED_SCOPES);
+
+        if (authorizedScopes == null ||
+                !(authorizedScopes.contains("internal_user_mgt_create") ||
+                        authorizedScopes.contains("internal_bulk_user_create") ||
+                        authorizedScopes.contains("internal_bulk_resource_create") ||
+                        authorizedScopes.contains("internal_org_user_mgt_create") ||
+                        authorizedScopes.contains("internal_org_bulk_user_create") ||
+                        authorizedScopes.contains("internal_org_bulk_resource_create")  )) {
+            throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
+                            " make this request..");
+        }
+
         String userStoreName = null;
         try {
             String userStoreDomainFromSP = getUserStoreDomainFromSP();
@@ -3727,7 +3741,8 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public void patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations)
-            throws NotImplementedException, BadRequestException, CharonException, NotFoundException {
+            throws NotImplementedException, BadRequestException, CharonException,
+            NotFoundException, ForbiddenException {
 
         doPatchGroup(groupId, currentGroupName, patchOperations);
     }
@@ -3735,14 +3750,15 @@ public class SCIMUserManager implements UserManager {
     @Override
     public Group patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations,
                             Map<String, Boolean> requiredAttributes) throws NotImplementedException,
-            BadRequestException, CharonException, NotFoundException {
+            BadRequestException, CharonException, NotFoundException, ForbiddenException {
 
         doPatchGroup(groupId, currentGroupName, patchOperations);
         return getGroup(groupId, requiredAttributes);
     }
 
     private void doPatchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations) throws
-            NotImplementedException, BadRequestException, CharonException, NotFoundException {
+            NotImplementedException, BadRequestException, CharonException, NotFoundException,
+            ForbiddenException {
 
         if (log.isDebugEnabled()) {
             log.debug("Updating group: " + currentGroupName);
@@ -3775,6 +3791,23 @@ public class SCIMUserManager implements UserManager {
             Set<String> deletedMembers = new HashSet<>();
             Set<Object> newlyAddedMemberIds = new HashSet<>();
             Set<Object> deletedMemberIds = new HashSet<>();
+
+            if (CollectionUtils.isNotEmpty(memberOperations)){
+
+                List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
+                        SCIMCommonConstants.AUTHORIZED_SCOPES);
+
+                if (authorizedScopes == null ||
+                        !(authorizedScopes.contains("internal_group_mgt_update") ||
+                                authorizedScopes.contains("internal_bulk_resource_create") ||
+                                authorizedScopes.contains("internal_bulk_group_update") ||
+                                authorizedScopes.contains("internal_org_group_mgt_update") ||
+                                authorizedScopes.contains("internal_org_bulk_resource_create") ||
+                                authorizedScopes.contains("internal_org_bulk_group_update") )) {
+                    throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
+                            " make this request..");
+                }
+            }
 
             for (PatchOperation memberOperation : memberOperations) {
                 if (memberOperation.getValues() instanceof Map) {
