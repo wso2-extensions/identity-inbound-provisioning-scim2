@@ -6220,7 +6220,7 @@ public class SCIMUserManager implements UserManager {
             if (StringUtils.isNotEmpty(mappedLocalClaim.getClaimProperty(ClaimConstants.CANONICAL_VALUES_PROPERTY))) {
                 JSONArray canonicalValues =
                         new JSONArray(mappedLocalClaim.getClaimProperty(ClaimConstants.CANONICAL_VALUES_PROPERTY));
-                attribute.addAttributeJSONPropertyArray(ClaimConstants.CANONICAL_VALUES_PROPERTY, canonicalValues);
+                attribute.addAttributeJSONArray(ClaimConstants.CANONICAL_VALUES_PROPERTY, canonicalValues);
             }
 
             // Add attribute profile properties.
