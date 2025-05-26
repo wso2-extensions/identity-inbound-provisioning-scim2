@@ -145,6 +145,12 @@ public class SCIMCommonUtils {
         return scimURL + SCIMCommonConstants.ROLES_V2;
     }
 
+    public static String getSCIMRoleV3URL() {
+
+        String scimURL = getSCIMURL(true);
+        return scimURL + SCIMCommonConstants.ROLES_V3;
+    }
+
     public static String getApplicationRefURL(String id) {
 
         String applicationURL;

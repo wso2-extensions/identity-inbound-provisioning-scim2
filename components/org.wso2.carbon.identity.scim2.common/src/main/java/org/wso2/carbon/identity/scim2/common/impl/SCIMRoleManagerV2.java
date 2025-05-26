@@ -484,6 +484,248 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return getRole(roleId, requiredAttributes);
     }
 
+    @Override
+    public RoleV2 createRoleMeta(RoleV2 role)
+            throws CharonException, ConflictException, NotImplementedException, BadRequestException {
+
+        try {
+            // Check if the role already exists.
+            if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
+                String error = "Role with id: " + role.getId() + " already exists in the tenantDomain: "
+                        + tenantDomain;
+                throw new ConflictException(error);
+            }
+
+            if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equals(role.
+                    getAudienceType())) {
+                ServiceProvider app = ApplicationManagementService.getInstance().getApplicationByResourceId(
+                        role.getAudienceValue(), tenantDomain);
+                if (app == null) {
+                    throw new BadRequestException("Invalid audience value. Audience value should be valid " +
+                            "application ID");
+                }
+
+                if (app.getSpProperties() != null && Arrays.stream(app.getSpProperties())
+                        .anyMatch(property -> ApplicationConstants.IS_FRAGMENT_APP.equals(property.getName())
+                                && Boolean.parseBoolean(property.getValue()))) {
+                    throw new BadRequestException("Role creation for shared applications is not allowed at " +
+                            "organization level.");
+                }
+            }
+            List<String> permissionValues = role.getPermissionValues();
+            List<Permission> permissionList = new ArrayList<>();
+            if (permissionValues != null) {
+                for (String permissionValue : permissionValues) {
+                    Permission permission = new Permission(permissionValue);
+                    permissionList.add(permission);
+                }
+            }
+            String audienceType = role.getAudienceType();
+            String audienceValue = role.getAudienceValue();
+            if (LOG.isDebugEnabled()) {
+                if (StringUtils.isNotBlank(audienceType) && StringUtils.isNotBlank(audienceValue)) {
+                    LOG.debug("Creating role: " + role.getDisplayName() + " for " + audienceType + " with id: " +
+                            audienceValue + " audience.");
+                } else {
+                    LOG.debug("Creating role: " + role.getDisplayName() + " for organization.");
+                }
+            }
+
+            RoleBasicInfo roleBasicInfo =
+                    roleManagementService.addRole(role.getDisplayName(), Collections.emptyList(),
+                            Collections.emptyList(), permissionList, audienceType,
+                            role.getAudienceValue(), tenantDomain);
+
+            RoleV2 createdRole = new RoleV2();
+            createdRole.setId(roleBasicInfo.getId());
+            String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
+            createdRole.setLocation(locationURI);
+            createdRole.setDisplayName(roleBasicInfo.getName());
+            createdRole.setSchemas();
+            createdRole.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
+                    roleBasicInfo.getAudience());
+            return createdRole;
+        } catch (IdentityRoleManagementException e) {
+            if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
+                throw new ConflictException(e.getMessage());
+            } else if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+                throw new BadRequestException(e.getMessage());
+            } else if (INVALID_AUDIENCE.getCode().equals(e.getErrorCode()) ||
+                    INVALID_PERMISSION.getCode().equals(e.getErrorCode())) {
+                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+            }
+            throw new CharonException(
+                    String.format("Error occurred while adding a new role: %s", role.getDisplayName()), e);
+        } catch (IdentityApplicationManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while retrieving application relevant for role: %s audience.",
+                            role.getDisplayName()), e);
+        } catch (OrganizationManagementException e) {
+            throw new CharonException(
+                    String.format("Error occurred while checking the organization status of the tenant: %s",
+                            tenantDomain), e);
+        }
+    }
+
+    @Override
+    public RoleV2 updateRoleMeta(RoleV2 oldRole, RoleV2 newRole)
+            throws BadRequestException, CharonException, ConflictException, NotFoundException {
+
+        doUpdateRoleName(oldRole, newRole);
+        doUpdatePermissions(oldRole, newRole);
+
+        RoleV2 role = new RoleV2();
+        role.setDisplayName(newRole.getDisplayName());
+        role.setId(oldRole.getId());
+        role.setSchemas();
+        role.setLocation(oldRole.getLocation());
+        role.setAudience(oldRole.getAudienceValue(), oldRole.getAudienceDisplayName(), oldRole.getAudienceType());
+        return role;
+    }
+
+    @Override
+    public RoleV2 patchRoleMeta(String roleId, Map<String, List<PatchOperation>> patchOperations)
+            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
+
+        String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Updating Role: " + roleId);
+        }
+
+        List<PatchOperation> displayNameOperations = new ArrayList<>();
+        List<PatchOperation> permissionOperations = new ArrayList<>();
+
+        if (MapUtils.isEmpty(patchOperations)) {
+            throw new CharonException("Patch operation can't be null or empty.");
+        }
+        for (List<PatchOperation> patchOperationList : patchOperations.values()) {
+            for (PatchOperation patchOperation : patchOperationList) {
+                switch (patchOperation.getAttributeName()) {
+                    case (SCIMConstants.RoleSchemaConstants.DISPLAY_NAME):
+                        displayNameOperations.add(patchOperation);
+                        break;
+                    case (SCIMConstants.RoleSchemaConstants.PERMISSIONS):
+                        permissionOperations.add(patchOperation);
+                        break;
+                }
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(displayNameOperations)) {
+            if (isSharedRole(roleId)) {
+                throw new BadRequestException("Role name modification is not allowed for shared roles.",
+                        ResponseCodeConstants.INVALID_VALUE);
+            }
+            String newRoleName = (String) displayNameOperations.get(displayNameOperations.size() - 1).getValues();
+            updateRoleName(roleId, currentRoleName, newRoleName);
+        }
+        if (CollectionUtils.isNotEmpty(permissionOperations)) {
+            if (isSharedRole(roleId)) {
+                throw new BadRequestException("Role permission modification is not allowed for shared roles.",
+                        ResponseCodeConstants.INVALID_VALUE);
+            }
+            updatePermissions(roleId, permissionOperations);
+        }
+
+        HashMap<String, Boolean> requiredAttributes = new HashMap<>();
+        requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
+        return getRole(roleId, requiredAttributes);
+    }
+
+    @Override
+    public RoleV2 updateUsersRole(RoleV2 oldRole, RoleV2 newRole)
+            throws BadRequestException, CharonException, ConflictException, NotFoundException {
+
+        doUpdateUsers(oldRole, newRole);
+
+        RoleV2 role = new RoleV2();
+        role.setDisplayName(newRole.getDisplayName());
+        role.setId(oldRole.getId());
+        role.setSchemas();
+        role.setLocation(oldRole.getLocation());
+        role.setAudience(oldRole.getAudienceValue(), oldRole.getAudienceDisplayName(), oldRole.getAudienceType());
+        return role;
+    }
+
+    @Override
+    public RoleV2 patchUsersRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
+            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Updating User for Role: " + roleId);
+        }
+
+        List<PatchOperation> memberOperations = new ArrayList<>();
+
+        if (MapUtils.isEmpty(patchOperations)) {
+            throw new CharonException("Patch operation can't be null or empty.");
+        }
+        for (List<PatchOperation> patchOperationList : patchOperations.values()) {
+            for (PatchOperation patchOperation : patchOperationList) {
+                switch (patchOperation.getAttributeName()) {
+                    case (SCIMConstants.RoleSchemaConstants.USERS):
+                        memberOperations.add(patchOperation);
+                        break;
+                }
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(memberOperations)) {
+            updateUsers(roleId, memberOperations);
+        }
+
+        HashMap<String, Boolean> requiredAttributes = new HashMap<>();
+        requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
+        return getRole(roleId, requiredAttributes);
+    }
+
+    @Override
+    public RoleV2 updateGroupsRole(RoleV2 oldRole, RoleV2 newRole)
+            throws BadRequestException, CharonException, ConflictException, NotFoundException {
+
+        doUpdateGroups(oldRole, newRole);
+
+        RoleV2 role = new RoleV2();
+        role.setDisplayName(newRole.getDisplayName());
+        role.setId(oldRole.getId());
+        role.setSchemas();
+        role.setLocation(oldRole.getLocation());
+        role.setAudience(oldRole.getAudienceValue(), oldRole.getAudienceDisplayName(), oldRole.getAudienceType());
+        return role;
+    }
+
+    @Override
+    public RoleV2 patchGroupsRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
+            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Updating Group for Role: " + roleId);
+        }
+
+        List<PatchOperation> groupOperations = new ArrayList<>();
+
+        if (MapUtils.isEmpty(patchOperations)) {
+            throw new CharonException("Patch operation can't be null or empty.");
+        }
+        for (List<PatchOperation> patchOperationList : patchOperations.values()) {
+            for (PatchOperation patchOperation : patchOperationList) {
+                switch (patchOperation.getAttributeName()) {
+                    case (SCIMConstants.RoleSchemaConstants.GROUPS):
+                        groupOperations.add(patchOperation);
+                        break;
+                }
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(groupOperations)) {
+            updateGroups(roleId, groupOperations);
+        }
+
+        HashMap<String, Boolean> requiredAttributes = new HashMap<>();
+        requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
+        return getRole(roleId, requiredAttributes);
+    }
+
     /**
      * Filter users using multi-attribute filters or single attribute filters with pagination.
      *
