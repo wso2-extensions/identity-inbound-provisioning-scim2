@@ -127,13 +127,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                 SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-        if (authorizedScopes == null ||
+        if (authorizedScopes != null &&
                 !(authorizedScopes.contains("internal_role_mgt_create") ||
                         authorizedScopes.contains("internal_bulk_resource_create") ||
                         authorizedScopes.contains("internal_bulk_role_create") ||
                         authorizedScopes.contains("internal_org_role_mgt_create") ||
                         authorizedScopes.contains("internal_org_bulk_resource_create") ||
                         authorizedScopes.contains("internal_org_bulk_role_create"))) {
+
             throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
                     " make this request..");
         }
@@ -376,13 +377,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                 SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-        if (authorizedScopes == null ||
+        if (authorizedScopes != null &&
                 !(authorizedScopes.contains("internal_role_mgt_delete") ||
                         authorizedScopes.contains("internal_bulk_resource_create") ||
                         authorizedScopes.contains("internal_bulk_role_delete") ||
                         authorizedScopes.contains("internal_org_role_mgt_delete") ||
                         authorizedScopes.contains("internal_org_bulk_resource_create") ||
                         authorizedScopes.contains("internal_org_bulk_role_delete"))) {
+
             throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
                     " make this request..");
         }
@@ -435,13 +437,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                 SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-        if (authorizedScopes == null ||
+        if (authorizedScopes != null &&
                 !(authorizedScopes.contains("internal_role_mgt_update") ||
                         authorizedScopes.contains("internal_bulk_resource_create") ||
                         authorizedScopes.contains("internal_bulk_role_update") ||
                         authorizedScopes.contains("internal_org_role_mgt_update") ||
                         authorizedScopes.contains("internal_org_bulk_resource_create") ||
                         authorizedScopes.contains("internal_org_bulk_role_update"))) {
+
             throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
                     " make this request..");
         }
@@ -467,15 +470,16 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                 SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-        if (authorizedScopes == null ||
+        if (authorizedScopes != null &&
                 !(authorizedScopes.contains("internal_role_mgt_update") ||
-                        authorizedScopes.contains("internal_bulk_resource_create") ||
-                        authorizedScopes.contains("internal_bulk_role_update") ||
-                        authorizedScopes.contains("internal_org_role_mgt_update") ||
-                        authorizedScopes.contains("internal_org_bulk_resource_create") ||
-                        authorizedScopes.contains("internal_org_bulk_role_update"))) {
-            throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
-                    " make this request..");
+                    authorizedScopes.contains("internal_bulk_resource_create") ||
+                    authorizedScopes.contains("internal_bulk_role_update") ||
+                    authorizedScopes.contains("internal_org_role_mgt_update") ||
+                    authorizedScopes.contains("internal_org_bulk_resource_create") ||
+                    authorizedScopes.contains("internal_org_bulk_role_update"))) {
+
+                throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
+                        " make this request..");
         }
 
         String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
