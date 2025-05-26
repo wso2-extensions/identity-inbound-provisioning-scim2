@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.lang.StringUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -1347,6 +1348,55 @@ public class SCIMUserManagerTest {
         SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         assertEquals(userManager.getEnterpriseUserSchema().size(), 2);
+    }
+
+    @Test
+    public void testGetSystemUserSchema() throws Exception {
+
+        JSONArray canonicalValues = new JSONArray();
+
+        JSONObject localUser = new JSONObject();
+        localUser.put("value", "LOCAL");
+        localUser.put("displayValue", "Local User");
+
+        JSONObject federatedUser = new JSONObject();
+        federatedUser.put("value", "FEDERATED");
+        federatedUser.put("displayValue", "Federated User");
+
+        canonicalValues.put(localUser);
+        canonicalValues.put(federatedUser);
+
+        Map<String, String> properties = new HashMap<String, String>() {{
+            put("ReadOnly", "true");
+            put("SupportedByDefault", "true");
+            put("Description", "sample");
+            put("Required", "true");
+            put("DataType", "Integer");
+            put("canonicalValues", canonicalValues.toString());
+        }};
+
+        List<LocalClaim> localClaimMap = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim("userType", new ArrayList<>(), properties));
+        }};
+        List<ExternalClaim> externalClaimMap = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT,
+                    SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT + ":userType",
+                    "userType"));
+        }};
+
+        when(mockClaimMetadataManagementService
+                .getExternalClaims(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT,
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimMap);
+        when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(localClaimMap);
+        scimCommonUtils.when(SCIMCommonUtils::isUserExtensionEnabled).thenReturn(true);
+
+        SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        List<Attribute> systemSchema = userManager.getSystemUserSchema();
+        assertEquals(systemSchema.size(), 1);
+        JSONObject jsonObject = systemSchema.get(0).getAttributeJSONArray("canonicalValues").getJSONObject(0);
+        assertEquals(jsonObject.get("displayValue"), canonicalValues.getJSONObject(0).get("displayValue"));
     }
 
     @Test
