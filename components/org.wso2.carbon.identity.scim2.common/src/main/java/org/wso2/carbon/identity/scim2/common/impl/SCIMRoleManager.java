@@ -101,10 +101,11 @@ public class SCIMRoleManager implements RoleManager {
         List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                 SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-        if (authorizedScopes == null ||
+        if (authorizedScopes != null &&
                 !(authorizedScopes.contains("internal_role_mgt_create") ||
                         authorizedScopes.contains("internal_bulk_resource_create") ||
                         authorizedScopes.contains("internal_bulk_role_create"))) {
+
             throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
                     " make this request..");
         }
@@ -206,10 +207,11 @@ public class SCIMRoleManager implements RoleManager {
         List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                 SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-        if (authorizedScopes == null ||
+        if (authorizedScopes != null &&
                 !(authorizedScopes.contains("internal_role_mgt_delete") ||
                         authorizedScopes.contains("internal_bulk_resource_create") ||
                         authorizedScopes.contains("internal_bulk_role_delete"))) {
+
             throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
                     " make this request..");
         }
@@ -402,10 +404,11 @@ public class SCIMRoleManager implements RoleManager {
         List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                 SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-        if (authorizedScopes == null ||
+        if (authorizedScopes != null &&
                 !(authorizedScopes.contains("internal_role_mgt_update") ||
                         authorizedScopes.contains("internal_bulk_resource_create") ||
                         authorizedScopes.contains("internal_bulk_role_update"))) {
+
             throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
                     " make this request..");
         }
@@ -593,10 +596,11 @@ public class SCIMRoleManager implements RoleManager {
         List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                 SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-        if (authorizedScopes == null ||
+        if (authorizedScopes != null &&
                 !(authorizedScopes.contains("internal_role_mgt_update") ||
                         authorizedScopes.contains("internal_bulk_resource_create") ||
                         authorizedScopes.contains("internal_bulk_role_update"))) {
+
             throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
                     " make this request..");
         }
