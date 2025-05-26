@@ -538,7 +538,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
             RoleV2 createdRole = new RoleV2();
             createdRole.setId(roleBasicInfo.getId());
-            String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
+            String locationURI = SCIMCommonUtils.getSCIMRoleV3URL(roleBasicInfo.getId());
             createdRole.setLocation(locationURI);
             createdRole.setDisplayName(roleBasicInfo.getName());
             createdRole.setSchemas();
