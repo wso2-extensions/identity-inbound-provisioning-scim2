@@ -1391,9 +1391,6 @@ public class SCIMUserManagerTest {
                 .thenReturn(localClaimMap);
         scimCommonUtils.when(SCIMCommonUtils::isUserExtensionEnabled).thenReturn(true);
 
-        SCIMUserSchemaExtensionBuilder sb = spy(new SCIMUserSchemaExtensionBuilder());
-        scimUserSchemaExtensionBuilder.when(SCIMUserSchemaExtensionBuilder::getInstance).thenReturn(sb);
-        when(sb.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
         when(mockedSCIMAttributeSchema.getSubAttributeSchema(anyString())).thenReturn(mockedAttributeSchema);
         when(mockedAttributeSchema.getType()).thenReturn(SCIMDefinitions.DataType.STRING);
 
