@@ -1391,9 +1391,6 @@ public class SCIMUserManagerTest {
                 .thenReturn(localClaimMap);
         scimCommonUtils.when(SCIMCommonUtils::isUserExtensionEnabled).thenReturn(true);
 
-        when(mockedSCIMAttributeSchema.getSubAttributeSchema(anyString())).thenReturn(mockedAttributeSchema);
-        when(mockedAttributeSchema.getType()).thenReturn(SCIMDefinitions.DataType.STRING);
-
         SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         List<Attribute> systemSchema = userManager.getSystemUserSchema();
