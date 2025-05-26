@@ -257,7 +257,7 @@ public class SCIMUserManager implements UserManager {
         List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                 SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-        if (authorizedScopes == null ||
+        if (authorizedScopes != null &&
                 !(authorizedScopes.contains("internal_user_mgt_create") ||
                         authorizedScopes.contains("internal_bulk_user_create") ||
                         authorizedScopes.contains("internal_bulk_resource_create") ||
@@ -3797,7 +3797,7 @@ public class SCIMUserManager implements UserManager {
                 List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
                         SCIMCommonConstants.AUTHORIZED_SCOPES);
 
-                if (authorizedScopes == null ||
+                if (authorizedScopes != null &&
                         !(authorizedScopes.contains("internal_group_mgt_update") ||
                                 authorizedScopes.contains("internal_bulk_resource_create") ||
                                 authorizedScopes.contains("internal_bulk_group_update") ||
