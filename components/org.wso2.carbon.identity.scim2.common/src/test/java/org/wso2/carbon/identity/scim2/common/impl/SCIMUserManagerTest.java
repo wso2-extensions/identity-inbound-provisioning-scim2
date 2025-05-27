@@ -839,6 +839,15 @@ public class SCIMUserManagerTest {
         testUser2.setUserStoreDomain("PRIMARY");
         users.add(testUser2);
 
+        org.wso2.carbon.user.core.common.User testUser3 = new org.wso2.carbon.user.core.common.User(UUID.randomUUID()
+                .toString(), "testUser3", "testUser3");
+        Map<String, String> testUser3Attributes = new HashMap<>();
+        testUser3Attributes.put("http://wso2.org/claims/givenname", "testNewUser");
+        testUser3Attributes.put("http://wso2.org/claims/emailaddress", "testUser3@wso2.com");
+        testUser3.setAttributes(testUser3Attributes);
+        testUser3.setUserStoreDomain("PRIMARY");
+        users.add(testUser3);
+
         return new Object[][]{
 
                 {users, "name.givenName eq testUser", 2,
@@ -849,6 +858,24 @@ public class SCIMUserManagerTest {
                 {users, "name.givenName eq testUser and emails eq testUser1@wso2.com", 1,
                         new ArrayList<org.wso2.carbon.user.core.common.User>() {{
                             add(testUser1);
+                        }}},
+                {users, "name.givenName ne testUser", 1,
+                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser3);
+                        }}},
+                {users, "userName ne testUser1", 2,
+                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2);
+                            add(testUser3);
+                        }}},
+                {users, "name.givenName ne testNewUser and emails ne testUser1@wso2.com", 1,
+                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2);
+                        }}},
+                // 'testUser1' is assumed to be part of the admin group.
+                {users, "groups ne admin", 2,
+                        new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3);
                         }}}
         };
     }
@@ -878,9 +905,17 @@ public class SCIMUserManagerTest {
 
         mockedUserStoreManager = mock(AbstractUserStoreManager.class);
 
-        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), anyInt(),
+        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(count),
                 anyInt(), nullable(String.class), nullable(String.class)))
                 .thenReturn(filteredUsersWithPagination.getFilteredUsers());
+
+        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(),
+                eq(configuredMaxLimit), anyInt(), nullable(String.class), nullable(String.class)))
+                .thenReturn(filteredUsersWithoutPagination.getFilteredUsers());
+
+        when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(),
+                eq(Integer.MAX_VALUE), anyInt(), nullable(String.class), nullable(String.class)))
+                .thenReturn(filteredUsersWithoutPagination.getFilteredUsers());
 
         when(mockedUserStoreManager.getPaginatedUserListWithID(any(Condition.class), anyString(), anyString(), eq(count),
                 anyInt(), nullable(String.class), nullable(String.class))).thenReturn(filteredUsersWithPagination);
@@ -1134,7 +1169,103 @@ public class SCIMUserManagerTest {
                             add(testUser5);
                         }}),
                         false, false, "SECONDARY", 1, 4, 1, 2},
-
+                {users, "userName ne testUser1",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3); add(testUser4); add(testUser5);
+                        }}),
+                        true,  false, "PRIMARY",  2, 4, 2, 4},
+                {users, "userName ne testUser1",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3); add(testUser4); add(testUser5);
+                        }}),
+                        false, false, "PRIMARY",  2, 4, 2, 2},
+                {users, "userName ne testUser1",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3); add(testUser4); add(testUser5);
+                        }}),
+                        true,  false, "SECONDARY", 2, 4, 2, 4},
+                {users, "userName ne testUser1",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3); add(testUser4); add(testUser5);
+                        }}),
+                        true,  true,  "SECONDARY", 2, 4, 2, 4},
+                {users, "name.givenName ne testUser",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser4);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser4); add(testUser5);
+                        }}),
+                        true,  false, "PRIMARY",  1, 4, 1, 2},
+                {users, "name.givenName ne testUser",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser4);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser4); add(testUser5);
+                        }}),
+                        false, false, "PRIMARY",  1, 4, 1, 1},
+                {users, "userName ne testUser1 and name.givenName ne testUser",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser4);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser4); add(testUser5);
+                        }}),
+                        true,  false, "PRIMARY",  1, 4, 1, 2},
+                {users, "userName ne testUser1 and name.givenName ne testUser",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser4);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser4); add(testUser5);
+                        }}),
+                        false, false, "PRIMARY",  1, 4, 1, 1},
+                // 'testUser1' is assumed to be part of the admin group.
+                {users, "groups ne admin",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3); add(testUser4); add(testUser5);
+                        }}),
+                        true,  false, "PRIMARY",  2, 4, 2, 4},
+                {users, "groups ne admin",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser1); add(testUser2);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3); add(testUser4); add(testUser5);
+                        }}),
+                        false, false, "PRIMARY",  2, 4, 2, 2},
+                {users, "groups ne admin",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3); add(testUser4); add(testUser5);
+                        }}),
+                        true,  false, "SECONDARY", 2, 4, 2, 4},
+                {users, "groups ne admin",
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3);
+                        }}),
+                        new PaginatedUserResponse(new ArrayList<org.wso2.carbon.user.core.common.User>() {{
+                            add(testUser2); add(testUser3); add(testUser4); add(testUser5);
+                        }}),
+                        true,  true,  "SECONDARY", 2, 4, 2, 4},
         };
     }
 

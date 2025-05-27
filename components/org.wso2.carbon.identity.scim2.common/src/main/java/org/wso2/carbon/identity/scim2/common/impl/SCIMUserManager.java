@@ -1790,11 +1790,18 @@ public class SCIMUserManager implements UserManager {
     }
 
     private Set<org.wso2.carbon.user.core.common.User> filterUsersByGroup(Node node, int offset, int limit,
-                                                                          String domainName) throws CharonException {
+                                                                          String sortBy, String sortOrder,
+                                                                          String domainName)
+            throws CharonException, BadRequestException {
 
         // Set filter values.
         String attributeName = ((ExpressionNode) node).getAttributeValue();
         String filterOperation = ((ExpressionNode) node).getOperation();
+
+        // Handle “Not Equal” (ne) filter on the groups attribute.
+        if (SCIMCommonConstants.NE.equalsIgnoreCase(filterOperation)) {
+            return getFilteredUsersBasedOnDomain(node, offset, limit, sortBy, sortOrder, domainName);
+        }
 
         /*
         If there is a domain and if the domain separator is not found in the attribute value, append the domain
@@ -1836,10 +1843,31 @@ public class SCIMUserManager implements UserManager {
         // Filter users when filter by group.
         if (!SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
                 SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
-            return filterUsersByGroup(node, offset, limit, domainName);
+            return filterUsersByGroup(node, offset, limit, sortBy, sortOrder, domainName);
         }
 
-        // Filter users when the domain is specified in the request.
+        return getFilteredUsersBasedOnDomain(node, offset, limit, sortBy, sortOrder, domainName);
+    }
+
+    /**
+     * Method to filter users based on domain scope.
+     * If domainName is provided, filters from single domain, otherwise filters from all the configured domains.
+     *
+     * @param node       Expression or Operation node
+     * @param offset     Start index value
+     * @param limit      Count value
+     * @param sortBy     SortBy
+     * @param sortOrder  Sort order
+     * @param domainName Domain to perform the search
+     * @return User names of the filtered users
+     * @throws CharonException     Error while filtering
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value.
+     */
+    private Set<org.wso2.carbon.user.core.common.User> getFilteredUsersBasedOnDomain(Node node, int offset, int limit,
+                                                                                     String sortBy, String sortOrder,
+                                                                                     String domainName)
+            throws CharonException, BadRequestException {
+
         if (StringUtils.isNotEmpty(domainName)) {
             return filterUsernames(createConditionForSingleAttributeFilter(domainName, node), offset, limit,
                     sortBy, sortOrder, domainName);
@@ -1865,6 +1893,11 @@ public class SCIMUserManager implements UserManager {
         String attributeName = ((ExpressionNode) node).getAttributeValue();
         String filterOperation = ((ExpressionNode) node).getOperation();
         String attributeValue = ((ExpressionNode) node).getValue();
+
+        // Handle “Not Equal” (ne) filter on the groups attribute.
+        if (SCIMCommonConstants.NE.equalsIgnoreCase(filterOperation)) {
+            return getFilteredUsersCountBasedOnDomain(node, 1, getMaxLimitForTotalResults(domainName), domainName);
+        }
 
         /*
         If there is a domain and if the domain separator is not found in the attribute value, append the domain
@@ -2420,6 +2453,8 @@ public class SCIMUserManager implements UserManager {
                 conditionOperation = ExpressionOperation.GE.toString();
             } else if (SCIMCommonConstants.LE.equals(operation)) {
                 conditionOperation = ExpressionOperation.LE.toString();
+            } else if (SCIMCommonConstants.NE.equals(operation)) {
+                conditionOperation = ExpressionOperation.NE.toString();
             } else {
                 conditionOperation = operation;
             }
@@ -3396,7 +3431,7 @@ public class SCIMUserManager implements UserManager {
                     + attributeValue);
         }
         // Check whether the filter operation is supported for filtering in groups.
-        if (isFilteringNotSupported(filterOperation)) {
+        if (isFilteringNotSupported(filterOperation) || SCIMCommonConstants.NE.equalsIgnoreCase(filterOperation)) {
             String errorMessage = "Filter operation: " + filterOperation + " is not supported for groups filtering.";
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_FILTER);
         }
@@ -5035,7 +5070,8 @@ public class SCIMUserManager implements UserManager {
                 .equalsIgnoreCase(SCIMCommonConstants.CO) && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.SW)
                 && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.EW)
                 && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.GE)
-                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.LE);
+                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.LE)
+                && !filterOperation.equalsIgnoreCase(SCIMCommonConstants.NE);
     }
 
     private Set<org.wso2.carbon.user.core.common.User> getUserListOfRoles(List<String> roleNames)
@@ -6842,8 +6878,27 @@ public class SCIMUserManager implements UserManager {
             throws CharonException, BadRequestException {
 
         if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
-            return filterUsersByGroup(node, offset, maxLimit, domainName).size();
+            return filterUsersByGroup(node, offset, maxLimit, null, null, domainName).size();
         }
+        return getFilteredUsersCountBasedOnDomain(node, offset, maxLimit, domainName);
+    }
+
+    /**
+     * Retrieves the count of filtered users based on domain scope.
+     * If domain name is provided, filters within that specific domain.
+     * Otherwise, filters across all available domains.
+     *
+     * @param node       Filter condition tree.
+     * @param offset     Starting index of the count.
+     * @param maxLimit   The maximum number of users to be counted.
+     * @param domainName Domain that the filter should perform. If empty, filtering is applied to all available domains.
+     * @return The count of users that match the filtering conditions.
+     * @throws CharonException     Error while filtering the users.
+     * @throws BadRequestException Domain miss match in domain parameter and attribute value.
+     */
+    private int getFilteredUsersCountBasedOnDomain(Node node, int offset, int maxLimit, String domainName)
+            throws CharonException, BadRequestException {
+
         if (StringUtils.isNotEmpty(domainName)) {
             Condition condition = createConditionForSingleAttributeFilter(domainName, node);
             return getFilteredUserCountFromSingleDomain(condition, offset, maxLimit, domainName);
