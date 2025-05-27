@@ -28,6 +28,7 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpStatus;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -145,6 +146,7 @@ import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
+import static org.wso2.carbon.identity.password.policy.constants.PasswordPolicyConstants.ErrorMessages.ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildSystemSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
@@ -434,7 +436,8 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private void handleErrorsOnUserNameAndPasswordPolicy(Throwable e) throws BadRequestException {
+    private void handleErrorsOnUserNameAndPasswordPolicy(Throwable e)
+            throws BadRequestException, CharonException {
 
         int i = 0; // this variable is used to avoid endless loop if the e.getCause never becomes null.
         while (e != null && i < 10) {
@@ -463,6 +466,11 @@ public class SCIMUserManager implements UserManager {
                         (ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION.getCode())) ||
                         StringUtils.equals(errorCode, ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION.getCode())) {
                     throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+                }
+                if (StringUtils.equals(errorCode, ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES.getCode())) {
+                    String message = "Error occurred while loading Password Policies. The configured password-pattern " +
+                            "regex is invalid. Please verify and correct your regex syntax.";
+                    throw new CharonException(message);
                 }
             }
             e = e.getCause();
@@ -1137,6 +1145,11 @@ public class SCIMUserManager implements UserManager {
                 isExistingUser = carbonUM.isExistingUser(user.getUserName());
             }
 
+            if (log.isDebugEnabled()) {
+                log.debug("User existence check for userID: " + user.getId() +
+                        ", exists: " + isExistingUser);
+            }
+
             if (!isExistingUser) {
                 throw new CharonException("User name is immutable in carbon user store.");
             }
@@ -1165,6 +1178,9 @@ public class SCIMUserManager implements UserManager {
             claims.remove(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI);
 
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            if (log.isDebugEnabled() && MapUtils.isEmpty(scimToLocalClaimsMap)) {
+                log.debug("SCIM to Local Claim mappings list is empty for userID: " + user.getId());
+            }
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
             if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
@@ -1352,6 +1368,9 @@ public class SCIMUserManager implements UserManager {
             claims.remove(SCIMConstants.CommonSchemaConstants.RESOURCE_TYPE_URI);
 
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
+            if (log.isDebugEnabled() && MapUtils.isEmpty(scimToLocalClaimsMap)) {
+                log.debug("SCIM to Local Claim mappings list is empty for userID: " + user.getId());
+            }
             List<String> requiredClaims = getOnlyRequiredClaims(scimToLocalClaimsMap.keySet(), requiredAttributes);
             List<String> requiredClaimsInLocalDialect;
             if (MapUtils.isNotEmpty(scimToLocalClaimsMap)) {
@@ -5532,6 +5551,13 @@ public class SCIMUserManager implements UserManager {
 
         preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted);
 
+        if (log.isDebugEnabled()) {
+            log.debug(String.format(
+                    "Updating user claims for user '%s'. Claims to be added: %s, to be deleted: %s, to be modified: %s",
+                    user.getId(), userClaimsToBeAdded.keySet(), userClaimsToBeDeleted.keySet(),
+                    userClaimsToBeModified.keySet()));
+        }
+
         // Remove user claims.
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
             if (!isImmutableClaim(entry.getKey())) {
@@ -5616,7 +5642,7 @@ public class SCIMUserManager implements UserManager {
         // Get all new claims, which are only modifying the value of an existing claim.
         for (Map.Entry<String, String> eachNewClaim : newClaimListExcludingMultiValuedClaims.entrySet()) {
             if (oldClaimListExcludingMultiValuedClaims.containsKey(eachNewClaim.getKey()) &&
-                    !oldClaimListExcludingMultiValuedClaims.get(eachNewClaim.getKey())
+                    !oldClaimListExcludingMultiValuedClaims.get(eachNewClaim.getKey()).trim()
                             .equals(eachNewClaim.getValue())) {
                 userClaimsToBeModified.put(eachNewClaim.getKey(), eachNewClaim.getValue());
             }
@@ -5628,6 +5654,13 @@ public class SCIMUserManager implements UserManager {
         preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted,
                 simpleMultiValuedClaimsToBeAdded,
                 simpleMultiValuedClaimsToBeRemoved, oldClaimList);
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format(
+                    "Updating user claims for user '%s'. Claims to be added: %s, to be deleted: %s, to be modified: %s",
+                    user.getId(), userClaimsToBeAdded.keySet(), userClaimsToBeDeleted.keySet(),
+                    userClaimsToBeModified.keySet()));
+        }
 
         // Remove user claims.
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
@@ -6251,6 +6284,11 @@ public class SCIMUserManager implements UserManager {
             if (mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY) != null) {
                 attribute.addAttributeProperty(SUPPORTED_BY_DEFAULT_PROPERTY,
                         mappedLocalClaim.getClaimProperty(ClaimConstants.SUPPORTED_BY_DEFAULT_PROPERTY));
+            }
+            if (StringUtils.isNotEmpty(mappedLocalClaim.getClaimProperty(ClaimConstants.CANONICAL_VALUES_PROPERTY))) {
+                JSONArray canonicalValues =
+                        new JSONArray(mappedLocalClaim.getClaimProperty(ClaimConstants.CANONICAL_VALUES_PROPERTY));
+                attribute.addAttributeJSONArray(ClaimConstants.CANONICAL_VALUES_PROPERTY, canonicalValues);
             }
 
             // Add attribute profile properties.

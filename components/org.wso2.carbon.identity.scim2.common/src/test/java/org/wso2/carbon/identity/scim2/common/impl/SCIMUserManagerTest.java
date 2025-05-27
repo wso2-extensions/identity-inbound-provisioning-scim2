@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.common.impl;
 
 import org.apache.commons.lang.StringUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -49,6 +50,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
+import org.wso2.carbon.identity.scim2.common.internal.action.PreUpdateProfileActionExecutor;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
@@ -105,6 +107,7 @@ import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -123,7 +126,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -131,7 +136,10 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
@@ -1474,6 +1482,55 @@ public class SCIMUserManagerTest {
     }
 
     @Test
+    public void testGetSystemUserSchema() throws Exception {
+
+        JSONArray canonicalValues = new JSONArray();
+
+        JSONObject localUser = new JSONObject();
+        localUser.put("value", "LOCAL");
+        localUser.put("displayValue", "Local User");
+
+        JSONObject federatedUser = new JSONObject();
+        federatedUser.put("value", "FEDERATED");
+        federatedUser.put("displayValue", "Federated User");
+
+        canonicalValues.put(localUser);
+        canonicalValues.put(federatedUser);
+
+        Map<String, String> properties = new HashMap<String, String>() {{
+            put("ReadOnly", "true");
+            put("SupportedByDefault", "true");
+            put("Description", "sample");
+            put("Required", "true");
+            put("DataType", "Integer");
+            put("canonicalValues", canonicalValues.toString());
+        }};
+
+        List<LocalClaim> localClaimMap = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim("userType", new ArrayList<>(), properties));
+        }};
+        List<ExternalClaim> externalClaimMap = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT,
+                    SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT + ":userType",
+                    "userType"));
+        }};
+
+        when(mockClaimMetadataManagementService
+                .getExternalClaims(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT,
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimMap);
+        when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(localClaimMap);
+        scimCommonUtils.when(SCIMCommonUtils::isUserExtensionEnabled).thenReturn(true);
+
+        SCIMUserManager userManager = new SCIMUserManager(mockedUserStoreManager, mockClaimMetadataManagementService,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        List<Attribute> systemSchema = userManager.getSystemUserSchema();
+        assertEquals(systemSchema.size(), 1);
+        JSONObject jsonObject = systemSchema.get(0).getAttributeJSONArray("canonicalValues").getJSONObject(0);
+        assertEquals(jsonObject.get("displayValue"), canonicalValues.getJSONObject(0).get("displayValue"));
+    }
+
+    @Test
     public void testGetEnterpriseUserSchemaWhenDisabled() throws Exception {
 
         scimCommonUtils.when(SCIMCommonUtils::isUserExtensionEnabled).thenReturn(false);
@@ -2190,6 +2247,147 @@ public class SCIMUserManagerTest {
             scimCommonUtils.when(SCIMCommonUtils::getSCIMtoLocalMappings).thenReturn(scimToLocalMappings);
             Map<String, String> actualSyncedAttributes = userManager.getSyncedUserAttributes();
             Assert.assertEquals(actualSyncedAttributes, expectedSyncedAttributes);
+        }
+    }
+
+    @Test
+    public void testUpdateUserClaimsWithNoChanges() throws Exception {
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(
+            mockedUserStoreManager,
+            mockClaimMetadataManagementService,
+            MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
+        ));
+
+        User user = mock(User.class);
+        when(user.getId()).thenReturn("foo");
+        Map<String, String> oldClaims =
+                new HashMap<>(Collections.singletonMap("claim1", "value1"));
+        Map<String, String> newClaims =
+                new HashMap<>(Collections.singletonMap("claim1", "value1"));
+        Map<String, String> multiValuedClaims = Collections.emptyMap();
+
+        Field preUpdateField = SCIMUserManager.class.getDeclaredField("preUpdateProfileActionExecutor");
+        preUpdateField.setAccessible(true);
+        PreUpdateProfileActionExecutor executorMock = mock(PreUpdateProfileActionExecutor.class);
+        preUpdateField.set(scimUserManager, executorMock);
+
+        doNothing().when(executorMock).execute(any(User.class), anyMap(), anyMap(), anyMap(), anyMap(), anyMap());
+
+        Field carbonUMField = SCIMUserManager.class.getDeclaredField("carbonUM");
+        carbonUMField.setAccessible(true);
+        carbonUMField.set(scimUserManager, mockedUserStoreManager);
+
+        doNothing().when(mockedUserStoreManager)
+            .setUserClaimValuesWithID(anyString(), anyMap(), isNull());
+
+        Method m = SCIMUserManager.class.getDeclaredMethod(
+            "updateUserClaims",
+            User.class, Map.class, Map.class, Map.class
+        );
+        m.setAccessible(true);
+        m.invoke(scimUserManager, user, oldClaims, newClaims, multiValuedClaims);
+
+        verify(mockedUserStoreManager, never())
+            .deleteUserClaimValueWithID(any(), any(), any());
+
+        verify(mockedUserStoreManager, times(1))
+            .setUserClaimValuesWithID(eq("foo"), anyMap(), isNull());
+    }
+
+    @Test
+    public void testUpdateUserClaims_AddDeleteModifyClaims() throws Exception {
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(
+                mockedUserStoreManager,
+                mockClaimMetadataManagementService,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
+        ));
+        User user = mock(User.class);
+        when(user.getId()).thenReturn("foo");
+
+        Map<String, String> oldClaims = new HashMap<>();
+        Map<String, String> newClaims = new HashMap<>();
+        Map<String, String> multiValuedClaims = new HashMap<>();
+
+        oldClaims.put("claim1", "value1");
+        oldClaims.put("claim2", "value2");
+        newClaims.put("claim1", "value1-modified");
+        newClaims.put("claim3", "value3");
+
+        Field preUpdateField = SCIMUserManager.class.getDeclaredField("preUpdateProfileActionExecutor");
+        preUpdateField.setAccessible(true);
+        PreUpdateProfileActionExecutor executorMock = mock(PreUpdateProfileActionExecutor.class);
+        preUpdateField.set(scimUserManager, executorMock);
+
+        doNothing().when(executorMock).execute(any(User.class), anyMap(), anyMap(), anyMap(), anyMap(), anyMap());
+
+        Field carbonUMField = SCIMUserManager.class.getDeclaredField("carbonUM");
+        carbonUMField.setAccessible(true);
+        carbonUMField.set(scimUserManager, mockedUserStoreManager);
+
+        doNothing().when(mockedUserStoreManager).setUserClaimValuesWithID(any(), anyMap(), isNull());
+        doNothing().when(mockedUserStoreManager).deleteUserClaimValueWithID(any(), any(), any());
+
+        Method m = SCIMUserManager.class.getDeclaredMethod(
+                "updateUserClaims",
+                User.class, Map.class, Map.class, Map.class
+        );
+        m.setAccessible(true);
+        m.invoke(scimUserManager, user, oldClaims, newClaims, multiValuedClaims);
+
+        verify(mockedUserStoreManager).deleteUserClaimValueWithID(eq("foo"), eq("claim2"), isNull());
+        verify(mockedUserStoreManager).setUserClaimValuesWithID(eq("foo"),
+                argThat(map -> map.containsKey("claim1") && map.containsKey("claim3")), isNull());
+    }
+
+    @Test
+    public void testUpdateUserClaims_MultiValuedClaims() throws Exception {
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(
+                mockedUserStoreManager,
+                mockClaimMetadataManagementService,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
+        ));
+        User user = mock(User.class);
+        when(user.getId()).thenReturn("foo");
+
+        Map<String, String> oldClaims = new HashMap<>();
+        Map<String, String> newClaims = new HashMap<>();
+        Map<String, String> multiValuedClaims = new HashMap<>();
+
+        multiValuedClaims.put("emails", "");
+        oldClaims.put("emails", "a@wso2.com,b@wso2.com");
+        newClaims.put("emails", "b@wso2.com,c@wso2.com");
+
+        Field preUpdateField = SCIMUserManager.class.getDeclaredField("preUpdateProfileActionExecutor");
+        preUpdateField.setAccessible(true);
+        PreUpdateProfileActionExecutor executorMock = mock(PreUpdateProfileActionExecutor.class);
+        preUpdateField.set(scimUserManager, executorMock);
+
+        doNothing().when(executorMock).execute(any(User.class), anyMap(), anyMap(), anyMap(), anyMap(), anyMap());
+
+        Field carbonUMField = SCIMUserManager.class.getDeclaredField("carbonUM");
+        carbonUMField.setAccessible(true);
+        carbonUMField.set(scimUserManager, mockedUserStoreManager);
+
+        try (MockedStatic<org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils> fw =
+                     mockStatic(org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.class)) {
+            fw.when(org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils::getMultiAttributeSeparator)
+                    .thenReturn(",");
+
+            doNothing().when(mockedUserStoreManager).setUserClaimValuesWithID(any(), anyMap(), anyMap(), anyMap(), anyMap(), isNull());
+
+            Method m = SCIMUserManager.class.getDeclaredMethod(
+                    "updateUserClaims", User.class, Map.class, Map.class, Map.class
+            );
+            m.setAccessible(true);
+            m.invoke(scimUserManager, user, oldClaims, newClaims, multiValuedClaims);
+
+            verify(mockedUserStoreManager).setUserClaimValuesWithID(
+                    eq("foo"), anyMap(), anyMap(),
+                    anyMap(), anyMap(), isNull()
+            );
         }
     }
 

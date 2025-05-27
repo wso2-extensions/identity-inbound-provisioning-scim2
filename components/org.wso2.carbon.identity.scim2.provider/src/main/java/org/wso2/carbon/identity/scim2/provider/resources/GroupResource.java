@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
@@ -366,6 +367,7 @@ public class GroupResource extends AbstractResource {
                                String resourceString) {
 
         try {
+            SupportUtils.updateIdentityContextFlow(Flow.Name.GROUP_UPDATE);
             // content-type header is compulsory in patch request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -386,7 +388,6 @@ public class GroupResource extends AbstractResource {
             return handleFormatNotSupportedException(e);
         }
 
-
         Map<String, String> requestAttributes = new HashMap<>();
         requestAttributes.put(SCIMProviderConstants.ID, id);
         requestAttributes.put(SCIMProviderConstants.HTTP_VERB, PATCH.class.getSimpleName());
@@ -394,6 +395,7 @@ public class GroupResource extends AbstractResource {
         requestAttributes.put(SCIMProviderConstants.ATTRIBUTES, attribute);
         requestAttributes.put(SCIMProviderConstants.EXCLUDE_ATTRIBUTES, excludedAttributes);
         requestAttributes.put(SCIMProviderConstants.SEARCH, "0");
+
         return processRequest(requestAttributes);
     }
 
