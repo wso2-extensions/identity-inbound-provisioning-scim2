@@ -650,7 +650,7 @@ public class SCIMRoleManagerTest {
     public void testUpdateRoleUpdateRoleName(String roleId, String oldRoleName, String newRoleName, String tenantDomain,
                                              String type)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
-            NotFoundException {
+            NotFoundException, ForbiddenException {
 
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
@@ -716,7 +716,7 @@ public class SCIMRoleManagerTest {
     public void testUpdateRoleUpdateRoleNameThrowingErrors(String roleId, String oldRoleName, String newRoleName,
                                                            String tenantDomain, String sError)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
-            NotFoundException {
+            NotFoundException, ForbiddenException {
 
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName);
 
@@ -769,7 +769,7 @@ public class SCIMRoleManagerTest {
     public void testUpdateRoleUpdateUserListOfRoleThrowingErrors(String roleId, String oldRoleName, String newRoleName,
                                                                  String tenantDomain, String type, String sError)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
-            NotFoundException {
+            NotFoundException, ForbiddenException {
 
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
@@ -815,7 +815,7 @@ public class SCIMRoleManagerTest {
     public void testUpdateRoleUpdateGroupListOfRoleThrowingErrors(String roleId, String oldRoleName, String newRoleName,
                                                                   String tenantDomain, String type, String sError)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
-            NotFoundException {
+            NotFoundException, ForbiddenException {
 
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
@@ -862,7 +862,7 @@ public class SCIMRoleManagerTest {
                                                                  String tenantDomain, String permissionType,
                                                                  String sError)
             throws IdentityRoleManagementException, BadRequestException, CharonException,
-            ConflictException, NotFoundException {
+            ConflictException, NotFoundException, ForbiddenException {
 
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, permissionType);
