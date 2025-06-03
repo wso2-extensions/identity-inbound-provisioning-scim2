@@ -390,7 +390,6 @@ public class SCIMRoleManager implements RoleManager {
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
         if (SCIMCommonUtils.isBulkRequest()) {
-
             SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
                     "internal_bulk_resource_create", "internal_bulk_role_update",
                     "internal_org_bulk_resource_create", "internal_org_bulk_role_update"));
@@ -577,7 +576,6 @@ public class SCIMRoleManager implements RoleManager {
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
         if (SCIMCommonUtils.isBulkRequest()) {
-
             SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
                     "internal_bulk_resource_create", "internal_bulk_role_update",
                     "internal_org_bulk_resource_create", "internal_org_bulk_role_update"));
