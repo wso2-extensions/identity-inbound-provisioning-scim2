@@ -225,7 +225,6 @@ public class SCIMUserManager implements UserManager {
             throws CharonException, ConflictException, BadRequestException, ForbiddenException {
 
         if (SCIMCommonUtils.isBulkRequest()) {
-
             SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList("internal_bulk_user_create",
                     "internal_bulk_resource_create", "internal_org_bulk_user_create",
                     "internal_org_bulk_resource_create"));

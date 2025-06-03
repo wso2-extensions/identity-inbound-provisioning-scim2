@@ -126,7 +126,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             BadRequestException, ForbiddenException {
 
         if (SCIMCommonUtils.isBulkRequest()) {
-
             SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
                     "internal_bulk_resource_create", "internal_bulk_role_create",
                     "internal_org_bulk_resource_create", "internal_org_bulk_role_create"));
@@ -419,7 +418,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
         if (SCIMCommonUtils.isBulkRequest()) {
-
             SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
                     "internal_bulk_resource_create", "internal_bulk_role_update",
                     "internal_org_bulk_resource_create", "internal_org_bulk_role_update"));
@@ -444,7 +442,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
         if (SCIMCommonUtils.isBulkRequest()) {
-
             SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
                     "internal_bulk_resource_create", "internal_bulk_role_update",
                     "internal_org_bulk_resource_create", "internal_org_bulk_role_update"));
