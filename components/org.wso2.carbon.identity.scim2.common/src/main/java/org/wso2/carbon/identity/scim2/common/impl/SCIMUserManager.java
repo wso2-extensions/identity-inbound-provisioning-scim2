@@ -224,18 +224,11 @@ public class SCIMUserManager implements UserManager {
     public User createUser(User user, Map<String, Boolean> requiredAttributes)
             throws CharonException, ConflictException, BadRequestException, ForbiddenException {
 
-        List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
-                SCIMCommonConstants.AUTHORIZED_SCOPES);
+        if (SCIMCommonUtils.isBulkRequest()) {
 
-        if (authorizedScopes != null &&
-                !(authorizedScopes.contains("internal_user_mgt_create") ||
-                        authorizedScopes.contains("internal_bulk_user_create") ||
-                        authorizedScopes.contains("internal_bulk_resource_create") ||
-                        authorizedScopes.contains("internal_org_user_mgt_create") ||
-                        authorizedScopes.contains("internal_org_bulk_user_create") ||
-                        authorizedScopes.contains("internal_org_bulk_resource_create")  )) {
-            throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
-                            " make this request..");
+            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList("internal_bulk_user_create",
+                    "internal_bulk_resource_create", "internal_org_bulk_user_create",
+                    "internal_org_bulk_resource_create"));
         }
 
         String userStoreName = null;
@@ -3709,19 +3702,10 @@ public class SCIMUserManager implements UserManager {
             Set<Object> deletedMemberIds = new HashSet<>();
 
             if (CollectionUtils.isNotEmpty(memberOperations)){
-
-                List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
-                        SCIMCommonConstants.AUTHORIZED_SCOPES);
-
-                if (authorizedScopes != null &&
-                        !(authorizedScopes.contains("internal_group_mgt_update") ||
-                                authorizedScopes.contains("internal_bulk_resource_create") ||
-                                authorizedScopes.contains("internal_bulk_group_update") ||
-                                authorizedScopes.contains("internal_org_group_mgt_update") ||
-                                authorizedScopes.contains("internal_org_bulk_resource_create") ||
-                                authorizedScopes.contains("internal_org_bulk_group_update") )) {
-                    throw new ForbiddenException("Operation is not permitted. You do not have permissions to" +
-                            " make this request..");
+                if (SCIMCommonUtils.isBulkRequest()) {
+                    SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList("internal_bulk_resource_create",
+                            "internal_bulk_group_update", "internal_org_bulk_resource_create",
+                            "internal_org_bulk_group_update"));
                 }
             }
 
