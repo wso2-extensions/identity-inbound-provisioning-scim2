@@ -144,6 +144,7 @@ public class GroupDAO {
 
     private boolean isExistingAttribute(String attributeName, String groupName, int tenantId)
             throws IdentitySCIMException {
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         ResultSet rSet = null;
@@ -171,6 +172,7 @@ public class GroupDAO {
 
     public void addSCIMGroupAttributes(int tenantId, String roleName, Map<String, String> attributes)
             throws IdentitySCIMException {
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
 
@@ -292,9 +294,9 @@ public class GroupDAO {
     /**
      * Update SCIM group attributes.
      *
-     * @param tenantId      Tenant id.
-     * @param roleName      Group name.
-     * @param attributes    Attributes to be updated.
+     * @param tenantId   Tenant id.
+     * @param roleName   Group name.
+     * @param attributes Attributes to be updated.
      * @throws IdentitySCIMException If an error occurred while updating the attributes.
      */
     public void updateSCIMGroupAttributes(int tenantId, String roleName,
@@ -337,6 +339,7 @@ public class GroupDAO {
     }
 
     public void removeSCIMGroup(int tenantId, String roleName) throws IdentitySCIMException {
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
 
@@ -358,6 +361,7 @@ public class GroupDAO {
 
     public Map<String, String> getSCIMGroupAttributes(int tenantId, String roleName)
             throws IdentitySCIMException {
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
         ResultSet rSet = null;
@@ -436,7 +440,8 @@ public class GroupDAO {
             }
             connection.commit();
         } catch (SQLException e) {
-            throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.", e);
+            throw new IdentitySCIMException("Error when reading the SCIM Group information from the persistence store.",
+                    e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rSet, prepStmt);
         }
@@ -449,6 +454,7 @@ public class GroupDAO {
 
     public void updateRoleName(int tenantId, String oldRoleName, String newRoleName)
             throws IdentitySCIMException {
+
         Connection connection = IdentityDatabaseUtil.getDBConnection();
         PreparedStatement prepStmt = null;
 
@@ -534,7 +540,7 @@ public class GroupDAO {
      * @throws IdentitySCIMException IdentitySCIMException when reading the SCIM Group information.
      */
     public String[] getGroupNameList(String searchAttributeName, String searchAttributeValue, Integer tenantId,
-            String domainName) throws IdentitySCIMException {
+                                     String domainName) throws IdentitySCIMException {
 
         List<String> roleList = new ArrayList<>();
         String sqlQuery;
