@@ -2304,7 +2304,7 @@ public class SCIMUserManager implements UserManager {
         int totalResults = 0;
         PaginatedUserResponse paginatedUserResult;
 
-        if (limit == 0) {
+        if (limit <= 0) {
           limit = getMaxLimit(domainName);
         }
         paginatedUserResult = getMultiAttributeFilteredUsersWithMaxLimit(node, offset, sortBy, sortOrder, domainName,
