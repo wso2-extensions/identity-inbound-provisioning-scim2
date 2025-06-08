@@ -110,6 +110,8 @@ public class UserResource extends AbstractResource {
                 throw  new FormatNotSupportedException(error);
             }
 
+            SupportUtils.updateIdentityContextFlow(Flow.Name.REGISTER_USER);
+
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 

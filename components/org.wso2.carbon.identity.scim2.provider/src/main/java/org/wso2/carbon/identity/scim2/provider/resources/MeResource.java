@@ -95,6 +95,7 @@ public class MeResource extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
+            SupportUtils.updateIdentityContextFlow(Flow.Name.REGISTER_USER);
 
             // create charon-SCIM user endpoint and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
