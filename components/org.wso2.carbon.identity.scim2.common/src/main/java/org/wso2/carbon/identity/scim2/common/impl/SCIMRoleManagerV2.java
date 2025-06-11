@@ -125,37 +125,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, ConflictException, NotImplementedException, BadRequestException {
 
         try {
-            // Check if the role already exists.
-            if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
-                String error = "Role with id: " + role.getId() + " already exists in the tenantDomain: "
-                        + tenantDomain;
-                throw new ConflictException(error);
-            }
+            checkIfRoleExists(role.getId(), tenantDomain);
+            validateOrganizationRoleCreation(role.getAudienceType(), role.getAudienceValue(), tenantDomain);
 
-            if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equals(role.
-                    getAudienceType())) {
-                ServiceProvider app = ApplicationManagementService.getInstance().getApplicationByResourceId(
-                        role.getAudienceValue(), tenantDomain);
-                if (app == null) {
-                    throw new BadRequestException("Invalid audience value. Audience value should be valid " +
-                            "application ID");
-                }
+            List<Permission> permissionList = buildPermissionList(role.getPermissionValues());
 
-                if (app.getSpProperties() != null && Arrays.stream(app.getSpProperties())
-                        .anyMatch(property -> ApplicationConstants.IS_FRAGMENT_APP.equals(property.getName())
-                                && Boolean.parseBoolean(property.getValue()))) {
-                    throw new BadRequestException("Role creation for shared applications is not allowed at " +
-                            "organization level.");
-                }
-            }
-            List<String> permissionValues = role.getPermissionValues();
-            List<Permission> permissionList = new ArrayList<>();
-            if (permissionValues != null) {
-                for (String permissionValue : permissionValues) {
-                    Permission permission = new Permission(permissionValue);
-                    permissionList.add(permission);
-                }
-            }
             String audienceType = role.getAudienceType();
             String audienceValue = role.getAudienceValue();
             if (LOG.isDebugEnabled()) {
@@ -188,15 +162,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 roleManagementService.updateIdpGroupListOfRole(roleBasicInfo.getId(), idpGroupList, new ArrayList<>(),
                         tenantDomain);
             }
-            RoleV2 createdRole = new RoleV2();
-            createdRole.setId(roleBasicInfo.getId());
+
             String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
-            createdRole.setLocation(locationURI);
-            createdRole.setDisplayName(roleBasicInfo.getName());
-            createdRole.setSchemas();
-            createdRole.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
-                    roleBasicInfo.getAudience());
-            return createdRole;
+            return buildSCIMRoleResponse(roleBasicInfo, locationURI);
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
                 throw new ConflictException(e.getMessage());
@@ -489,37 +457,11 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, ConflictException, NotImplementedException, BadRequestException {
 
         try {
-            // Check if the role already exists.
-            if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
-                String error = "Role with id: " + role.getId() + " already exists in the tenantDomain: "
-                        + tenantDomain;
-                throw new ConflictException(error);
-            }
+            checkIfRoleExists(role.getId(), tenantDomain);
+            validateOrganizationRoleCreation(role.getAudienceType(), role.getAudienceValue(), tenantDomain);
 
-            if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equals(role.
-                    getAudienceType())) {
-                ServiceProvider app = ApplicationManagementService.getInstance().getApplicationByResourceId(
-                        role.getAudienceValue(), tenantDomain);
-                if (app == null) {
-                    throw new BadRequestException("Invalid audience value. Audience value should be valid " +
-                            "application ID");
-                }
+            List<Permission> permissionList = buildPermissionList(role.getPermissionValues());
 
-                if (app.getSpProperties() != null && Arrays.stream(app.getSpProperties())
-                        .anyMatch(property -> ApplicationConstants.IS_FRAGMENT_APP.equals(property.getName())
-                                && Boolean.parseBoolean(property.getValue()))) {
-                    throw new BadRequestException("Role creation for shared applications is not allowed at " +
-                            "organization level.");
-                }
-            }
-            List<String> permissionValues = role.getPermissionValues();
-            List<Permission> permissionList = new ArrayList<>();
-            if (permissionValues != null) {
-                for (String permissionValue : permissionValues) {
-                    Permission permission = new Permission(permissionValue);
-                    permissionList.add(permission);
-                }
-            }
             String audienceType = role.getAudienceType();
             String audienceValue = role.getAudienceValue();
             if (LOG.isDebugEnabled()) {
@@ -536,15 +478,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                             Collections.emptyList(), permissionList, audienceType,
                             role.getAudienceValue(), tenantDomain);
 
-            RoleV2 createdRole = new RoleV2();
-            createdRole.setId(roleBasicInfo.getId());
             String locationURI = SCIMCommonUtils.getSCIMRoleV3URL(roleBasicInfo.getId());
-            createdRole.setLocation(locationURI);
-            createdRole.setDisplayName(roleBasicInfo.getName());
-            createdRole.setSchemas();
-            createdRole.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
-                    roleBasicInfo.getAudience());
-            return createdRole;
+            return buildSCIMRoleResponse(roleBasicInfo, locationURI);
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
                 throw new ConflictException(e.getMessage());
@@ -1738,5 +1673,61 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         } catch (IdentityRoleManagementException e) {
             throw new CharonException("Error while checking whether the role is a shared role.", e);
         }
+    }
+
+    private void checkIfRoleExists(String roleId, String tenantDomain)
+            throws ConflictException, IdentityRoleManagementException {
+
+        // Check if the role already exists.
+        if (roleManagementService.isExistingRole(roleId, tenantDomain)) {
+            String error = "Role with id: " + roleId + " already exists in the tenantDomain: "
+                    + tenantDomain;
+            throw new ConflictException(error);
+        }
+    }
+
+    private void validateOrganizationRoleCreation(String audienceType, String audienceValue, String tenantDomain)
+
+            throws BadRequestException, OrganizationManagementException, IdentityApplicationManagementException {
+
+        if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equals(audienceType)) {
+            ServiceProvider app = ApplicationManagementService.getInstance().getApplicationByResourceId(
+                    audienceValue, tenantDomain);
+            if (app == null) {
+                throw new BadRequestException("Invalid audience value. Audience value should be valid " +
+                        "application ID");
+            }
+
+            if (app.getSpProperties() != null && Arrays.stream(app.getSpProperties())
+                    .anyMatch(property -> ApplicationConstants.IS_FRAGMENT_APP.equals(property.getName())
+                            && Boolean.parseBoolean(property.getValue()))) {
+                throw new BadRequestException("Role creation for shared applications is not allowed at " +
+                        "organization level.");
+            }
+        }
+    }
+
+    private List<Permission> buildPermissionList(List<String> permissionValues) {
+
+        List<Permission> permissionList = new ArrayList<>();
+        if (permissionValues != null) {
+            for (String permissionValue : permissionValues) {
+                Permission permission = new Permission(permissionValue);
+                permissionList.add(permission);
+            }
+        }
+        return permissionList;
+    }
+
+    private RoleV2 buildSCIMRoleResponse(RoleBasicInfo roleBasicInfo, String locationURI)
+            throws BadRequestException, CharonException {
+
+        RoleV2 role = new RoleV2();
+        role.setId(roleBasicInfo.getId());
+        role.setLocation(locationURI);
+        role.setDisplayName(roleBasicInfo.getName());
+        role.setSchemas();
+        role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(), roleBasicInfo.getAudience());
+        return role;
     }
 }
