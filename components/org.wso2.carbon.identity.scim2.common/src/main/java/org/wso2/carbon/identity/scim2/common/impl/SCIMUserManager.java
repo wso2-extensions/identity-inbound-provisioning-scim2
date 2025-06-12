@@ -383,8 +383,7 @@ public class SCIMUserManager implements UserManager {
                 handleResourceLimitReached();
             }
 
-            publishEventOnUserRegistrationFailure(user, e.getErrorCode(), e.getMessage(),
-                    claimsInLocalDialect, carbonUM);
+            publishEventOnUserRegistrationFailure(user, e.getErrorCode(), e.getMessage(), claimsInLocalDialect);
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
             // Sometimes client exceptions are wrapped in the super class.
@@ -400,7 +399,7 @@ public class SCIMUserManager implements UserManager {
                     handleResourceLimitReached();
                 }
                 publishEventOnUserRegistrationFailure(user, ResponseCodeConstants.INVALID_VALUE, ex.getMessage(),
-                        claimsInLocalDialect, carbonUM);
+                        claimsInLocalDialect);
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
 
@@ -408,12 +407,10 @@ public class SCIMUserManager implements UserManager {
                 handleErrorsOnUserNameAndPasswordPolicy(e);
             } catch (BadRequestException | CharonException exception) {
                 publishEventOnUserRegistrationFailure(user, exception.getScimType(), exception.getMessage(),
-                        claimsInLocalDialect, carbonUM);
+                        claimsInLocalDialect);
                 throw exception;
             }
         } catch (NotImplementedException e) {
-            publishEventOnUserRegistrationFailure(user, e.getScimType(),
-                    "Error in getting user information from Carbon User Store", claimsInLocalDialect, carbonUM);
             throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return user;
@@ -6868,9 +6865,8 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private void publishEventOnUserRegistrationFailure(User user, String errorCode, String errorMessage, Map<String, String> claims,
-                                                       UserStoreManager userStoreManager)
-            throws BadRequestException {
+    private void publishEventOnUserRegistrationFailure(User user, String errorCode, String errorMessage,
+                                                       Map<String, String> claims) throws BadRequestException {
 
         HashMap<String, Object> properties = new HashMap<>();
         properties.put("ERROR_CODE", errorCode);
@@ -6881,11 +6877,10 @@ public class SCIMUserManager implements UserManager {
         }
         properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS, claims);
         properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
-        properties.put(IdentityEventConstants.EventProperty.USER_STORE_MANAGER, userStoreManager);
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getTenantId());
 
-        Event identityMgtEvent = new Event("REGISTRATION_FAILURE", properties);
+        Event identityMgtEvent = new Event("USER_REGISTRATION_FAILED", properties);
 
         try {
             SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
