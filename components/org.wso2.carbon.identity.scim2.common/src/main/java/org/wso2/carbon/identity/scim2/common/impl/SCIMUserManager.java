@@ -31,6 +31,7 @@ import org.apache.http.HttpStatus;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -257,6 +258,7 @@ public class SCIMUserManager implements UserManager {
                     "enabled for user store " + userStoreDomainName);
         }
 
+        Map<String, String> claimsInLocalDialect = Collections.emptyMap();
         try {
 
             // Persist in carbon user store.
@@ -307,7 +309,7 @@ public class SCIMUserManager implements UserManager {
 
             claimsMap.remove(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
 
-            Map<String, String> claimsInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap);
+            claimsInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap);
 
             org.wso2.carbon.user.core.common.User coreUser = null;
             /*Provide a preferred primary login identifier.Generate a unique user id as the immutable identifier of
@@ -380,6 +382,9 @@ public class SCIMUserManager implements UserManager {
             if (isResourceLimitReachedError(e)) {
                 handleResourceLimitReached();
             }
+
+            publishEventOnUserRegistrationFailure(user, e.getErrorCode(), e.getMessage(),
+                    claimsInLocalDialect, carbonUM);
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
             // Sometimes client exceptions are wrapped in the super class.
@@ -394,10 +399,21 @@ public class SCIMUserManager implements UserManager {
                 if (isResourceLimitReachedError((UserStoreClientException) ex)) {
                     handleResourceLimitReached();
                 }
+                publishEventOnUserRegistrationFailure(user, ResponseCodeConstants.INVALID_VALUE, ex.getMessage(),
+                        claimsInLocalDialect, carbonUM);
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
-            handleErrorsOnUserNameAndPasswordPolicy(e);
+
+            try {
+                handleErrorsOnUserNameAndPasswordPolicy(e);
+            } catch (BadRequestException | CharonException exception) {
+                publishEventOnUserRegistrationFailure(user, exception.getScimType(), exception.getMessage(),
+                        claimsInLocalDialect, carbonUM);
+                throw exception;
+            }
         } catch (NotImplementedException e) {
+            publishEventOnUserRegistrationFailure(user, e.getScimType(),
+                    "Error in getting user information from Carbon User Store", claimsInLocalDialect, carbonUM);
             throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return user;
@@ -3286,7 +3302,7 @@ public class SCIMUserManager implements UserManager {
             String errMsg = "Error in obtaining role names from user store.";
             errMsg += e.getMessage();
             throw resolveError(e, errMsg);
-        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+        } catch (UserStoreException e) {
             String errMsg = "Error in retrieving role names from user store.";
             throw resolveError(e, errMsg);
         } catch (IdentitySCIMException | BadRequestException e) {
@@ -3477,7 +3493,7 @@ public class SCIMUserManager implements UserManager {
             String errorMsg = "Error in filtering groups by attribute name : " + attributeName + ", "
                     + "attribute value : " + attributeValue + " and filter operation : " + filterOperation;
             throw resolveError(e, errorMsg);
-        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+        } catch (UserStoreException e) {
             throw resolveError(e, "Error in filtering group with filter: " + attributeName + " + " +
                     filterOperation + " + " + attributeValue);
         }
@@ -3681,7 +3697,7 @@ public class SCIMUserManager implements UserManager {
 
             Collections.reverse(displayNameOperations);
 
-            if (CollectionUtils.isNotEmpty(displayNameOperations)) {
+            if (isNotEmpty(displayNameOperations)) {
                 newGroupName = (String) displayNameOperations.get(0).getValues();
                 setGroupDisplayName(groupId, currentGroupName, newGroupName);
             }
@@ -3785,9 +3801,9 @@ public class SCIMUserManager implements UserManager {
                 return;
             }
             if (e instanceof org.wso2.carbon.user.core.UserStoreException && StringUtils
-                    .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getCode(),
+                    .equals(ERROR_CODE_NON_EXISTING_USER.getCode(),
                             ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode())) {
-                log.error(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER.getMessage(), e);
+                log.error(ERROR_CODE_NON_EXISTING_USER.getMessage(), e);
                 throw new BadRequestException(ResponseCodeConstants.INVALID_VALUE);
             }
             throw resolveError(e, e.getMessage());
@@ -6845,6 +6861,32 @@ public class SCIMUserManager implements UserManager {
         }
 
         Event identityMgtEvent = new Event(eventName, properties);
+        try {
+            SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
+        } catch (IdentityEventException e) {
+            throw new BadRequestException("Error occurred publishing event", ResponseCodeConstants.INVALID_VALUE);
+        }
+    }
+
+    private void publishEventOnUserRegistrationFailure(User user, String errorCode, String errorMessage, Map<String, String> claims,
+                                                       UserStoreManager userStoreManager)
+            throws BadRequestException {
+
+        HashMap<String, Object> properties = new HashMap<>();
+        properties.put("ERROR_CODE", errorCode);
+        properties.put("ERROR_MESSAGE", errorMessage);
+
+        if (user != null) {
+            properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
+        }
+        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS, claims);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
+        properties.put(IdentityEventConstants.EventProperty.USER_STORE_MANAGER, userStoreManager);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getTenantId());
+
+        Event identityMgtEvent = new Event("REGISTRATION_FAILURE", properties);
+
         try {
             SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
         } catch (IdentityEventException e) {
