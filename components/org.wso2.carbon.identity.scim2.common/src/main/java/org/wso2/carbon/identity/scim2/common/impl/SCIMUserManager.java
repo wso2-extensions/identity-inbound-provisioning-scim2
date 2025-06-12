@@ -406,7 +406,7 @@ public class SCIMUserManager implements UserManager {
             try {
                 handleErrorsOnUserNameAndPasswordPolicy(e);
             } catch (BadRequestException | CharonException exception) {
-                publishEventOnUserRegistrationFailure(user, exception.getScimType(), exception.getMessage(),
+                publishEventOnUserRegistrationFailure(user, exception.getScimType(), exception.getDetail(),
                         claimsInLocalDialect);
                 throw exception;
             }
