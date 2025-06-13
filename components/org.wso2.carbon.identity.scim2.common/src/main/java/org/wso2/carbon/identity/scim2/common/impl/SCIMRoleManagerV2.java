@@ -452,6 +452,18 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return getRole(roleId, requiredAttributes);
     }
 
+    /**
+     * Creates a new role without assigning users or groups during creation.
+     * This method is introduced for the SCIM2 Roles V3 API,
+     * where user and group assignments are not allowed at role creation time.
+     *
+     * @param role The role object containing role details.
+     * @return The created RoleV2 object.
+     * @throws CharonException         CharonException.
+     * @throws ConflictException       ConflictException.
+     * @throws NotImplementedException NotImplementedException.
+     * @throws BadRequestException     BadRequestException.
+     */
     @Override
     public RoleV2 createRoleMeta(RoleV2 role)
             throws CharonException, ConflictException, NotImplementedException, BadRequestException {
@@ -502,6 +514,18 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
     }
 
+    /**
+     * Updates the role metadata for the SCIM2 Roles V3 API.
+     * Only the role name and permissions can be updated using this method.
+     *
+     * @param oldRole The existing role object.
+     * @param newRole The new role object with updated values.
+     * @return The updated RoleV2 object.
+     * @throws BadRequestException   BadRequestException.
+     * @throws CharonException       CharonException.
+     * @throws ConflictException     ConflictException.
+     * @throws NotFoundException     NotFoundException.
+     */
     @Override
     public RoleV2 updateRoleMeta(RoleV2 oldRole, RoleV2 newRole)
             throws BadRequestException, CharonException, ConflictException, NotFoundException {
@@ -518,6 +542,19 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return role;
     }
 
+    /**
+     * Update the metadata of a role for the SCIM2 Roles V3 API.
+     * Only the role name and permissions can be updated using this method.
+     *
+     * @param roleId           The ID of the role to be updated.
+     * @param patchOperations  A map of patch operations to apply.
+     * @return The updated RoleV2 object.
+     * @throws BadRequestException   BadRequestException.
+     * @throws CharonException       CharonException.
+     * @throws ConflictException     ConflictException.
+     * @throws NotFoundException     NotFoundException.
+     * @throws ForbiddenException    ForbiddenException.
+     */
     @Override
     public RoleV2 patchRoleMeta(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
@@ -567,6 +604,19 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return getRole(roleId, requiredAttributes);
     }
 
+    /**
+     * Updates the user list of a role for the SCIM2 Roles V3 API.
+     * This method is used in the PUT operation to replace the existing user list of a role
+     * with the new user list provided in the request.
+     *
+     * @param oldRole The existing role object.
+     * @param newRole The new role object containing the updated user list.
+     * @return The updated RoleV2 object.
+     * @throws BadRequestException   BadRequestException.
+     * @throws CharonException       CharonException.
+     * @throws ConflictException     ConflictException.
+     * @throws NotFoundException     NotFoundException.
+     */
     @Override
     public RoleV2 updateUsersRole(RoleV2 oldRole, RoleV2 newRole)
             throws BadRequestException, CharonException, ConflictException, NotFoundException {
@@ -582,6 +632,19 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return role;
     }
 
+    /**
+     * Updates the user list of a role using PATCH operations.
+     * This method is used in the SCIM2 Roles V3 API to add or remove users from a role.
+     *
+     * @param roleId          The ID of the role to update.
+     * @param patchOperations A map of patch operations to apply to the user list.
+     * @return The updated RoleV2 object.
+     * @throws BadRequestException   BadRequestException.
+     * @throws CharonException       CharonException.
+     * @throws ConflictException     ConflictException.
+     * @throws NotFoundException     NotFoundException.
+     * @throws ForbiddenException    ForbiddenException.
+     */
     @Override
     public RoleV2 patchUsersRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
@@ -614,6 +677,19 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return getRole(roleId, requiredAttributes);
     }
 
+    /**
+     * Updates the group list of a role for the SCIM2 Roles V3 API.
+     * This method is used in the PUT operation to replace the existing group list of a role
+     * with the new group list provided in the request.
+     *
+     * @param oldRole The existing role object.
+     * @param newRole The new role object containing the updated group list.
+     * @return The updated RoleV2 object.
+     * @throws BadRequestException   BadRequestException.
+     * @throws CharonException       CharonException.
+     * @throws ConflictException     ConflictException.
+     * @throws NotFoundException     NotFoundException.
+     */
     @Override
     public RoleV2 updateGroupsRole(RoleV2 oldRole, RoleV2 newRole)
             throws BadRequestException, CharonException, ConflictException, NotFoundException {
@@ -629,6 +705,19 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return role;
     }
 
+    /**
+     * Updates the group list of a role using PATCH operations.
+     * This method is used in the SCIM2 Roles V3 API to add or remove groups from a role.
+     *
+     * @param roleId          The ID of the role to update.
+     * @param patchOperations A map of patch operations to apply to the group list.
+     * @return The updated RoleV2 object.
+     * @throws BadRequestException   If the request is invalid.
+     * @throws CharonException       If a general SCIM error occurs.
+     * @throws ConflictException     If there is a conflict during the update.
+     * @throws NotFoundException     If the role is not found.
+     * @throws ForbiddenException    If the operation is forbidden.
+     */
     @Override
     public RoleV2 patchGroupsRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
@@ -1675,6 +1764,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
     }
 
+    /**
+     * Checks if the role already exists in the tenant domain.
+     *
+     * @param roleId        ID of the role to check.
+     * @param tenantDomain  Tenant domain where the role is checked.
+     * @throws ConflictException ConflictException.
+     * @throws IdentityRoleManagementException IdentityRoleManagementException.
+     */
     private void checkIfRoleExists(String roleId, String tenantDomain)
             throws ConflictException, IdentityRoleManagementException {
 
@@ -1686,6 +1783,16 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         }
     }
 
+    /**
+     * Validates the creation of organization roles.
+     *
+     * @param audienceType  Type of the audience.
+     * @param audienceValue Value of the audience.
+     * @param tenantDomain  Tenant domain.
+     * @throws BadRequestException BadRequestException.
+     * @throws OrganizationManagementException OrganizationManagementException.
+     * @throws IdentityApplicationManagementException IdentityApplicationManagementException.
+     */
     private void validateOrganizationRoleCreation(String audienceType, String audienceValue, String tenantDomain)
 
             throws BadRequestException, OrganizationManagementException, IdentityApplicationManagementException {
@@ -1719,6 +1826,15 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return permissionList;
     }
 
+    /**
+     * Builds a SCIM Role response object from the basic role information and location URI.
+     *
+     * @param roleBasicInfo Basic information of the role.
+     * @param locationURI   Location URI of the role.
+     * @return SCIM Role response object.
+     * @throws BadRequestException BadRequestException.
+     * @throws CharonException CharonException.
+     */
     private RoleV2 buildSCIMRoleResponse(RoleBasicInfo roleBasicInfo, String locationURI)
             throws BadRequestException, CharonException {
 
