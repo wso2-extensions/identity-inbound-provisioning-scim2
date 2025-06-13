@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMAgentAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -51,6 +52,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
+import org.wso2.charon3.core.config.SCIMAgentSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
@@ -488,6 +490,14 @@ public class SCIMCommonUtils {
                                 .getExtensionSchema().getURI(), null, tenantDomain, false);
                 scimToLocalClaimMap.putAll(systemExtensionClaims);
             }
+            // Add agent schema claims if agent schema extension is enabled and available.
+            if (SCIMAgentSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+                Map<String, String> agentExtensionClaims = ClaimMetadataHandler.getInstance()
+                        .getMappingsMapFromOtherDialectToCarbon(
+                                SCIMAgentSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI(),
+                                null, tenantDomain, false);
+                scimToLocalClaimMap.putAll(agentExtensionClaims);
+            }
 
             String userTenantDomain = getTenantDomain();
             Map<String, String> customExtensionClaims =
@@ -501,6 +511,33 @@ public class SCIMCommonUtils {
                     "domain : " + tenantDomain, e);
         }
     }
+
+/**
+ * Retrieves SCIM to Local Claim Mappings including agent schema.
+ *
+ * @return Map of SCIM claims and corresponding Local WSO2 claims, including agent schema.
+ * @throws UserStoreException
+ */
+public static Map<String, String> getSCIMtoLocalMappingsWithAgentSchema() throws UserStoreException {
+
+    Map<String, String> scimToLocalClaimMap = getSCIMtoLocalMappings();
+
+    try {
+        String tenantDomain = getTenantDomain();
+        // Add agent schema claims if agent schema extension is enabled and available.
+        if (SCIMAgentSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+            Map<String, String> agentExtensionClaims = ClaimMetadataHandler.getInstance()
+                    .getMappingsMapFromOtherDialectToCarbon(
+                            SCIMAgentSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI(),
+                            null, tenantDomain, false);
+            scimToLocalClaimMap.putAll(agentExtensionClaims);
+        }
+    } catch (ClaimMetadataException e) {
+        throw new UserStoreException("Error occurred while retrieving agent schema claim mappings.", e);
+    }
+
+    return scimToLocalClaimMap;
+}
 
     /**
      * This is used to get tenant domain.
@@ -985,6 +1022,29 @@ public class SCIMCommonUtils {
         } catch (InternalErrorException | IdentitySCIMException e) {
             throw new CharonException("Error while building scim system schema", e);
         }
+    }
+
+    /**
+     * Returns SCIM2 agent AttributeSchema of the tenant.
+     * 
+     * @param tenantId
+     * @throws CharonException
+     */
+    public static AttributeSchema buildAgentSchema(int tenantId) throws CharonException {
+
+        try {
+            SCIMCustomSchemaProcessor scimCustomSchemaProcessor = new SCIMCustomSchemaProcessor();
+            List<SCIMCustomAttribute> attributes = scimCustomSchemaProcessor.getCustomAttributes(
+                    IdentityTenantUtil.getTenantDomain(tenantId),
+                    SCIMConstants.AGENT_SCHEMA_URI);
+            AttributeSchema attributeSchema = SCIMAgentSchemaExtensionBuilder.getInstance()
+                    .buildAgentSchemaExtension(attributes);
+            SCIMAgentAttributeSchemaCache.getInstance().addSCIMAgentAttributeSchema(tenantId, attributeSchema);
+            return attributeSchema;
+        } catch (InternalErrorException | IdentitySCIMException e) {
+            log.error("Error while building SCIM agent schema", e);
+        }
+        return null;
     }
 
     public static void updateEveryOneRoleV2MetaData(int tenantId) {

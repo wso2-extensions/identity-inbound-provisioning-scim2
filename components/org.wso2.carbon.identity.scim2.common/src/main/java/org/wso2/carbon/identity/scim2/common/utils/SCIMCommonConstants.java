@@ -50,6 +50,8 @@ public class SCIMCommonConstants {
     public static final String SCIM_ENTERPRISE_USER_CLAIM_DIALECT =
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
     public static final String SCIM_SYSTEM_USER_CLAIM_DIALECT = "urn:scim:wso2:schema";
+    public static final String SCIM_AGENT_CLAIM_DIALECT = "urn:scim:wso2:agent:schema";
+
 
     public static final String EQ = "eq";
     public static final String NE = "ne";
