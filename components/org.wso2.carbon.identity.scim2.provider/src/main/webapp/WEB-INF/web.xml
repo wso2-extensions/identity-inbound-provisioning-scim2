@@ -460,6 +460,29 @@
         <url-pattern>/o/v3/Roles/*</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>agentResource</servlet-name>
+        <servlet-class>
+            org.apache.cxf.jaxrs.servlet.CXFNonSpringJaxrsServlet
+        </servlet-class>
+        <load-on-startup>1</load-on-startup>
+        <init-param>
+            <param-name>hide-service-list-page</param-name>
+            <param-value>true</param-value>
+        </init-param>
+        <init-param>
+            <param-name>jaxrs.serviceClasses</param-name>
+            <param-value>
+                org.wso2.carbon.identity.scim2.provider.resources.AgentResource
+            </param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>agentResource</servlet-name>
+        <url-pattern>/Agents/*</url-pattern>
+    </servlet-mapping>
+
+
     <session-config>
         <session-timeout>60</session-timeout>
         <cookie-config>
