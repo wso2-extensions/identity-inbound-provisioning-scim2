@@ -139,9 +139,7 @@ public class SCIMCommonComponent {
             logger.error("Error in reading information from identity tables at SCIMCommonComponentStartup.", e);
         } catch (InternalErrorException e) {
             logger.error("Error in reading information from identity tables at SCIMCommonComponentStartup.", e);
-        } catch (Throwable e) {
-            logger.error("Error in activating SCIMCommonComponent.", e);
-        }
+        } 
     }
 
     protected void unsetIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
