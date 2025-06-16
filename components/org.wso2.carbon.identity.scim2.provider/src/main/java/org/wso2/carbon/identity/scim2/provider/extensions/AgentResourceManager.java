@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
  *
@@ -21,6 +20,7 @@ package org.wso2.carbon.identity.scim2.provider.extensions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
@@ -31,6 +31,7 @@ import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
+import org.wso2.charon3.core.objects.Agent;
 import org.wso2.charon3.core.objects.ListedResource;
 import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -44,6 +45,8 @@ import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.CopyUtil;
 import org.wso2.charon3.core.utils.ResourceManagerUtil;
 import org.wso2.charon3.core.utils.codeutils.Node;
+
+import static org.wso2.charon3.core.schema.SCIMConstants.AGENT;
 
 import java.security.SecureRandom;
 import java.util.HashMap;
@@ -137,7 +140,7 @@ public class AgentResourceManager extends UserResourceManager {
             SCIMResourceTypeSchema schema = getAgentSchema(agentManager);
 
             // Decode the SCIM Agent object from the submitted JSON payload
-            User agent = (User) getDecoder().decodeResource(scimObjectString, schema, new User());
+            Agent agent = (Agent) getDecoder().decodeResource(scimObjectString, schema, new Agent());
             String requestedUsername = agent.getUserName();
             logger.debug("Successfully decoded agent object from request payload with username: {}", requestedUsername);
 

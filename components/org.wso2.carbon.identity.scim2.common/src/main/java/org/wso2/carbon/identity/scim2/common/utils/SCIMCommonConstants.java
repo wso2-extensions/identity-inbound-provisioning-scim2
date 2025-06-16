@@ -35,6 +35,7 @@ public class SCIMCommonConstants {
     public static final String USERS = "/Users";
     public static final String GROUPS = "/Groups";
     public static final String ROLES = "/Roles";
+    public static final String AGENTS = "/Agents";
     public static final String ROLES_V2 = "/v2/Roles";
     public static final String ROLES_V3 = "/v3/Roles";
     public static final String SCIM_VERSION = "scimVersion";

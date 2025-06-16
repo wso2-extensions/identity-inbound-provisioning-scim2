@@ -99,8 +99,19 @@ public class SCIMCommonUtils {
      */
     private static ThreadLocal<Boolean> threadLocalIsManagedThroughSCIMEP = new ThreadLocal<>();
 
+    /**
+     * ThreadLocal to indicate if the agent flow is managed through SCIM.
+     */
+    private static ThreadLocal<Boolean> threadLocalIsAgentFlowContextThroughSCIM = new ThreadLocal<>();
+
     public static String getSCIMUserURL(String id) {
-        return StringUtils.isNotBlank(id) ? getSCIMUserURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+        // if threadLocalAgentFlowContextThroughSCIM is true, then we need to use the Agent URL for the user.
+        if (Boolean.TRUE.equals(getThreadLocalIsAgentFlowContextThroughSCIM())) {
+            return StringUtils.isNotBlank(id) ? getSCIMAgentURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+        } else {
+            return StringUtils.isNotBlank(id) ? getSCIMUserURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+
+        }
     }
 
     public static String getSCIMGroupURL(String id) {
@@ -163,6 +174,12 @@ public class SCIMCommonUtils {
 
         String scimURL = getSCIMURL(true);
         return scimURL + "/" + scimVersion + SCIMCommonConstants.ROLES;
+    }
+
+    public static String getSCIMAgentURL() {
+
+        String scimURL = getSCIMURL(true);
+        return scimURL + SCIMCommonConstants.AGENTS;
     }
 
     public static String getApplicationRefURL(String id) {
@@ -373,6 +390,18 @@ public class SCIMCommonUtils {
 
     public static void setThreadLocalIsManagedThroughSCIMEP(Boolean value) {
         threadLocalIsManagedThroughSCIMEP.set(value);
+    }
+
+    public static void unsetThreadLocalIsAgentFlowContextThroughSCIM() {
+        threadLocalIsAgentFlowContextThroughSCIM.remove();
+    }
+
+    public static Boolean getThreadLocalIsAgentFlowContextThroughSCIM() {
+        return threadLocalIsAgentFlowContextThroughSCIM.get();
+    }
+
+    public static void setThreadLocalIsAgentFlowContextThroughSCIM(Boolean value) {
+        threadLocalIsAgentFlowContextThroughSCIM.set(value);
     }
 
     public static String getGlobalConsumerId() {
