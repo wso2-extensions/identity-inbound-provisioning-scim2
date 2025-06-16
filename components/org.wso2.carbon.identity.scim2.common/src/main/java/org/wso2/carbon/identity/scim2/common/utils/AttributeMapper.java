@@ -166,7 +166,7 @@ public class AttributeMapper {
                 if (values != null) {
                     values += FrameworkUtils.getMultiAttributeSeparator() + attributeValue;
                 } else {
-                    values = (String) attributeValue;
+                    values = attributeValue.toString();
                 }
             }
             claimsMap.put(attributeURI, values);
