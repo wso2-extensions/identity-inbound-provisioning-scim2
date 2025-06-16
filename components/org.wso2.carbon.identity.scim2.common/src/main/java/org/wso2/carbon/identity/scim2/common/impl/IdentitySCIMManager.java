@@ -96,6 +96,7 @@ public class IdentitySCIMManager {
         endpointURLs.put(SCIMConstants.SERVICE_PROVIDER_CONFIG_ENDPOINT, SCIMCommonUtils
                 .getSCIMServiceProviderConfigURL());
         endpointURLs.put(SCIMConstants.RESOURCE_TYPE_ENDPOINT, SCIMCommonUtils.getSCIMResourceTypeURL());
+        endpointURLs.put(SCIMConstants.AGENT_ENDPOINT, SCIMCommonUtils.getSCIMAgentURL());
 
         // Register endpoint URLs in AbstractResourceEndpoint since they are called with in the API.
         registerEndpointURLs();
