@@ -20,13 +20,16 @@ package org.wso2.carbon.identity.scim2.provider.resources;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
+import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.carbon.identity.scim2.provider.extensions.AgentResourceManager;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -110,6 +113,10 @@ public class AgentResource extends UserResource {
             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
             String resourceString) {
 
+        // Set agent flow context before operations
+        LOG.debug("Setting thread local agent flow context to true for agent creation");
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
+        
         try {
             // Validate content-type header for agent creation
             if (inputFormat == null) {
@@ -152,6 +159,41 @@ public class AgentResource extends UserResource {
         } catch (FormatNotSupportedException e) {
             LOG.error("Format not supported for agent creation: " + e.getMessage(), e);
             return handleFormatNotSupportedException(e);
+        } finally {
+            // Unset agent flow context after operations
+            LOG.debug("Unsetting thread local agent flow context after agent creation");
+            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+        }
+    }
+
+    /**
+     * Override the getUser by ID method from UserResource to handle agent-specific retrieval.
+     * 
+     * @param id                 Agent ID to retrieve
+     * @param outputFormat       Response format preference
+     * @param attribute          Comma-separated list of attributes to include in response
+     * @param excludedAttributes Comma-separated list of attributes to exclude from response
+     * @return Response containing agent details or error response
+     */
+    @Override
+    @GET
+    @Path("{id}")
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
+    public Response getUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
+                            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+                            @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
+                            @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes) {
+
+        // Set agent flow context before super call
+        LOG.debug("Setting thread local agent flow context to true for agent retrieval by ID.");
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
+        
+        try {
+            return super.getUser(id, outputFormat, attribute, excludedAttributes);
+        } finally {
+            // Unset agent flow context after super call
+            LOG.debug("Unsetting thread local agent flow context after agent retrieval by ID.");
+            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
         }
     }
 
@@ -197,14 +239,26 @@ public class AgentResource extends UserResource {
             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder,
             @QueryParam(SCIMProviderConstants.DOMAIN) String domainName) {
 
-        // Check if domain name parameter was provided and warn about its irrelevance
-        if (domainName != null && !domainName.isEmpty()) {
-            LOG.warn("Domain name parameter is not applicable for agents. Ignoring domain filter.");
-        }
+        // Set agent flow context before operations
+        LOG.debug("Setting thread local agent flow context to true for agent listing");
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
+        
+        try {
+            // Check if domain name parameter was provided and warn about its irrelevance
+            if (domainName != null && !domainName.isEmpty()) {
+                LOG.warn("Domain name parameter is not applicable for agents. Ignoring domain filter.");
+            }
 
-        // Delegate to static listAgents method for actual implementation
-        return AgentResource.listAgents(this, format, attribute, excludedAttributes, filter, startIndex, count, sortBy,
-                sortOrder);
+             domainName = AGENT_DOMAIN;
+             return super.getUser(format, attribute, excludedAttributes, filter, startIndex, count, sortBy, sortOrder, domainName);
+            // Delegate to static listAgents method for actual implementation
+            // return AgentResource.listAgents(this, format, attribute, excludedAttributes, filter, startIndex, count, sortBy,
+                    // sortOrder);
+        } finally {
+            // Unset agent flow context after operations
+            LOG.debug("Unsetting thread local agent flow context after agent listing");
+            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+        }
     }
 
     /**
@@ -247,7 +301,7 @@ public class AgentResource extends UserResource {
      */
     @GET
     @Produces({ MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON })
-    public static Response listAgents(AgentResource agentResource,
+    public Response listAgents(AgentResource agentResource,
             @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format,
             @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
@@ -256,43 +310,132 @@ public class AgentResource extends UserResource {
             @QueryParam(SCIMProviderConstants.COUNT) Integer count,
             @QueryParam(SCIMProviderConstants.SORT_BY) String sortBy,
             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder) {
+        
         // Set default domain for agent operations
-        String domainName = AGENT_DOMAIN;
 
+        return getUser(format, attribute, excludedAttributes, filter, startIndex, count, sortBy, sortOrder, AGENT_DOMAIN);
+    }
+
+    /**
+     * Override the deleteUser method from UserResource to handle agent deletion.
+     * 
+     * @param id     Agent ID to delete
+     * @param format Response format preference
+     * @return Response indicating success or failure of deletion
+     */
+    @Override
+    @DELETE
+    @Path("{id}")
+    public Response deleteUser(@PathParam(SCIMProviderConstants.ID) String id,
+                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
+
+        // Set agent flow context before super call
+        LOG.debug("Setting thread local agent flow context to true for agent deletion, ID.");
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
+        
         try {
-            // Default to application/scim+json format if not specified
-            if (format == null) {
-                format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
-            }
+            return super.deleteUser(id, format);
+        } finally {
+            // Unset agent flow context after super call
+            LOG.debug("Unsetting thread local agent flow context after agent deletion, ID.");
+            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+        }
+    }
 
-            // Validate the requested output format
-            if (!agentResource.isValidOutputFormat(format)) {
-                String error = format + " is not supported for agent operations.";
-                throw new FormatNotSupportedException(error);
-            }
+    /**
+     * Override the getUsersByPost method from UserResource to handle agent search.
+     * 
+     * @param inputFormat    Request content type
+     * @param outputFormat   Response format preference
+     * @param resourceString Search criteria in JSON format
+     * @return Response containing list of agents matching search criteria
+     */
+    @Override
+    @POST
+    @Path("/.search")
+    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
+    public Response getUsersByPost(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+                                   @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+                                   String resourceString) {
 
-            // Obtain the agent manager from Identity SCIM Manager
-            UserManager agentManager = IdentitySCIMManager.getInstance().getUserManager();
+        // Set agent flow context before super call
+        LOG.debug("Setting thread local agent flow context to true for agent search");
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
+        
+        try {
+            return super.getUsersByPost(inputFormat, outputFormat, resourceString);
+        } finally {
+            // Unset agent flow context after super call
+            LOG.debug("Unsetting thread local agent flow context after agent search");
+            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+        }
+    }
 
-            // Build agent custom schema including WSO2 agent schema extensions
-            agentResource.buildAgentCustomSchema(agentManager, getTenantId());
+    /**
+     * Override the updateUser method from UserResource to handle agent updates.
+     * 
+     * @param id                 Agent ID to update
+     * @param inputFormat        Request content type
+     * @param outputFormat       Response format preference
+     * @param attribute          Comma-separated list of attributes to include in response
+     * @param excludedAttributes Comma-separated list of attributes to exclude from response
+     * @param resourceString     Updated agent data in JSON format
+     * @return Response containing updated agent details or error response
+     */
+    @Override
+    @PUT
+    @Path("{id}")
+    public Response updateUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
+                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+                               @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
+                               @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
+                               String resourceString) {
 
-            // Create charon-SCIM agent resource manager for agent operations
-            AgentResourceManager agentResourceManager = new AgentResourceManager();
+        // Set agent flow context before super call
+        LOG.debug("Setting thread local agent flow context to true for agent update, ID.");
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
+        
+        try {
+            return super.updateUser(id, inputFormat, outputFormat, attribute, excludedAttributes, resourceString);
+        } finally {
+            // Unset agent flow context after super call
+            LOG.debug("Unsetting thread local agent flow context after agent update, ID.");
+            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+        }
+    }
 
-            // Perform the agent listing operation with all provided parameters
-            SCIMResponse scimResponse = agentResourceManager.listWithGET(agentManager, filter, startIndex, count,
-                    sortBy, sortOrder, domainName, attribute, excludedAttributes);
+    /**
+     * Override the patchUser method from UserResource to handle agent partial updates.
+     * 
+     * @param id                 Agent ID to update
+     * @param inputFormat        Request content type
+     * @param outputFormat       Response format preference
+     * @param attribute          Comma-separated list of attributes to include in response
+     * @param excludedAttributes Comma-separated list of attributes to exclude from response
+     * @param resourceString     Patch operations in JSON format
+     * @return Response containing updated agent details or error response
+     */
+    @Override
+    @PATCH
+    @Path("{id}")
+    public Response patchUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
+                              @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+                              @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+                              @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
+                              @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
+                              String resourceString) {
 
-            // Build and return the HTTP response
-            return SupportUtils.buildResponse(scimResponse);
-
-        } catch (CharonException e) {
-            LOG.error("Error occurred while listing agents: " + e.getMessage(), e);
-            return agentResource.handleCharonException(e);
-        } catch (FormatNotSupportedException e) {
-            LOG.error("Format not supported for agent listing: " + e.getMessage(), e);
-            return agentResource.handleFormatNotSupportedException(e);
+        // Set agent flow context before super call
+        LOG.debug("Setting thread local agent flow context to true for agent patch, ID.");
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
+        
+        try {
+            return super.patchUser(id, inputFormat, outputFormat, attribute, excludedAttributes, resourceString);
+        } finally {
+            // Unset agent flow context after super call
+            LOG.debug("Unsetting thread local agent flow context after agent patch, ID.");
+            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
         }
     }
 

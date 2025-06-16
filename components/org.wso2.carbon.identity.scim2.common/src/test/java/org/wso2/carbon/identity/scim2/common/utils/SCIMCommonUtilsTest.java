@@ -88,6 +88,7 @@ public class SCIMCommonUtilsTest {
         when(serviceURL1.getAbsolutePublicURL()).thenReturn("https://localhost:9443/scim2");
         when(serviceURL.getAbsolutePublicURL()).thenReturn("https://localhost:9443");
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomainFromContext()).thenReturn("carbon.super");
+       
     }
 
     @AfterMethod
@@ -242,6 +243,24 @@ public class SCIMCommonUtilsTest {
     public void testSetThreadLocalIsManagedThroughSCIMEP(Boolean value, Boolean expectedResult) throws Exception {
         SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(value);
         assertEquals(SCIMCommonUtils.getThreadLocalIsManagedThroughSCIMEP(), expectedResult);
+    }
+
+    @Test
+    public void testUnsetThreadLocalIsAgentFlowContextThroughSCIM() throws Exception {
+        SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+        assertNull(SCIMCommonUtils.getThreadLocalIsAgentFlowContextThroughSCIM());
+    }
+
+    @Test(dataProvider = "threadLocalData")
+    public void testGetThreadLocalIsAgentFlowContextThroughSCIM(Boolean value, Boolean expectedResult) throws Exception {
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(value);
+        assertEquals(SCIMCommonUtils.getThreadLocalIsAgentFlowContextThroughSCIM(), expectedResult);
+    }
+
+    @Test(dataProvider = "threadLocalData")
+    public void testSetThreadLocalIsAgentFlowContextThroughSCIM(Boolean value, Boolean expectedResult) throws Exception {
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(value);
+        assertEquals(SCIMCommonUtils.getThreadLocalIsAgentFlowContextThroughSCIM(), expectedResult);
     }
 
     @Test
