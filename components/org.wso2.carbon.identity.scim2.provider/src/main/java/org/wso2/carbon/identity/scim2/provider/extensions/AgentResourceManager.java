@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.scim2.provider.extensions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.user.mgt.common.DefaultPasswordGenerator;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
@@ -32,9 +32,7 @@ import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.Agent;
-import org.wso2.charon3.core.objects.ListedResource;
 import org.wso2.charon3.core.objects.User;
-import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
@@ -44,11 +42,7 @@ import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.CopyUtil;
 import org.wso2.charon3.core.utils.ResourceManagerUtil;
-import org.wso2.charon3.core.utils.codeutils.Node;
 
-import static org.wso2.charon3.core.schema.SCIMConstants.AGENT;
-
-import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -81,16 +75,6 @@ public class AgentResourceManager extends UserResourceManager {
     
     /** Default domain name for agent user store operations. */
     protected static final String AGENT_STORE_DOMAIN = "AGENT";
-
-    // Password generation constants for secure random password creation
-    private static final String LOWERCASE_CHARS = "abcdefghijklmnopqrstuvwxyz";
-    private static final String UPPERCASE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String NUMBERS = "0123456789";
-    private static final String SPECIAL_CHARS = "!@#$%^&*()_+-=[]{}|;:,.<>?";
-    private static final int DEFAULT_PASSWORD_LENGTH = 12;
-
-    /** Secure random instance for cryptographically secure password generation. */
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
      * Constructs a new AgentResourceManager instance.
@@ -157,7 +141,8 @@ public class AgentResourceManager extends UserResourceManager {
 
             // Auto-generate secure password if not provided in the request
             if (agent.getPassword() == null || agent.getPassword().trim().isEmpty()) {
-                String generatedPassword = generateSecurePassword();
+                DefaultPasswordGenerator passwordGenerator = new DefaultPasswordGenerator();
+                String generatedPassword = new String(passwordGenerator.generatePassword());
                 agent.setPassword(generatedPassword);
                 logger.debug("Auto-generated secure password for agent: {}", agent.getUserName());
             } else {
@@ -166,7 +151,6 @@ public class AgentResourceManager extends UserResourceManager {
 
             // Validate the created agent object with agent-specific validations
             validateCreatedAgent(agent, schema);
-            logger.debug("Agent validation completed for username: {}", agent.getUserName());
 
             // Get the URIs of required attributes which must be given a value
             Map<String, Boolean> requiredAttributes = ResourceManagerUtil.getOnlyRequiredAttributesURIs(
@@ -317,55 +301,5 @@ public class AgentResourceManager extends UserResourceManager {
         String agentUsername = agent.getUserName();
         logger.debug("Agent returned attributes validation completed for agent ID: {} with username: {}", 
                      agentId, agentUsername);
-    }
-
-    /**
-     * Generates a cryptographically secure random password for agent accounts.
-     * 
-     * <p>This method creates a secure password that meets standard password policy
-     * requirements to ensure agent accounts are properly protected. The password
-     * generation uses cryptographically secure random number generation.</p>
-     * 
-     * <p>Generated password characteristics:</p>
-     * <ul>
-     *   <li>At least one lowercase letter (a-z)</li>
-     *   <li>At least one uppercase letter (A-Z)</li>
-     *   <li>At least one numeric digit (0-9)</li>
-     *   <li>At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)</li>
-     *   <li>Total length of 12 characters (configurable via DEFAULT_PASSWORD_LENGTH)</li>
-     *   <li>Character positions are shuffled to avoid predictable patterns</li>
-     * </ul>
-     * 
-     * @return A randomly generated secure password meeting policy requirements
-     */
-    private String generateSecurePassword() {
-        logger.debug("Generating secure password for agent account");
-        
-        StringBuilder password = new StringBuilder();
-        String allChars = LOWERCASE_CHARS + UPPERCASE_CHARS + NUMBERS + SPECIAL_CHARS;
-
-        // Ensure at least one character from each required category for policy compliance
-        password.append(LOWERCASE_CHARS.charAt(SECURE_RANDOM.nextInt(LOWERCASE_CHARS.length())));
-        password.append(UPPERCASE_CHARS.charAt(SECURE_RANDOM.nextInt(UPPERCASE_CHARS.length())));
-        password.append(NUMBERS.charAt(SECURE_RANDOM.nextInt(NUMBERS.length())));
-        password.append(SPECIAL_CHARS.charAt(SECURE_RANDOM.nextInt(SPECIAL_CHARS.length())));
-
-        // Fill the remaining positions with random characters from all categories
-        for (int i = 4; i < DEFAULT_PASSWORD_LENGTH; i++) {
-            password.append(allChars.charAt(SECURE_RANDOM.nextInt(allChars.length())));
-        }
-
-        // Shuffle the password characters to avoid predictable patterns (e.g., all lowercase first)
-        char[] passwordArray = password.toString().toCharArray();
-        for (int i = passwordArray.length - 1; i > 0; i--) {
-            int j = SECURE_RANDOM.nextInt(i + 1);
-            char temp = passwordArray[i];
-            passwordArray[i] = passwordArray[j];
-            passwordArray[j] = temp;
-        }
-
-        String generatedPassword = new String(passwordArray);
-        logger.debug("Successfully generated secure password with length: {} characters", generatedPassword.length());
-        return generatedPassword;
     }
 }
