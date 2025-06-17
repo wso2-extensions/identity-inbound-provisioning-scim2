@@ -273,7 +273,7 @@ public class RoleResourceV3 extends AbstractResource {
 
     @PUT
     @Path("{id}/Users")
-    public Response updateUserRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
+    public Response updateUsersOfRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
                                    @HeaderParam(SCIMConstants.CONTENT_TYPE_HEADER) String inputFormat,
                                    @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                    String resourceString) {
@@ -307,7 +307,7 @@ public class RoleResourceV3 extends AbstractResource {
 
     @PATCH
     @Path("{id}/Users")
-    public Response patchUserRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
+    public Response patchUsersOfRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
                                   @HeaderParam(SCIMConstants.CONTENT_TYPE_HEADER) String inputFormat,
                                   @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                   String resourceString) {
@@ -341,7 +341,7 @@ public class RoleResourceV3 extends AbstractResource {
 
     @PUT
     @Path("{id}/Groups")
-    public Response updateGroupsRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
+    public Response updateGroupsOfRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
                                      @HeaderParam(SCIMConstants.CONTENT_TYPE_HEADER) String inputFormat,
                                      @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                      String resourceString) {
@@ -375,7 +375,7 @@ public class RoleResourceV3 extends AbstractResource {
 
     @PATCH
     @Path("{id}/Groups")
-    public Response patchGroupsRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
+    public Response patchGroupsOfRole(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
                                     @HeaderParam(SCIMConstants.CONTENT_TYPE_HEADER) String inputFormat,
                                     @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                     String resourceString) {
