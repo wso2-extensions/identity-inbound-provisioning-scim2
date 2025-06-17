@@ -199,84 +199,149 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws BadRequestException, CharonException, NotFoundException {
 
         try {
-            Role role;
-            if (isUsersAttributeRequired(requiredAttributes)) {
-                role = roleManagementService.getRole(roleID, tenantDomain);
-            } else {
-                role = roleManagementService.getRoleWithoutUsers(roleID, tenantDomain);
-            }
-            RoleV2 scimRole = new RoleV2();
-            scimRole.setId(role.getId());
-            scimRole.setDisplayName(role.getName());
+            Role role = fetchRole(roleID, requiredAttributes);
+
             String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(role.getId());
-            scimRole.setLocation(locationURI);
-            scimRole.setSchemas();
-            scimRole.setAudience(role.getAudienceId(), role.getAudienceName(), role.getAudience());
-            if (systemRoles.contains(role.getName())) {
-                scimRole.setSystemRole(true);
-            }
-            List<MultiValuedComplexType> roleProperties =
-                    convertRolePropertiesToMultiValuedComplexType(role.getRoleProperties());
-            scimRole.setRoleProperties(roleProperties);
-            // Set permissions.
-            List<MultiValuedComplexType> permissions =
-                    convertPermissionsToMultiValuedComplexType(role.getPermissions());
-            scimRole.setPermissions(permissions);
+            RoleV2 scimRole = createRoleWithMetadata(role, locationURI);
 
             // Set role's assigned users.
-            List<UserBasicInfo> assignedUsers = role.getUsers();
-            if (assignedUsers != null) {
-                for (UserBasicInfo userInfo : assignedUsers) {
-                    userInfo.getId();
-                    String userLocationURI = SCIMCommonUtils.getSCIMUserURL(userInfo.getId());
-                    User user = new User();
-                    user.setUserName(userInfo.getName());
-                    user.setId(userInfo.getId());
-                    user.setLocation(userLocationURI);
-                    scimRole.setUser(user);
-                }
-            }
+            setAssignedUsersForRole(scimRole, role.getUsers());
 
             // Set role's assigned userstore groups.
-            List<GroupBasicInfo> assignedUserstoreGroups = role.getGroups();
-            if (assignedUserstoreGroups != null) {
-                for (GroupBasicInfo groupInfo : assignedUserstoreGroups) {
-                    String groupId = groupInfo.getId();
-                    String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupId);
-                    Group group = new Group();
-                    group.setDisplayName(groupInfo.getName());
-                    group.setId(groupId);
-                    group.setLocation(groupLocationURI);
-                    scimRole.setGroup(group);
-                }
-            }
+            setRoleAssignedUserstoreGroups(scimRole, role.getGroups());
 
             // Set role's assigned idp groups.
-            List<IdpGroup> assignedIdpGroups = role.getIdpGroups();
-            if (assignedIdpGroups != null) {
-                for (IdpGroup idpGroup : assignedIdpGroups) {
-                    String idpGroupId = idpGroup.getGroupId();
-                    String idpGroupLocationURI = SCIMCommonUtils.getIdpGroupURL(idpGroup.getIdpId(), idpGroupId);
-                    Group group = new Group();
-                    group.setDisplayName(idpGroup.getGroupName());
-                    group.setId(idpGroupId);
-                    group.setLocation(idpGroupLocationURI);
-                    scimRole.setGroup(group);
-                }
-            }
+            getRoleAssignedIdpGroups(scimRole, role.getIdpGroups());
 
             // Set associated applications.
-            List<MultiValuedComplexType> associatedApps =
-                    convertAssociatedAppsToMultivaluedComplexType(role.getAssociatedApplications());
-            if (CollectionUtils.isNotEmpty(associatedApps)) {
-                scimRole.setAssociatedApplications(associatedApps);
-            }
+            setAssociatedPermissionsForRole(scimRole, role);
+
             return scimRole;
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
                 throw new NotFoundException(e.getMessage());
             }
             throw new CharonException(String.format("Error occurred while getting the role: %s", roleID), e);
+        }
+    }
+
+    public RoleV2 getRoleV3(String roleID, Map<String, Boolean> requiredAttributes)
+            throws BadRequestException, CharonException, NotFoundException {
+
+        try {
+            Role role = fetchRole(roleID, requiredAttributes);
+
+            String locationURI = SCIMCommonUtils.getSCIMRoleV3URL(role.getId());
+            RoleV2 scimRole = createRoleWithMetadata(role, locationURI);
+
+            // Set role's assigned users.
+            setAssignedUsersForRole(scimRole, role.getUsers());
+
+            // Set role's assigned userstore groups.
+            setRoleAssignedUserstoreGroups(scimRole, role.getGroups());
+
+            // Set role's assigned idp groups.
+            getRoleAssignedIdpGroups(scimRole, role.getIdpGroups());
+
+            // Set associated applications.
+            setAssociatedPermissionsForRole(scimRole, role);
+
+            return scimRole;
+        } catch (IdentityRoleManagementException e) {
+            if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
+                throw new NotFoundException(e.getMessage());
+            }
+            throw new CharonException(String.format("Error occurred while getting the role: %s", roleID), e);
+        }
+    }
+
+    private Role fetchRole(String roleId, Map<String, Boolean> requiredAttributes)
+            throws IdentityRoleManagementException {
+
+        if (isUsersAttributeRequired(requiredAttributes)) {
+            return roleManagementService.getRole(roleId, tenantDomain);
+        } else {
+            return roleManagementService.getRoleWithoutUsers(roleId, tenantDomain);
+        }
+    }
+
+    private RoleV2 createRoleWithMetadata(Role role, String locationURI)
+            throws BadRequestException, CharonException {
+
+        RoleV2 scimRole = new RoleV2();
+        scimRole.setId(role.getId());
+        scimRole.setDisplayName(role.getName());
+        scimRole.setLocation(locationURI);
+        scimRole.setSchemas();
+        scimRole.setAudience(role.getAudienceId(), role.getAudienceName(), role.getAudience());
+        if (systemRoles.contains(role.getName())) {
+            scimRole.setSystemRole(true);
+        }
+        List<MultiValuedComplexType> roleProperties =
+                convertRolePropertiesToMultiValuedComplexType(role.getRoleProperties());
+        scimRole.setRoleProperties(roleProperties);
+        // Set permissions.
+        List<MultiValuedComplexType> permissions =
+                convertPermissionsToMultiValuedComplexType(role.getPermissions());
+        scimRole.setPermissions(permissions);
+
+        return scimRole;
+    }
+
+    private void setAssignedUsersForRole(RoleV2 role, List<UserBasicInfo> assignedUsers)
+            throws BadRequestException, CharonException {
+
+        if (assignedUsers != null) {
+            for (UserBasicInfo userInfo : assignedUsers) {
+                userInfo.getId();
+                String userLocationURI = SCIMCommonUtils.getSCIMUserURL(userInfo.getId());
+                User user = new User();
+                user.setUserName(userInfo.getName());
+                user.setId(userInfo.getId());
+                user.setLocation(userLocationURI);
+                role.setUser(user);
+            }
+        }
+    }
+
+    private void setRoleAssignedUserstoreGroups(RoleV2 role, List<GroupBasicInfo> assignedUserstoreGroups)
+            throws BadRequestException, CharonException {
+
+        if (assignedUserstoreGroups != null) {
+            for (GroupBasicInfo groupInfo : assignedUserstoreGroups) {
+                String groupId = groupInfo.getId();
+                String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupId);
+                Group group = new Group();
+                group.setDisplayName(groupInfo.getName());
+                group.setId(groupId);
+                group.setLocation(groupLocationURI);
+                role.setGroup(group);
+            }
+        }
+    }
+
+    private void getRoleAssignedIdpGroups(RoleV2 role, List<IdpGroup> assignedIdpGroups)
+            throws BadRequestException, CharonException {
+
+        if (assignedIdpGroups != null) {
+            for (IdpGroup idpGroup : assignedIdpGroups) {
+                String idpGroupId = idpGroup.getGroupId();
+                String idpGroupLocationURI = SCIMCommonUtils.getIdpGroupURL(idpGroup.getIdpId(), idpGroupId);
+                Group group = new Group();
+                group.setDisplayName(idpGroup.getGroupName());
+                group.setId(idpGroupId);
+                group.setLocation(idpGroupLocationURI);
+                role.setGroup(group);
+            }
+        }
+    }
+
+    private void setAssociatedPermissionsForRole(RoleV2 scimRole, Role role) {
+
+        List<MultiValuedComplexType> associatedApps =
+                convertAssociatedAppsToMultivaluedComplexType(role.getAssociatedApplications());
+        if (CollectionUtils.isNotEmpty(associatedApps)) {
+            scimRole.setAssociatedApplications(associatedApps);
         }
     }
 
@@ -601,7 +666,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         HashMap<String, Boolean> requiredAttributes = new HashMap<>();
         requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
-        return getRole(roleId, requiredAttributes);
+        return getRoleV3(roleId, requiredAttributes);
     }
 
     /**
@@ -674,7 +739,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         HashMap<String, Boolean> requiredAttributes = new HashMap<>();
         requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
-        return getRole(roleId, requiredAttributes);
+        return getRoleV3(roleId, requiredAttributes);
     }
 
     /**
@@ -747,7 +812,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         HashMap<String, Boolean> requiredAttributes = new HashMap<>();
         requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
-        return getRole(roleId, requiredAttributes);
+        return getRoleV3(roleId, requiredAttributes);
     }
 
     /**
