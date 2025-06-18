@@ -417,14 +417,33 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                                                String sortOrder, List<String> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
+        String scimUrl = SCIMCommonConstants.ROLES_V2;
+
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported.");
         } else if (count != null && count == 0) {
             return new RolesV2GetResponse(0, Collections.emptyList());
         } else if (rootNode != null) {
-            return filterRoles(rootNode, count, startIndex, null, null, requiredAttributes);
+            return filterRoles(rootNode, count, startIndex, null, null, requiredAttributes, scimUrl);
         } else {
-            return listRoles(count, startIndex, null, null, requiredAttributes);
+            return listRoles(count, startIndex, null, null, requiredAttributes, scimUrl);
+        }
+    }
+
+    public RolesV2GetResponse listRolesV3WithGET(Node rootNode, Integer startIndex, Integer count, String sortBy,
+                                               String sortOrder, List<String> requiredAttributes)
+            throws CharonException, NotImplementedException, BadRequestException {
+
+        String scimUrl = SCIMCommonConstants.ROLES_V3;
+
+        if (sortBy != null || sortOrder != null) {
+            throw new NotImplementedException("Sorting is not supported.");
+        } else if (count != null && count == 0) {
+            return new RolesV2GetResponse(0, Collections.emptyList());
+        } else if (rootNode != null) {
+            return filterRoles(rootNode, count, startIndex, null, null, requiredAttributes, scimUrl);
+        } else {
+            return listRoles(count, startIndex, null, null, requiredAttributes, scimUrl);
         }
     }
 
@@ -827,11 +846,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @throws CharonException Error filtering the roles.
      */
     private RolesV2GetResponse filterRoles(Node node, Integer count, Integer startIndex, String sortBy,
-                                           String sortOrder, List<String> requiredAttributes)
+                                           String sortOrder, List<String> requiredAttributes, String scimUrl)
             throws CharonException, NotImplementedException, BadRequestException {
 
         if (node instanceof ExpressionNode || node instanceof OperationNode) {
-            return filterRolesByAttributes(node, count, startIndex, sortBy, sortOrder, requiredAttributes);
+            return filterRolesByAttributes(node, count, startIndex, sortBy, sortOrder,
+                    requiredAttributes, scimUrl);
         }
         throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
     }
@@ -848,7 +868,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @throws CharonException Error filtering the roles.
      */
     private RolesV2GetResponse filterRolesByAttributes(Node node, Integer count, Integer startIndex, String sortBy,
-                                                       String sortOrder, List<String> requiredAttributes)
+                                                       String sortOrder,
+                                                       List<String> requiredAttributes, String scimUrl)
             throws CharonException, BadRequestException {
 
         String searchFilter = buildSearchFilter(node);
@@ -861,7 +882,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         try {
             roles = roleManagementService.getRoles(searchFilter, count, startIndex, sortBy, sortOrder, tenantDomain,
                     requiredAttributes);
-            scimRoles = getScimRolesList(roles, requiredAttributes);
+            scimRoles = getScimRolesList(roles, requiredAttributes, scimUrl);
             roleCount = roleManagementService.getRolesCount(searchFilter, tenantDomain);
             if (roleCount == 0) {
                 roleCount = scimRoles.size();
@@ -923,7 +944,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @throws CharonException Error while listing users.
      */
     private RolesV2GetResponse listRoles(Integer count, Integer startIndex, String sortBy, String sortOrder,
-                                         List<String> requiredAttributes)
+                                         List<String> requiredAttributes, String scimUrl)
             throws CharonException, BadRequestException {
 
         List<RoleV2> rolesList = new ArrayList<>();
@@ -931,7 +952,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         try {
             List<Role> roles = roleManagementService.getRoles(count, startIndex, sortBy, sortOrder, tenantDomain,
                     requiredAttributes);
-            List<RoleV2> scimRoles = getScimRolesList(roles, requiredAttributes);
+            List<RoleV2> scimRoles = getScimRolesList(roles, requiredAttributes, scimUrl);
             rolesCount = roleManagementService.getRolesCount(tenantDomain);
             // Set total number of results to 0th index.
             if (rolesCount == 0) {
@@ -989,7 +1010,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return searchFilter;
     }
 
-    private List<RoleV2> getScimRolesList(List<Role> roles, List<String> requiredAttributes)
+    private List<RoleV2> getScimRolesList(List<Role> roles, List<String> requiredAttributes, String scimUrl)
             throws BadRequestException, CharonException {
 
         List<RoleV2> scimRoles = new ArrayList<>();
@@ -998,7 +1019,13 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             scimRole.setDisplayName(role.getName());
             scimRole.setId(role.getId());
             scimRole.setSchemas();
-            scimRole.setLocation(SCIMCommonUtils.getSCIMRoleV2URL(role.getId()));
+
+            if (scimUrl.equals(SCIMCommonConstants.ROLES_V2)) {
+                scimRole.setLocation(SCIMCommonUtils.getSCIMRoleV2URL(role.getId()));
+            } else if(scimUrl.equals(SCIMCommonConstants.ROLES_V3)) {
+                scimRole.setLocation(SCIMCommonUtils.getSCIMRoleV3URL(role.getId()));
+            }
+
             scimRole.setAudience(role.getAudienceId(), role.getAudienceName(),
                     role.getAudience());
             if (systemRoles.contains(role.getName())) {
