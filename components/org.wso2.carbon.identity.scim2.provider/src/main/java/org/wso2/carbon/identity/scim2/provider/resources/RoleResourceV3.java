@@ -65,7 +65,7 @@ public class RoleResourceV3 extends AbstractResource {
             RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
-            SCIMResponse scimResponse = roleResourceManager.getRole(id, roleManager, attribute, excludedAttributes);
+            SCIMResponse scimResponse = roleResourceManager.getRoleV3(id, roleManager, attribute, excludedAttributes);
             // Needs to check the code of the response and return 200 0k or other error codes appropriately.
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
@@ -165,7 +165,7 @@ public class RoleResourceV3 extends AbstractResource {
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse scimResponse = roleResourceManager
-                    .listWithGETRole(roleManager, filter, startIndex, count, sortBy, sortOrder, attribute,
+                    .listWithGETRoleV3(roleManager, filter, startIndex, count, sortBy, sortOrder, attribute,
                             excludedAttributes);
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
