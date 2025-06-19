@@ -310,4 +310,32 @@ public class SCIMCommonUtilsTest {
         }
 
     }
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMAgentURL(boolean isTenantQualifyURLEnabled) throws Exception {
+        identityTenantUtil.when(() -> IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
+        String expectedAgentURL = SCIM_URL + SCIMCommonConstants.AGENTS;
+        String scimAgentURL = SCIMCommonUtils.getSCIMAgentURL();
+        assertEquals(scimAgentURL, expectedAgentURL);
+    }
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMUserURL_AgentFlowContext(boolean isTenantQualifyURLEnabled) throws Exception {
+        // Simulate agent flow context
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
+        identityTenantUtil.when(() -> IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
+        String expectedAgentUserURL = SCIM_URL + SCIMCommonConstants.AGENTS + "/" + ID;
+        String scimUserURL = SCIMCommonUtils.getSCIMUserURL(ID);
+        assertEquals(scimUserURL, expectedAgentUserURL);
+        SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+    }
+
+    @Test(dataProvider = "tenantURLQualifyData")
+    public void testGetSCIMUserURL_AgentFlowContext_NullId(boolean isTenantQualifyURLEnabled) throws Exception {
+        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
+        identityTenantUtil.when(() -> IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
+        String scimUserURL = SCIMCommonUtils.getSCIMUserURL(null);
+        assertNull(scimUserURL);
+        SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+    }
+
+    
 }

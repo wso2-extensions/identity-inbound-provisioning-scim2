@@ -56,7 +56,6 @@ import org.wso2.carbon.user.mgt.RolePermissionManagementService;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
-import org.wso2.charon3.core.config.SCIMAgentSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
@@ -95,7 +94,6 @@ public class SCIMCommonComponent {
                                 SCIMConfigConstants.SCIM_SCHEMA_EXTENSION_CONFIG;
                 SCIMUserSchemaExtensionBuilder.getInstance().buildUserSchemaExtension(schemaFilePath);
                 SCIMSystemSchemaExtensionBuilder.getInstance().buildSystemSchemaExtension(schemaFilePath);
-                SCIMAgentSchemaExtensionBuilder.getInstance().buildAgentSchemaExtension(schemaFilePath);
             }
             // If custom schema is enabled, read it root attribute URI from the file config if it is configured.
             if (SCIMCommonUtils.isCustomSchemaEnabled()) {
