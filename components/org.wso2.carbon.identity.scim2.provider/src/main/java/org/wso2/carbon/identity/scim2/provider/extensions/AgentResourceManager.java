@@ -45,6 +45,7 @@ import org.wso2.charon3.core.utils.ResourceManagerUtil;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Agent Resource Manager for handling SCIM2 agent operations.
@@ -128,8 +129,11 @@ public class AgentResourceManager extends UserResourceManager {
             String requestedUsername = agent.getUserName();
             logger.debug("Successfully decoded agent object from request payload with username: {}", requestedUsername);
 
-            // Add agent store domain name prefix to the agent username for proper user store routing
-            if (agent.getUserName() != null && !agent.getUserName().contains("/")) {
+            // Generate a unique ID for the agent as the username
+            if (agent.getUserName() == null || agent.getUserName().trim().isEmpty()) {
+                String agentID =  UUID.randomUUID().toString();
+                agent.setUserName(AGENT_STORE_DOMAIN + UserCoreConstants.DOMAIN_SEPARATOR + agentID);
+            } else if (agent.getUserName() != null && !agent.getUserName().contains("/")) {
                 String originalUsername = agent.getUserName();
                 agent.setUserName(AGENT_STORE_DOMAIN + UserCoreConstants.DOMAIN_SEPARATOR + originalUsername);
                 logger.debug("Added domain prefix to agent username: {} -> {}", originalUsername, agent.getUserName());
@@ -142,7 +146,7 @@ public class AgentResourceManager extends UserResourceManager {
             // Auto-generate secure password if not provided in the request
             if (agent.getPassword() == null || agent.getPassword().trim().isEmpty()) {
                 DefaultPasswordGenerator passwordGenerator = new DefaultPasswordGenerator();
-                String generatedPassword = new String(passwordGenerator.generatePassword());
+                String generatedPassword = new String(passwordGenerator.generatePassword()).concat(new String(passwordGenerator.generatePassword()));
                 agent.setPassword(generatedPassword);
                 logger.debug("Auto-generated secure password for agent: {}", agent.getUserName());
             } else {
@@ -161,7 +165,7 @@ public class AgentResourceManager extends UserResourceManager {
             if (agentManager != null) {
                 // Handover the SCIM Agent object to the agent manager for persistence
                 createdAgent = agentManager.createUser(agent, requiredAttributes);
-                logger.debug("Agent creation delegated to agent manager for username: {}", agent.getUserName());
+                logger.debug("Agent creation delegated to agent manager for name: {}", agent.getUserName());
             } else {
                 String error = "Provided agent manager handler is null.";
                 logger.error("Agent manager is null for username: {}", agent.getUserName());
