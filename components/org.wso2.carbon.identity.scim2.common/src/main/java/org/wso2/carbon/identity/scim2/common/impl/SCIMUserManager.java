@@ -5951,7 +5951,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, true, false);
+                    buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, true, false);
 
             enterpriseUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -5984,7 +5984,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, false, true);
+                    buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, false, true);
 
             systemUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -6015,7 +6015,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, true, true);
+                    buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, false, false);
 
             agentUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -6429,7 +6429,7 @@ public class SCIMUserManager implements UserManager {
      * @param filteredFlatAttributeMap
      * @return
      */
-    private Map<String, Attribute> buildHierarchicalAttributeMapForEnterpriseSchema(
+    private Map<String, Attribute> buildHierarchicalAttributeMapForExtendedSchema(
             Map<String, Attribute> filteredFlatAttributeMap, boolean isEnterpriseExtensionAttr,
             boolean isSystemExtensionAttr) throws CharonException {
 
@@ -6768,7 +6768,7 @@ public class SCIMUserManager implements UserManager {
         Map<String, Attribute> filteredAttributeMap
                 = getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
         Map<String, Attribute> hierarchicalAttributeMap =
-                buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, false, false);
+                buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, false, false);
 
         customUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -6802,8 +6802,8 @@ public class SCIMUserManager implements UserManager {
         return null;
     }
 
-        /**
-     * Returns SCIM2 system AttributeSchema of the tenant.
+    /**
+     * Returns SCIM2 system AttributeSchema of the tenant if this is a agent flow.
      *
      * @return Returns scim2 system schema
      * @throws CharonException
@@ -6811,16 +6811,17 @@ public class SCIMUserManager implements UserManager {
     @Override
     public AttributeSchema getCustomAttributeSchemaInAgentExtension() throws CharonException {
 
-        if (tenantDomain != null) {
-            AttributeSchema schema = SCIMAgentAttributeSchemaCache.getInstance().
-                    getSCIMAgentAttributeSchemaByTenant(IdentityTenantUtil.getTenantId(tenantDomain));
+        if (tenantDomain != null
+                && (Boolean.TRUE.equals(SCIMCommonUtils.getThreadLocalIsAgentFlowContextThroughSCIM()))) {
+            AttributeSchema schema = SCIMAgentAttributeSchemaCache.getInstance()
+                    .getSCIMAgentAttributeSchemaByTenant(IdentityTenantUtil.getTenantId(tenantDomain));
             if (schema != null) {
                 return schema;
             }
             try {
                 return buildAgentSchema(carbonUM.getTenantId());
             } catch (UserStoreException e) {
-                throw new CharonException("Error while building scim custom schema", e);
+                throw new CharonException("Error while building scim custom agent schema", e);
             }
         }
         return null;

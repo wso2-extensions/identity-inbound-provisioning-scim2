@@ -142,6 +142,7 @@ public class SCIMCommonUtils {
 
     public static String getSCIMUserURL() {
 
+
         String scimURL = getSCIMURL(true);
         return scimURL + SCIMCommonConstants.USERS;
     }
@@ -520,10 +521,9 @@ public class SCIMCommonUtils {
                 scimToLocalClaimMap.putAll(systemExtensionClaims);
             }
             // Add agent schema claims if agent schema extension is enabled and available.
-            if (SCIMAgentSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+            if (Boolean.TRUE.equals(getThreadLocalIsAgentFlowContextThroughSCIM())) {
                 Map<String, String> agentExtensionClaims = ClaimMetadataHandler.getInstance()
-                        .getMappingsMapFromOtherDialectToCarbon(
-                                SCIMAgentSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI(),
+                        .getMappingsMapFromOtherDialectToCarbon(SCIMAgentSchemaExtensionBuilder.getInstance().getURI(),
                                 null, tenantDomain, false);
                 scimToLocalClaimMap.putAll(agentExtensionClaims);
             }
@@ -554,10 +554,10 @@ public static Map<String, String> getSCIMtoLocalMappingsWithAgentSchema() throws
     try {
         String tenantDomain = getTenantDomain();
         // Add agent schema claims if agent schema extension is enabled and available.
-        if (SCIMAgentSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
+        if (Boolean.TRUE.equals(getThreadLocalIsAgentFlowContextThroughSCIM())) {
             Map<String, String> agentExtensionClaims = ClaimMetadataHandler.getInstance()
                     .getMappingsMapFromOtherDialectToCarbon(
-                            SCIMAgentSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI(),
+                            SCIMAgentSchemaExtensionBuilder.getInstance().getURI(),
                             null, tenantDomain, false);
             scimToLocalClaimMap.putAll(agentExtensionClaims);
         }
