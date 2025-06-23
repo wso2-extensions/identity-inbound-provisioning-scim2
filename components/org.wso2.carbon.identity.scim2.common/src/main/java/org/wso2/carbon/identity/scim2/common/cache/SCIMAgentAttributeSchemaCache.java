@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2025, WSO2 Inc. (http://www.wso2.org).
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -26,11 +26,11 @@ import org.wso2.charon3.core.schema.AttributeSchema;
 /**
  * This stores agent AttributeSchema against tenants.
  */
-public class SCIMAgentAttributeSchemaCache 
+public class SCIMAgentAttributeSchemaCache
         extends BaseCache<SCIMAgentAttributeSchemaCacheKey, SCIMAgentAttributeSchemaCacheEntry> {
 
     private static final String SCIM_AGENT_SCHEMA_CACHE = "SCIMAgentAttributeSchemaCache";
-    private static final Log log = LogFactory.getLog(SCIMAgentAttributeSchemaCache.class);
+    private static final Log LOG = LogFactory.getLog(SCIMAgentAttributeSchemaCache.class);
 
     private static volatile SCIMAgentAttributeSchemaCache instance;
 
@@ -54,21 +54,20 @@ public class SCIMAgentAttributeSchemaCache
     /**
      * Add agent attribute schema to cache against tenantId.
      *
-     * @param tenantId TenantId.
+     * @param tenantId             TenantId.
      * @param agentAttributeSchema AgentAttributeSchema.
      */
-    public void addSCIMAgentAttributeSchema(int tenantId, AttributeSchema agentAttributeSchema){
+    public void addSCIMAgentAttributeSchema(int tenantId, AttributeSchema agentAttributeSchema) {
 
         SCIMAgentAttributeSchemaCacheKey cacheKey = new SCIMAgentAttributeSchemaCacheKey(tenantId);
         SCIMAgentAttributeSchemaCacheEntry cacheEntry = new SCIMAgentAttributeSchemaCacheEntry(agentAttributeSchema);
         super.addToCache(cacheKey, cacheEntry);
-        if (log.isDebugEnabled()) {
-            log.debug("Successfully added scim agent attributes into SCIMAgentSchemaCache for the tenant:"
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Successfully added scim agent attributes into SCIMAgentSchemaCache for the tenant:"
                     + tenantId);
         }
 
     }
-
 
     /**
      * Get SCIM2 Agent AttributeSchema by tenantId.
@@ -83,8 +82,8 @@ public class SCIMAgentAttributeSchemaCache
         if (cacheEntry != null) {
             return cacheEntry.getSCIMAgentAttributeSchema();
         } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Cache entry is null for tenantId: " + tenantId);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Cache entry is null for tenantId: " + tenantId);
             }
             return null;
         }
@@ -97,8 +96,8 @@ public class SCIMAgentAttributeSchemaCache
      */
     public void clearSCIMAgentAttributeSchemaByTenant(int tenantId) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Clearing SCIMAgentAttributeSchemaCache entry by the tenant with id: " + tenantId);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Clearing SCIMAgentAttributeSchemaCache entry by the tenant with id: " + tenantId);
         }
         SCIMAgentAttributeSchemaCacheKey cacheKey = new SCIMAgentAttributeSchemaCacheKey(tenantId);
         super.clearCacheEntry(cacheKey);

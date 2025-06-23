@@ -764,9 +764,9 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             String createdDate = AttributeUtil.formatDateTime(Instant.now());
             attributes.put(createdLocalClaimUri, createdDate);
             attributes.put(modifiedLocalClaimUri, createdDate);
-            // if SCIMCommonUtils.threadLocalIsAgentFlowContextThroughSCIM is true, then the resource type is set to
-            // Agent, else it is set to User.
-             if (Boolean.TRUE.equals(SCIMCommonUtils.getThreadLocalIsAgentFlowContextThroughSCIM())) {
+            // If SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow() is true (an agent specific operational flow),
+            // then the resource type is set to Agent, else it is set to User.
+             if (Boolean.TRUE.equals(SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow())) {
                 attributes.put(resourceTypeLocalClaimUri, SCIMConstants.AGENT);
             } else {
                 attributes.put(resourceTypeLocalClaimUri, SCIMConstants.USER);

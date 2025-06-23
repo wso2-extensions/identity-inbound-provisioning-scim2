@@ -115,8 +115,8 @@ public class AgentResource extends UserResource {
 
         // Set agent flow context before operations
         LOG.debug("Setting thread local agent flow context to true for agent creation");
-        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
-        
+        SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+
         try {
             // Validate content-type header for agent creation
             if (inputFormat == null) {
@@ -162,38 +162,41 @@ public class AgentResource extends UserResource {
         } finally {
             // Unset agent flow context after operations
             LOG.debug("Unsetting thread local agent flow context after agent creation");
-            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+            SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
         }
     }
 
     /**
-     * Override the getUser by ID method from UserResource to handle agent-specific retrieval.
+     * Override the getUser by ID method from UserResource to handle agent-specific
+     * retrieval.
      * 
      * @param id                 Agent ID to retrieve
      * @param outputFormat       Response format preference
-     * @param attribute          Comma-separated list of attributes to include in response
-     * @param excludedAttributes Comma-separated list of attributes to exclude from response
+     * @param attribute          Comma-separated list of attributes to include in
+     *                           response
+     * @param excludedAttributes Comma-separated list of attributes to exclude from
+     *                           response
      * @return Response containing agent details or error response
      */
     @Override
     @GET
     @Path("{id}")
-    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
+    @Produces({ MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON })
     public Response getUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
-                            @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
-                            @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes) {
+            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+            @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
+            @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes) {
 
         // Set agent flow context before super call
         LOG.debug("Setting thread local agent flow context to true for agent retrieval by ID.");
-        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
-        
+        SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+
         try {
             return super.getUser(id, outputFormat, attribute, excludedAttributes);
         } finally {
             // Unset agent flow context after super call
             LOG.debug("Unsetting thread local agent flow context after agent retrieval by ID.");
-            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+            SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
         }
     }
 
@@ -241,23 +244,21 @@ public class AgentResource extends UserResource {
 
         // Set agent flow context before operations
         LOG.debug("Setting thread local agent flow context to true for agent listing");
-        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
-        
+        SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+
         try {
             // Check if domain name parameter was provided and warn about its irrelevance
             if (domainName != null && !domainName.isEmpty()) {
                 LOG.warn("Domain name parameter is not applicable for agents. Ignoring domain filter.");
             }
 
-             domainName = AGENT_DOMAIN;
-             return super.getUser(format, attribute, excludedAttributes, filter, startIndex, count, sortBy, sortOrder, domainName);
-            // Delegate to static listAgents method for actual implementation
-            // return AgentResource.listAgents(this, format, attribute, excludedAttributes, filter, startIndex, count, sortBy,
-                    // sortOrder);
+            domainName = AGENT_DOMAIN;
+            return super.getUser(format, attribute, excludedAttributes, filter, startIndex, count, sortBy, sortOrder,
+                    domainName);
         } finally {
             // Unset agent flow context after operations
             LOG.debug("Unsetting thread local agent flow context after agent listing");
-            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+            SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
         }
     }
 
@@ -310,10 +311,11 @@ public class AgentResource extends UserResource {
             @QueryParam(SCIMProviderConstants.COUNT) Integer count,
             @QueryParam(SCIMProviderConstants.SORT_BY) String sortBy,
             @QueryParam(SCIMProviderConstants.SORT_ORDER) String sortOrder) {
-        
+
         // Set default domain for agent operations
 
-        return getUser(format, attribute, excludedAttributes, filter, startIndex, count, sortBy, sortOrder, AGENT_DOMAIN);
+        return getUser(format, attribute, excludedAttributes, filter, startIndex, count, sortBy, sortOrder,
+                AGENT_DOMAIN);
     }
 
     /**
@@ -327,18 +329,18 @@ public class AgentResource extends UserResource {
     @DELETE
     @Path("{id}")
     public Response deleteUser(@PathParam(SCIMProviderConstants.ID) String id,
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
+            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
 
         // Set agent flow context before super call
         LOG.debug("Setting thread local agent flow context to true for agent deletion, ID.");
-        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
-        
+        SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+
         try {
             return super.deleteUser(id, format);
         } finally {
             // Unset agent flow context after super call
             LOG.debug("Unsetting thread local agent flow context after agent deletion, ID.");
-            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+            SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
         }
     }
 
@@ -353,21 +355,21 @@ public class AgentResource extends UserResource {
     @Override
     @POST
     @Path("/.search")
-    @Produces({MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON})
+    @Produces({ MediaType.APPLICATION_JSON, SCIMProviderConstants.APPLICATION_SCIM_JSON })
     public Response getUsersByPost(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
-                                   @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
-                                   String resourceString) {
+            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+            String resourceString) {
 
         // Set agent flow context before super call
         LOG.debug("Setting thread local agent flow context to true for agent search");
-        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
-        
+        SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+
         try {
             return super.getUsersByPost(inputFormat, outputFormat, resourceString);
         } finally {
             // Unset agent flow context after super call
             LOG.debug("Unsetting thread local agent flow context after agent search");
-            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+            SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
         }
     }
 
@@ -377,8 +379,10 @@ public class AgentResource extends UserResource {
      * @param id                 Agent ID to update
      * @param inputFormat        Request content type
      * @param outputFormat       Response format preference
-     * @param attribute          Comma-separated list of attributes to include in response
-     * @param excludedAttributes Comma-separated list of attributes to exclude from response
+     * @param attribute          Comma-separated list of attributes to include in
+     *                           response
+     * @param excludedAttributes Comma-separated list of attributes to exclude from
+     *                           response
      * @param resourceString     Updated agent data in JSON format
      * @return Response containing updated agent details or error response
      */
@@ -386,33 +390,36 @@ public class AgentResource extends UserResource {
     @PUT
     @Path("{id}")
     public Response updateUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                               @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
-                               @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
-                               @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
-                               @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
-                               String resourceString) {
+            @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+            @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
+            @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
+            String resourceString) {
 
         // Set agent flow context before super call
         LOG.debug("Setting thread local agent flow context to true for agent update, ID.");
-        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
-        
+        SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+
         try {
             return super.updateUser(id, inputFormat, outputFormat, attribute, excludedAttributes, resourceString);
         } finally {
             // Unset agent flow context after super call
             LOG.debug("Unsetting thread local agent flow context after agent update, ID.");
-            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+            SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
         }
     }
 
     /**
-     * Override the patchUser method from UserResource to handle agent partial updates.
+     * Override the patchUser method from UserResource to handle agent partial
+     * updates.
      * 
      * @param id                 Agent ID to update
      * @param inputFormat        Request content type
      * @param outputFormat       Response format preference
-     * @param attribute          Comma-separated list of attributes to include in response
-     * @param excludedAttributes Comma-separated list of attributes to exclude from response
+     * @param attribute          Comma-separated list of attributes to include in
+     *                           response
+     * @param excludedAttributes Comma-separated list of attributes to exclude from
+     *                           response
      * @param resourceString     Patch operations in JSON format
      * @return Response containing updated agent details or error response
      */
@@ -420,22 +427,22 @@ public class AgentResource extends UserResource {
     @PATCH
     @Path("{id}")
     public Response patchUser(@PathParam(SCIMConstants.CommonSchemaConstants.ID) String id,
-                              @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
-                              @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
-                              @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
-                              @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
-                              String resourceString) {
+            @HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
+            @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
+            @QueryParam(SCIMProviderConstants.ATTRIBUTES) String attribute,
+            @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
+            String resourceString) {
 
         // Set agent flow context before super call
         LOG.debug("Setting thread local agent flow context to true for agent patch, ID.");
-        SCIMCommonUtils.setThreadLocalIsAgentFlowContextThroughSCIM(true);
-        
+        SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+
         try {
             return super.patchUser(id, inputFormat, outputFormat, attribute, excludedAttributes, resourceString);
         } finally {
             // Unset agent flow context after super call
             LOG.debug("Unsetting thread local agent flow context after agent patch, ID.");
-            SCIMCommonUtils.unsetThreadLocalIsAgentFlowContextThroughSCIM();
+            SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
         }
     }
 

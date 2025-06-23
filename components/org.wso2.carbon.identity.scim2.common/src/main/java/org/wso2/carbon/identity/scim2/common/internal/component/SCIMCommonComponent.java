@@ -137,7 +137,7 @@ public class SCIMCommonComponent {
             logger.error("Error in reading information from identity tables at SCIMCommonComponentStartup.", e);
         } catch (InternalErrorException e) {
             logger.error("Error in reading information from identity tables at SCIMCommonComponentStartup.", e);
-        } 
+        }
     }
 
     protected void unsetIdentityCoreInitializedEventService(IdentityCoreInitializedEvent identityCoreInitializedEvent) {
@@ -184,7 +184,6 @@ public class SCIMCommonComponent {
         if (logger.isDebugEnabled()) {
             logger.debug("realmService unset in SCIMCommonComponent bundle");
         }
-
         SCIMCommonComponentHolder.setRealmService(null);
     }
 
