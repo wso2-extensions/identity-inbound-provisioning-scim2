@@ -102,15 +102,14 @@ public class SCIMCommonUtils {
     /**
      * ThreadLocal to indicate if the agent flow is managed through SCIM.
      */
-    private static ThreadLocal<Boolean> threadLocalIsAgentFlowContextThroughSCIM = new ThreadLocal<>();
+    private static ThreadLocal<Boolean> threadLocalIsSCIMAgentFlow = new ThreadLocal<>();
 
     public static String getSCIMUserURL(String id) {
-        // if threadLocalAgentFlowContextThroughSCIM is true, then we need to use the Agent URL for the user.
-        if (Boolean.TRUE.equals(getThreadLocalIsAgentFlowContextThroughSCIM())) {
+        // If getThreadLocalIsSCIMAgentFlow() is true, then we need to use the Agent URL for the user.
+        if (Boolean.TRUE.equals(getThreadLocalIsSCIMAgentFlow())) {
             return StringUtils.isNotBlank(id) ? getSCIMAgentURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
         } else {
             return StringUtils.isNotBlank(id) ? getSCIMUserURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
-
         }
     }
 
@@ -141,7 +140,6 @@ public class SCIMCommonUtils {
     /*Handling ThreadLocals*/
 
     public static String getSCIMUserURL() {
-
 
         String scimURL = getSCIMURL(true);
         return scimURL + SCIMCommonConstants.USERS;
@@ -393,16 +391,19 @@ public class SCIMCommonUtils {
         threadLocalIsManagedThroughSCIMEP.set(value);
     }
 
-    public static void unsetThreadLocalIsAgentFlowContextThroughSCIM() {
-        threadLocalIsAgentFlowContextThroughSCIM.remove();
+    public static void unsetThreadLocalIsSCIMAgentFlow() {
+
+        threadLocalIsSCIMAgentFlow.remove();
     }
 
-    public static Boolean getThreadLocalIsAgentFlowContextThroughSCIM() {
-        return threadLocalIsAgentFlowContextThroughSCIM.get();
+    public static Boolean getThreadLocalIsSCIMAgentFlow() {
+
+        return threadLocalIsSCIMAgentFlow.get();
     }
 
-    public static void setThreadLocalIsAgentFlowContextThroughSCIM(Boolean value) {
-        threadLocalIsAgentFlowContextThroughSCIM.set(value);
+    public static void setThreadLocalIsSCIMAgentFlow(Boolean value) {
+        
+        threadLocalIsSCIMAgentFlow.set(value);
     }
 
     public static String getGlobalConsumerId() {
@@ -521,7 +522,7 @@ public class SCIMCommonUtils {
                 scimToLocalClaimMap.putAll(systemExtensionClaims);
             }
             // Add agent schema claims if agent schema extension is enabled and available.
-            if (Boolean.TRUE.equals(getThreadLocalIsAgentFlowContextThroughSCIM())) {
+            if (Boolean.TRUE.equals(getThreadLocalIsSCIMAgentFlow())) {
                 Map<String, String> agentExtensionClaims = ClaimMetadataHandler.getInstance()
                         .getMappingsMapFromOtherDialectToCarbon(SCIMAgentSchemaExtensionBuilder.getInstance().getURI(),
                                 null, tenantDomain, false);
@@ -554,7 +555,7 @@ public static Map<String, String> getSCIMtoLocalMappingsWithAgentSchema() throws
     try {
         String tenantDomain = getTenantDomain();
         // Add agent schema claims if agent schema extension is enabled and available.
-        if (Boolean.TRUE.equals(getThreadLocalIsAgentFlowContextThroughSCIM())) {
+        if (Boolean.TRUE.equals(getThreadLocalIsSCIMAgentFlow())) {
             Map<String, String> agentExtensionClaims = ClaimMetadataHandler.getInstance()
                     .getMappingsMapFromOtherDialectToCarbon(
                             SCIMAgentSchemaExtensionBuilder.getInstance().getURI(),
