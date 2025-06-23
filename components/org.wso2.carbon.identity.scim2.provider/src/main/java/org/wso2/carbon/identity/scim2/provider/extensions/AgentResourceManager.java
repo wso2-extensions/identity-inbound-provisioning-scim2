@@ -137,7 +137,7 @@ public class AgentResourceManager extends UserResourceManager {
                 String originalUsername = agent.getUserName();
                 agent.setUserName(AGENT_STORE_DOMAIN + UserCoreConstants.DOMAIN_SEPARATOR + originalUsername);
                 logger.debug("Added domain prefix to agent username: {} -> {}", originalUsername, agent.getUserName());
-            } else if (agent.getUserName() != null || agent.getUserName().contains("/")) {
+            } else if (agent.getUserName() != null && agent.getUserName().contains("/")) {
                 String error = "Agent username cannot contain domain name or be null.";
                 logger.error("Invalid agent username format: {}", agent.getUserName());
                 throw new BadRequestException(error);
