@@ -6804,16 +6804,16 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Returns SCIM2 system AttributeSchema of the tenant if this is a agent flow.
+     * Returns SCIM2 Agent AttributeSchema of the tenant if this is an agent flow.
      *
-     * @return Returns scim2 system schema
+     * @return Returns scim2 agent schema
      * @throws CharonException
      */
     @Override
     public AttributeSchema getCustomAttributeSchemaInAgentExtension() throws CharonException {
 
         if (tenantDomain != null
-                && (Boolean.TRUE.equals(SCIMCommonUtils.getThreadLocalIsAgentFlowContextThroughSCIM()))) {
+                && (Boolean.TRUE.equals(SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()))) {
             AttributeSchema schema = SCIMAgentAttributeSchemaCache.getInstance()
                     .getSCIMAgentAttributeSchemaByTenant(IdentityTenantUtil.getTenantId(tenantDomain));
             if (schema != null) {
