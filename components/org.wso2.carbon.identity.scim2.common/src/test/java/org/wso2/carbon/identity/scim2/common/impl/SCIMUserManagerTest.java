@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
@@ -2137,8 +2138,13 @@ public class SCIMUserManagerTest {
                 .thenThrow(new UserStoreException(new UserStoreClientException("TestException")));
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        IdentityEventService mockService = mock(IdentityEventService.class);
+
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getIdentityEventService).thenReturn(mockService);
         scimUserManager.createUser(user, null);
         // This method is for testing of throwing BadRequestException, hence no assertion.
+
     }
 
     @Test(expectedExceptions = AbstractCharonException.class)
