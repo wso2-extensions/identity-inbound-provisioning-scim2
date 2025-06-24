@@ -5682,8 +5682,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, String> multiValuedClaimsToModify =
                     SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(oldClaimList, simpleMultiValuedClaimsToBeAdded,
                             simpleMultiValuedClaimsToBeRemoved);
-
-            userClaimsToBeModified.putAll(multiValuedClaimsToModify);
+            userClaimsToBeModifiedIncludingMultiValueClaims.putAll(multiValuedClaimsToModify);
 
             preUpdateProfileActionExecutor.execute(user, userClaimsToBeModifiedIncludingMultiValueClaims, userClaimsToBeDeleted);
         }
@@ -6943,6 +6942,9 @@ public class SCIMUserManager implements UserManager {
         properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getTenantId());
+        properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN,
+                IdentityUtil.extractDomainFromName(user.getUsername()));
+        properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
 
         Event identityMgtEvent = new Event("USER_PROFILE_UPDATE", properties);
 
