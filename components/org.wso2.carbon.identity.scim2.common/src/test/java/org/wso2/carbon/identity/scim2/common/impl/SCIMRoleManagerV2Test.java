@@ -109,6 +109,8 @@ public class SCIMRoleManagerV2Test {
 
     private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolderMockedStatic;
 
+    private MockedStatic<RoleManagementUtils> roleManagementUtilsMockedStatic;
+
     @BeforeClass
     public void setUpClass() {
 
@@ -122,6 +124,7 @@ public class SCIMRoleManagerV2Test {
         scimRoleManagerV2 = new SCIMRoleManagerV2(roleManagementService, SAMPLE_TENANT_DOMAIN);
         organizationManagementUtilMockedStatic = mockStatic(OrganizationManagementUtil.class);
         scimCommonComponentHolderMockedStatic = mockStatic(SCIMCommonComponentHolder.class);
+        roleManagementUtilsMockedStatic = mockStatic(RoleManagementUtils.class);
     }
 
     @AfterMethod
@@ -130,6 +133,7 @@ public class SCIMRoleManagerV2Test {
         identityUtil.close();
         organizationManagementUtilMockedStatic.close();
         scimCommonComponentHolderMockedStatic.close();
+        roleManagementUtilsMockedStatic.close();
     }
 
     @DataProvider(name = "scimOperations")
@@ -182,26 +186,21 @@ public class SCIMRoleManagerV2Test {
     @Test(dataProvider = "roleNameUpdateExceptions", expectedExceptions = BadRequestException.class)
     public void testInvalidRequestOnRoleNameUpdate(IdentityRoleManagementException identityException, Class<? extends Throwable> expectedException) throws Exception {
 
-        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
-             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class);
-             MockedStatic<OrganizationManagementUtil> mockOrganizationManagementUtil =
-                     mockStatic(OrganizationManagementUtil.class)) {
+        RoleV2 oldRole = mock(RoleV2.class);
+        RoleV2 newRole = mock(RoleV2.class);
 
-            RoleV2 oldRole = mock(RoleV2.class);
-            RoleV2 newRole = mock(RoleV2.class);
+        when(oldRole.getDisplayName()).thenReturn(ROLE_NAME);
+        when(newRole.getDisplayName()).thenReturn(ROLE_NAME_2);
+        when(oldRole.getId()).thenReturn(ROLE_ID);
 
-            when(oldRole.getDisplayName()).thenReturn(ROLE_NAME);
-            when(newRole.getDisplayName()).thenReturn(ROLE_NAME_2);
-            when(oldRole.getId()).thenReturn(ROLE_ID);
+        when(RoleManagementUtils.isSharedRole(ROLE_ID, SAMPLE_TENANT_DOMAIN)).thenReturn(false);
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
 
-            when(RoleManagementUtils.isSharedRole(ROLE_ID, SAMPLE_TENANT_DOMAIN)).thenReturn(false);
-            when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+        doThrow(identityException).when(roleManagementService)
+                .updateRoleName(ROLE_ID, ROLE_NAME_2, SAMPLE_TENANT_DOMAIN);
 
-            doThrow(identityException).when(roleManagementService)
-                    .updateRoleName(ROLE_ID, ROLE_NAME_2, SAMPLE_TENANT_DOMAIN);
+        scimRoleManagerV2.updateRole(oldRole, newRole);
 
-            scimRoleManagerV2.updateRole(oldRole, newRole);
-        }
     }
 
     @Test
@@ -219,8 +218,7 @@ public class SCIMRoleManagerV2Test {
         role.setId(SAMPLE_VALID_ROLE_ID);
         role.setName(SAMPLE_VALID_ROLE_NAME);
 
-        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
-             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+        try (MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
 
             when(roleManagementService.getPermissionListOfRole(any(), any()))
                     .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_2_NAME)));
@@ -267,8 +265,7 @@ public class SCIMRoleManagerV2Test {
         role.setId(SAMPLE_VALID_ROLE_ID);
         role.setName(SAMPLE_VALID_ROLE_NAME);
 
-        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
-             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+        try (MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
 
             when(roleManagementService.getPermissionListOfRole(any(), any()))
                     .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_2_NAME)));
@@ -315,8 +312,7 @@ public class SCIMRoleManagerV2Test {
         role.setId(SAMPLE_VALID_ROLE_ID);
         role.setName(SAMPLE_VALID_ROLE_NAME);
 
-        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
-             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+        try (MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
 
             when(roleManagementService.getPermissionListOfRole(any(), any()))
                     .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_1_NAME)));
