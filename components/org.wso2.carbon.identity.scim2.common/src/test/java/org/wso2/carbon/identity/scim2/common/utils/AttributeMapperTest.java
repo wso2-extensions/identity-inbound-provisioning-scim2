@@ -25,9 +25,12 @@ import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
+import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
+import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.encoder.JSONDecoder;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.AbstractSCIMObject;
@@ -80,7 +83,8 @@ public class AttributeMapperTest {
     @Test
     public void testGetClaimsMap() throws Exception {
 
-        String scimObjectString = "{\"schemas\":[\"urn:ietf:params:scim:schemas:core:2.0:User\"]," +
+        String scimObjectString = "{\"schemas\":[\"urn:ietf:params:scim:schemas:core:2.0:User\", " +
+                "\"urn:scim:wso2:schema\", \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"]," +
                 "\"id\":\"1819c223-7f76-453a-919d-413851904641\",\"externalId\":\"702984\",\"userName\":\"paul\"," +
                 "\"name\":{\"formatted\":\"Ms.BarbaraJJensen,III\",\"familyName\":\"Jensen\"," +
                 "\"givenName\":\"Barbara\",\"middleName\":\"Jane\",\"honorificPrefix\":\"Ms.\"," +
@@ -93,15 +97,97 @@ public class AttributeMapperTest {
                 "\"locality\":\"Hollywood\",\"region\":\"CA\",\"postalCode\":\"91608\",\"country\":\"USA\"," +
                 "\"formatted\":\"456HollywoodBlvd\\nHollywood,CA91608USA\"}]," +
                 "\"phoneNumbers\":[{\"value\":\"555-555-5555\",\"type\":\"work\"},{\"value\":\"555-555-4444\"," +
-                "\"type\":\"mobile\"}]}";
+                "\"type\":\"mobile\"}], \"urn:scim:wso2:schema\":{\"emailAddresses\":[\"bjensen@example.com\"," +
+                "\"babs@jensen.org\"]}, " +
+                "\"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\":{\"department\":\"ABC\"}}";
 
-        JSONDecoder decoder = new JSONDecoder();
-        SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
-        User user = (User) decoder.decodeResource(scimObjectString, schema, new User());
+        try (MockedStatic<SCIMUserSchemaExtensionBuilder> scimUserSchemaExtensionBuilder =
+                     Mockito.mockStatic(SCIMUserSchemaExtensionBuilder.class);
+             MockedStatic<SCIMSystemSchemaExtensionBuilder> scimSystemSchemaExtensionBuilder =
+                Mockito.mockStatic(SCIMSystemSchemaExtensionBuilder.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = Mockito.mockStatic(FrameworkUtils.class)) {
 
-        assertNotNull(AttributeMapper.getClaimsMap(user));
-        assertEquals(AttributeMapper.getClaimsMap(user).size(), 17);
+            AttributeSchema departmentSchema = SCIMAttributeSchema.createSCIMAttributeSchema(
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department",
+                    "department",
+                    SCIMDefinitions.DataType.STRING,
+                    false,
+                    "Department",
+                    false,
+                    false,
+                    SCIMDefinitions.Mutability.READ_WRITE,
+                    SCIMDefinitions.Returned.DEFAULT,
+                    SCIMDefinitions.Uniqueness.NONE,
+                    null,
+                    null,
+                    new ArrayList<>());
 
+            SCIMAttributeSchema scimUserAttributeSchema = SCIMAttributeSchema.createSCIMAttributeSchema(
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                    SCIMDefinitions.DataType.COMPLEX,
+                    false,
+                    "Enterprise User",
+                    false,
+                    false,
+                    SCIMDefinitions.Mutability.READ_WRITE,
+                    SCIMDefinitions.Returned.DEFAULT,
+                    SCIMDefinitions.Uniqueness.NONE,
+                    null,
+                    null,
+                    new ArrayList<>(Collections.singletonList(departmentSchema)));
+
+            SCIMUserSchemaExtensionBuilder
+                    mockScimUserSchemaExtensionBuilder = mock(SCIMUserSchemaExtensionBuilder.class);
+            scimUserSchemaExtensionBuilder.when(SCIMUserSchemaExtensionBuilder::getInstance)
+                    .thenReturn(mockScimUserSchemaExtensionBuilder);
+            when(mockScimUserSchemaExtensionBuilder.getExtensionSchema()).thenReturn(scimUserAttributeSchema);
+
+            AttributeSchema emailAddressesSchema = SCIMAttributeSchema.createSCIMAttributeSchema(
+                    "urn:scim:wso2:schema:emailAddresses",
+                    "emailAddresses",
+                    SCIMDefinitions.DataType.STRING,
+                    true,
+                    "Email Addresses",
+                    false,
+                    false,
+                    SCIMDefinitions.Mutability.READ_WRITE,
+                    SCIMDefinitions.Returned.DEFAULT,
+                    SCIMDefinitions.Uniqueness.NONE,
+                    null,
+                    null,
+                    new ArrayList<>());
+
+            SCIMAttributeSchema scimSystemAttributeSchema = SCIMAttributeSchema.createSCIMAttributeSchema(
+                    "urn:scim:wso2:schema",
+                    "urn:scim:wso2:schema",
+                    SCIMDefinitions.DataType.COMPLEX,
+                    false,
+                    "Enterprise User",
+                    false,
+                    false,
+                    SCIMDefinitions.Mutability.READ_WRITE,
+                    SCIMDefinitions.Returned.DEFAULT,
+                    SCIMDefinitions.Uniqueness.NONE,
+                    null,
+                    null,
+                    new ArrayList<>(Collections.singletonList(emailAddressesSchema)));
+
+            SCIMSystemSchemaExtensionBuilder
+                    mockScimSystemSchemaExtensionBuilder = mock(SCIMSystemSchemaExtensionBuilder.class);
+            scimSystemSchemaExtensionBuilder.when(SCIMSystemSchemaExtensionBuilder::getInstance)
+                    .thenReturn(mockScimSystemSchemaExtensionBuilder);
+            when(mockScimSystemSchemaExtensionBuilder.getExtensionSchema()).thenReturn(scimSystemAttributeSchema);
+
+            frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            JSONDecoder decoder = new JSONDecoder();
+            SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+            User user = decoder.decodeResource(scimObjectString, schema, new User());
+
+            assertNotNull(AttributeMapper.getClaimsMap(user));
+            assertEquals(AttributeMapper.getClaimsMap(user).size(), 19);
+        }
     }
 
     @Test

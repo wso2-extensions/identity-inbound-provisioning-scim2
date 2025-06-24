@@ -6291,6 +6291,12 @@ public class SCIMUserManager implements UserManager {
                 attribute.addAttributeJSONArray(ClaimConstants.CANONICAL_VALUES_PROPERTY, canonicalValues);
             }
 
+            if (StringUtils.isNotEmpty(mappedLocalClaim.getClaimProperty(ClaimConstants.INPUT_FORMAT_PROPERTY))) {
+                JSONObject inputFormat =
+                        new JSONObject(mappedLocalClaim.getClaimProperty(ClaimConstants.INPUT_FORMAT_PROPERTY));
+                attribute.addAttributeJSONProperty(ClaimConstants.INPUT_FORMAT_PROPERTY, inputFormat);
+            }
+
             // Add attribute profile properties.
             for (Map.Entry<String, String> entry: mappedLocalClaim.getClaimProperties().entrySet()) {
                 if (StringUtils.startsWith(entry.getKey(), ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX)) {

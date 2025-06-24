@@ -1504,6 +1504,7 @@ public class SCIMUserManagerTest {
             put("Required", "true");
             put("DataType", "Integer");
             put("canonicalValues", canonicalValues.toString());
+            put("inputFormat", "{\"inputType\" : \"dropdown\"}");
         }};
 
         List<LocalClaim> localClaimMap = new ArrayList<LocalClaim>() {{
@@ -1528,6 +1529,9 @@ public class SCIMUserManagerTest {
         assertEquals(systemSchema.size(), 1);
         JSONObject jsonObject = systemSchema.get(0).getAttributeJSONArray("canonicalValues").getJSONObject(0);
         assertEquals(jsonObject.get("displayValue"), canonicalValues.getJSONObject(0).get("displayValue"));
+
+        jsonObject = systemSchema.get(0).getAttributeJSONProperty("inputFormat");
+        assertEquals(jsonObject.get("inputType"), "dropdown");
     }
 
     @Test
