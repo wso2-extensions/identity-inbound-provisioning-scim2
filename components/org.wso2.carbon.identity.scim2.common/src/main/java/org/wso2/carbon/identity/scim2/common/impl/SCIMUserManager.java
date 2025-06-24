@@ -5562,7 +5562,11 @@ public class SCIMUserManager implements UserManager {
         // Combine the claims to be added and modified.
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
 
-        preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted);
+        boolean isExecutableUserProfileUpdate =
+                SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted);
+        if (isExecutableUserProfileUpdate) {
+            preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted);
+        }
 
         if (log.isDebugEnabled()) {
             log.debug(String.format(
@@ -5571,15 +5575,20 @@ public class SCIMUserManager implements UserManager {
                     userClaimsToBeModified.keySet()));
         }
 
+        Map<String, String> claimsDeleted = new HashMap<>();
         // Remove user claims.
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
             if (!isImmutableClaim(entry.getKey())) {
                 carbonUM.deleteUserClaimValueWithID(user.getId(), entry.getKey(), null);
+                claimsDeleted.put(entry.getKey(), entry.getValue());
             }
         }
 
         // Update user claims.
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
+        if (isExecutableUserProfileUpdate) {
+            publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModified, claimsDeleted);
+        }
     }
 
     /**
@@ -5664,9 +5673,20 @@ public class SCIMUserManager implements UserManager {
         // Combine the claims to be added and modified.
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
 
-        preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted,
-                simpleMultiValuedClaimsToBeAdded,
-                simpleMultiValuedClaimsToBeRemoved, oldClaimList);
+        boolean isExecutableUserProfileUpdate = SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted,
+                simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved);
+        Map<String, String> userClaimsToBeModifiedIncludingMultiValueClaims = new HashMap<>(userClaimsToBeModified);
+
+        if (isExecutableUserProfileUpdate) {
+
+            Map<String, String> multiValuedClaimsToModify =
+                    SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(oldClaimList, simpleMultiValuedClaimsToBeAdded,
+                            simpleMultiValuedClaimsToBeRemoved);
+
+            userClaimsToBeModified.putAll(multiValuedClaimsToModify);
+
+            preUpdateProfileActionExecutor.execute(user, userClaimsToBeModifiedIncludingMultiValueClaims, userClaimsToBeDeleted);
+        }
 
         if (log.isDebugEnabled()) {
             log.debug(String.format(
@@ -5676,9 +5696,11 @@ public class SCIMUserManager implements UserManager {
         }
 
         // Remove user claims.
+        Map<String,String> claimsDeleted = new HashMap<>();
         for (Map.Entry<String, String> entry : userClaimsToBeDeleted.entrySet()) {
             if (!isImmutableClaim(entry.getKey())) {
                 carbonUM.deleteUserClaimValueWithID(user.getId(), entry.getKey(), null);
+                claimsDeleted.put(entry.getKey(), entry.getValue());
             }
         }
 
@@ -5691,6 +5713,11 @@ public class SCIMUserManager implements UserManager {
             carbonUM.setUserClaimValuesWithID(user.getId(), convertClaimValuesToList(oldClaimList),
                     simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved,
                     convertClaimValuesToList(userClaimsToBeModified), null);
+        }
+
+        if (isExecutableUserProfileUpdate) {
+            publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
+                    claimsDeleted);
         }
     }
 
@@ -6892,6 +6919,37 @@ public class SCIMUserManager implements UserManager {
             SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
         } catch (IdentityEventException e) {
             throw new BadRequestException("Error occurred publishing event", ResponseCodeConstants.INVALID_VALUE);
+        }
+    }
+
+    private void publishUserProfileUpdateEvent(User user, Map<String, String> userClaimsAdded,
+                                               Map<String, String> userClaimsAddedAndModified,
+                                               Map<String, String> userClaimsDeleted) {
+
+        HashMap<String, Object> properties = new HashMap<>();
+
+        if (user != null) {
+            properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
+        }
+
+        Map<String, String> userClaimsModified = new HashMap<>(userClaimsAddedAndModified);
+        if (MapUtils.isNotEmpty(userClaimsAdded) && MapUtils.isNotEmpty(userClaimsModified)) {
+            userClaimsModified.keySet().removeAll(userClaimsAdded.keySet());
+        }
+
+        properties.put("USER_CLAIMS_ADDED", userClaimsAdded);
+        properties.put("USER_CLAIMS_MODIFIED", userClaimsModified);
+        properties.put("USER_CLAIMS_DELETED", userClaimsDeleted);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getTenantId());
+
+        Event identityMgtEvent = new Event("USER_PROFILE_UPDATE", properties);
+
+        try {
+            SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
+        } catch (IdentityEventException e) {
+            log.error("Error occurred publishing event USER_PROFILE_UPDATE", e);
         }
     }
 
