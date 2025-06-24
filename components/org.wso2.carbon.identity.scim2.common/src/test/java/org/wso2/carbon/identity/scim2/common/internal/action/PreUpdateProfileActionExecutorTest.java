@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.constants.TestConstants;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionServerException;
@@ -59,9 +60,9 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 import static org.testng.AssertJUnit.assertEquals;
@@ -130,9 +131,8 @@ public class PreUpdateProfileActionExecutorTest {
         preUpdateProfileActionExecutor.execute(user, Collections.emptyMap(), Collections.emptyMap());
         verify(actionExecutorService, Mockito.never()).execute(any(), any(), any());
 
-        preUpdateProfileActionExecutor.execute(user, Collections.emptyMap(), Collections.emptyMap(),
-                Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap());
-        verify(actionExecutorService, Mockito.never()).execute(any(), any(), any());
+        assertFalse(SCIMCommonUtils.isExecutableUserProfileUpdate(Collections.emptyMap(), Collections.emptyMap(),
+                Collections.emptyMap(), Collections.emptyMap()));
     }
 
     @Test
@@ -261,9 +261,7 @@ public class PreUpdateProfileActionExecutorTest {
                 FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getInputValueAsString());
 
         Map<String, String> claimsToDelete = new HashMap<>();
-
-        preUpdateProfileActionExecutor.execute(user, claimsToModify, claimsToDelete);
-        verify(actionExecutorService, never()).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
+        assertFalse(SCIMCommonUtils.isExecutableUserProfileUpdate(claimsToModify, claimsToDelete));
     }
 
     @Test
@@ -275,14 +273,10 @@ public class PreUpdateProfileActionExecutorTest {
         when(status.getStatus()).thenReturn(ActionExecutionStatus.Status.SUCCESS);
         when(actionExecutorService.execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any())).thenReturn(status);
 
-        User user = getSCIMUser();
-
         Map<String, String> claimsToModify = new HashMap<>();
-
         Map<String, String> claimsToDelete = new HashMap<>();
 
-        preUpdateProfileActionExecutor.execute(user, claimsToModify, claimsToDelete);
-        verify(actionExecutorService, never()).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
+        assertFalse(SCIMCommonUtils.isExecutableUserProfileUpdate(claimsToModify, claimsToDelete));
     }
 
     @Test
@@ -651,16 +645,10 @@ public class PreUpdateProfileActionExecutorTest {
 
         Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved = new HashMap<>();
 
-        Map<String, String> existingClaimsOfUser = new HashMap<>();
-
-        preUpdateProfileActionExecutor.execute(user,
-                userClaimsExcludingMultiValuedClaimsToBeModified,
+        assertFalse(SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsExcludingMultiValuedClaimsToBeModified,
                 userClaimsExcludingMultiValuedClaimsToBeDeleted,
                 simpleMultiValuedClaimsToBeAdded,
-                simpleMultiValuedClaimsToBeRemoved,
-                existingClaimsOfUser);
-
-        verify(actionExecutorService, never()).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
+                simpleMultiValuedClaimsToBeRemoved));
     }
 
     private static User getSCIMUser() throws CharonException, BadRequestException {
