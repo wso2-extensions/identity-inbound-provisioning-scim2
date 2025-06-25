@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
@@ -57,6 +58,8 @@ public class RoleResourceV3 extends AbstractResource {
                             @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes) {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(SCIMProviderConstants.SCIM_VERSION,
+                    SCIMProviderConstants.SCIM_VERSION_V3);
             if (!isValidOutputFormat(outputFormat)) {
                 String error = outputFormat + " is not supported.";
                 throw new FormatNotSupportedException(error);
@@ -65,13 +68,15 @@ public class RoleResourceV3 extends AbstractResource {
             RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
-            SCIMResponse scimResponse = roleResourceManager.getRoleV3(id, roleManager, attribute, excludedAttributes);
+            SCIMResponse scimResponse = roleResourceManager.getRole(id, roleManager, attribute, excludedAttributes);
             // Needs to check the code of the response and return 200 0k or other error codes appropriately.
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(SCIMProviderConstants.SCIM_VERSION);
         }
     }
 
@@ -83,6 +88,8 @@ public class RoleResourceV3 extends AbstractResource {
                                    String resourceString) {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(SCIMProviderConstants.SCIM_VERSION,
+                    SCIMProviderConstants.SCIM_VERSION_V3);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
@@ -106,6 +113,8 @@ public class RoleResourceV3 extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(SCIMProviderConstants.SCIM_VERSION);
         }
     }
 
@@ -152,6 +161,8 @@ public class RoleResourceV3 extends AbstractResource {
                              @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes) {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(SCIMProviderConstants.SCIM_VERSION,
+                    SCIMProviderConstants.SCIM_VERSION_V3);
             // Defaults to application/scim+json.
             if (outputFormat == null) {
                 outputFormat = SCIMProviderConstants.APPLICATION_SCIM_JSON;
@@ -165,13 +176,15 @@ public class RoleResourceV3 extends AbstractResource {
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
             SCIMResponse scimResponse = roleResourceManager
-                    .listWithGETRoleV3(roleManager, filter, startIndex, count, sortBy, sortOrder, attribute,
+                    .listWithGETRole(roleManager, filter, startIndex, count, sortBy, sortOrder, attribute,
                             excludedAttributes);
             return SupportUtils.buildResponse(scimResponse);
         } catch (CharonException e) {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(SCIMProviderConstants.SCIM_VERSION);
         }
     }
 
@@ -211,6 +224,8 @@ public class RoleResourceV3 extends AbstractResource {
                                String resourceString) {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(SCIMProviderConstants.SCIM_VERSION,
+                    SCIMProviderConstants.SCIM_VERSION_V3);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
@@ -234,6 +249,8 @@ public class RoleResourceV3 extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(SCIMProviderConstants.SCIM_VERSION);
         }
     }
 
@@ -245,6 +262,8 @@ public class RoleResourceV3 extends AbstractResource {
                               String resourceString) {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(SCIMProviderConstants.SCIM_VERSION,
+                    SCIMProviderConstants.SCIM_VERSION_V3);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
@@ -268,6 +287,8 @@ public class RoleResourceV3 extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(SCIMProviderConstants.SCIM_VERSION);
         }
     }
 
@@ -279,6 +300,8 @@ public class RoleResourceV3 extends AbstractResource {
                                    String resourceString) {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(SCIMProviderConstants.SCIM_VERSION,
+                    SCIMProviderConstants.SCIM_VERSION_V3);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
@@ -292,16 +315,20 @@ public class RoleResourceV3 extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw new FormatNotSupportedException(error);
             }
+            String formattedPayload = SupportUtils.formatJsonPayloadWithKey(resourceString,
+                    SCIMProviderConstants.USERS);
             // Obtain the role manager.
             RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
-            SCIMResponse response = roleResourceManager.updateUsersWithPUTRole(id, resourceString, roleManager);
+            SCIMResponse response = roleResourceManager.updateUsersWithPUTRole(id, formattedPayload, roleManager);
             return SupportUtils.buildResponse(response);
         } catch (CharonException e) {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(SCIMProviderConstants.SCIM_VERSION);
         }
     }
 
@@ -313,6 +340,8 @@ public class RoleResourceV3 extends AbstractResource {
                                   String resourceString) {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(SCIMProviderConstants.SCIM_VERSION,
+                    SCIMProviderConstants.SCIM_VERSION_V3);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
@@ -326,16 +355,20 @@ public class RoleResourceV3 extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw new FormatNotSupportedException(error);
             }
+            String formattedPayload = SupportUtils.formalizeScimPatchRequest(resourceString,
+                    SCIMProviderConstants.USERS);
             // Obtain the role manager.
             RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
-            SCIMResponse response = roleResourceManager.updateUsersWithPATCHRole(id, resourceString, roleManager);
+            SCIMResponse response = roleResourceManager.updateUsersWithPATCHRole(id, formattedPayload, roleManager);
             return SupportUtils.buildResponse(response);
         } catch (CharonException e) {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(SCIMProviderConstants.SCIM_VERSION);
         }
     }
 
@@ -347,6 +380,8 @@ public class RoleResourceV3 extends AbstractResource {
                                      String resourceString) {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(SCIMProviderConstants.SCIM_VERSION,
+                    SCIMProviderConstants.SCIM_VERSION_V3);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
@@ -360,16 +395,21 @@ public class RoleResourceV3 extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw new FormatNotSupportedException(error);
             }
+
+            String formattedPayload = SupportUtils.formatJsonPayloadWithKey(resourceString,
+                    SCIMProviderConstants.GROUPS);
             // Obtain the role manager.
             RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
-            SCIMResponse response = roleResourceManager.updateGroupsWithPUTRole(id, resourceString, roleManager);
+            SCIMResponse response = roleResourceManager.updateGroupsWithPUTRole(id, formattedPayload, roleManager);
             return SupportUtils.buildResponse(response);
         } catch (CharonException e) {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(SCIMProviderConstants.SCIM_VERSION);
         }
     }
 
@@ -381,6 +421,8 @@ public class RoleResourceV3 extends AbstractResource {
                                     String resourceString) {
 
         try {
+            IdentityUtil.threadLocalProperties.get().put(SCIMProviderConstants.SCIM_VERSION,
+                    SCIMProviderConstants.SCIM_VERSION_V3);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE + " not present in the request header";
@@ -394,16 +436,20 @@ public class RoleResourceV3 extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw new FormatNotSupportedException(error);
             }
+            String formattedPayload = SupportUtils.formalizeScimPatchRequest(resourceString,
+                    SCIMProviderConstants.GROUPS);
             // Obtain the role manager.
             RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
             RoleResourceV2Manager roleResourceManager = new RoleResourceV2Manager();
-            SCIMResponse response = roleResourceManager.updateGroupsWithPATCHRole(id, resourceString, roleManager);
+            SCIMResponse response = roleResourceManager.updateGroupsWithPATCHRole(id, formattedPayload, roleManager);
             return SupportUtils.buildResponse(response);
         } catch (CharonException e) {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityUtil.threadLocalProperties.get().remove(SCIMProviderConstants.SCIM_VERSION);
         }
     }
 }
