@@ -225,6 +225,12 @@ public class SCIMUserManager implements UserManager {
     public User createUser(User user, Map<String, Boolean> requiredAttributes)
             throws CharonException, ConflictException, BadRequestException, ForbiddenException {
 
+        if (SCIMCommonUtils.isBulkRequest()) {
+            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList("internal_bulk_user_create",
+                    "internal_bulk_resource_create", "internal_org_bulk_user_create",
+                    "internal_org_bulk_resource_create"));
+        }
+
         String userStoreName = null;
         try {
             String userStoreDomainFromSP = getUserStoreDomainFromSP();
@@ -3656,7 +3662,8 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public void patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations)
-            throws NotImplementedException, BadRequestException, CharonException, NotFoundException {
+            throws NotImplementedException, BadRequestException, CharonException,
+            NotFoundException, ForbiddenException {
 
         doPatchGroup(groupId, currentGroupName, patchOperations);
     }
@@ -3664,14 +3671,15 @@ public class SCIMUserManager implements UserManager {
     @Override
     public Group patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations,
                             Map<String, Boolean> requiredAttributes) throws NotImplementedException,
-            BadRequestException, CharonException, NotFoundException {
+            BadRequestException, CharonException, NotFoundException, ForbiddenException {
 
         doPatchGroup(groupId, currentGroupName, patchOperations);
         return getGroup(groupId, requiredAttributes);
     }
 
     private void doPatchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations) throws
-            NotImplementedException, BadRequestException, CharonException, NotFoundException {
+            NotImplementedException, BadRequestException, CharonException, NotFoundException,
+            ForbiddenException {
 
         if (log.isDebugEnabled()) {
             log.debug("Updating group: " + currentGroupName);
@@ -3704,6 +3712,14 @@ public class SCIMUserManager implements UserManager {
             Set<String> deletedMembers = new HashSet<>();
             Set<Object> newlyAddedMemberIds = new HashSet<>();
             Set<Object> deletedMemberIds = new HashSet<>();
+
+            if (CollectionUtils.isNotEmpty(memberOperations)){
+                if (SCIMCommonUtils.isBulkRequest()) {
+                    SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList("internal_bulk_resource_create",
+                            "internal_bulk_group_update", "internal_org_bulk_resource_create",
+                            "internal_org_bulk_group_update"));
+                }
+            }
 
             for (PatchOperation memberOperation : memberOperations) {
                 if (memberOperation.getValues() instanceof Map) {
