@@ -228,9 +228,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
         if (isUsersAttributeRequired(requiredAttributes)) {
             return roleManagementService.getRole(roleId, tenantDomain);
-        } else {
-            return roleManagementService.getRoleWithoutUsers(roleId, tenantDomain);
         }
+        return roleManagementService.getRoleWithoutUsers(roleId, tenantDomain);
     }
 
     private RoleV2 buildRoleWithMetadata(Role role)
