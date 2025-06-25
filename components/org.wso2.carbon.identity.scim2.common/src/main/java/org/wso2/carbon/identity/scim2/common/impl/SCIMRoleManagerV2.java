@@ -205,7 +205,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             } else if (INVALID_AUDIENCE.getCode().equals(e.getErrorCode()) ||
                     INVALID_PERMISSION.getCode().equals(e.getErrorCode())) {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
-            } else if (StringUtils.equals(ROLE_WORKFLOW_CREATED.getCode(), e.getErrorCode())) {
+            } else if (ROLE_WORKFLOW_CREATED.getCode().equals(e.getErrorCode())) {
                 CharonException charonException = new CharonException(e.getMessage());
                 charonException.setStatus(ResponseCodeConstants.CODE_ACCEPTED);
                 throw charonException;
