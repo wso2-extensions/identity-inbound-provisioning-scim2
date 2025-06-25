@@ -295,22 +295,23 @@ public class SupportUtils {
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(inputJson);
-            ArrayNode operations = (ArrayNode) root.get("Operations");
+            ArrayNode operations = (ArrayNode) root.get(SCIMProviderConstants.OPERATIONS);
 
             for (JsonNode opNode : operations) {
                 ObjectNode opObject = (ObjectNode) opNode;
-                String op = opObject.get("op").asText();
+                String op = opObject.get(SCIMProviderConstants.OP).asText();
 
                 // Add default "path"
-                if (!opObject.has("path")) {
-                    if (op.equalsIgnoreCase("add") || op.equalsIgnoreCase("replace")) {
-                        opObject.put("path", scimAttribute);
+                if (!opObject.has(SCIMProviderConstants.PATH)) {
+                    if (op.equalsIgnoreCase(SCIMProviderConstants.ADD) ||
+                            op.equalsIgnoreCase(SCIMProviderConstants.REPLACE)) {
+                        opObject.put(SCIMProviderConstants.PATH, scimAttribute);
                     }
                 } else {
-                    String path = opObject.get("path").asText();
-                    if (path.startsWith("[value eq")) {
+                    String path = opObject.get(SCIMProviderConstants.PATH).asText();
+                    if (path.startsWith("[" + SCIMProviderConstants.VALUE_EQ)) {
                         // Prefix with "groups" if needed
-                        opObject.put("path", scimAttribute + path);
+                        opObject.put(SCIMProviderConstants.PATH, scimAttribute + path);
                     }
                 }
             }
