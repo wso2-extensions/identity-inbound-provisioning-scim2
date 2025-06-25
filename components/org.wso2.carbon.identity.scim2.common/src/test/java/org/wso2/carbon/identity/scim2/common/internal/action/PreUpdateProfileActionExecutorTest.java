@@ -343,12 +343,25 @@ public class PreUpdateProfileActionExecutorTest {
         existingClaimsOfUser.put(DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8.getClaimURI(),
                 DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8.getExistingValueInUser());
 
-        preUpdateProfileActionExecutor.execute(user,
-                userClaimsExcludingMultiValuedClaimsToBeModified,
-                userClaimsExcludingMultiValuedClaimsToBeDeleted,
-                simpleMultiValuedClaimsToBeAdded,
-                simpleMultiValuedClaimsToBeRemoved,
-                existingClaimsOfUser);
+        boolean isExecutableUserProfileUpdate =
+                SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsExcludingMultiValuedClaimsToBeModified,
+                        userClaimsExcludingMultiValuedClaimsToBeDeleted, simpleMultiValuedClaimsToBeAdded,
+                        simpleMultiValuedClaimsToBeRemoved);
+        assertTrue(isExecutableUserProfileUpdate);
+
+        Map<String, String> userClaimsToBeModifiedIncludingMultiValueClaims =
+                new HashMap<>(userClaimsExcludingMultiValuedClaimsToBeModified);
+
+        Map<String, String> multiValuedClaimsToModify =
+                SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(existingClaimsOfUser,
+                        simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved);
+        assertNotNull(multiValuedClaimsToModify);
+
+        userClaimsToBeModifiedIncludingMultiValueClaims.putAll(multiValuedClaimsToModify);
+        assertNotNull(userClaimsToBeModifiedIncludingMultiValueClaims);
+
+        preUpdateProfileActionExecutor.execute(user, userClaimsToBeModifiedIncludingMultiValueClaims,
+                userClaimsExcludingMultiValuedClaimsToBeDeleted);
 
         verify(actionExecutorService).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
     }
@@ -569,12 +582,24 @@ public class PreUpdateProfileActionExecutorTest {
         existingClaimsOfUser.put(DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8.getClaimURI(),
                 DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8.getExistingValueInUser());
 
-        preUpdateProfileActionExecutor.execute(user,
-                userClaimsExcludingMultiValuedClaimsToBeModified,
-                userClaimsExcludingMultiValuedClaimsToBeDeleted,
-                simpleMultiValuedClaimsToBeAdded,
-                simpleMultiValuedClaimsToBeRemoved,
-                existingClaimsOfUser);
+        boolean isExecutableUserProfileUpdate =
+                SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsExcludingMultiValuedClaimsToBeModified,
+                        userClaimsExcludingMultiValuedClaimsToBeDeleted, simpleMultiValuedClaimsToBeAdded,
+                        simpleMultiValuedClaimsToBeRemoved);
+        assertTrue(isExecutableUserProfileUpdate);
+
+        Map<String, String> userClaimsToBeModifiedIncludingMultiValueClaims =
+                new HashMap<>(userClaimsExcludingMultiValuedClaimsToBeModified);
+
+        Map<String, String> multiValuedClaimsToModify =
+                SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(existingClaimsOfUser,
+                        simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved);
+        assertNotNull(multiValuedClaimsToModify);
+
+        userClaimsToBeModifiedIncludingMultiValueClaims.putAll(multiValuedClaimsToModify);
+
+        preUpdateProfileActionExecutor.execute(user, userClaimsToBeModifiedIncludingMultiValueClaims,
+                userClaimsExcludingMultiValuedClaimsToBeDeleted);
 
         // Retrieve the UserActionRequestDTO.
         ArgumentCaptor<FlowContext> flowContextCaptor = ArgumentCaptor.forClass(FlowContext.class);
@@ -591,7 +616,7 @@ public class PreUpdateProfileActionExecutorTest {
         assertNotNull(requestDTO);
 
         Map<String, Object> claims = requestDTO.getClaims();
-        assertEquals(claims.size(), 8);
+        assertEquals(8, claims.size());
         // Verify that the modified claim exists.
         // Single valued claims modified should return a String
         assertTrue(claims.containsKey(NEW_SINGLEVALUE_CLAIM1.getClaimURI()));

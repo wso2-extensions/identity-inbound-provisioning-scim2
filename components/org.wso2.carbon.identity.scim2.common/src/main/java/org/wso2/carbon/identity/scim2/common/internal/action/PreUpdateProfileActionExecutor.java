@@ -96,66 +96,6 @@ public class PreUpdateProfileActionExecutor {
         }
     }
 
-    /**
-     * Triggers the execution of pre update profile extension at profile update with PATCH
-     *
-     * @param user                                             SCIMUserObject reference that updates
-     * @param userClaimsExcludingMultiValuedClaimsToBeModified Collection of new claims and existing claims that
-     *                                                         updates in the profile, excluding multi-valued claims
-     *                                                         with list of values separated with
-     *                                                         multi attribute separator
-     * @param userClaimsExcludingMultiValuedClaimsToBeDeleted  Collection of existing claims that deletes from the
-     *                                                         profile, excluding multi-valued claims with list of
-     *                                                         values separated with multi attribute separator
-     * @param simpleMultiValuedClaimsToBeAdded                 Collection of claims that updates with a list of values
-     *                                                         that are added or updated in existing value set
-     * @param simpleMultiValuedClaimsToBeRemoved               Collection of claims that includes a list of values
-     *                                                         that are removed from existing value set
-     * @param existingClaimsOfUser                             The existing claims of the user
-     * @throws UserStoreException If an error occurs while executing the action
-     */
-    public void execute(User user, Map<String, String> userClaimsExcludingMultiValuedClaimsToBeModified,
-                        Map<String, String> userClaimsExcludingMultiValuedClaimsToBeDeleted,
-                        Map<String, List<String>> simpleMultiValuedClaimsToBeAdded,
-                        Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved,
-                        Map<String, String> existingClaimsOfUser)
-            throws UserStoreException {
-
-        ActionExecutorService actionExecutorService = SCIMCommonComponentHolder.getActionExecutorService();
-
-        if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)) {
-            return;
-        }
-
-        LOG.debug("Executing pre update profile action for user: " + user.getId());
-
-        try {
-            Map<String, String> multiValuedClaimsToModify = SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(existingClaimsOfUser,
-                    simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved);
-
-            Map<String, String> userClaimsToBeModified =
-                    new HashMap<>(userClaimsExcludingMultiValuedClaimsToBeModified);
-            userClaimsToBeModified.putAll(multiValuedClaimsToModify);
-
-            UserActionRequestDTO userActionRequestDTO =
-                    buildUserActionRequestDTO(user, userClaimsToBeModified,
-                            userClaimsExcludingMultiValuedClaimsToBeDeleted);
-            UserActionContext userActionContext = new UserActionContext(userActionRequestDTO);
-
-            FlowContext flowContext = FlowContext.create();
-            flowContext.add(UserActionContext.USER_ACTION_CONTEXT_REFERENCE_KEY, userActionContext);
-
-            ActionExecutionStatus<?> actionExecutionStatus =
-                    actionExecutorService.execute(ActionType.PRE_UPDATE_PROFILE, flowContext,
-                            IdentityContext.getThreadLocalIdentityContext().getTenantDomain());
-
-            handleActionExecutionStatus(actionExecutionStatus);
-        } catch (ActionExecutionException e) {
-            throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
-                    "Error while executing pre update profile action.", e);
-        }
-    }
-
     private UserActionRequestDTO buildUserActionRequestDTO(User user, Map<String, String> userClaimsToBeModified,
                                                            Map<String, String> userClaimsToBeDeleted)
             throws UserStoreException {
