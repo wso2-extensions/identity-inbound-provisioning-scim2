@@ -650,7 +650,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @throws NotFoundException     NotFoundException.
      */
     @Override
-    public RoleV2 updateUsersRole(RoleV2 oldRole, RoleV2 newRole)
+    public RoleV2 updateUsersOfRole(RoleV2 oldRole, RoleV2 newRole)
             throws BadRequestException, CharonException, ConflictException, NotFoundException {
 
         doUpdateUsers(oldRole, newRole);
@@ -678,7 +678,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @throws ForbiddenException    ForbiddenException.
      */
     @Override
-    public RoleV2 patchUsersRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
+    public RoleV2 patchUsersOfRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
         if (LOG.isDebugEnabled()) {
@@ -723,7 +723,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @throws NotFoundException     NotFoundException.
      */
     @Override
-    public RoleV2 updateGroupsRole(RoleV2 oldRole, RoleV2 newRole)
+    public RoleV2 updateGroupsOfRole(RoleV2 oldRole, RoleV2 newRole)
             throws BadRequestException, CharonException, ConflictException, NotFoundException {
 
         doUpdateGroups(oldRole, newRole);
@@ -751,7 +751,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @throws ForbiddenException    If the operation is forbidden.
      */
     @Override
-    public RoleV2 patchGroupsRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
+    public RoleV2 patchGroupsOfRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
         if (LOG.isDebugEnabled()) {
