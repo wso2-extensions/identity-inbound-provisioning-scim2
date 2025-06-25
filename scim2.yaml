@@ -1728,7 +1728,7 @@ paths:
 
         <b>Scope(Permission) required:</b>
 
-            *
+            *internal_role_mgt_meta_create
       operationId: createRoleV3
       consumes:
         - application/scim+json
@@ -1860,7 +1860,7 @@ paths:
 
         <b>Scope(Permission) required:</b>
 
-            * internal_role_mgt_delete
+            *internal_role_mgt_meta_update
       operationId: updateRoleV3
       consumes:
         - application/scim+json
@@ -1949,7 +1949,7 @@ paths:
 
          <b>Scope(Permission) required:</b>
 
-             *
+             *internal_role_mgt_meta_update
       operationId: patchRole
       consumes:
         - application/scim+json
@@ -1998,7 +1998,7 @@ paths:
 
         <b>Scope(Permission) required:</b>
 
-            *
+            *internal_role_mgt_users_update
       operationId: updateUserRoleV3
       consumes:
         - application/scim+json
@@ -2014,12 +2014,12 @@ paths:
           name: body
           required: false
           schema:
-            $ref: '#/definitions/RoleUsersPutRequestObjectV3'
+            $ref: '#/definitions/RoleEntitlementPutRequestObjectV3'
       responses:
         200:
           description: Role is updated
           schema:
-            $ref: '#/definitions/RolePutResponseObjectV3'
+            $ref: '#/definitions/RoleEntitlementPutResponseV3'
         400:
           description: Invalid Input
           schema:
@@ -2049,7 +2049,7 @@ paths:
 
          <b>Scope(Permission) required:</b>
 
-             *
+             *internal_role_mgt_users_update
       operationId: patchUserRoleV3
       consumes:
         - application/scim+json
@@ -2065,7 +2065,7 @@ paths:
           name: body
           required: false
           schema:
-            $ref: '#/definitions/PatchUserRoleV3OperationRequestObjectV2'
+            $ref: '#/definitions/RoleEntitlementPatchRequestV3'
       responses:
         200:
           description: Role is updated
@@ -2098,7 +2098,7 @@ paths:
 
         <b>Scope(Permission) required:</b>
 
-            *
+            *internal_role_mgt_groups_update
       operationId: updateGroupRoleV3
       consumes:
         - application/scim+json
@@ -2114,7 +2114,7 @@ paths:
           name: body
           required: false
           schema:
-            $ref: '#/definitions/RoleGroupPutRequestObject'
+            $ref: '#/definitions/RoleEntitlementPutRequestObjectV3'
       responses:
         200:
           description: Role is updated
@@ -2149,7 +2149,7 @@ paths:
 
          <b>Scope(Permission) required:</b>
 
-             *
+             *internal_role_mgt_groups_update
       operationId: patchGroupRoleV3
       consumes:
         - application/scim+json
@@ -2165,7 +2165,7 @@ paths:
           name: body
           required: false
           schema:
-            $ref: '#/definitions/PatchGroupRoleV3OperationRequestObjectV2'
+            $ref: '#/definitions/RoleEntitlementPatchRequestV3'
       responses:
         200:
           description: Role is updated
@@ -3984,9 +3984,39 @@ definitions:
           location:
             type: string
             example: "https://localhost:9443/scim2/v3/Roles/4645709c-ea8c-4495-8590-e1fa0efe3de0"
-          resourceType:
+      schemas:
+        type: array
+        items:
+          type: string
+          example: "urn:ietf:params:scim:schemas:extension:2.0:Role"
+      id:
+        type: string
+        example: "4645709c-ea8c-4495-8590-e1fa0efe3de0"
+      audience:
+        type: object
+        properties:
+          value:
             type: string
-            example: Role
+            example: '3645709f-ea8d-5595-7690-e1fa0efe3df9'
+          display:
+            type: string
+            example: 'My Org'
+          type:
+            type: string
+            enum: ['application', 'organization']
+            example: 'organization'
+  #-----------------------------------------------------
+  # The Role PUT response object
+  #-----------------------------------------------------
+  RoleEntitlementPutResponseV3:
+    type: object
+    properties:
+      meta:
+        type: object
+        properties:
+          location:
+            type: string
+            example: "https://localhost:9443/scim2/v3/Roles/4645709c-ea8c-4495-8590-e1fa0efe3de0"
       schemas:
         type: array
         items:
@@ -4022,7 +4052,29 @@ definitions:
       Operations:
         type: array
         items:
-          $ref: "#/definitions/RolePatchOperationobjV2"
+          $ref: "#/definitions/RolePatchOperationobjV3"
+  #-----------------------------------------------------
+  # The Role Patch Operation Object
+  #-----------------------------------------------------
+  RolePatchOperationobjV3:
+    type: object
+    properties:
+      op:
+        type: string
+        enum: [ "add", "remove", "replace" ]
+      path:
+        type: string
+      value:
+        type: array
+        items:
+          type: object
+          properties:
+            value:
+              type: string
+    example:
+      - op: 'replace'
+        path: 'displayName'
+        value: 'org_role'
   #-----------------------------------------------------
   # The Patch Role Operation Output - Role
   #-----------------------------------------------------
@@ -4064,30 +4116,56 @@ definitions:
   #-----------------------------------------------------
   # The Role PUT request object
   #-----------------------------------------------------
-  RoleUsersPutRequestObjectV3:
-    type: object
-    properties:
-      users:
-        type: array
-        items:
-          type: object
-          example:
-            value: '409ca90b-2ba6-4474-9a45-2cf7376e6e43'
+  RoleEntitlementPutRequestObjectV3:
+    type: array
+    items:
+      type: object
+      properties:
+        value:
+          type: string
+          format: "ae66119c-b083-4d4f-81bd-8aa0c3d0a1df"
+    example:
+      - value: "ae66119c-b083-4d4f-81bd-8aa0c3d0a1df"
+      - value: "a9b7da54-41b0-4e3c-823a-731bf3f76937"
   #-----------------------------------------------------
   # The Patch Role Operation Input
   #-----------------------------------------------------
-  PatchUserRoleV3OperationRequestObjectV2:
+  RoleEntitlementPatchRequestV3:
     type: object
     properties:
       schemas:
         type: array
         items:
           type: string
-          example: "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+        example:
+          - "urn:ietf:params:scim:api:messages:2.0:PatchOp"
       Operations:
         type: array
         items:
-          $ref: "#/definitions/UserRolePatchOperationobjV3"
+          type: object
+          properties:
+            op:
+              type: string
+            path:
+              type: string
+            value:
+              type: array
+              items:
+                type: object
+                properties:
+                  value:
+                    type: string
+                    format: uuid
+        example:
+          - op: add
+            value:
+              - value: "1f3a758f-0e29-4472-becc-0b21258a680b"
+          - op: replace
+            value:
+              - value: "2819c223-7f76-453a-919d-413861904646"
+          - op: remove
+            path: "[value eq 9065f445-265e-4rfg3-83ad-666c66ed4a55]"
+
   #-----------------------------------------------------
   # The Role Patch Operation Object
   #-----------------------------------------------------
