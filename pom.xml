@@ -305,11 +305,11 @@
         <inbound.auth.oauth.version>6.5.3</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.10.55</carbon.kernel.version>
-        <identity.framework.version>7.8.244</identity.framework.version>
+        <identity.framework.version>7.8.248</identity.framework.version>
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.8.12</identity.governance.version>
-        <charon.version>4.0.49</charon.version>
+        <charon.version>4.0.51</charon.version>
         <org.wso2.carbon.identity.organization.management.core.version>1.0.76
         </org.wso2.carbon.identity.organization.management.core.version>
         <org.wso2.carbon.identity.handler.event.account.lock.version>1.8.13

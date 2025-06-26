@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -27,6 +27,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
@@ -34,12 +35,15 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
 import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
+import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.objects.RoleV2;
 import org.wso2.charon3.core.objects.plainobjects.MultiValuedComplexType;
 import org.wso2.charon3.core.objects.plainobjects.RolesV2GetResponse;
@@ -63,9 +67,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
+import static org.mockito.MockitoAnnotations.openMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_WORKFLOW_CREATED;
 
 /**
  * Contains the unit test cases for SCIMRoleManagerV2.
@@ -77,7 +82,6 @@ public class SCIMRoleManagerV2Test {
     private static final String SAMPLE_GROUP_NAME = "testGroup";
     private static final String SAMPLE_PERMISSION_1_NAME = "permission1";
     private static final String SAMPLE_PERMISSION_2_NAME = "permission2";
-    private static final String SAMPLE_PERMISSION_3_NAME = "permission3";
     private static final String SAMPLE_VALID_ROLE_NAME = "admin";
     private static final String ROLE_ID = "role_id";
     private static final String ROLE_ID_2 = "role_id_2";
@@ -94,14 +98,23 @@ public class SCIMRoleManagerV2Test {
     @Mock
     private RoleManagementService roleManagementService;
 
+    @Mock
+    private IdpManager idpManager;
+
     private SCIMRoleManagerV2 scimRoleManagerV2;
 
     private MockedStatic<IdentityUtil> identityUtil;
 
+    private MockedStatic<OrganizationManagementUtil> organizationManagementUtilMockedStatic;
+
+    private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolderMockedStatic;
+
+    private MockedStatic<RoleManagementUtils> roleManagementUtilsMockedStatic;
+
     @BeforeClass
     public void setUpClass() {
 
-        initMocks(this);
+        openMocks(this);
     }
 
     @BeforeMethod
@@ -109,11 +122,18 @@ public class SCIMRoleManagerV2Test {
 
         identityUtil = mockStatic(IdentityUtil.class);
         scimRoleManagerV2 = new SCIMRoleManagerV2(roleManagementService, SAMPLE_TENANT_DOMAIN);
+        organizationManagementUtilMockedStatic = mockStatic(OrganizationManagementUtil.class);
+        scimCommonComponentHolderMockedStatic = mockStatic(SCIMCommonComponentHolder.class);
+        roleManagementUtilsMockedStatic = mockStatic(RoleManagementUtils.class);
     }
 
     @AfterMethod
     public void tearDown() {
+
         identityUtil.close();
+        organizationManagementUtilMockedStatic.close();
+        scimCommonComponentHolderMockedStatic.close();
+        roleManagementUtilsMockedStatic.close();
     }
 
     @DataProvider(name = "scimOperations")
@@ -166,26 +186,21 @@ public class SCIMRoleManagerV2Test {
     @Test(dataProvider = "roleNameUpdateExceptions", expectedExceptions = BadRequestException.class)
     public void testInvalidRequestOnRoleNameUpdate(IdentityRoleManagementException identityException, Class<? extends Throwable> expectedException) throws Exception {
 
-        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
-             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class);
-             MockedStatic<OrganizationManagementUtil> mockOrganizationManagementUtil =
-                     mockStatic(OrganizationManagementUtil.class)) {
+        RoleV2 oldRole = mock(RoleV2.class);
+        RoleV2 newRole = mock(RoleV2.class);
 
-            RoleV2 oldRole = mock(RoleV2.class);
-            RoleV2 newRole = mock(RoleV2.class);
+        when(oldRole.getDisplayName()).thenReturn(ROLE_NAME);
+        when(newRole.getDisplayName()).thenReturn(ROLE_NAME_2);
+        when(oldRole.getId()).thenReturn(ROLE_ID);
 
-            when(oldRole.getDisplayName()).thenReturn(ROLE_NAME);
-            when(newRole.getDisplayName()).thenReturn(ROLE_NAME_2);
-            when(oldRole.getId()).thenReturn(ROLE_ID);
+        when(RoleManagementUtils.isSharedRole(ROLE_ID, SAMPLE_TENANT_DOMAIN)).thenReturn(false);
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
 
-            when(RoleManagementUtils.isSharedRole(ROLE_ID, SAMPLE_TENANT_DOMAIN)).thenReturn(false);
-            when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+        doThrow(identityException).when(roleManagementService)
+                .updateRoleName(ROLE_ID, ROLE_NAME_2, SAMPLE_TENANT_DOMAIN);
 
-            doThrow(identityException).when(roleManagementService)
-                    .updateRoleName(ROLE_ID, ROLE_NAME_2, SAMPLE_TENANT_DOMAIN);
+        scimRoleManagerV2.updateRole(oldRole, newRole);
 
-            scimRoleManagerV2.updateRole(oldRole, newRole);
-        }
     }
 
     @Test
@@ -203,8 +218,7 @@ public class SCIMRoleManagerV2Test {
         role.setId(SAMPLE_VALID_ROLE_ID);
         role.setName(SAMPLE_VALID_ROLE_NAME);
 
-        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
-             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+        try (MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
 
             when(roleManagementService.getPermissionListOfRole(any(), any()))
                     .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_2_NAME)));
@@ -251,8 +265,7 @@ public class SCIMRoleManagerV2Test {
         role.setId(SAMPLE_VALID_ROLE_ID);
         role.setName(SAMPLE_VALID_ROLE_NAME);
 
-        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
-             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+        try (MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
 
             when(roleManagementService.getPermissionListOfRole(any(), any()))
                     .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_2_NAME)));
@@ -299,8 +312,7 @@ public class SCIMRoleManagerV2Test {
         role.setId(SAMPLE_VALID_ROLE_ID);
         role.setName(SAMPLE_VALID_ROLE_NAME);
 
-        try (MockedStatic<RoleManagementUtils> mockRoleManagementUtils = mockStatic(RoleManagementUtils.class);
-             MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+        try (MockedStatic<SCIMCommonUtils> mockSCIMCommonUtils = mockStatic(SCIMCommonUtils.class)) {
 
             when(roleManagementService.getPermissionListOfRole(any(), any()))
                     .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_1_NAME)));
@@ -450,6 +462,25 @@ public class SCIMRoleManagerV2Test {
                 assertTrue(roles.get(0).getRoleProperties().isEmpty());
                 assertTrue(roles.get(1).getRoleProperties().isEmpty());
             }
+        }
+    }
+
+    @Test
+    public void testCreateRoleWhenWorkflowEnabled() throws ConflictException, NotImplementedException,
+            BadRequestException, CharonException, OrganizationManagementException, IdentityRoleManagementException {
+
+        when(OrganizationManagementUtil.isOrganization(SAMPLE_TENANT_DOMAIN)).thenReturn(true);
+        when(SCIMCommonComponentHolder.getIdpManagerService()).thenReturn(idpManager);
+        when(roleManagementService.addRole(eq(ROLE_NAME), any(), any(), any(), any(), any(), eq(SAMPLE_TENANT_DOMAIN))).
+                thenThrow(new IdentityRoleManagementException(ROLE_WORKFLOW_CREATED.getCode(), "Role " +
+                        "creation request is sent to the workflow engine for approval."));
+        RoleV2 roleV2 = new RoleV2();
+        roleV2.setDisplayName(ROLE_NAME);
+        try {
+            scimRoleManagerV2.createRole(roleV2);
+        } catch (CharonException e) {
+            assertEquals(e.getStatus(), ResponseCodeConstants.CODE_ACCEPTED);
+            assertEquals(e.getDetail(), "Role creation request is sent to the workflow engine for approval.");
         }
     }
 }

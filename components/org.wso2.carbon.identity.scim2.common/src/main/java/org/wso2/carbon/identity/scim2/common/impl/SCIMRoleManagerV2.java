@@ -93,7 +93,7 @@ import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVA
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
-
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_WORKFLOW_CREATED;
 /**
  * Implementation of the {@link RoleV2Manager} interface to manage RoleResourceV2.
  */
@@ -205,6 +205,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             } else if (INVALID_AUDIENCE.getCode().equals(e.getErrorCode()) ||
                     INVALID_PERMISSION.getCode().equals(e.getErrorCode())) {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
+            } else if (ROLE_WORKFLOW_CREATED.getCode().equals(e.getErrorCode())) {
+                CharonException charonException = new CharonException(e.getMessage());
+                charonException.setStatus(ResponseCodeConstants.CODE_ACCEPTED);
+                throw charonException;
             }
             throw new CharonException(
                     String.format("Error occurred while adding a new role: %s", role.getDisplayName()), e);
