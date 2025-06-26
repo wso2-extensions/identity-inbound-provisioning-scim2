@@ -6901,8 +6901,8 @@ public class SCIMUserManager implements UserManager {
                                                        Map<String, String> claims) throws BadRequestException {
 
         HashMap<String, Object> properties = new HashMap<>();
-        properties.put("ERROR_CODE", errorCode);
-        properties.put("ERROR_MESSAGE", errorMessage);
+        properties.put(IdentityEventConstants.EventProperty.ERROR_CODE, errorCode);
+        properties.put(IdentityEventConstants.EventProperty.ERROR_MESSAGE, errorMessage);
 
         if (user != null) {
             properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
@@ -6912,7 +6912,7 @@ public class SCIMUserManager implements UserManager {
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getTenantId());
 
-        Event identityMgtEvent = new Event("USER_REGISTRATION_FAILED", properties);
+        Event identityMgtEvent = new Event(IdentityEventConstants.Event.USER_REGISTRATION_FAILED, properties);
 
         try {
             SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
@@ -6936,9 +6936,9 @@ public class SCIMUserManager implements UserManager {
             userClaimsModified.keySet().removeAll(userClaimsAdded.keySet());
         }
 
-        properties.put("USER_CLAIMS_ADDED", userClaimsAdded);
-        properties.put("USER_CLAIMS_MODIFIED", userClaimsModified);
-        properties.put("USER_CLAIMS_DELETED", userClaimsDeleted);
+        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS_ADDED, userClaimsAdded);
+        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS_MODIFIED, userClaimsModified);
+        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS_DELETED, userClaimsDeleted);
         properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getTenantId());
@@ -6946,7 +6946,7 @@ public class SCIMUserManager implements UserManager {
                 IdentityUtil.extractDomainFromName(user.getUsername()));
         properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
 
-        Event identityMgtEvent = new Event("USER_PROFILE_UPDATE", properties);
+        Event identityMgtEvent = new Event(IdentityEventConstants.Event.USER_PROFILE_UPDATE, properties);
 
         try {
             SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
