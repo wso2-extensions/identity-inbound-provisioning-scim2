@@ -4164,7 +4164,7 @@ definitions:
             value:
               - value: "2819c223-7f76-453a-919d-413861904646"
           - op: remove
-            path: "[value eq 9065f445-265e-4rfg3-83ad-666c66ed4a55]"
+            path: "value eq 9065f445-265e-4rfg3-83ad-666c66ed4a55"
 
   #-----------------------------------------------------
   # The Role Patch Operation Object

@@ -271,8 +271,7 @@ public class SupportUtils {
         try {
             ObjectMapper mapper = new ObjectMapper();
             List<Map<String, String>> inputList = mapper.readValue(inputJson,
-                    new TypeReference<List<Map<String, String>>>() {
-                    });
+                    new TypeReference<List<Map<String, String>>>() {});
             Map<String, Object> outputMap = new HashMap<>();
             outputMap.put(wrapperKey, inputList);
             return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(outputMap);
@@ -311,8 +310,8 @@ public class SupportUtils {
                     }
                 } else {
                     String path = opObject.get(SCIMProviderConstants.PATH).asText();
-                    if (path.startsWith("[" + SCIMProviderConstants.VALUE_EQ)) {
-                        opObject.put(SCIMProviderConstants.PATH, scimAttribute + path);
+                    if (path.startsWith(SCIMProviderConstants.VALUE_EQ)) {
+                        opObject.put(SCIMProviderConstants.PATH, scimAttribute + "[" + path + "]");
                     }
                 }
             }
