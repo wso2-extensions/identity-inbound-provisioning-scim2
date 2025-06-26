@@ -113,7 +113,7 @@ public class UserResource extends AbstractResource {
             if (SupportUtils.isAskPasswordFlow(resourceString)) {
                 SupportUtils.updateIdentityContextFlow(Flow.Name.USER_REGISTRATION_INVITE_WITH_PASSWORD);
             } else {
-                SupportUtils.updateIdentityContextFlow(Flow.Name.USER_REGISTER);
+                SupportUtils.updateIdentityContextFlow(Flow.Name.USER_REGISTRATION);
             }
 
             // obtain the user store manager
