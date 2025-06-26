@@ -312,7 +312,6 @@ public class SupportUtils {
                 } else {
                     String path = opObject.get(SCIMProviderConstants.PATH).asText();
                     if (path.startsWith("[" + SCIMProviderConstants.VALUE_EQ)) {
-                        // Prefix with "groups" if needed
                         opObject.put(SCIMProviderConstants.PATH, scimAttribute + path);
                     }
                 }
