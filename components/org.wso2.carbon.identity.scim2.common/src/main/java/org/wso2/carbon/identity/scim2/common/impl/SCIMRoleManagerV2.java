@@ -238,7 +238,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         RoleV2 scimRole = new RoleV2();
         scimRole.setId(role.getId());
         scimRole.setDisplayName(role.getName());
-        scimRole.setLocation(getSCIMRoleURLBasedOnVersion(role));
+        scimRole.setLocation(getSCIMRoleURLBasedOnVersion(role.getId()));
         scimRole.setSchemas();
         scimRole.setAudience(role.getAudienceId(), role.getAudienceName(), role.getAudience());
         if (systemRoles.contains(role.getName())) {
@@ -522,7 +522,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                             Collections.emptyList(), permissionList, audienceType,
                             role.getAudienceValue(), tenantDomain);
 
-            String locationURI = SCIMCommonUtils.getSCIMRoleV3URL(roleBasicInfo.getId());
+            String locationURI = getSCIMRoleURLBasedOnVersion(roleBasicInfo.getId());
             return buildSCIMRoleResponse(roleBasicInfo, locationURI);
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
@@ -967,7 +967,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             scimRole.setDisplayName(role.getName());
             scimRole.setId(role.getId());
             scimRole.setSchemas();
-            scimRole.setLocation(getSCIMRoleURLBasedOnVersion(role));
+            scimRole.setLocation(getSCIMRoleURLBasedOnVersion(role.getId()));
 
             scimRole.setAudience(role.getAudienceId(), role.getAudienceName(),
                     role.getAudience());
@@ -1881,14 +1881,14 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return role;
     }
 
-    private String getSCIMRoleURLBasedOnVersion(Role role) {
+    private String getSCIMRoleURLBasedOnVersion(String roleId) {
 
         if (IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SCIM_VERSION) != null) {
 
-            return SCIMCommonUtils.getSCIMRoleURLWithVersion(role.getId(),
+            return SCIMCommonUtils.getSCIMRoleURLWithVersion(roleId,
                     IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SCIM_VERSION).toString());
         } else {
-            return SCIMCommonUtils.getSCIMRoleV2URL(role.getId());
+            return SCIMCommonUtils.getSCIMRoleV2URL(roleId);
         }
     }
 
