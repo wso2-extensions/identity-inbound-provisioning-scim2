@@ -109,6 +109,8 @@ public class SupportUtils {
      * the REST API Authentication valve
      * @deprecated use {@link #getAuthenticatedUserId()} to use the authenticated user id instead of authenticated
      * user name.
+     *
+     * @return tenant and userstore domain appended
      */
     @Deprecated
     public static String getAuthenticatedUsername() {

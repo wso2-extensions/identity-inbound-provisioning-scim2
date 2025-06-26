@@ -485,9 +485,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     /**
-     * Creates a new role without assigning users or groups during creation.
-     * This method is introduced for the SCIM2 Roles V3 API,
-     * where user and group assignments are not allowed at role creation time.
+     * Creates a new role with MetaData. This method will not assign users or groups to the role.
      *
      * @param role The role object containing role details.
      * @return The created RoleV2 object.
@@ -517,6 +515,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 }
             }
 
+            // If users and groups are provided, they will be ignored. No error response will be returned.
             RoleBasicInfo roleBasicInfo =
                     roleManagementService.addRole(role.getDisplayName(), Collections.emptyList(),
                             Collections.emptyList(), permissionList, audienceType,
@@ -547,7 +546,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     /**
-     * Updates the role metadata for the SCIM2 Roles V3 API.
+     * Updates the role metadata.
      * Only the role name and permissions can be updated using this method.
      *
      * @param oldRole The existing role object.
@@ -575,7 +574,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     /**
-     * Update the metadata of a role for the SCIM2 Roles V3 API.
+     * Update the metadata of a role via PATCH operations.
      * Only the role name and permissions can be updated using this method.
      *
      * @param roleId           The ID of the role to be updated.
@@ -637,7 +636,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     /**
-     * Updates the user list of a role for the SCIM2 Roles V3 API.
+     * Updates the user list of a role.
      * This method is used in the PUT operation to replace the existing user list of a role
      * with the new user list provided in the request.
      *
@@ -666,7 +665,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
     /**
      * Updates the user list of a role using PATCH operations.
-     * This method is used in the SCIM2 Roles V3 API to add or remove users from a role.
      *
      * @param roleId          The ID of the role to update.
      * @param patchOperations A map of patch operations to apply to the user list.
@@ -710,7 +708,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     /**
-     * Updates the group list of a role for the SCIM2 Roles V3 API.
+     * Updates the group list of a role.
      * This method is used in the PUT operation to replace the existing group list of a role
      * with the new group list provided in the request.
      *
@@ -739,7 +737,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
     /**
      * Updates the group list of a role using PATCH operations.
-     * This method is used in the SCIM2 Roles V3 API to add or remove groups from a role.
      *
      * @param roleId          The ID of the role to update.
      * @param patchOperations A map of patch operations to apply to the group list.
