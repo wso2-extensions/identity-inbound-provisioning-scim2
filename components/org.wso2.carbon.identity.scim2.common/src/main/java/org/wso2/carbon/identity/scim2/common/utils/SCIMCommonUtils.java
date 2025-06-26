@@ -178,7 +178,7 @@ public class SCIMCommonUtils {
     public static String getSCIMAgentURL() {
 
         String scimURL = getSCIMURL(true);
-        return scimURL + SCIMCommonConstants.AGENTS;
+        return scimURL + SCIMCommonConstants.AGENTS_ENDPOINT;
     }
 
     public static String getApplicationRefURL(String id) {
@@ -402,7 +402,7 @@ public class SCIMCommonUtils {
     }
 
     public static void setThreadLocalIsSCIMAgentFlow(Boolean value) {
-        
+
         threadLocalIsSCIMAgentFlow.set(value);
     }
 

@@ -35,7 +35,7 @@ public class SCIMCommonConstants {
     public static final String USERS = "/Users";
     public static final String GROUPS = "/Groups";
     public static final String ROLES = "/Roles";
-    public static final String AGENTS = "/Agents";
+    public static final String AGENTS_ENDPOINT = "/Agents";
     public static final String ROLES_V2 = "/v2/Roles";
     public static final String ROLES_V3 = "/v3/Roles";
     public static final String SCIM_VERSION = "scimVersion";
@@ -52,7 +52,6 @@ public class SCIMCommonConstants {
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
     public static final String SCIM_SYSTEM_USER_CLAIM_DIALECT = "urn:scim:wso2:schema";
     public static final String SCIM_AGENT_CLAIM_DIALECT = "urn:scim:wso2:agent:schema";
-
 
     public static final String EQ = "eq";
     public static final String NE = "ne";
