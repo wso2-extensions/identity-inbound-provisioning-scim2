@@ -110,7 +110,11 @@ public class UserResource extends AbstractResource {
                 throw  new FormatNotSupportedException(error);
             }
 
-            SupportUtils.updateIdentityContextFlow(Flow.Name.REGISTER_USER);
+            if (SupportUtils.isAskPasswordFlow(resourceString)) {
+                SupportUtils.updateIdentityContextFlow(Flow.Name.USER_REGISTRATION_INVITE_WITH_PASSWORD);
+            } else {
+                SupportUtils.updateIdentityContextFlow(Flow.Name.USER_REGISTRATION);
+            }
 
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
