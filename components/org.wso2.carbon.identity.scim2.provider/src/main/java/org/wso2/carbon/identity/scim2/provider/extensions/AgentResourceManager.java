@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.user.mgt.common.DefaultPasswordGenerator;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.charon3.core.encoder.JSONEncoder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
@@ -43,6 +44,8 @@ import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.CopyUtil;
 import org.wso2.charon3.core.utils.ResourceManagerUtil;
+
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.AGENTS_ENDPOINT;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -78,12 +81,6 @@ public class AgentResourceManager extends UserResourceManager {
 
     /** Logger instance for this class. */
     private static final Logger LOG = LoggerFactory.getLogger(AgentResourceManager.class);
-
-    /** REST endpoint path for agent resources. */
-    private static final String AGENT_ENDPOINT = "/Agents";
-
-    /** Default domain name for agent user store operations. */
-    protected static final String AGENT_STORE_DOMAIN = "AGENT";
 
     /**
      * Constructs a new AgentResourceManager instance.
@@ -150,10 +147,10 @@ public class AgentResourceManager extends UserResourceManager {
             // Generate a unique ID for the agent as the username.
             if (StringUtils.isBlank(agent.getUsername())) {
                 String agentID = UUID.randomUUID().toString();
-                agent.setUserName(AGENT_STORE_DOMAIN + UserCoreConstants.DOMAIN_SEPARATOR + agentID);
+                agent.setUserName(IdentityUtil.getAgentIdentityUserstoreName() + UserCoreConstants.DOMAIN_SEPARATOR + agentID);
             } else if (!agent.getUsername().contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
                 String originalUsername = agent.getUserName();
-                agent.setUserName(AGENT_STORE_DOMAIN + UserCoreConstants.DOMAIN_SEPARATOR + originalUsername);
+                agent.setUserName(IdentityUtil.getAgentIdentityUserstoreName() + UserCoreConstants.DOMAIN_SEPARATOR + originalUsername);
                 LOG.debug("Added domain prefix to agent username: {} -> {}", originalUsername, agent.getUserName());
             } else if (agent.getUserName() != null && agent.getUserName().contains("/")) {
                 String error = "Agent username cannot contain domain name or be null.";
@@ -204,7 +201,7 @@ public class AgentResourceManager extends UserResourceManager {
                 LOG.info("Successfully created agent with ID: {}", agentId);
 
                 // Build agent location URL for response headers.
-                String agentLocationUrl = getResourceEndpointURL(AGENT_ENDPOINT) + "/" + agentId;
+                String agentLocationUrl = getResourceEndpointURL(AGENTS_ENDPOINT) + "/" + agentId;
                 LOG.debug("Agent location URL generated: {} for agent ID: {}", agentLocationUrl, agentId);
 
                 // Validate returned agent attributes against requested inclusion/exclusion.
@@ -219,7 +216,7 @@ public class AgentResourceManager extends UserResourceManager {
 
                 // Add agent-specific location header.
                 responseHeaders.put(SCIMConstants.LOCATION_HEADER,
-                        getResourceEndpointURL(AGENT_ENDPOINT) + "/" + createdAgent.getId());
+                        getResourceEndpointURL(AGENTS_ENDPOINT) + "/" + createdAgent.getId());
                 responseHeaders.put(SCIMConstants.CONTENT_TYPE_HEADER, SCIMConstants.APPLICATION_JSON);
 
                 LOG.info("Successfully created agent with ID: {}", createdAgent.getId());
