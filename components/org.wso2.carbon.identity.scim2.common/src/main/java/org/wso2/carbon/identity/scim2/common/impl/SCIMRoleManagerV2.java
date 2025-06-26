@@ -795,8 +795,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, NotImplementedException, BadRequestException {
 
         if (node instanceof ExpressionNode || node instanceof OperationNode) {
-            return filterRolesByAttributes(node, count, startIndex, sortBy, sortOrder,
-                    requiredAttributes);
+            return filterRolesByAttributes(node, count, startIndex, sortBy, sortOrder, requiredAttributes);
         }
         throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
     }
