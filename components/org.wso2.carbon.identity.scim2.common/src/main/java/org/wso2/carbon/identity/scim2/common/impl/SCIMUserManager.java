@@ -66,6 +66,7 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
+import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
@@ -389,13 +390,13 @@ public class SCIMUserManager implements UserManager {
             // Sometimes client exceptions are wrapped in the super class.
             // Therefore, checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
-            if (ex instanceof UserStoreClientException) {
+            if (ex instanceof UserStoreClientException || ex instanceof WorkflowException) {
                 String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName())
                         + ". %s", ex.getMessage());
                 if (log.isDebugEnabled()) {
                     log.debug(errorMessage, ex);
                 }
-                if (isResourceLimitReachedError((UserStoreClientException) ex)) {
+                if (ex instanceof UserStoreClientException && isResourceLimitReachedError((UserStoreClientException) ex)) {
                     handleResourceLimitReached();
                 }
                 publishEventOnUserRegistrationFailure(user, ResponseCodeConstants.INVALID_VALUE, ex.getMessage(),
