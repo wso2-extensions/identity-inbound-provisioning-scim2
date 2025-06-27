@@ -209,6 +209,10 @@
             <artifactId>jacoco-maven-plugin</artifactId>
             <version>${jacoco.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.workflow.mgt</artifactId>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
