@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -48,6 +49,7 @@ import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.objects.RoleV2;
 import org.wso2.charon3.core.objects.User;
+import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.plainobjects.MultiValuedComplexType;
 import org.wso2.charon3.core.objects.plainobjects.RolesV2GetResponse;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
@@ -595,6 +597,48 @@ public class SCIMRoleManagerV2Test {
             // Verify the SCIMCommonUtils calls
             scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMUserURL(userId1), times(1));
             scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMUserURL(userId2), times(1));
+        }
+    }
+
+    /**
+     * Test the setRoleAssignedUserstoreGroups method with valid group list.
+     */
+    @Test
+    public void testSetRoleAssignedUserstoreGroups_ValidGroupList() throws Exception {
+
+        String groupId1 = "group-id-1";
+        String groupName1 = "testGroup1";
+        String groupId2 = "group-id-2";
+        String groupName2 = "testGroup2";
+        String groupLocationURI1 = "https://localhost:9443/scim2/Groups/" + groupId1;
+        String groupLocationURI2 = "https://localhost:9443/scim2/Groups/" + groupId2;
+
+        // Create GroupBasicInfo mocks
+        GroupBasicInfo groupInfo1 = mock(GroupBasicInfo.class);
+        when(groupInfo1.getId()).thenReturn(groupId1);
+        when(groupInfo1.getName()).thenReturn(groupName1);
+
+        GroupBasicInfo groupInfo2 = mock(GroupBasicInfo.class);
+        when(groupInfo2.getId()).thenReturn(groupId2);
+        when(groupInfo2.getName()).thenReturn(groupName2);
+
+        List<GroupBasicInfo> assignedUserstoreGroups = Arrays.asList(groupInfo1, groupInfo2);
+        RoleV2 role = mock(RoleV2.class);
+
+        try (MockedStatic<SCIMCommonUtils> scimCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+            scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMGroupURL(groupId1)).thenReturn(groupLocationURI1);
+            scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMGroupURL(groupId2)).thenReturn(groupLocationURI2);
+            java.lang.reflect.Method setRoleAssignedUserstoreGroupsMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
+                    "setRoleAssignedUserstoreGroups", RoleV2.class, List.class);
+            setRoleAssignedUserstoreGroupsMethod.setAccessible(true);
+            setRoleAssignedUserstoreGroupsMethod.invoke(scimRoleManagerV2, role, assignedUserstoreGroups);
+
+            // Verify that setGroup was called twice (once for each group)
+            verify(role, times(2)).setGroup(any(Group.class));
+
+            // Verify the SCIMCommonUtils calls
+            scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMGroupURL(groupId1), times(1));
+            scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMGroupURL(groupId2), times(1));
         }
     }
 }
