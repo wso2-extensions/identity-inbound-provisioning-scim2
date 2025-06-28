@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -46,6 +47,7 @@ import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.objects.RoleV2;
+import org.wso2.charon3.core.objects.User;
 import org.wso2.charon3.core.objects.plainobjects.MultiValuedComplexType;
 import org.wso2.charon3.core.objects.plainobjects.RolesV2GetResponse;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
@@ -66,6 +68,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
@@ -551,5 +555,46 @@ public class SCIMRoleManagerV2Test {
         assertEquals(result.getAudienceValue(), audienceId);
         assertEquals(result.getAudienceDisplayName(), audienceName);
         assertEquals(result.getAudienceType(), audienceType);
+    }
+
+    /**
+     * Test the setAssignedUsersForRole method with valid user list.
+     */
+    @Test
+    public void testSetAssignedUsersForRole_ValidUserList() throws Exception {
+
+        String userId1 = "user-id-1";
+        String userName1 = "testUser1";
+        String userId2 = "user-id-2";
+        String userName2 = "testUser2";
+        String userLocationURI1 = "https://localhost:9443/scim2/Users/" + userId1;
+        String userLocationURI2 = "https://localhost:9443/scim2/Users/" + userId2;
+
+        UserBasicInfo userInfo1 = mock(UserBasicInfo.class);
+        when(userInfo1.getId()).thenReturn(userId1);
+        when(userInfo1.getName()).thenReturn(userName1);
+
+        UserBasicInfo userInfo2 = mock(UserBasicInfo.class);
+        when(userInfo2.getId()).thenReturn(userId2);
+        when(userInfo2.getName()).thenReturn(userName2);
+
+        List<UserBasicInfo> assignedUsers = Arrays.asList(userInfo1, userInfo2);
+        RoleV2 role = mock(RoleV2.class);
+
+        try (MockedStatic<SCIMCommonUtils> scimCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+            scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMUserURL(userId1)).thenReturn(userLocationURI1);
+            scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMUserURL(userId2)).thenReturn(userLocationURI2);
+            java.lang.reflect.Method setAssignedUsersForRoleMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
+                    "setAssignedUsersForRole", RoleV2.class, List.class);
+            setAssignedUsersForRoleMethod.setAccessible(true);
+            setAssignedUsersForRoleMethod.invoke(scimRoleManagerV2, role, assignedUsers);
+
+            // Verify that setUser was called twice (once for each user)
+            verify(role, times(2)).setUser(any(User.class));
+
+            // Verify the SCIMCommonUtils calls
+            scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMUserURL(userId1), times(1));
+            scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMUserURL(userId2), times(1));
+        }
     }
 }
