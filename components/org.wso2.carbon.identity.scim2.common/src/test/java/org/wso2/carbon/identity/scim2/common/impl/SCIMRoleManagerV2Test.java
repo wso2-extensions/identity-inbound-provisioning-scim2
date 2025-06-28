@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
@@ -482,5 +483,73 @@ public class SCIMRoleManagerV2Test {
             assertEquals(e.getStatus(), ResponseCodeConstants.CODE_ACCEPTED);
             assertEquals(e.getDetail(), "Role creation request is sent to the workflow engine for approval.");
         }
+    }
+
+    /**
+     * Test the buildSCIMRoleResponse method with valid inputs.
+     */
+    @Test
+    public void testBuildSCIMRoleResponse_ValidInput() throws Exception {
+
+        String roleId = "test-role-id-123";
+        String roleName = "TestRole";
+        String audienceId = "audience-id-456";
+        String audienceName = "Test Audience";
+        String audienceType = "application";
+        String locationURI = "https://localhost:9443/scim2/v3/Roles/" + roleId;
+
+        RoleBasicInfo roleBasicInfo = mock(RoleBasicInfo.class);
+        when(roleBasicInfo.getId()).thenReturn(roleId);
+        when(roleBasicInfo.getName()).thenReturn(roleName);
+        when(roleBasicInfo.getAudienceId()).thenReturn(audienceId);
+        when(roleBasicInfo.getAudienceName()).thenReturn(audienceName);
+        when(roleBasicInfo.getAudience()).thenReturn(audienceType);
+
+        java.lang.reflect.Method buildSCIMRoleResponseMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
+                "buildSCIMRoleResponse", RoleBasicInfo.class, String.class);
+        buildSCIMRoleResponseMethod.setAccessible(true);
+        RoleV2 result = (RoleV2) buildSCIMRoleResponseMethod.invoke(
+                scimRoleManagerV2, roleBasicInfo, locationURI);
+
+        assertEquals(result.getId(), roleId);
+        assertEquals(result.getDisplayName(), roleName);
+        assertEquals(result.getLocation(), locationURI);
+        assertEquals(result.getAudienceValue(), audienceId);
+        assertEquals(result.getAudienceDisplayName(), audienceName);
+        assertEquals(result.getAudienceType(), audienceType);
+    }
+
+    /**
+     * Test the buildSCIMRoleResponse method with organization audience type.
+     */
+    @Test
+    public void testBuildSCIMRoleResponse_OrganizationAudience() throws Exception {
+
+        String roleId = "org-role-id-789";
+        String roleName = "OrganizationRole";
+        String audienceId = "org-123";
+        String audienceName = "Test Organization";
+        String audienceType = "organization";
+        String locationURI = "https://localhost:9443/scim2/v3/Roles/" + roleId;
+
+        RoleBasicInfo roleBasicInfo = mock(RoleBasicInfo.class);
+        when(roleBasicInfo.getId()).thenReturn(roleId);
+        when(roleBasicInfo.getName()).thenReturn(roleName);
+        when(roleBasicInfo.getAudienceId()).thenReturn(audienceId);
+        when(roleBasicInfo.getAudienceName()).thenReturn(audienceName);
+        when(roleBasicInfo.getAudience()).thenReturn(audienceType);
+
+        java.lang.reflect.Method buildSCIMRoleResponseMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
+                "buildSCIMRoleResponse", RoleBasicInfo.class, String.class);
+        buildSCIMRoleResponseMethod.setAccessible(true);
+        RoleV2 result = (RoleV2) buildSCIMRoleResponseMethod.invoke(
+                scimRoleManagerV2, roleBasicInfo, locationURI);
+
+        assertEquals(result.getId(), roleId);
+        assertEquals(result.getDisplayName(), roleName);
+        assertEquals(result.getLocation(), locationURI);
+        assertEquals(result.getAudienceValue(), audienceId);
+        assertEquals(result.getAudienceDisplayName(), audienceName);
+        assertEquals(result.getAudienceType(), audienceType);
     }
 }
