@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.IdpGroup;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -639,6 +640,50 @@ public class SCIMRoleManagerV2Test {
             // Verify the SCIMCommonUtils calls
             scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMGroupURL(groupId1), times(1));
             scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMGroupURL(groupId2), times(1));
+        }
+    }
+
+    /**
+     * Test the getRoleAssignedIdpGroups method with valid IDP group list.
+     */
+    @Test
+    public void testGetRoleAssignedIdpGroups_ValidIdpGroupList() throws Exception {
+
+        String idpGroupId1 = "idp-group-id-1";
+        String idpGroupName1 = "testIdpGroup1";
+        String idpId1 = "idp-id-1";
+        String idpGroupId2 = "idp-group-id-2";
+        String idpGroupName2 = "testIdpGroup2";
+        String idpId2 = "idp-id-2";
+        String idpGroupLocationURI1 = "https://localhost:9443/scim2/IdpGroups/" + idpId1 + "/" + idpGroupId1;
+        String idpGroupLocationURI2 = "https://localhost:9443/scim2/IdpGroups/" + idpId2 + "/" + idpGroupId2;
+        IdpGroup idpGroup1 = mock(IdpGroup.class);
+        when(idpGroup1.getGroupId()).thenReturn(idpGroupId1);
+        when(idpGroup1.getGroupName()).thenReturn(idpGroupName1);
+        when(idpGroup1.getIdpId()).thenReturn(idpId1);
+
+        IdpGroup idpGroup2 = mock(IdpGroup.class);
+        when(idpGroup2.getGroupId()).thenReturn(idpGroupId2);
+        when(idpGroup2.getGroupName()).thenReturn(idpGroupName2);
+        when(idpGroup2.getIdpId()).thenReturn(idpId2);
+
+        List<IdpGroup> assignedIdpGroups = Arrays.asList(idpGroup1, idpGroup2);
+        RoleV2 role = mock(RoleV2.class);
+
+        try (MockedStatic<SCIMCommonUtils> scimCommonUtils = mockStatic(SCIMCommonUtils.class)) {
+            scimCommonUtils.when(() -> SCIMCommonUtils.getIdpGroupURL(idpId1, idpGroupId1)).thenReturn(idpGroupLocationURI1);
+            scimCommonUtils.when(() -> SCIMCommonUtils.getIdpGroupURL(idpId2, idpGroupId2)).thenReturn(idpGroupLocationURI2);
+            java.lang.reflect.Method getRoleAssignedIdpGroupsMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
+                    "getRoleAssignedIdpGroups", RoleV2.class, List.class);
+            getRoleAssignedIdpGroupsMethod.setAccessible(true);
+            getRoleAssignedIdpGroupsMethod.invoke(scimRoleManagerV2, role, assignedIdpGroups);
+
+            // Verify that setGroup was called twice (once for each IDP group)
+            verify(role, times(2)).setGroup(any(Group.class));
+
+            // Verify the SCIMCommonUtils calls
+            scimCommonUtils.verify(() -> SCIMCommonUtils.getIdpGroupURL(idpId1, idpGroupId1), times(1));
+            scimCommonUtils.verify(() -> SCIMCommonUtils.getIdpGroupURL(idpId2, idpGroupId2), times(1));
         }
     }
 }
