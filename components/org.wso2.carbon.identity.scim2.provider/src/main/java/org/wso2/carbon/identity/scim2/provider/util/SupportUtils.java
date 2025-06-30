@@ -18,12 +18,6 @@
 
 package org.wso2.carbon.identity.scim2.provider.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.axiom.om.util.Base64;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -33,27 +27,35 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.ApplicationActor;
 import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
+import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCustomSchemaProcessor;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
+import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
-import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
+import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.protocol.SCIMResponse;
+import org.wso2.charon3.core.schema.AttributeSchema;
 
 import javax.ws.rs.core.Response;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getTenantDomainFromContext;
 
 /**
@@ -69,7 +71,6 @@ public class SupportUtils {
 
     /**
      * build the jaxrs response
-     *
      * @param scimResponse
      * @return
      */
@@ -254,71 +255,6 @@ public class SupportUtils {
             IdentityContext.getThreadLocalIdentityContext()
                     .setFlow(new Flow.Builder().name(flowName).initiatingPersona(
                             Flow.InitiatingPersona.ADMIN).build());
-        }
-    }
-
-    /**
-     * This method formats the given scim payload for PUT requests.
-     * It expects the input JSON to be an array of objects and the method wraps it in a map with a specified key.
-     *
-     * @param inputJson The input JSON string representing an array of objects.
-     * @return A formatted JSON string suitable for PUT requests.
-     * @throws FormatNotSupportedException If the input JSON is not a valid array or cannot be processed.
-     */
-    public static String formatJsonPayloadWithKey(String inputJson, String wrapperKey)
-            throws FormatNotSupportedException {
-
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            List<Map<String, String>> inputList = mapper.readValue(inputJson,
-                    new TypeReference<List<Map<String, String>>>() {});
-            Map<String, Object> outputMap = new HashMap<>();
-            outputMap.put(wrapperKey, inputList);
-            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(outputMap);
-        } catch (JsonProcessingException e) {
-            throw new FormatNotSupportedException("Error while transforming groups payload for PUT request. " +
-                    "Please ensure the input is a valid JSON array.");
-        }
-    }
-
-    /**
-     * Formalizes a SCIM PatchOp JSON request by ensuring all operations have a valid "path"
-     * and wrap any object values in arrays, using the specified SCIM attribute name.
-     *
-     * @param inputJson     The raw SCIM PatchOp request body as a JSON string
-     * @param scimAttribute The SCIM attribute name to use (e.g., "groups", "members")
-     * @return A normalized JSON string with explicit paths and wrapped values
-     * @throws FormatNotSupportedException FormatNotSupportedException
-     */
-    public static String formalizeScimPatchRequest(String inputJson, String scimAttribute)
-            throws FormatNotSupportedException {
-
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(inputJson);
-            ArrayNode operations = (ArrayNode) root.get(SCIMProviderConstants.OPERATIONS);
-
-            for (JsonNode opNode : operations) {
-                ObjectNode opObject = (ObjectNode) opNode;
-                String op = opObject.get(SCIMProviderConstants.OP).asText();
-
-                // Add default "path"
-                if (!opObject.has(SCIMProviderConstants.PATH)) {
-                    if (op.equalsIgnoreCase(SCIMProviderConstants.ADD) ||
-                            op.equalsIgnoreCase(SCIMProviderConstants.REPLACE)) {
-                        opObject.put(SCIMProviderConstants.PATH, scimAttribute);
-                    }
-                } else {
-                    String path = opObject.get(SCIMProviderConstants.PATH).asText();
-                    if (path.startsWith(SCIMProviderConstants.VALUE_EQ)) {
-                        opObject.put(SCIMProviderConstants.PATH, scimAttribute + "[" + path + "]");
-                    }
-                }
-            }
-            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
-        } catch (JsonProcessingException e ) {
-            throw new FormatNotSupportedException("Error while processing SCIM PatchOp request. " +
-                    "Please ensure the input is a valid JSON object with 'Operations' array.");
         }
     }
 }

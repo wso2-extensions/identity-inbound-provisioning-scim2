@@ -125,11 +125,37 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, ConflictException, NotImplementedException, BadRequestException {
 
         try {
-            checkIfRoleExists(role.getId(), tenantDomain);
-            validateOrganizationRoleCreation(role.getAudienceType(), role.getAudienceValue(), tenantDomain);
+            // Check if the role already exists.
+            if (roleManagementService.isExistingRole(role.getId(), tenantDomain)) {
+                String error = "Role with id: " + role.getId() + " already exists in the tenantDomain: "
+                        + tenantDomain;
+                throw new ConflictException(error);
+            }
 
-            List<Permission> permissionList = buildPermissionList(role.getPermissionValues());
+            if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equals(role.
+                    getAudienceType())) {
+                ServiceProvider app = ApplicationManagementService.getInstance().getApplicationByResourceId(
+                        role.getAudienceValue(), tenantDomain);
+                if (app == null) {
+                    throw new BadRequestException("Invalid audience value. Audience value should be valid " +
+                            "application ID");
+                }
 
+                if (app.getSpProperties() != null && Arrays.stream(app.getSpProperties())
+                        .anyMatch(property -> ApplicationConstants.IS_FRAGMENT_APP.equals(property.getName())
+                                && Boolean.parseBoolean(property.getValue()))) {
+                    throw new BadRequestException("Role creation for shared applications is not allowed at " +
+                            "organization level.");
+                }
+            }
+            List<String> permissionValues = role.getPermissionValues();
+            List<Permission> permissionList = new ArrayList<>();
+            if (permissionValues != null) {
+                for (String permissionValue : permissionValues) {
+                    Permission permission = new Permission(permissionValue);
+                    permissionList.add(permission);
+                }
+            }
             String audienceType = role.getAudienceType();
             String audienceValue = role.getAudienceValue();
             if (LOG.isDebugEnabled()) {
@@ -162,9 +188,15 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 roleManagementService.updateIdpGroupListOfRole(roleBasicInfo.getId(), idpGroupList, new ArrayList<>(),
                         tenantDomain);
             }
-
+            RoleV2 createdRole = new RoleV2();
+            createdRole.setId(roleBasicInfo.getId());
             String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
-            return buildSCIMRoleResponse(roleBasicInfo, locationURI);
+            createdRole.setLocation(locationURI);
+            createdRole.setDisplayName(roleBasicInfo.getName());
+            createdRole.setSchemas();
+            createdRole.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
+                    roleBasicInfo.getAudience());
+            return createdRole;
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
                 throw new ConflictException(e.getMessage());
@@ -199,116 +231,84 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws BadRequestException, CharonException, NotFoundException {
 
         try {
-            Role role = fetchRole(roleID, requiredAttributes);
-            RoleV2 scimRole = buildRoleWithMetadata(role);
+            Role role;
+            if (isUsersAttributeRequired(requiredAttributes)) {
+                role = roleManagementService.getRole(roleID, tenantDomain);
+            } else {
+                role = roleManagementService.getRoleWithoutUsers(roleID, tenantDomain);
+            }
+            RoleV2 scimRole = new RoleV2();
+            scimRole.setId(role.getId());
+            scimRole.setDisplayName(role.getName());
+            String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(role.getId());
+            scimRole.setLocation(locationURI);
+            scimRole.setSchemas();
+            scimRole.setAudience(role.getAudienceId(), role.getAudienceName(), role.getAudience());
+            if (systemRoles.contains(role.getName())) {
+                scimRole.setSystemRole(true);
+            }
+            List<MultiValuedComplexType> roleProperties =
+                    convertRolePropertiesToMultiValuedComplexType(role.getRoleProperties());
+            scimRole.setRoleProperties(roleProperties);
+            // Set permissions.
+            List<MultiValuedComplexType> permissions =
+                    convertPermissionsToMultiValuedComplexType(role.getPermissions());
+            scimRole.setPermissions(permissions);
 
             // Set role's assigned users.
-            setAssignedUsersForRole(scimRole, role.getUsers());
+            List<UserBasicInfo> assignedUsers = role.getUsers();
+            if (assignedUsers != null) {
+                for (UserBasicInfo userInfo : assignedUsers) {
+                    userInfo.getId();
+                    String userLocationURI = SCIMCommonUtils.getSCIMUserURL(userInfo.getId());
+                    User user = new User();
+                    user.setUserName(userInfo.getName());
+                    user.setId(userInfo.getId());
+                    user.setLocation(userLocationURI);
+                    scimRole.setUser(user);
+                }
+            }
 
             // Set role's assigned userstore groups.
-            setRoleAssignedUserstoreGroups(scimRole, role.getGroups());
+            List<GroupBasicInfo> assignedUserstoreGroups = role.getGroups();
+            if (assignedUserstoreGroups != null) {
+                for (GroupBasicInfo groupInfo : assignedUserstoreGroups) {
+                    String groupId = groupInfo.getId();
+                    String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupId);
+                    Group group = new Group();
+                    group.setDisplayName(groupInfo.getName());
+                    group.setId(groupId);
+                    group.setLocation(groupLocationURI);
+                    scimRole.setGroup(group);
+                }
+            }
 
             // Set role's assigned idp groups.
-            getRoleAssignedIdpGroups(scimRole, role.getIdpGroups());
+            List<IdpGroup> assignedIdpGroups = role.getIdpGroups();
+            if (assignedIdpGroups != null) {
+                for (IdpGroup idpGroup : assignedIdpGroups) {
+                    String idpGroupId = idpGroup.getGroupId();
+                    String idpGroupLocationURI = SCIMCommonUtils.getIdpGroupURL(idpGroup.getIdpId(), idpGroupId);
+                    Group group = new Group();
+                    group.setDisplayName(idpGroup.getGroupName());
+                    group.setId(idpGroupId);
+                    group.setLocation(idpGroupLocationURI);
+                    scimRole.setGroup(group);
+                }
+            }
 
             // Set associated applications.
-            setAssociatedPermissionsForRole(scimRole, role);
-
+            List<MultiValuedComplexType> associatedApps =
+                    convertAssociatedAppsToMultivaluedComplexType(role.getAssociatedApplications());
+            if (CollectionUtils.isNotEmpty(associatedApps)) {
+                scimRole.setAssociatedApplications(associatedApps);
+            }
             return scimRole;
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
                 throw new NotFoundException(e.getMessage());
             }
             throw new CharonException(String.format("Error occurred while getting the role: %s", roleID), e);
-        }
-    }
-
-    private Role fetchRole(String roleId, Map<String, Boolean> requiredAttributes)
-            throws IdentityRoleManagementException {
-
-        if (isUsersAttributeRequired(requiredAttributes)) {
-            return roleManagementService.getRole(roleId, tenantDomain);
-        }
-        return roleManagementService.getRoleWithoutUsers(roleId, tenantDomain);
-    }
-
-    private RoleV2 buildRoleWithMetadata(Role role)
-            throws BadRequestException, CharonException {
-
-        RoleV2 scimRole = new RoleV2();
-        scimRole.setId(role.getId());
-        scimRole.setDisplayName(role.getName());
-        scimRole.setLocation(getSCIMRoleURLBasedOnVersion(role.getId()));
-        scimRole.setSchemas();
-        scimRole.setAudience(role.getAudienceId(), role.getAudienceName(), role.getAudience());
-        if (systemRoles.contains(role.getName())) {
-            scimRole.setSystemRole(true);
-        }
-        List<MultiValuedComplexType> roleProperties =
-                convertRolePropertiesToMultiValuedComplexType(role.getRoleProperties());
-        scimRole.setRoleProperties(roleProperties);
-        // Set permissions.
-        List<MultiValuedComplexType> permissions =
-                convertPermissionsToMultiValuedComplexType(role.getPermissions());
-        scimRole.setPermissions(permissions);
-
-        return scimRole;
-    }
-
-    private void setAssignedUsersForRole(RoleV2 role, List<UserBasicInfo> assignedUsers)
-            throws BadRequestException, CharonException {
-
-        if (assignedUsers != null) {
-            for (UserBasicInfo userInfo : assignedUsers) {
-                userInfo.getId();
-                String userLocationURI = SCIMCommonUtils.getSCIMUserURL(userInfo.getId());
-                User user = new User();
-                user.setUserName(userInfo.getName());
-                user.setId(userInfo.getId());
-                user.setLocation(userLocationURI);
-                role.setUser(user);
-            }
-        }
-    }
-
-    private void setRoleAssignedUserstoreGroups(RoleV2 role, List<GroupBasicInfo> assignedUserstoreGroups)
-            throws BadRequestException, CharonException {
-
-        if (assignedUserstoreGroups != null) {
-            for (GroupBasicInfo groupInfo : assignedUserstoreGroups) {
-                String groupId = groupInfo.getId();
-                String groupLocationURI = SCIMCommonUtils.getSCIMGroupURL(groupId);
-                Group group = new Group();
-                group.setDisplayName(groupInfo.getName());
-                group.setId(groupId);
-                group.setLocation(groupLocationURI);
-                role.setGroup(group);
-            }
-        }
-    }
-
-    private void getRoleAssignedIdpGroups(RoleV2 role, List<IdpGroup> assignedIdpGroups)
-            throws BadRequestException, CharonException {
-
-        if (assignedIdpGroups != null) {
-            for (IdpGroup idpGroup : assignedIdpGroups) {
-                String idpGroupId = idpGroup.getGroupId();
-                String idpGroupLocationURI = SCIMCommonUtils.getIdpGroupURL(idpGroup.getIdpId(), idpGroupId);
-                Group group = new Group();
-                group.setDisplayName(idpGroup.getGroupName());
-                group.setId(idpGroupId);
-                group.setLocation(idpGroupLocationURI);
-                role.setGroup(group);
-            }
-        }
-    }
-
-    private void setAssociatedPermissionsForRole(RoleV2 scimRole, Role role) {
-
-        List<MultiValuedComplexType> associatedApps =
-                convertAssociatedAppsToMultivaluedComplexType(role.getAssociatedApplications());
-        if (CollectionUtils.isNotEmpty(associatedApps)) {
-            scimRole.setAssociatedApplications(associatedApps);
         }
     }
 
@@ -485,301 +485,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     /**
-     * Creates a new role with MetaData. This method will not assign users or groups to the role.
-     *
-     * @param role The role object containing role details.
-     * @return The created RoleV2 object.
-     * @throws CharonException         CharonException.
-     * @throws ConflictException       ConflictException.
-     * @throws NotImplementedException NotImplementedException.
-     * @throws BadRequestException     BadRequestException.
-     */
-    @Override
-    public RoleV2 createRoleMeta(RoleV2 role)
-            throws CharonException, ConflictException, NotImplementedException, BadRequestException {
-
-        try {
-            checkIfRoleExists(role.getId(), tenantDomain);
-            validateOrganizationRoleCreation(role.getAudienceType(), role.getAudienceValue(), tenantDomain);
-
-            List<Permission> permissionList = buildPermissionList(role.getPermissionValues());
-
-            String audienceType = role.getAudienceType();
-            String audienceValue = role.getAudienceValue();
-            if (LOG.isDebugEnabled()) {
-                if (StringUtils.isNotBlank(audienceType) && StringUtils.isNotBlank(audienceValue)) {
-                    LOG.debug("Creating role: " + role.getDisplayName() + " for " + audienceType + " with id: " +
-                            audienceValue + " audience.");
-                } else {
-                    LOG.debug("Creating role: " + role.getDisplayName() + " for organization.");
-                }
-            }
-
-            // If users and groups are provided, they will be ignored. No error response will be returned.
-            RoleBasicInfo roleBasicInfo =
-                    roleManagementService.addRole(role.getDisplayName(), Collections.emptyList(),
-                            Collections.emptyList(), permissionList, audienceType,
-                            role.getAudienceValue(), tenantDomain);
-
-            String locationURI = getSCIMRoleURLBasedOnVersion(roleBasicInfo.getId());
-            return buildSCIMRoleResponse(roleBasicInfo, locationURI);
-        } catch (IdentityRoleManagementException e) {
-            if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
-                throw new ConflictException(e.getMessage());
-            } else if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
-                throw new BadRequestException(e.getMessage());
-            } else if (INVALID_AUDIENCE.getCode().equals(e.getErrorCode()) ||
-                    INVALID_PERMISSION.getCode().equals(e.getErrorCode())) {
-                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
-            }
-            throw new CharonException(
-                    String.format("Error occurred while adding a new role: %s", role.getDisplayName()), e);
-        } catch (IdentityApplicationManagementException e) {
-            throw new CharonException(
-                    String.format("Error occurred while retrieving application relevant for role: %s audience.",
-                            role.getDisplayName()), e);
-        } catch (OrganizationManagementException e) {
-            throw new CharonException(
-                    String.format("Error occurred while checking the organization status of the tenant: %s",
-                            tenantDomain), e);
-        }
-    }
-
-    /**
-     * Updates the role metadata.
-     * Only the role name and permissions can be updated using this method.
-     *
-     * @param oldRole The existing role object.
-     * @param newRole The new role object with updated values.
-     * @return The updated RoleV2 object.
-     * @throws BadRequestException   BadRequestException.
-     * @throws CharonException       CharonException.
-     * @throws ConflictException     ConflictException.
-     * @throws NotFoundException     NotFoundException.
-     */
-    @Override
-    public RoleV2 updateRoleMeta(RoleV2 oldRole, RoleV2 newRole)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException {
-
-        doUpdateRoleName(oldRole, newRole);
-        doUpdatePermissions(oldRole, newRole);
-
-        RoleV2 role = new RoleV2();
-        role.setDisplayName(newRole.getDisplayName());
-        role.setId(oldRole.getId());
-        role.setSchemas();
-        role.setLocation(oldRole.getLocation());
-        role.setAudience(oldRole.getAudienceValue(), oldRole.getAudienceDisplayName(), oldRole.getAudienceType());
-        return role;
-    }
-
-    /**
-     * Update the metadata of a role via PATCH operations.
-     * Only the role name and permissions can be updated using this method.
-     *
-     * @param roleId           The ID of the role to be updated.
-     * @param patchOperations  A map of patch operations to apply.
-     * @return The updated RoleV2 object.
-     * @throws BadRequestException   BadRequestException.
-     * @throws CharonException       CharonException.
-     * @throws ConflictException     ConflictException.
-     * @throws NotFoundException     NotFoundException.
-     * @throws ForbiddenException    ForbiddenException.
-     */
-    @Override
-    public RoleV2 patchRoleMeta(String roleId, Map<String, List<PatchOperation>> patchOperations)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
-
-        String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Updating Role: " + roleId);
-        }
-
-        List<PatchOperation> displayNameOperations = new ArrayList<>();
-        List<PatchOperation> permissionOperations = new ArrayList<>();
-
-        if (MapUtils.isEmpty(patchOperations)) {
-            throw new CharonException("Patch operation can't be null or empty.");
-        }
-        for (List<PatchOperation> patchOperationList : patchOperations.values()) {
-            for (PatchOperation patchOperation : patchOperationList) {
-                switch (patchOperation.getAttributeName()) {
-                    case (SCIMConstants.RoleSchemaConstants.DISPLAY_NAME):
-                        displayNameOperations.add(patchOperation);
-                        break;
-                    case (SCIMConstants.RoleSchemaConstants.PERMISSIONS):
-                        permissionOperations.add(patchOperation);
-                        break;
-                }
-            }
-        }
-
-        if (CollectionUtils.isNotEmpty(displayNameOperations)) {
-            if (isSharedRole(roleId)) {
-                throw new BadRequestException("Role name modification is not allowed for shared roles.",
-                        ResponseCodeConstants.INVALID_VALUE);
-            }
-            String newRoleName = (String) displayNameOperations.get(displayNameOperations.size() - 1).getValues();
-            updateRoleName(roleId, currentRoleName, newRoleName);
-        }
-        if (CollectionUtils.isNotEmpty(permissionOperations)) {
-            if (isSharedRole(roleId)) {
-                throw new BadRequestException("Role permission modification is not allowed for shared roles.",
-                        ResponseCodeConstants.INVALID_VALUE);
-            }
-            updatePermissions(roleId, permissionOperations);
-        }
-
-        HashMap<String, Boolean> requiredAttributes = new HashMap<>();
-        requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
-        return getRole(roleId, requiredAttributes);
-    }
-
-    /**
-     * Updates the user list of a role.
-     * This method is used in the PUT operation to replace the existing user list of a role
-     * with the new user list provided in the request.
-     *
-     * @param oldRole The existing role object.
-     * @param newRole The new role object containing the updated user list.
-     * @return The updated RoleV2 object.
-     * @throws BadRequestException   BadRequestException.
-     * @throws CharonException       CharonException.
-     * @throws ConflictException     ConflictException.
-     * @throws NotFoundException     NotFoundException.
-     */
-    @Override
-    public RoleV2 updateUsersOfRole(RoleV2 oldRole, RoleV2 newRole)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException {
-
-        doUpdateUsers(oldRole, newRole);
-
-        RoleV2 role = new RoleV2();
-        role.setDisplayName(newRole.getDisplayName());
-        role.setId(oldRole.getId());
-        role.setSchemas();
-        role.setLocation(oldRole.getLocation());
-        role.setAudience(oldRole.getAudienceValue(), oldRole.getAudienceDisplayName(), oldRole.getAudienceType());
-        return role;
-    }
-
-    /**
-     * Updates the user list of a role using PATCH operations.
-     *
-     * @param roleId          The ID of the role to update.
-     * @param patchOperations A map of patch operations to apply to the user list.
-     * @return The updated RoleV2 object.
-     * @throws BadRequestException   BadRequestException.
-     * @throws CharonException       CharonException.
-     * @throws ConflictException     ConflictException.
-     * @throws NotFoundException     NotFoundException.
-     * @throws ForbiddenException    ForbiddenException.
-     */
-    @Override
-    public RoleV2 patchUsersOfRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
-
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Updating User for Role: " + roleId);
-        }
-
-        List<PatchOperation> memberOperations = new ArrayList<>();
-
-        if (MapUtils.isEmpty(patchOperations)) {
-            throw new CharonException("Patch operation can't be null or empty.");
-        }
-        for (List<PatchOperation> patchOperationList : patchOperations.values()) {
-            for (PatchOperation patchOperation : patchOperationList) {
-                switch (patchOperation.getAttributeName()) {
-                    case (SCIMConstants.RoleSchemaConstants.USERS):
-                        memberOperations.add(patchOperation);
-                        break;
-                }
-            }
-        }
-
-        if (CollectionUtils.isNotEmpty(memberOperations)) {
-            updateUsers(roleId, memberOperations);
-        }
-
-        HashMap<String, Boolean> requiredAttributes = new HashMap<>();
-        requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
-        return getRole(roleId, requiredAttributes);
-    }
-
-    /**
-     * Updates the group list of a role.
-     * This method is used in the PUT operation to replace the existing group list of a role
-     * with the new group list provided in the request.
-     *
-     * @param oldRole The existing role object.
-     * @param newRole The new role object containing the updated group list.
-     * @return The updated RoleV2 object.
-     * @throws BadRequestException   BadRequestException.
-     * @throws CharonException       CharonException.
-     * @throws ConflictException     ConflictException.
-     * @throws NotFoundException     NotFoundException.
-     */
-    @Override
-    public RoleV2 updateGroupsOfRole(RoleV2 oldRole, RoleV2 newRole)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException {
-
-        doUpdateGroups(oldRole, newRole);
-
-        RoleV2 role = new RoleV2();
-        role.setDisplayName(newRole.getDisplayName());
-        role.setId(oldRole.getId());
-        role.setSchemas();
-        role.setLocation(oldRole.getLocation());
-        role.setAudience(oldRole.getAudienceValue(), oldRole.getAudienceDisplayName(), oldRole.getAudienceType());
-        return role;
-    }
-
-    /**
-     * Updates the group list of a role using PATCH operations.
-     *
-     * @param roleId          The ID of the role to update.
-     * @param patchOperations A map of patch operations to apply to the group list.
-     * @return The updated RoleV2 object.
-     * @throws BadRequestException   If the request is invalid.
-     * @throws CharonException       If a general SCIM error occurs.
-     * @throws ConflictException     If there is a conflict during the update.
-     * @throws NotFoundException     If the role is not found.
-     * @throws ForbiddenException    If the operation is forbidden.
-     */
-    @Override
-    public RoleV2 patchGroupsOfRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
-
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Updating Group for Role: " + roleId);
-        }
-
-        List<PatchOperation> groupOperations = new ArrayList<>();
-
-        if (MapUtils.isEmpty(patchOperations)) {
-            throw new CharonException("Patch operation can't be null or empty.");
-        }
-        for (List<PatchOperation> patchOperationList : patchOperations.values()) {
-            for (PatchOperation patchOperation : patchOperationList) {
-                switch (patchOperation.getAttributeName()) {
-                    case (SCIMConstants.RoleSchemaConstants.GROUPS):
-                        groupOperations.add(patchOperation);
-                        break;
-                }
-            }
-        }
-
-        if (CollectionUtils.isNotEmpty(groupOperations)) {
-            updateGroups(roleId, groupOperations);
-        }
-
-        HashMap<String, Boolean> requiredAttributes = new HashMap<>();
-        requiredAttributes.put(SCIMConstants.RoleSchemaConstants.DISPLAY_NAME_URI, true);
-        return getRole(roleId, requiredAttributes);
-    }
-
-    /**
      * Filter users using multi-attribute filters or single attribute filters with pagination.
      *
      * @param node       Filter condition tree.
@@ -812,8 +517,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
      * @throws CharonException Error filtering the roles.
      */
     private RolesV2GetResponse filterRolesByAttributes(Node node, Integer count, Integer startIndex, String sortBy,
-                                                       String sortOrder,
-                                                       List<String> requiredAttributes)
+                                                       String sortOrder, List<String> requiredAttributes)
             throws CharonException, BadRequestException {
 
         String searchFilter = buildSearchFilter(node);
@@ -963,8 +667,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             scimRole.setDisplayName(role.getName());
             scimRole.setId(role.getId());
             scimRole.setSchemas();
-            scimRole.setLocation(getSCIMRoleURLBasedOnVersion(role.getId()));
-
+            scimRole.setLocation(SCIMCommonUtils.getSCIMRoleV2URL(role.getId()));
             scimRole.setAudience(role.getAudienceId(), role.getAudienceName(),
                     role.getAudience());
             if (systemRoles.contains(role.getName())) {
@@ -1794,98 +1497,4 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throw new CharonException("Error while checking whether the role is a shared role.", e);
         }
     }
-
-    /**
-     * Checks if the role already exists in the tenant domain.
-     *
-     * @param roleId        ID of the role to check.
-     * @param tenantDomain  Tenant domain where the role is checked.
-     * @throws ConflictException ConflictException.
-     * @throws IdentityRoleManagementException IdentityRoleManagementException.
-     */
-    private void checkIfRoleExists(String roleId, String tenantDomain)
-            throws ConflictException, IdentityRoleManagementException {
-
-        // Check if the role already exists.
-        if (roleManagementService.isExistingRole(roleId, tenantDomain)) {
-            String error = "Role with id: " + roleId + " already exists in the tenantDomain: "
-                    + tenantDomain;
-            throw new ConflictException(error);
-        }
-    }
-
-    /**
-     * Validates the creation of organization roles.
-     *
-     * @param audienceType  Type of the audience.
-     * @param audienceValue Value of the audience.
-     * @param tenantDomain  Tenant domain.
-     * @throws BadRequestException BadRequestException.
-     * @throws OrganizationManagementException OrganizationManagementException.
-     * @throws IdentityApplicationManagementException IdentityApplicationManagementException.
-     */
-    private void validateOrganizationRoleCreation(String audienceType, String audienceValue, String tenantDomain)
-            throws BadRequestException, OrganizationManagementException, IdentityApplicationManagementException {
-
-        if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equals(audienceType)) {
-            ServiceProvider app = ApplicationManagementService.getInstance().getApplicationByResourceId(
-                    audienceValue, tenantDomain);
-            if (app == null) {
-                throw new BadRequestException("Invalid audience value. Audience value should be valid " +
-                        "application ID");
-            }
-
-            if (app.getSpProperties() != null && Arrays.stream(app.getSpProperties())
-                    .anyMatch(property -> ApplicationConstants.IS_FRAGMENT_APP.equals(property.getName())
-                            && Boolean.parseBoolean(property.getValue()))) {
-                throw new BadRequestException("Role creation for shared applications is not allowed at " +
-                        "organization level.");
-            }
-        }
-    }
-
-    private List<Permission> buildPermissionList(List<String> permissionValues) {
-
-        List<Permission> permissionList = new ArrayList<>();
-        if (permissionValues != null) {
-            for (String permissionValue : permissionValues) {
-                Permission permission = new Permission(permissionValue);
-                permissionList.add(permission);
-            }
-        }
-        return permissionList;
-    }
-
-    /**
-     * Builds a SCIM Role response object from the basic role information and location URI.
-     *
-     * @param roleBasicInfo Basic information of the role.
-     * @param locationURI   Location URI of the role.
-     * @return SCIM Role response object.
-     * @throws BadRequestException BadRequestException.
-     * @throws CharonException CharonException.
-     */
-    private RoleV2 buildSCIMRoleResponse(RoleBasicInfo roleBasicInfo, String locationURI)
-            throws BadRequestException, CharonException {
-
-        RoleV2 role = new RoleV2();
-        role.setId(roleBasicInfo.getId());
-        role.setLocation(locationURI);
-        role.setDisplayName(roleBasicInfo.getName());
-        role.setSchemas();
-        role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(), roleBasicInfo.getAudience());
-        return role;
-    }
-
-    private String getSCIMRoleURLBasedOnVersion(String roleId) {
-
-        if (IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SCIM_VERSION) != null) {
-
-            return SCIMCommonUtils.getSCIMRoleURLWithVersion(roleId,
-                    IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SCIM_VERSION).toString());
-        } else {
-            return SCIMCommonUtils.getSCIMRoleV2URL(roleId);
-        }
-    }
-
 }

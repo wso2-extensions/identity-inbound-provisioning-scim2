@@ -33,11 +33,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.IdpGroup;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -49,8 +45,6 @@ import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.objects.RoleV2;
-import org.wso2.charon3.core.objects.User;
-import org.wso2.charon3.core.objects.Group;
 import org.wso2.charon3.core.objects.plainobjects.MultiValuedComplexType;
 import org.wso2.charon3.core.objects.plainobjects.RolesV2GetResponse;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
@@ -71,8 +65,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
@@ -489,201 +481,6 @@ public class SCIMRoleManagerV2Test {
         } catch (CharonException e) {
             assertEquals(e.getStatus(), ResponseCodeConstants.CODE_ACCEPTED);
             assertEquals(e.getDetail(), "Role creation request is sent to the workflow engine for approval.");
-        }
-    }
-
-    /**
-     * Test the buildSCIMRoleResponse method with valid inputs.
-     */
-    @Test
-    public void testBuildSCIMRoleResponse_ValidInput() throws Exception {
-
-        String roleId = "test-role-id-123";
-        String roleName = "TestRole";
-        String audienceId = "audience-id-456";
-        String audienceName = "Test Audience";
-        String audienceType = "application";
-        String locationURI = "https://localhost:9443/scim2/v3/Roles/" + roleId;
-
-        RoleBasicInfo roleBasicInfo = mock(RoleBasicInfo.class);
-        when(roleBasicInfo.getId()).thenReturn(roleId);
-        when(roleBasicInfo.getName()).thenReturn(roleName);
-        when(roleBasicInfo.getAudienceId()).thenReturn(audienceId);
-        when(roleBasicInfo.getAudienceName()).thenReturn(audienceName);
-        when(roleBasicInfo.getAudience()).thenReturn(audienceType);
-
-        java.lang.reflect.Method buildSCIMRoleResponseMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
-                "buildSCIMRoleResponse", RoleBasicInfo.class, String.class);
-        buildSCIMRoleResponseMethod.setAccessible(true);
-        RoleV2 result = (RoleV2) buildSCIMRoleResponseMethod.invoke(
-                scimRoleManagerV2, roleBasicInfo, locationURI);
-
-        assertEquals(result.getId(), roleId);
-        assertEquals(result.getDisplayName(), roleName);
-        assertEquals(result.getLocation(), locationURI);
-        assertEquals(result.getAudienceValue(), audienceId);
-        assertEquals(result.getAudienceDisplayName(), audienceName);
-        assertEquals(result.getAudienceType(), audienceType);
-    }
-
-    /**
-     * Test the buildSCIMRoleResponse method with organization audience type.
-     */
-    @Test
-    public void testBuildSCIMRoleResponse_OrganizationAudience() throws Exception {
-
-        String roleId = "org-role-id-789";
-        String roleName = "OrganizationRole";
-        String audienceId = "org-123";
-        String audienceName = "Test Organization";
-        String audienceType = "organization";
-        String locationURI = "https://localhost:9443/scim2/v3/Roles/" + roleId;
-
-        RoleBasicInfo roleBasicInfo = mock(RoleBasicInfo.class);
-        when(roleBasicInfo.getId()).thenReturn(roleId);
-        when(roleBasicInfo.getName()).thenReturn(roleName);
-        when(roleBasicInfo.getAudienceId()).thenReturn(audienceId);
-        when(roleBasicInfo.getAudienceName()).thenReturn(audienceName);
-        when(roleBasicInfo.getAudience()).thenReturn(audienceType);
-
-        java.lang.reflect.Method buildSCIMRoleResponseMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
-                "buildSCIMRoleResponse", RoleBasicInfo.class, String.class);
-        buildSCIMRoleResponseMethod.setAccessible(true);
-        RoleV2 result = (RoleV2) buildSCIMRoleResponseMethod.invoke(
-                scimRoleManagerV2, roleBasicInfo, locationURI);
-
-        assertEquals(result.getId(), roleId);
-        assertEquals(result.getDisplayName(), roleName);
-        assertEquals(result.getLocation(), locationURI);
-        assertEquals(result.getAudienceValue(), audienceId);
-        assertEquals(result.getAudienceDisplayName(), audienceName);
-        assertEquals(result.getAudienceType(), audienceType);
-    }
-
-    /**
-     * Test the setAssignedUsersForRole method with valid user list.
-     */
-    @Test
-    public void testSetAssignedUsersForRole_ValidUserList() throws Exception {
-
-        String userId1 = "user-id-1";
-        String userName1 = "testUser1";
-        String userId2 = "user-id-2";
-        String userName2 = "testUser2";
-        String userLocationURI1 = "https://localhost:9443/scim2/Users/" + userId1;
-        String userLocationURI2 = "https://localhost:9443/scim2/Users/" + userId2;
-
-        UserBasicInfo userInfo1 = mock(UserBasicInfo.class);
-        when(userInfo1.getId()).thenReturn(userId1);
-        when(userInfo1.getName()).thenReturn(userName1);
-
-        UserBasicInfo userInfo2 = mock(UserBasicInfo.class);
-        when(userInfo2.getId()).thenReturn(userId2);
-        when(userInfo2.getName()).thenReturn(userName2);
-
-        List<UserBasicInfo> assignedUsers = Arrays.asList(userInfo1, userInfo2);
-        RoleV2 role = mock(RoleV2.class);
-
-        try (MockedStatic<SCIMCommonUtils> scimCommonUtils = mockStatic(SCIMCommonUtils.class)) {
-            scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMUserURL(userId1)).thenReturn(userLocationURI1);
-            scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMUserURL(userId2)).thenReturn(userLocationURI2);
-            java.lang.reflect.Method setAssignedUsersForRoleMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
-                    "setAssignedUsersForRole", RoleV2.class, List.class);
-            setAssignedUsersForRoleMethod.setAccessible(true);
-            setAssignedUsersForRoleMethod.invoke(scimRoleManagerV2, role, assignedUsers);
-
-            // Verify that setUser was called twice (once for each user)
-            verify(role, times(2)).setUser(any(User.class));
-
-            // Verify the SCIMCommonUtils calls
-            scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMUserURL(userId1), times(1));
-            scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMUserURL(userId2), times(1));
-        }
-    }
-
-    /**
-     * Test the setRoleAssignedUserstoreGroups method with valid group list.
-     */
-    @Test
-    public void testSetRoleAssignedUserstoreGroups_ValidGroupList() throws Exception {
-
-        String groupId1 = "group-id-1";
-        String groupName1 = "testGroup1";
-        String groupId2 = "group-id-2";
-        String groupName2 = "testGroup2";
-        String groupLocationURI1 = "https://localhost:9443/scim2/Groups/" + groupId1;
-        String groupLocationURI2 = "https://localhost:9443/scim2/Groups/" + groupId2;
-
-        // Create GroupBasicInfo mocks
-        GroupBasicInfo groupInfo1 = mock(GroupBasicInfo.class);
-        when(groupInfo1.getId()).thenReturn(groupId1);
-        when(groupInfo1.getName()).thenReturn(groupName1);
-
-        GroupBasicInfo groupInfo2 = mock(GroupBasicInfo.class);
-        when(groupInfo2.getId()).thenReturn(groupId2);
-        when(groupInfo2.getName()).thenReturn(groupName2);
-
-        List<GroupBasicInfo> assignedUserstoreGroups = Arrays.asList(groupInfo1, groupInfo2);
-        RoleV2 role = mock(RoleV2.class);
-
-        try (MockedStatic<SCIMCommonUtils> scimCommonUtils = mockStatic(SCIMCommonUtils.class)) {
-            scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMGroupURL(groupId1)).thenReturn(groupLocationURI1);
-            scimCommonUtils.when(() -> SCIMCommonUtils.getSCIMGroupURL(groupId2)).thenReturn(groupLocationURI2);
-            java.lang.reflect.Method setRoleAssignedUserstoreGroupsMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
-                    "setRoleAssignedUserstoreGroups", RoleV2.class, List.class);
-            setRoleAssignedUserstoreGroupsMethod.setAccessible(true);
-            setRoleAssignedUserstoreGroupsMethod.invoke(scimRoleManagerV2, role, assignedUserstoreGroups);
-
-            // Verify that setGroup was called twice (once for each group)
-            verify(role, times(2)).setGroup(any(Group.class));
-
-            // Verify the SCIMCommonUtils calls
-            scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMGroupURL(groupId1), times(1));
-            scimCommonUtils.verify(() -> SCIMCommonUtils.getSCIMGroupURL(groupId2), times(1));
-        }
-    }
-
-    /**
-     * Test the getRoleAssignedIdpGroups method with valid IDP group list.
-     */
-    @Test
-    public void testGetRoleAssignedIdpGroups_ValidIdpGroupList() throws Exception {
-
-        String idpGroupId1 = "idp-group-id-1";
-        String idpGroupName1 = "testIdpGroup1";
-        String idpId1 = "idp-id-1";
-        String idpGroupId2 = "idp-group-id-2";
-        String idpGroupName2 = "testIdpGroup2";
-        String idpId2 = "idp-id-2";
-        String idpGroupLocationURI1 = "https://localhost:9443/scim2/IdpGroups/" + idpId1 + "/" + idpGroupId1;
-        String idpGroupLocationURI2 = "https://localhost:9443/scim2/IdpGroups/" + idpId2 + "/" + idpGroupId2;
-        IdpGroup idpGroup1 = mock(IdpGroup.class);
-        when(idpGroup1.getGroupId()).thenReturn(idpGroupId1);
-        when(idpGroup1.getGroupName()).thenReturn(idpGroupName1);
-        when(idpGroup1.getIdpId()).thenReturn(idpId1);
-
-        IdpGroup idpGroup2 = mock(IdpGroup.class);
-        when(idpGroup2.getGroupId()).thenReturn(idpGroupId2);
-        when(idpGroup2.getGroupName()).thenReturn(idpGroupName2);
-        when(idpGroup2.getIdpId()).thenReturn(idpId2);
-
-        List<IdpGroup> assignedIdpGroups = Arrays.asList(idpGroup1, idpGroup2);
-        RoleV2 role = mock(RoleV2.class);
-
-        try (MockedStatic<SCIMCommonUtils> scimCommonUtils = mockStatic(SCIMCommonUtils.class)) {
-            scimCommonUtils.when(() -> SCIMCommonUtils.getIdpGroupURL(idpId1, idpGroupId1)).thenReturn(idpGroupLocationURI1);
-            scimCommonUtils.when(() -> SCIMCommonUtils.getIdpGroupURL(idpId2, idpGroupId2)).thenReturn(idpGroupLocationURI2);
-            java.lang.reflect.Method getRoleAssignedIdpGroupsMethod = SCIMRoleManagerV2.class.getDeclaredMethod(
-                    "getRoleAssignedIdpGroups", RoleV2.class, List.class);
-            getRoleAssignedIdpGroupsMethod.setAccessible(true);
-            getRoleAssignedIdpGroupsMethod.invoke(scimRoleManagerV2, role, assignedIdpGroups);
-
-            // Verify that setGroup was called twice (once for each IDP group)
-            verify(role, times(2)).setGroup(any(Group.class));
-
-            // Verify the SCIMCommonUtils calls
-            scimCommonUtils.verify(() -> SCIMCommonUtils.getIdpGroupURL(idpId1, idpGroupId1), times(1));
-            scimCommonUtils.verify(() -> SCIMCommonUtils.getIdpGroupURL(idpId2, idpGroupId2), times(1));
         }
     }
 }
