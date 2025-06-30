@@ -6009,7 +6009,7 @@ public class SCIMUserManager implements UserManager {
 
         List<Attribute> agentUserSchemaAttributesList = null;
 
-        if (SCIMCommonUtils.isUserExtensionEnabled()) {
+        if (IdentityUtil.isAgentIdentityEnabled() && SCIMCommonUtils.isUserExtensionEnabled()) {
             Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
                     getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_AGENT_CLAIM_DIALECT, tenantDomain);
 
