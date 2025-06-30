@@ -483,8 +483,8 @@
     </servlet-mapping>
 
 
-        <servlet>
-        <servlet-name>userResourceOrgPerspective</servlet-name>
+    <servlet>
+        <servlet-name>agentResourceOrgPerspective</servlet-name>
         <servlet-class>
             org.apache.cxf.jaxrs.servlet.CXFNonSpringJaxrsServlet
         </servlet-class>
