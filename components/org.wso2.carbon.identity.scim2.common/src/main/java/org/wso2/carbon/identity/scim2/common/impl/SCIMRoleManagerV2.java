@@ -72,7 +72,6 @@ import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
-import org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -102,7 +101,7 @@ import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
         ERROR_CODE_ROLE_WF_USER_NOT_FOUND;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
-        ERROR_CODE_ROLE_WF_USER_PENDING_APPROVAL;
+        ERROR_CODE_ROLE_WF_USER_PENDING_DELETION;
 
 /**
  * Implementation of the {@link RoleV2Manager} interface to manage RoleResourceV2.
@@ -215,7 +214,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     ERROR_CODE_ROLE_WF_ALREADY_EXISTS.getCode().equals(errorCode) ||
                     ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS.getCode().equals(errorCode) ||
                     ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getCode().equals(errorCode) ||
-                    ERROR_CODE_ROLE_WF_USER_PENDING_APPROVAL.getCode().equals(errorCode)) {
+                    ERROR_CODE_ROLE_WF_USER_PENDING_DELETION.getCode().equals(errorCode)) {
                 throw new BadRequestException(e.getMessage());
             } else if (INVALID_AUDIENCE.getCode().equals(errorCode) ||
                     INVALID_PERMISSION.getCode().equals(errorCode)) {
