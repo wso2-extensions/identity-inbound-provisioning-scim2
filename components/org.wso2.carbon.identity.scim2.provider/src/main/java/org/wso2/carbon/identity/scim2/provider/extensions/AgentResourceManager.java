@@ -147,10 +147,12 @@ public class AgentResourceManager extends UserResourceManager {
             // Generate a unique ID for the agent as the username.
             if (StringUtils.isBlank(agent.getUsername())) {
                 String agentID = UUID.randomUUID().toString();
-                agent.setUserName(IdentityUtil.getAgentIdentityUserstoreName() + UserCoreConstants.DOMAIN_SEPARATOR + agentID);
+                agent.setUserName(
+                        IdentityUtil.getAgentIdentityUserstoreName() + UserCoreConstants.DOMAIN_SEPARATOR + agentID);
             } else if (!agent.getUsername().contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
                 String originalUsername = agent.getUserName();
-                agent.setUserName(IdentityUtil.getAgentIdentityUserstoreName() + UserCoreConstants.DOMAIN_SEPARATOR + originalUsername);
+                agent.setUserName(IdentityUtil.getAgentIdentityUserstoreName() + UserCoreConstants.DOMAIN_SEPARATOR
+                        + originalUsername);
                 LOG.debug("Added domain prefix to agent username: {} -> {}", originalUsername, agent.getUserName());
             } else if (agent.getUserName() != null && agent.getUserName().contains("/")) {
                 String error = "Agent username cannot contain domain name or be null.";
@@ -198,7 +200,6 @@ public class AgentResourceManager extends UserResourceManager {
 
                 // Log agent creation success with ID.
                 String agentId = createdAgent.getId();
-                LOG.info("Successfully created agent with ID: {}", agentId);
 
                 // Build agent location URL for response headers.
                 String agentLocationUrl = getResourceEndpointURL(AGENTS_ENDPOINT) + "/" + agentId;
@@ -207,8 +208,10 @@ public class AgentResourceManager extends UserResourceManager {
                 // Validate returned agent attributes against requested inclusion/exclusion.
                 validateReturnedAgentAttributes(copiedAgent, attributes, excludeAttributes);
 
-                // Include the password in the response (this will be filtered out based on
-                // schema configuration).
+                // Include the password in the response for agent creation.
+                // Note: This is generally not recommended for security reasons, but done here
+                // as the server generates a password for the agent and need to return it for later user.
+                // The party onboarding the agent should handle this securely.
                 copiedAgent.setPassword(agent.getPassword());
 
                 // Encode the agent object to JSON for response body.
@@ -224,7 +227,7 @@ public class AgentResourceManager extends UserResourceManager {
 
             } else {
                 String error = "Newly created Agent resource is null.";
-                LOG.error("Created agent is null");
+                LOG.error(error);
                 throw new InternalErrorException(error);
             }
 
@@ -238,7 +241,7 @@ public class AgentResourceManager extends UserResourceManager {
             return AbstractResourceManager.encodeSCIMException(e);
         } catch (BadRequestException | ConflictException | InternalErrorException | NotFoundException
                 | NotImplementedException | ForbiddenException e) {
-            LOG.error("Exception in agent creation: {}", e.getMessage(), e);
+            LOG.error("Exception in agent creation.", e);
             return AbstractResourceManager.encodeSCIMException(e);
         }
     }
@@ -271,6 +274,12 @@ public class AgentResourceManager extends UserResourceManager {
     private SCIMResourceTypeSchema getAgentSchema(UserManager agentManager)
             throws BadRequestException, NotImplementedException, CharonException {
 
+        // Check if agentIdentityIsEnabled is set to true in IdentityUtil.
+        if (!IdentityUtil.isAgentIdentityEnabled()) {
+            String error = "Agent identity management is not enabled in the system.";
+            LOG.error(error);
+            throw new NotImplementedException(error);
+        }
         SCIMResourceTypeSchema schema;
         if (agentManager != null) {
             // Retrieve user schema with potential custom extensions from agent manager.
