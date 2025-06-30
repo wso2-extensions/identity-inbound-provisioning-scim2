@@ -95,7 +95,7 @@ import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_WORKFLOW_CREATED;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
-        ERROR_CODE_ROLE_WF_ALREADY_EXISTS;
+        ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
         ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
@@ -211,7 +211,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             if (ROLE_ALREADY_EXISTS.getCode().equals((errorCode))) {
                 throw new ConflictException(e.getMessage());
             } else if (INVALID_REQUEST.getCode().equals(errorCode) ||
-                    ERROR_CODE_ROLE_WF_ALREADY_EXISTS.getCode().equals(errorCode) ||
+                    ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getCode().equals(errorCode) ||
                     ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS.getCode().equals(errorCode) ||
                     ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getCode().equals(errorCode) ||
                     ERROR_CODE_ROLE_WF_USER_PENDING_DELETION.getCode().equals(errorCode)) {
