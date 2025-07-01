@@ -94,6 +94,15 @@ import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPER
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_WORKFLOW_CREATED;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
+        ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
+        ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
+        ERROR_CODE_ROLE_WF_USER_NOT_FOUND;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
+        ERROR_CODE_ROLE_WF_USER_PENDING_DELETION;
+
 /**
  * Implementation of the {@link RoleV2Manager} interface to manage RoleResourceV2.
  */
@@ -166,14 +175,19 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
             return buildSCIMRoleResponse(roleBasicInfo, locationURI);
         } catch (IdentityRoleManagementException e) {
-            if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
+            String errorCode = e.getErrorCode();
+            if (ROLE_ALREADY_EXISTS.getCode().equals((errorCode))) {
                 throw new ConflictException(e.getMessage());
-            } else if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+            } else if (INVALID_REQUEST.getCode().equals(errorCode) ||
+                    ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getCode().equals(errorCode) ||
+                    ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS.getCode().equals(errorCode) ||
+                    ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getCode().equals(errorCode) ||
+                    ERROR_CODE_ROLE_WF_USER_PENDING_DELETION.getCode().equals(errorCode)) {
                 throw new BadRequestException(e.getMessage());
-            } else if (INVALID_AUDIENCE.getCode().equals(e.getErrorCode()) ||
-                    INVALID_PERMISSION.getCode().equals(e.getErrorCode())) {
+            } else if (INVALID_AUDIENCE.getCode().equals(errorCode) ||
+                    INVALID_PERMISSION.getCode().equals(errorCode)) {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
-            } else if (ROLE_WORKFLOW_CREATED.getCode().equals(e.getErrorCode())) {
+            } else if (ROLE_WORKFLOW_CREATED.getCode().equals(errorCode)) {
                 CharonException charonException = new CharonException(e.getMessage());
                 charonException.setStatus(ResponseCodeConstants.CODE_ACCEPTED);
                 throw charonException;
