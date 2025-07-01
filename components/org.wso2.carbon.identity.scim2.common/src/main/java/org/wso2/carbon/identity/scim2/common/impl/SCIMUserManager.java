@@ -6947,12 +6947,12 @@ public class SCIMUserManager implements UserManager {
                 IdentityUtil.extractDomainFromName(user.getUsername()));
         properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
 
-        Event identityMgtEvent = new Event(IdentityEventConstants.Event.USER_PROFILE_UPDATE, properties);
+        Event identityMgtEvent = new Event(IdentityEventConstants.Event.POST_USER_PROFILE_UPDATE, properties);
 
         try {
             SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
         } catch (IdentityEventException e) {
-            log.error("Error occurred publishing event USER_PROFILE_UPDATE", e);
+            log.error("Error occurred publishing event POST_USER_PROFILE_UPDATE", e);
         }
     }
 
