@@ -455,10 +455,12 @@ public class UserResource extends AbstractResource {
                                 .getString(ASK_PASSWORD_KEY));
             }
 
-            String customSchemaURI = SCIMCommonUtils.getCustomSchemaURI();
-            if (customSchemaURI != null && request.has(customSchemaURI) &&
-                    request.getJSONObject(customSchemaURI).has(ASK_PASSWORD_KEY)) {
-                return Boolean.parseBoolean(request.getJSONObject(customSchemaURI).getString(ASK_PASSWORD_KEY));
+            if (request.has(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT) &&
+                    request.getJSONObject(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT)
+                            .has(ASK_PASSWORD_KEY)) {
+                return Boolean.parseBoolean(
+                        request.getJSONObject(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT)
+                                .getString(ASK_PASSWORD_KEY));
             }
 
         } catch (JSONException e) {
