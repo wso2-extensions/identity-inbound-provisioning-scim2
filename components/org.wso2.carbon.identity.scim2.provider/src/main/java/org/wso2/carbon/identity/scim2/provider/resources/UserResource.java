@@ -20,6 +20,8 @@ package org.wso2.carbon.identity.scim2.provider.resources;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -27,6 +29,7 @@ import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
@@ -41,6 +44,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.ASK_PASSWORD_KEY;
 import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.getTenantDomain;
 import static org.wso2.carbon.identity.scim2.provider.util.SupportUtils.getTenantId;
@@ -110,7 +114,7 @@ public class UserResource extends AbstractResource {
                 throw  new FormatNotSupportedException(error);
             }
 
-            if (SupportUtils.isAskPasswordFlow(resourceString)) {
+            if (isAskPasswordFlow(resourceString)) {
                 SupportUtils.updateIdentityContextFlow(Flow.Name.USER_REGISTRATION_INVITE_WITH_PASSWORD);
             } else {
                 SupportUtils.updateIdentityContextFlow(Flow.Name.USER_REGISTRATION);
@@ -431,5 +435,36 @@ public class UserResource extends AbstractResource {
         }
 
         return count;
+    }
+
+    /**
+     * Check whether the resource include ask password with custom schema.
+     *
+     * @param resourceString Resource body.
+     * @return True if askPassword is true in resource string.
+     */
+    private boolean isAskPasswordFlow(String resourceString) {
+
+        try {
+            JSONObject request = new JSONObject(resourceString);
+            if (request.has(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT) &&
+                    request.getJSONObject(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT)
+                            .has(ASK_PASSWORD_KEY)) {
+                return Boolean.parseBoolean(
+                        request.getJSONObject(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT)
+                                .getString(ASK_PASSWORD_KEY));
+            }
+
+            String customSchemaURI = SCIMCommonUtils.getCustomSchemaURI();
+            if (customSchemaURI != null && request.has(customSchemaURI) &&
+                    request.getJSONObject(customSchemaURI).has(ASK_PASSWORD_KEY)) {
+                return Boolean.parseBoolean(request.getJSONObject(customSchemaURI).getString(ASK_PASSWORD_KEY));
+            }
+
+        } catch (JSONException e) {
+            return false;
+        }
+
+        return false;
     }
 }
