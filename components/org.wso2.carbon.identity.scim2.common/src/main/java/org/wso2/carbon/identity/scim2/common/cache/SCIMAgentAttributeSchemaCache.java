@@ -66,7 +66,6 @@ public class SCIMAgentAttributeSchemaCache
             LOG.debug("Successfully added scim agent attributes into SCIMAgentSchemaCache for the tenant:"
                     + tenantId);
         }
-
     }
 
     /**

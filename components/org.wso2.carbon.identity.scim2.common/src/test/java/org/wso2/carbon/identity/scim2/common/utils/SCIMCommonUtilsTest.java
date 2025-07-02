@@ -307,9 +307,8 @@ public class SCIMCommonUtilsTest {
         } else {
             assertFalse(SCIMCommonUtils.isConsiderServerWideUserEndpointMaxLimitEnabled());
         }
-
     }
-    
+
     @Test(dataProvider = "tenantURLQualifyData")
     public void testGetSCIMAgentURL(boolean isTenantQualifyURLEnabled) throws Exception {
         identityTenantUtil.when(() -> IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);
