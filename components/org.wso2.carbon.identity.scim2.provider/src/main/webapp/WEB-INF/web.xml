@@ -482,7 +482,6 @@
         <url-pattern>/Agents/*</url-pattern>
     </servlet-mapping>
 
-
     <servlet>
         <servlet-name>agentResourceOrgPerspective</servlet-name>
         <servlet-class>

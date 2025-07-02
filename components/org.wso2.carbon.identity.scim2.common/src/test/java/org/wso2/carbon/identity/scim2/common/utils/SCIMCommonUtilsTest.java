@@ -87,8 +87,7 @@ public class SCIMCommonUtilsTest {
         when(defaultServiceURLBuilder1.build()).thenReturn(serviceURL1);
         when(serviceURL1.getAbsolutePublicURL()).thenReturn("https://localhost:9443/scim2");
         when(serviceURL.getAbsolutePublicURL()).thenReturn("https://localhost:9443");
-        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomainFromContext()).thenReturn("carbon.super");
-       
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomainFromContext()).thenReturn("carbon.super"); 
     }
 
     @AfterMethod
@@ -310,6 +309,7 @@ public class SCIMCommonUtilsTest {
         }
 
     }
+    
     @Test(dataProvider = "tenantURLQualifyData")
     public void testGetSCIMAgentURL(boolean isTenantQualifyURLEnabled) throws Exception {
         identityTenantUtil.when(() -> IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifyURLEnabled);

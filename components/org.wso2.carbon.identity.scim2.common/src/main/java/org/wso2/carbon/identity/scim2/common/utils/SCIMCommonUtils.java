@@ -542,33 +542,6 @@ public class SCIMCommonUtils {
         }
     }
 
-/**
- * Retrieves SCIM to Local Claim Mappings including agent schema.
- *
- * @return Map of SCIM claims and corresponding Local WSO2 claims, including agent schema.
- * @throws UserStoreException
- */
-public static Map<String, String> getSCIMtoLocalMappingsWithAgentSchema() throws UserStoreException {
-
-    Map<String, String> scimToLocalClaimMap = getSCIMtoLocalMappings();
-
-    try {
-        String tenantDomain = getTenantDomain();
-        // Add agent schema claims if agent schema extension is enabled and available.
-        if (Boolean.TRUE.equals(getThreadLocalIsSCIMAgentFlow())) {
-            Map<String, String> agentExtensionClaims = ClaimMetadataHandler.getInstance()
-                    .getMappingsMapFromOtherDialectToCarbon(
-                            SCIMAgentSchemaExtensionBuilder.getInstance().getURI(),
-                            null, tenantDomain, false);
-            scimToLocalClaimMap.putAll(agentExtensionClaims);
-        }
-    } catch (ClaimMetadataException e) {
-        throw new UserStoreException("Error occurred while retrieving agent schema claim mappings.", e);
-    }
-
-    return scimToLocalClaimMap;
-}
-
     /**
      * This is used to get tenant domain.
      *
