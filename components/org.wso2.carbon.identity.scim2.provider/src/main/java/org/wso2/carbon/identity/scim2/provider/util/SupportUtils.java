@@ -246,6 +246,10 @@ public class SupportUtils {
      */
     public static void updateIdentityContextFlow(Flow.Name flowName) {
 
+        if (IdentityContext.getThreadLocalIdentityContext().getFlow() != null) {
+            return;
+        }
+
         if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
             IdentityContext.getThreadLocalIdentityContext()
                     .setFlow(new Flow.Builder().name(flowName).initiatingPersona(
