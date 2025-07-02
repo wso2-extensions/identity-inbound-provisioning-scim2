@@ -63,7 +63,7 @@ public class SupportUtils {
 
     private static final Log log = LogFactory.getLog(SupportUtils.class);
     private static final String ASK_PASSWORD_CONFIRMATION_CODE_HEADER_NAME = "Ask-Password-Confirmation-Code";
-    private static final String ASK_PASSWORD_KEY = "askPassword";
+    public static final String ASK_PASSWORD_KEY = "askPassword";
 
     private SupportUtils() {}
 
