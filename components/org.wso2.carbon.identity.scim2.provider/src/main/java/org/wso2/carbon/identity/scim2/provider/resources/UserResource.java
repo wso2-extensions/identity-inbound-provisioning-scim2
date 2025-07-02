@@ -157,6 +157,8 @@ public class UserResource extends AbstractResource {
                 String error = format + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
+
+            SupportUtils.updateIdentityContextFlow(Flow.Name.USER_DELETE);
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
