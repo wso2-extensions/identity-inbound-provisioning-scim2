@@ -39,6 +39,7 @@
             <class name="org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCacheTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.listener.SCIMGroupResolverTest"/>
             <class name="org.wso2.carbon.identity.scim2.common.internal.action.PreUpdateProfileActionExecutorTest"/>
+            <class name="org.wso2.carbon.identity.scim2.common.cache.SCIMAgentAttributeSchemaCacheTest"/>
         </classes>
     </test>
 

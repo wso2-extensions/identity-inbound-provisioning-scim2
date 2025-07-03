@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMAgentAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -51,6 +52,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.attributes.SCIMCustomAttribute;
+import org.wso2.charon3.core.config.SCIMAgentSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
@@ -97,8 +99,18 @@ public class SCIMCommonUtils {
      */
     private static ThreadLocal<Boolean> threadLocalIsManagedThroughSCIMEP = new ThreadLocal<>();
 
+    /**
+     * ThreadLocal to indicate if the agent flow is managed through SCIM.
+     */
+    private static ThreadLocal<Boolean> threadLocalIsSCIMAgentFlow = new ThreadLocal<>();
+
     public static String getSCIMUserURL(String id) {
-        return StringUtils.isNotBlank(id) ? getSCIMUserURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+        // If getThreadLocalIsSCIMAgentFlow() is true, then we need to use the Agent URL for the user.
+        if (Boolean.TRUE.equals(getThreadLocalIsSCIMAgentFlow())) {
+            return StringUtils.isNotBlank(id) ? getSCIMAgentURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+        } else {
+            return StringUtils.isNotBlank(id) ? getSCIMUserURL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+        }
     }
 
     public static String getSCIMGroupURL(String id) {
@@ -161,6 +173,12 @@ public class SCIMCommonUtils {
 
         String scimURL = getSCIMURL(true);
         return scimURL + "/" + scimVersion + SCIMCommonConstants.ROLES;
+    }
+
+    public static String getSCIMAgentURL() {
+
+        String scimURL = getSCIMURL(true);
+        return scimURL + SCIMCommonConstants.AGENTS_ENDPOINT;
     }
 
     public static String getApplicationRefURL(String id) {
@@ -373,6 +391,21 @@ public class SCIMCommonUtils {
         threadLocalIsManagedThroughSCIMEP.set(value);
     }
 
+    public static void unsetThreadLocalIsSCIMAgentFlow() {
+
+        threadLocalIsSCIMAgentFlow.remove();
+    }
+
+    public static Boolean getThreadLocalIsSCIMAgentFlow() {
+
+        return threadLocalIsSCIMAgentFlow.get();
+    }
+
+    public static void setThreadLocalIsSCIMAgentFlow(Boolean value) {
+
+        threadLocalIsSCIMAgentFlow.set(value);
+    }
+
     public static String getGlobalConsumerId() {
         return getTenantDomainFromContext();
     }
@@ -487,6 +520,13 @@ public class SCIMCommonUtils {
                         .getMappingsMapFromOtherDialectToCarbon(SCIMSystemSchemaExtensionBuilder.getInstance()
                                 .getExtensionSchema().getURI(), null, tenantDomain, false);
                 scimToLocalClaimMap.putAll(systemExtensionClaims);
+            }
+            // Add agent schema claims if agent schema extension is enabled and available.
+            if (Boolean.TRUE.equals(getThreadLocalIsSCIMAgentFlow())) {
+                Map<String, String> agentExtensionClaims = ClaimMetadataHandler.getInstance()
+                        .getMappingsMapFromOtherDialectToCarbon(SCIMAgentSchemaExtensionBuilder.getInstance().getURI(),
+                                null, tenantDomain, false);
+                scimToLocalClaimMap.putAll(agentExtensionClaims);
             }
 
             String userTenantDomain = getTenantDomain();
@@ -985,6 +1025,29 @@ public class SCIMCommonUtils {
         } catch (InternalErrorException | IdentitySCIMException e) {
             throw new CharonException("Error while building scim system schema", e);
         }
+    }
+
+    /**
+     * Returns SCIM2 agent AttributeSchema of the tenant.
+     * 
+     * @param tenantId
+     * @throws CharonException
+     */
+    public static AttributeSchema buildAgentSchema(int tenantId) throws CharonException {
+
+        try {
+            SCIMCustomSchemaProcessor scimCustomSchemaProcessor = new SCIMCustomSchemaProcessor();
+            List<SCIMCustomAttribute> attributes = scimCustomSchemaProcessor.getCustomAttributes(
+                    IdentityTenantUtil.getTenantDomain(tenantId),
+                    SCIMConstants.AGENT_SCHEMA_URI);
+            AttributeSchema attributeSchema = SCIMAgentSchemaExtensionBuilder.getInstance()
+                    .buildAgentSchemaExtension(attributes);
+            SCIMAgentAttributeSchemaCache.getInstance().addSCIMAgentAttributeSchema(tenantId, attributeSchema);
+            return attributeSchema;
+        } catch (InternalErrorException | IdentitySCIMException e) {
+            log.error("Error while building SCIM agent schema", e);
+        }
+        return null;
     }
 
     public static void updateEveryOneRoleV2MetaData(int tenantId) {

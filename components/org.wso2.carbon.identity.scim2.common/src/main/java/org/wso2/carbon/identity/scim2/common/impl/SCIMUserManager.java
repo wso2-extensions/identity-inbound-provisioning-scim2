@@ -53,6 +53,7 @@ import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMAgentAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -149,6 +150,7 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATT
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.password.policy.constants.PasswordPolicyConstants.ErrorMessages.ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildAgentSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildSystemSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
@@ -5964,7 +5966,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, true, false);
+                    buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, true, false);
 
             enterpriseUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -5997,7 +5999,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, false, true);
+                    buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, false, true);
 
             systemUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -6008,6 +6010,37 @@ public class SCIMUserManager implements UserManager {
             log.debug("System user schema support disabled.");
         }
         return systemUserSchemaAttributesList;
+    }
+
+    /**
+     * Returns the schema of the agent user extension in SCIM 2.0.
+     *
+     * @return List of attributes of agent user extension
+     * @throws CharonException
+     */
+    @Override
+    public List<Attribute> getAgentUserSchema() throws CharonException {
+
+        List<Attribute> agentUserSchemaAttributesList = null;
+
+        if (IdentityUtil.isAgentIdentityEnabled() && SCIMCommonUtils.isUserExtensionEnabled()) {
+            Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
+                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_AGENT_CLAIM_DIALECT, tenantDomain);
+
+            Map<String, Attribute> filteredAttributeMap =
+                    getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
+            Map<String, Attribute> hierarchicalAttributeMap =
+                    buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, false, false);
+
+            agentUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
+
+            if (log.isDebugEnabled()) {
+                logSchemaAttributes(agentUserSchemaAttributesList);
+            }
+        } else {
+            log.debug("Agent user schema support disabled.");
+        }
+        return agentUserSchemaAttributesList;
     }
 
     /**
@@ -6411,7 +6444,7 @@ public class SCIMUserManager implements UserManager {
      * @param filteredFlatAttributeMap
      * @return
      */
-    private Map<String, Attribute> buildHierarchicalAttributeMapForEnterpriseSchema(
+    private Map<String, Attribute> buildHierarchicalAttributeMapForExtendedSchema(
             Map<String, Attribute> filteredFlatAttributeMap, boolean isEnterpriseExtensionAttr,
             boolean isSystemExtensionAttr) throws CharonException {
 
@@ -6750,7 +6783,7 @@ public class SCIMUserManager implements UserManager {
         Map<String, Attribute> filteredAttributeMap
                 = getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
         Map<String, Attribute> hierarchicalAttributeMap =
-                buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, false, false);
+                buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, false, false);
 
         customUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -6779,6 +6812,31 @@ public class SCIMUserManager implements UserManager {
                 return buildSystemSchema(carbonUM.getTenantId());
             } catch (UserStoreException e) {
                 throw new CharonException("Error while building scim custom schema", e);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns SCIM2 Agent AttributeSchema of the tenant if this is an agent flow.
+     *
+     * @return Returns scim2 agent schema
+     * @throws CharonException
+     */
+    @Override
+    public AttributeSchema getCustomAttributeSchemaInAgentExtension() throws CharonException {
+
+        if (tenantDomain != null
+                && (Boolean.TRUE.equals(SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()))) {
+            AttributeSchema schema = SCIMAgentAttributeSchemaCache.getInstance()
+                    .getSCIMAgentAttributeSchemaByTenant(IdentityTenantUtil.getTenantId(tenantDomain));
+            if (schema != null) {
+                return schema;
+            }
+            try {
+                return buildAgentSchema(carbonUM.getTenantId());
+            } catch (UserStoreException e) {
+                throw new CharonException("Error while building scim custom agent schema", e);
             }
         }
         return null;
