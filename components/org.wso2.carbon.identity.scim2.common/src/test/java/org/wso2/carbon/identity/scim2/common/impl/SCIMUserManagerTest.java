@@ -34,6 +34,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -148,6 +149,8 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.ERROR_CODE_USER_WF_ALREADY_EXISTS;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.ERROR_CODE_USER_WF_USER_NOT_FOUND;
 import static org.wso2.charon3.core.schema.SCIMConstants.CUSTOM_EXTENSION_SCHEMA_URI;
 import static org.wso2.charon3.core.schema.SCIMConstants.ENTERPRISE_USER_SCHEMA_URI;
 
@@ -356,8 +359,6 @@ public class SCIMUserManagerTest {
             put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c");
         }});
 
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
-
         Field userStoreManagerHolderField = AbstractUserStoreManager.class.getDeclaredField("userStoreManagerHolder");
         userStoreManagerHolderField.setAccessible(true);
         userStoreManagerHolderField.set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
@@ -419,7 +420,6 @@ public class SCIMUserManagerTest {
     @Test(dataProvider = "getGroupException")
     public void testGetGroupWithExceptions(String roleName, String userStoreDomain) throws Exception {
 
-        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         Field field = AbstractUserStoreManager.class.getDeclaredField("userStoreManagerHolder");
         field.setAccessible(true);
         field.set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
@@ -498,9 +498,6 @@ public class SCIMUserManagerTest {
         when(mockedGroupDAO.getSCIMGroupAttributes(0, "testRole")).thenReturn(attributes);
         identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenReturn(userStoreDomain);
 
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
-
-        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         Field field = AbstractUserStoreManager.class.getDeclaredField("userStoreManagerHolder");
         field.setAccessible(true);
         field.set(mockedUserStoreManager, new HashMap<String, UserStoreManager>());
@@ -553,7 +550,6 @@ public class SCIMUserManagerTest {
         String[] groups = new String[]{"group1", "group2", "group3", "group4", "group5", "group6"};
         Node node = new ExpressionNode("filter urn:ietf:params:scim:schemas:core:2.0:Group:displayName co group");
 
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), eq(false), eq(true), eq(true))).thenReturn(groups);
         when(mockedUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockRealmConfig);
@@ -586,7 +582,6 @@ public class SCIMUserManagerTest {
             throws Exception {
 
         String[] groups = new String[]{"group1", "group2", "group3", "group4", "group5", "group6"};
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(groups);
@@ -704,8 +699,6 @@ public class SCIMUserManagerTest {
         scimCommonUtils.when(() -> SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap())).thenReturn(new HashMap<String, String>() {{
             put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c");
         }});
-
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
 
         when(mockedUserStoreManager.getUserListWithID("http://wso2.org/claims/userid", "*", null)).thenReturn(users);
         when(mockedUserStoreManager.getUserListWithID("http://wso2.org/claims/givenname", "testUser", "default"))
@@ -903,8 +896,6 @@ public class SCIMUserManagerTest {
         scimCommonUtils.when(() -> SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap())).thenReturn(new HashMap<String, String>() {{
             put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c");
         }});
-
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
 
         when(mockedUserStoreManager.getUserListWithID(any(Condition.class), anyString(), anyString(), eq(count),
                 anyInt(), nullable(String.class), nullable(String.class)))
@@ -1327,11 +1318,10 @@ public class SCIMUserManagerTest {
     public void testListApplicationRolesWithDomainParam(Map<String, Boolean> requiredAttributes, String[] roles,
                                                         Map<String, String> attributes) throws Exception {
 
-        AbstractUserStoreManager abstractUserStoreManager = mock(AbstractUserStoreManager.class);
-        when(abstractUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(roles);
         for (String role : roles) {
-            when(abstractUserStoreManager.getGroupByGroupName(role, null)).
+            when(mockedUserStoreManager.getGroupByGroupName(role, null)).
                     thenReturn(buildUserCoreGroupResponse(role, "123456789", null));
         }
         when(mockedGroupDAO.isExistingGroup(anyString(), anyInt())).thenReturn(true);
@@ -1347,7 +1337,7 @@ public class SCIMUserManagerTest {
 
             CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
             identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenReturn("Application");
-            SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
+            SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
             GroupsGetResponse groupsResponse = scimUserManager
                     .listGroupsWithGET(null, 1, null, null, null, "Application", requiredAttributes);
 
@@ -1390,12 +1380,11 @@ public class SCIMUserManagerTest {
 
         ExpressionNode node = new ExpressionNode(filter);
         Map<String, Boolean> requiredAttributes = null;
-        AbstractUserStoreManager abstractUserStoreManager = mock(AbstractUserStoreManager.class);
-        when(abstractUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(roles);
-        when(abstractUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
+        when(mockedUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
         for(String role: roles){
-            when(abstractUserStoreManager.getGroupByGroupName(role, null)).
+            when(mockedUserStoreManager.getGroupByGroupName(role, null)).
                     thenReturn(buildUserCoreGroupResponse(role, "123456", "dummyDomain"));
         }
         userCoreUtil = mockStatic(UserCoreUtil.class);
@@ -1407,7 +1396,7 @@ public class SCIMUserManagerTest {
         CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
         identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenReturn("Application");
-        SCIMUserManager scimUserManager = new SCIMUserManager(abstractUserStoreManager, mockedClaimManager);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
         GroupsGetResponse groupsResponse = scimUserManager
                 .listGroupsWithGET(node, 1, null, null, null, "Application", requiredAttributes);
 
@@ -1922,7 +1911,6 @@ public class SCIMUserManagerTest {
         when(user.getDomainQualifiedUsername()).thenReturn(domainQualifiedUserName);
         when(user.getUserID()).thenReturn((userId));
 
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserWithID(anyString(), nullable(String[].class), anyString())).thenReturn(user);
         when(mockedUserStoreManager.getTenantId()).thenReturn(1234567);
         when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(), nullable(String.class)))
@@ -2022,7 +2010,6 @@ public class SCIMUserManagerTest {
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
 
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         org.wso2.carbon.user.core.common.User user = mock(org.wso2.carbon.user.core.common.User.class);
@@ -2061,7 +2048,6 @@ public class SCIMUserManagerTest {
         List<org.wso2.carbon.user.core.common.User> coreUsers = new ArrayList<>();
 
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
-        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserListWithID(anyString(), anyString(), anyString())).thenReturn(coreUsers);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -2083,7 +2069,6 @@ public class SCIMUserManagerTest {
         coreUser.setUserStoreDomain("DomainName");
 
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
-        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(coreUser);
         when(mockedUserStoreManager.getSecondaryUserStoreManager("DomainName")).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(false);
@@ -2106,7 +2091,6 @@ public class SCIMUserManagerTest {
         coreUser.setUserStoreDomain("PRIMARY");
 
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
-        AbstractUserStoreManager mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(coreUser);
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -2118,6 +2102,53 @@ public class SCIMUserManagerTest {
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(serviceProvider);
         scimUserManager.deleteUser(userId);
         // This method is for testing of throwing CharonException, hence no assertion.
+    }
+
+    @Test(dataProvider = "provideUserDeleteWorkflowValidationErrorMessages")
+    public void testDeleteUserWithWorkflowErrors(String errorMessage, String errorCode, String scimType)
+            throws NotFoundException, CharonException, UserStoreException,
+            IdentityApplicationManagementException {
+
+        String userId = "12345";
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, "userIdURI");
+        org.wso2.carbon.user.core.common.User coreUser = new org.wso2.carbon.user.core.common.User();
+        coreUser.setUserID(userId);
+        coreUser.setUsername("coreUser");
+        coreUser.setUserStoreDomain("PRIMARY");
+
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        when(mockedUserStoreManager.getUserWithID(anyString(), any(), anyString())).thenReturn(coreUser);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
+                .thenReturn(secondaryUserStoreManager);
+        when(secondaryUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        ServiceProvider serviceProvider = new ServiceProvider();
+        InboundProvisioningConfig inboundProvisioningConfig = new InboundProvisioningConfig();
+        inboundProvisioningConfig.setProvisioningUserStore("PRIMARY");
+        serviceProvider.setInboundProvisioningConfig(inboundProvisioningConfig);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(serviceProvider);
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        doThrow(new UserStoreException(errorMessage, errorCode))
+                .when(mockedUserStoreManager).deleteUserWithID(coreUser.getUserID());
+        try {
+            scimUserManager.deleteUser(userId);
+        } catch (BadRequestException e) {
+            assertEquals(e.getScimType(), scimType);
+            assertEquals(e.getDetail(), errorMessage);
+        }
+    }
+
+    @DataProvider
+    public Object[][] provideUserDeleteWorkflowValidationErrorMessages() {
+
+        return new Object[][]{
+                {ERROR_CODE_USER_WF_ALREADY_EXISTS.getMessage(),
+                        ERROR_CODE_USER_WF_ALREADY_EXISTS.getCode(), ResponseCodeConstants.INVALID_VALUE},
+                {ERROR_CODE_USER_WF_USER_NOT_FOUND.getMessage(),
+                        ERROR_CODE_USER_WF_USER_NOT_FOUND.getCode(), ResponseCodeConstants.INVALID_VALUE}
+        };
     }
 
     @Test(expectedExceptions = BadRequestException.class)
@@ -2197,7 +2228,6 @@ public class SCIMUserManagerTest {
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
 
-        mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         when(mockedUserStoreManager.isExistingUserWithID(anyString())).thenReturn(true);
         when(mockedUserStoreManager.isExistingUser(anyString())).thenReturn(true);
         when(mockedUserStoreManager.getUserList(anyString(), anyString(), nullable(String.class))).thenReturn(existingUserList);
