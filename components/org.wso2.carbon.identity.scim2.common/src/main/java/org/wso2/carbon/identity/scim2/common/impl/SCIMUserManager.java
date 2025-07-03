@@ -206,11 +206,14 @@ public class SCIMUserManager implements UserManager {
     private static final String MAX_LIMIT_RESOURCE_TYPE_NAME = "response-max-limit-configurations";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
 
-     /*
-     This will be expanded as few other claims to be added
-     Assuming these claims are immutable and will not be deleted.
-      */
-    private static final List<String> USER_ACCOUNT_FLOW_INITIATION_CLAIMS =
+    /*
+     * Claims in this set are used to trigger specific identity management flows.
+     * While their values can be updated via SCIM PATCH or PUT requests,
+     * these claims are considered immutable in terms of presence — they must not be deleted.
+     * Only value updates are allowed.
+     * For example, account enable/disable is managed via http://wso2.org/claims/identity/accountDisabled claim.
+     */
+    private static final List<String> USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS =
             Arrays.asList("http://wso2.org/claims/identity/accountDisabled");
 
     @Deprecated
@@ -5596,7 +5599,7 @@ public class SCIMUserManager implements UserManager {
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
-        if (isExecutableUserProfileUpdate && hasAnyNonAccountStateClaims(userClaimsToBeModified.keySet())) {
+        if (isExecutableUserProfileUpdate && includesOnlyAccountManagementFlowInitClaims(userClaimsToBeModified.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModified, claimsDeleted);
         }
     }
@@ -5726,7 +5729,7 @@ public class SCIMUserManager implements UserManager {
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
         if (isExecutableUserProfileUpdate &&
-                hasAnyNonAccountStateClaims(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
+                includesOnlyAccountManagementFlowInitClaims(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
@@ -7263,7 +7266,7 @@ public class SCIMUserManager implements UserManager {
      * @param claimUris Set of claim URIs to check.
      * @return true if there is any non-account state claim, false otherwise.
      */
-    private boolean hasAnyNonAccountStateClaims(Set<String> claimUris) {
+    private boolean includesOnlyAccountManagementFlowInitClaims(Set<String> claimUris) {
 
         if (CollectionUtils.isEmpty(claimUris)) {
             return false;
@@ -7273,7 +7276,7 @@ public class SCIMUserManager implements UserManager {
         // If all claim URIs are in the set, then it is considered as an account state claim.
 
         for (String claimUri : claimUris) {
-            if (!USER_ACCOUNT_FLOW_INITIATION_CLAIMS.contains(claimUri)) {
+            if (!USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS.contains(claimUri)) {
                 return true;
             }
         }
