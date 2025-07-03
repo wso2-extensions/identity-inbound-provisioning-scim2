@@ -53,6 +53,7 @@ import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
+import org.wso2.carbon.identity.scim2.common.cache.SCIMAgentAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.exceptions.IdentitySCIMException;
@@ -66,6 +67,7 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
+import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
 import org.wso2.carbon.user.api.ClaimMapping;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
@@ -148,6 +150,7 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATT
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.password.policy.constants.PasswordPolicyConstants.ErrorMessages.ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildAgentSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildSystemSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
@@ -208,6 +211,16 @@ public class SCIMUserManager implements UserManager {
 
     private static final String MAX_LIMIT_RESOURCE_TYPE_NAME = "response-max-limit-configurations";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
+
+    /*
+     * Claims in this set are used to trigger specific identity management flows.
+     * While their values can be updated via SCIM PATCH or PUT requests,
+     * these claims are considered immutable in terms of presence — they must not be deleted.
+     * Only value updates are allowed.
+     * For example, account enable/disable is managed via http://wso2.org/claims/identity/accountDisabled claim.
+     */
+    private static final List<String> USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS =
+            Arrays.asList("http://wso2.org/claims/identity/accountDisabled");
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -393,13 +406,13 @@ public class SCIMUserManager implements UserManager {
             // Sometimes client exceptions are wrapped in the super class.
             // Therefore, checking for possible client exception.
             Throwable ex = ExceptionUtils.getRootCause(e);
-            if (ex instanceof UserStoreClientException) {
+            if (ex instanceof UserStoreClientException || ex instanceof WorkflowException) {
                 String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName())
                         + ". %s", ex.getMessage());
                 if (log.isDebugEnabled()) {
                     log.debug(errorMessage, ex);
                 }
-                if (isResourceLimitReachedError((UserStoreClientException) ex)) {
+                if (ex instanceof UserStoreClientException && isResourceLimitReachedError((UserStoreClientException) ex)) {
                     handleResourceLimitReached();
                 }
                 publishEventOnUserRegistrationFailure(user, ResponseCodeConstants.INVALID_VALUE, ex.getMessage(),
@@ -5595,7 +5608,9 @@ public class SCIMUserManager implements UserManager {
 
         // Update user claims.
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
-        if (isExecutableUserProfileUpdate) {
+
+        // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
+        if (isExecutableUserProfileUpdate && includesAtLeastOneNonAccountManagementFlowInitClaim(userClaimsToBeModified.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModified, claimsDeleted);
         }
     }
@@ -5723,7 +5738,9 @@ public class SCIMUserManager implements UserManager {
                     convertClaimValuesToList(userClaimsToBeModified), null);
         }
 
-        if (isExecutableUserProfileUpdate) {
+        // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
+        if (isExecutableUserProfileUpdate &&
+                includesAtLeastOneNonAccountManagementFlowInitClaim(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
@@ -5958,7 +5975,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, true, false);
+                    buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, true, false);
 
             enterpriseUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -5991,7 +6008,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
             Map<String, Attribute> hierarchicalAttributeMap =
-                    buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, false, true);
+                    buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, false, true);
 
             systemUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -6002,6 +6019,37 @@ public class SCIMUserManager implements UserManager {
             log.debug("System user schema support disabled.");
         }
         return systemUserSchemaAttributesList;
+    }
+
+    /**
+     * Returns the schema of the agent user extension in SCIM 2.0.
+     *
+     * @return List of attributes of agent user extension
+     * @throws CharonException
+     */
+    @Override
+    public List<Attribute> getAgentUserSchema() throws CharonException {
+
+        List<Attribute> agentUserSchemaAttributesList = null;
+
+        if (IdentityUtil.isAgentIdentityEnabled() && SCIMCommonUtils.isUserExtensionEnabled()) {
+            Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
+                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_AGENT_CLAIM_DIALECT, tenantDomain);
+
+            Map<String, Attribute> filteredAttributeMap =
+                    getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
+            Map<String, Attribute> hierarchicalAttributeMap =
+                    buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, false, false);
+
+            agentUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
+
+            if (log.isDebugEnabled()) {
+                logSchemaAttributes(agentUserSchemaAttributesList);
+            }
+        } else {
+            log.debug("Agent user schema support disabled.");
+        }
+        return agentUserSchemaAttributesList;
     }
 
     /**
@@ -6405,7 +6453,7 @@ public class SCIMUserManager implements UserManager {
      * @param filteredFlatAttributeMap
      * @return
      */
-    private Map<String, Attribute> buildHierarchicalAttributeMapForEnterpriseSchema(
+    private Map<String, Attribute> buildHierarchicalAttributeMapForExtendedSchema(
             Map<String, Attribute> filteredFlatAttributeMap, boolean isEnterpriseExtensionAttr,
             boolean isSystemExtensionAttr) throws CharonException {
 
@@ -6744,7 +6792,7 @@ public class SCIMUserManager implements UserManager {
         Map<String, Attribute> filteredAttributeMap
                 = getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
         Map<String, Attribute> hierarchicalAttributeMap =
-                buildHierarchicalAttributeMapForEnterpriseSchema(filteredAttributeMap, false, false);
+                buildHierarchicalAttributeMapForExtendedSchema(filteredAttributeMap, false, false);
 
         customUserSchemaAttributesList = new ArrayList(hierarchicalAttributeMap.values());
 
@@ -6773,6 +6821,31 @@ public class SCIMUserManager implements UserManager {
                 return buildSystemSchema(carbonUM.getTenantId());
             } catch (UserStoreException e) {
                 throw new CharonException("Error while building scim custom schema", e);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns SCIM2 Agent AttributeSchema of the tenant if this is an agent flow.
+     *
+     * @return Returns scim2 agent schema
+     * @throws CharonException
+     */
+    @Override
+    public AttributeSchema getCustomAttributeSchemaInAgentExtension() throws CharonException {
+
+        if (tenantDomain != null
+                && (Boolean.TRUE.equals(SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()))) {
+            AttributeSchema schema = SCIMAgentAttributeSchemaCache.getInstance()
+                    .getSCIMAgentAttributeSchemaByTenant(IdentityTenantUtil.getTenantId(tenantDomain));
+            if (schema != null) {
+                return schema;
+            }
+            try {
+                return buildAgentSchema(carbonUM.getTenantId());
+            } catch (UserStoreException e) {
+                throw new CharonException("Error while building scim custom agent schema", e);
             }
         }
         return null;
@@ -6955,12 +7028,12 @@ public class SCIMUserManager implements UserManager {
                 IdentityUtil.extractDomainFromName(user.getUsername()));
         properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
 
-        Event identityMgtEvent = new Event(IdentityEventConstants.Event.USER_PROFILE_UPDATE, properties);
+        Event identityMgtEvent = new Event(IdentityEventConstants.Event.POST_USER_PROFILE_UPDATE, properties);
 
         try {
             SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
         } catch (IdentityEventException e) {
-            log.error("Error occurred publishing event USER_PROFILE_UPDATE", e);
+            log.error("Error occurred publishing event POST_USER_PROFILE_UPDATE", e);
         }
     }
 
@@ -7252,4 +7325,32 @@ public class SCIMUserManager implements UserManager {
         }
         return primaryUSDomain;
     }
+
+    /**
+     * Checks whether the given set of claim URIs contains at least one claim
+     * that is not related to account management flow initiation.
+     * Any claim not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS is considered
+     * a user profile claim.
+     *
+     * @param claimUris Set of claim URIs to evaluate.
+     * @return true if at least one claim is not an account management flow initiation claim; false otherwise.
+     */
+    private boolean includesAtLeastOneNonAccountManagementFlowInitClaim(Set<String> claimUris) {
+
+        if (CollectionUtils.isEmpty(claimUris)) {
+            return false;
+        }
+
+        // If any claim URI is not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS,
+        // it is considered a user profile claim. In that case, return true.
+
+        for (String claimUri : claimUris) {
+            if (!USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS.contains(claimUri)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 }

@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.IdpGroup;
 import org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -78,6 +79,11 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_PERMISSION;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_REQUEST;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_WORKFLOW_CREATED;
 
 /**
@@ -490,6 +496,46 @@ public class SCIMRoleManagerV2Test {
             assertEquals(e.getStatus(), ResponseCodeConstants.CODE_ACCEPTED);
             assertEquals(e.getDetail(), "Role creation request is sent to the workflow engine for approval.");
         }
+    }
+
+    @Test(dataProvider = "provideErrorsWhenRoleCreation")
+    public void testCreateRoleWhenWorkflowEnabledAndThrowingErrors(String errorCode, String errorMessage)
+            throws OrganizationManagementException, IdentityRoleManagementException, BadRequestException,
+            CharonException {
+
+        when(OrganizationManagementUtil.isOrganization(SAMPLE_TENANT_DOMAIN)).thenReturn(true);
+        when(SCIMCommonComponentHolder.getIdpManagerService()).thenReturn(idpManager);
+        when(roleManagementService.addRole(eq(ROLE_NAME), any(), any(), any(), any(), any(), eq(SAMPLE_TENANT_DOMAIN)))
+                .thenThrow(new IdentityRoleManagementException(errorCode, errorMessage));
+        RoleV2 roleV2 = new RoleV2();
+        roleV2.setDisplayName(ROLE_NAME);
+        try {
+            scimRoleManagerV2.createRole(roleV2);
+        } catch (BadRequestException e) {
+            assertEquals(e.getScimType(), errorMessage);
+        }catch (ConflictException e) {
+            assertEquals(errorMessage, e.getMessage());
+        } catch (Exception e) {
+            fail("Unexpected exception occurred: " + e.getMessage(), e);
+        }
+    }
+
+    @DataProvider
+    public Object[][] provideErrorsWhenRoleCreation() {
+        return new Object[][] {
+                {WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS.getCode(),
+                        WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS.getMessage()},
+                {WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getCode(),
+                        WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getMessage()},
+                {WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getCode(),
+                        WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getMessage()},
+                {WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_USER_PENDING_DELETION.getCode(),
+                        WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_USER_PENDING_DELETION.getMessage()},
+                {ROLE_ALREADY_EXISTS.getCode(), null},
+                {INVALID_REQUEST.getCode(), null},
+                {INVALID_AUDIENCE.getCode(), ResponseCodeConstants.INVALID_VALUE},
+                {INVALID_PERMISSION.getCode(), ResponseCodeConstants.INVALID_VALUE}
+        };
     }
 
     /**

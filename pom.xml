@@ -28,7 +28,7 @@
     <artifactId>identity-inbound-provisioning-scim2</artifactId>
     <packaging>pom</packaging>
     <modelVersion>4.0.0</modelVersion>
-    <version>3.4.163-SNAPSHOT</version>
+    <version>3.4.170-SNAPSHOT</version>
     <name>WSO2 Carbon - SCIM Provisioning Module</name>
     <description>
         SCIM 2.0 Implementation for C4
@@ -84,6 +84,11 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.application.common</artifactId>
+                <version>${identity.framework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.workflow.mgt</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
             <dependency>
@@ -309,7 +314,7 @@
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.8.12</identity.governance.version>
-        <charon.version>4.0.52</charon.version>
+        <charon.version>4.0.53</charon.version>
         <org.wso2.carbon.identity.organization.management.core.version>1.0.76
         </org.wso2.carbon.identity.organization.management.core.version>
         <org.wso2.carbon.identity.handler.event.account.lock.version>1.8.13
