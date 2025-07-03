@@ -5599,7 +5599,7 @@ public class SCIMUserManager implements UserManager {
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
-        if (isExecutableUserProfileUpdate && includesOnlyAccountManagementFlowInitClaims(userClaimsToBeModified.keySet())) {
+        if (isExecutableUserProfileUpdate && includesAtLeastOneNonAccountManagementFlowInitClaim(userClaimsToBeModified.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModified, claimsDeleted);
         }
     }
@@ -5729,7 +5729,7 @@ public class SCIMUserManager implements UserManager {
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
         if (isExecutableUserProfileUpdate &&
-                includesOnlyAccountManagementFlowInitClaims(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
+                includesAtLeastOneNonAccountManagementFlowInitClaim(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
@@ -7260,20 +7260,22 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Checks whether the given set of claim URIs contains any non-account state claims.
-     * Any non-account state claim is considered as a real profile attribute.
+     * Checks whether the given set of claim URIs contains at least one claim
+     * that is not related to account management flow initiation.
+     * Any claim not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS is considered
+     * a user profile claim.
      *
-     * @param claimUris Set of claim URIs to check.
-     * @return true if there is any non-account state claim, false otherwise.
+     * @param claimUris Set of claim URIs to evaluate.
+     * @return true if at least one claim is not an account management flow initiation claim; false otherwise.
      */
-    private boolean includesOnlyAccountManagementFlowInitClaims(Set<String> claimUris) {
+    private boolean includesAtLeastOneNonAccountManagementFlowInitClaim(Set<String> claimUris) {
 
         if (CollectionUtils.isEmpty(claimUris)) {
             return false;
         }
 
-        // Check if any of the claim URIs is not in the set of user account state claim URIs.
-        // If all claim URIs are in the set, then it is considered as an account state claim.
+        // If any claim URI is not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS,
+        // it is considered a user profile claim. In that case, return true.
 
         for (String claimUri : claimUris) {
             if (!USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS.contains(claimUri)) {
