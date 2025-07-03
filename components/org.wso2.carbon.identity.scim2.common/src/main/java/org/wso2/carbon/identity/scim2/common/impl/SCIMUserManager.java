@@ -210,7 +210,7 @@ public class SCIMUserManager implements UserManager {
      This will be expanded as few other claims to be added
      Assuming these claims are immutable and will not be deleted.
       */
-    private static final List<String> USER_ACCOUNT_STATE_CLAIM_URIS =
+    private static final List<String> USER_ACCOUNT_FLOW_INITIATION_CLAIMS =
             Arrays.asList("http://wso2.org/claims/identity/accountDisabled");
 
     @Deprecated
@@ -7273,7 +7273,7 @@ public class SCIMUserManager implements UserManager {
         // If all claim URIs are in the set, then it is considered as an account state claim.
 
         for (String claimUri : claimUris) {
-            if (!USER_ACCOUNT_STATE_CLAIM_URIS.contains(claimUri)) {
+            if (!USER_ACCOUNT_FLOW_INITIATION_CLAIMS.contains(claimUri)) {
                 return true;
             }
         }
