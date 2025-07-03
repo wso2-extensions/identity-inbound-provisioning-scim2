@@ -23,6 +23,7 @@ import org.apache.http.HttpStatus;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.constants.UserCoreErrorConstants;
 
@@ -44,6 +45,10 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
         if (e.getMessage().contains(ERROR_CODE_USER_NOT_FOUND)) {
             String msg = e.getMessage().substring(e.getMessage().indexOf(":") + 1).trim();
             return new SCIMUserStoreException(msg, HttpStatus.SC_NOT_FOUND);
+        } else if (e instanceof org.wso2.carbon.user.core.UserStoreException &&
+                (UserCoreConstants.ErrorCode.USER_DELETION_WORKFLOW_CREATED.equals(((org.wso2.carbon.user.core.UserStoreException) e).
+                        getErrorCode()))) {
+            return new SCIMUserStoreException("User deletion has sent for the approval", HttpStatus.SC_ACCEPTED);
         } else if (e.getMessage().contains(ERROR_CODE_EXISTING_ROLE_NAME) ||
                 (e instanceof org.wso2.carbon.user.core.UserStoreClientException &&
                         ((UserStoreClientException) e).getErrorCode() != null &&
