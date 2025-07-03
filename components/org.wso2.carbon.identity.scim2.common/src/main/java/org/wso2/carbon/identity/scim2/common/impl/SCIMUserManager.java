@@ -205,7 +205,11 @@ public class SCIMUserManager implements UserManager {
 
     private static final String MAX_LIMIT_RESOURCE_TYPE_NAME = "response-max-limit-configurations";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
-    // USER_ACCOUNT_STATE_CLAIM_URIS will be expanded as few other claims to be added.
+
+     /*
+     This will be expanded as few other claims to be added
+     Assuming these claims are immutable and will not be deleted.
+      */
     private static final List<String> USER_ACCOUNT_STATE_CLAIM_URIS =
             Arrays.asList("http://wso2.org/claims/identity/accountDisabled");
 
@@ -5592,8 +5596,7 @@ public class SCIMUserManager implements UserManager {
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
-        if (isExecutableUserProfileUpdate && (hasAnyNonAccountStateClaims(userClaimsToBeModified.keySet()) ||
-                hasAnyNonAccountStateClaims(userClaimsToBeDeleted.keySet()))) {
+        if (isExecutableUserProfileUpdate && hasAnyNonAccountStateClaims(userClaimsToBeModified.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModified, claimsDeleted);
         }
     }
@@ -5723,8 +5726,7 @@ public class SCIMUserManager implements UserManager {
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
         if (isExecutableUserProfileUpdate &&
-                (hasAnyNonAccountStateClaims(userClaimsToBeModifiedIncludingMultiValueClaims.keySet()) ||
-                        hasAnyNonAccountStateClaims(userClaimsToBeDeleted.keySet()))) {
+                hasAnyNonAccountStateClaims(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
@@ -7266,10 +7268,16 @@ public class SCIMUserManager implements UserManager {
         if (CollectionUtils.isEmpty(claimUris)) {
             return false;
         }
-        for (String claimUri : claimUris) {
 
-            return !USER_ACCOUNT_STATE_CLAIM_URIS.contains(claimUri);
+        // Check if any of the claim URIs is not in the set of user account state claim URIs.
+        // If all claim URIs are in the set, then it is considered as an account state claim.
+
+        for (String claimUri : claimUris) {
+            if (!USER_ACCOUNT_STATE_CLAIM_URIS.contains(claimUri)) {
+                return true;
+            }
         }
+
         return false;
     }
 
