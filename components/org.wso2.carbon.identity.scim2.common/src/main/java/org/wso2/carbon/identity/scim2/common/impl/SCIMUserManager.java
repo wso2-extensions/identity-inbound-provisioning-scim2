@@ -205,6 +205,9 @@ public class SCIMUserManager implements UserManager {
 
     private static final String MAX_LIMIT_RESOURCE_TYPE_NAME = "response-max-limit-configurations";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
+    // USER_ACCOUNT_STATE_CLAIM_URIS will be expanded as few other claims to be added.
+    private static final List<String> USER_ACCOUNT_STATE_CLAIM_URIS =
+            Arrays.asList("http://wso2.org/claims/identity/accountDisabled");
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -5587,7 +5590,10 @@ public class SCIMUserManager implements UserManager {
 
         // Update user claims.
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
-        if (isExecutableUserProfileUpdate) {
+
+        // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
+        if (isExecutableUserProfileUpdate && (hasAnyNonAccountStateClaims(userClaimsToBeModified.keySet()) ||
+                hasAnyNonAccountStateClaims(userClaimsToBeDeleted.keySet()))) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModified, claimsDeleted);
         }
     }
@@ -5715,7 +5721,10 @@ public class SCIMUserManager implements UserManager {
                     convertClaimValuesToList(userClaimsToBeModified), null);
         }
 
-        if (isExecutableUserProfileUpdate) {
+        // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
+        if (isExecutableUserProfileUpdate &&
+                (hasAnyNonAccountStateClaims(userClaimsToBeModifiedIncludingMultiValueClaims.keySet()) ||
+                        hasAnyNonAccountStateClaims(userClaimsToBeDeleted.keySet()))) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
@@ -7244,4 +7253,24 @@ public class SCIMUserManager implements UserManager {
         }
         return primaryUSDomain;
     }
+
+    /**
+     * Checks whether the given set of claim URIs contains any non-account state claims.
+     * Any non-account state claim is considered as a real profile attribute.
+     *
+     * @param claimUris Set of claim URIs to check.
+     * @return true if there is any non-account state claim, false otherwise.
+     */
+    private boolean hasAnyNonAccountStateClaims(Set<String> claimUris) {
+
+        if (CollectionUtils.isEmpty(claimUris)) {
+            return false;
+        }
+        for (String claimUri : claimUris) {
+
+            return !USER_ACCOUNT_STATE_CLAIM_URIS.contains(claimUri);
+        }
+        return false;
+    }
+
 }
