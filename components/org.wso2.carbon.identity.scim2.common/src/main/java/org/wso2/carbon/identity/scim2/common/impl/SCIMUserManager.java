@@ -159,6 +159,10 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.mandat
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
         .mandateDomainForUsernamesAndGroupNamesInResponse;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.prependDomain;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
+        ERROR_CODE_USER_WF_ALREADY_EXISTS;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
+        ERROR_CODE_USER_WF_USER_NOT_FOUND;
 import static org.wso2.carbon.user.core.UserCoreConstants.ClaimTypeURIs.IDENTITY_CLAIM_URI;
 import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_ROLES_CLAIM;
 import static org.wso2.carbon.user.core.constants.UserCoreErrorConstants.ErrorMessages.ERROR_CODE_NON_EXISTING_USER;
@@ -613,6 +617,11 @@ public class SCIMUserManager implements UserManager {
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             if (e.getMessage().contains(ERROR_CODE_NON_EXISTING_USER.getCode())) {
                 throwUserNotFoundError(userId);
+            }
+            String errorCode = e.getErrorCode();
+            if (ERROR_CODE_USER_WF_ALREADY_EXISTS.getCode().equals(errorCode) ||
+                    ERROR_CODE_USER_WF_USER_NOT_FOUND.getCode().equals(errorCode)) {
+                throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             String errorMessage;
             if (isNotifyUserstoreStatusEnabled()) {
