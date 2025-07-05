@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.extensions.UserManager;
@@ -126,6 +127,8 @@ public class AgentResource extends UserResource {
         // Set agent flow context before operations
         LOG.debug("Setting thread local agent flow context to true for agent creation");
         SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+        UserCoreUtil.setSkipUsernamePatternValidationThreadLocal(true);
+        UserCoreUtil.setSkipPasswordPatternValidationThreadLocal(true);
 
         try {
             // Validate content-type header for agent creation
@@ -173,6 +176,8 @@ public class AgentResource extends UserResource {
             // Unset agent flow context after operations
             LOG.debug("Unsetting thread local agent flow context after agent creation");
             SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
+            UserCoreUtil.setSkipUsernamePatternValidationThreadLocal(false);
+            UserCoreUtil.setSkipPasswordPatternValidationThreadLocal(false);
         }
     }
 
