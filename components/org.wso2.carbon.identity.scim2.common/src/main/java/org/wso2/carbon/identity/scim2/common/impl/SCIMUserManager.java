@@ -31,6 +31,7 @@ import org.apache.http.HttpStatus;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -48,6 +49,7 @@ import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
@@ -66,6 +68,7 @@ import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.user.api.ClaimMapping;
+import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.PaginatedUserStoreManager;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -84,6 +87,7 @@ import org.wso2.carbon.user.core.model.ExpressionOperation;
 import org.wso2.carbon.user.core.model.OperationalCondition;
 import org.wso2.carbon.user.core.model.OperationalOperation;
 import org.wso2.carbon.user.core.model.UniqueIDUserClaimSearchEntry;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.user.mgt.RolePermissionException;
 import org.wso2.charon3.core.attributes.AbstractAttribute;
@@ -626,12 +630,32 @@ public class SCIMUserManager implements UserManager {
                                          String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
+        // Get all tenant domains of searching space.
+        List<String> tenantDomains = new ArrayList<>();
+        try {
+            // Search on all organizations.
+            String currentOrganizationId = getOrganizationId(tenantDomain);
+            List<String> childOrganizationsIds = SCIMCommonComponentHolder.getOrganizationManager()
+                    .getChildOrganizationsIds(currentOrganizationId);
+            // tenantDomains.add(tenantDomain);
+            for (String organizationId : childOrganizationsIds) {
+                tenantDomains.add(SCIMCommonComponentHolder.getOrganizationManager()
+                        .resolveTenantDomain(organizationId));
+            }
+        } catch (OrganizationManagementException e) {
+            // TODO
+            throw new CharonException("Error while retrieving tenant domains for listing users.", e);
+        } catch (IdentitySCIMException e) {
+            // TODO
+            throw new RuntimeException(e);
+        }
+
         if (sortBy != null || sortOrder != null) {
             throw new NotImplementedException("Sorting is not supported");
         } else if (rootNode != null) {
-            return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
+            return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder, domainName, tenantDomains);
         } else {
-            return listUsers(requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
+            return listUsers(requiredAttributes, startIndex, count, sortBy, sortOrder, domainName, tenantDomains);
         }
     }
 
@@ -640,6 +664,25 @@ public class SCIMUserManager implements UserManager {
                                          String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
+        // Get all tenant domains of searching space.
+        List<String> tenantDomains = new ArrayList<>();
+        try {
+            // Search on all organizations.
+            String currentOrganizationId = getOrganizationId(tenantDomain);
+            List<String> childOrganizationsIds = SCIMCommonComponentHolder.getOrganizationManager()
+                    .getChildOrganizationsIds(currentOrganizationId);
+            for (String organizationId : childOrganizationsIds) {
+                tenantDomains.add(SCIMCommonComponentHolder.getOrganizationManager()
+                        .resolveTenantDomain(organizationId));
+            }
+        } catch (OrganizationManagementException e) {
+            // TODO
+            throw new CharonException("Error while retrieving tenant domains for listing users.", e);
+        } catch (IdentitySCIMException e) {
+            // TODO
+            throw new RuntimeException(e);
+        }
+
         // Validate NULL value for startIndex.
         startIndex = handleStartIndexEqualsNULL(startIndex);
         if (sortBy != null || sortOrder != null) {
@@ -647,9 +690,9 @@ public class SCIMUserManager implements UserManager {
         } else if (count != null && count == 0) {
             return new UsersGetResponse(0, Collections.emptyList());
         } else if (rootNode != null) {
-            return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
+            return filterUsers(rootNode, requiredAttributes, startIndex, count, sortBy, sortOrder, domainName, tenantDomains);
         } else {
-            return listUsers(requiredAttributes, startIndex, count, sortBy, sortOrder, domainName);
+            return listUsers(requiredAttributes, startIndex, count, sortBy, sortOrder, domainName, tenantDomains);
         }
     }
 
@@ -678,6 +721,7 @@ public class SCIMUserManager implements UserManager {
             log.error("Error occurred while getting the tenant name", e);
         }
 
+        // TODO : update based on exact query param support
         return listUsersWithGET(searchRequest.getFilter(), (Integer) searchRequest.getStartIndex(),
                 (Integer) count, searchRequest.getSortBy(), searchRequest.getSortOder(),
                 searchRequest.getDomainName(), requiredAttributes);
@@ -711,8 +755,8 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse listUsers(Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                   String sortBy, String sortOrder, String domainName) throws CharonException,
-            BadRequestException {
+                                       String sortBy, String sortOrder, String domainName, List<String> tenantDomains)
+            throws CharonException, BadRequestException {
 
         List<User> scimUsers = new ArrayList<>();
         // Handle limit equals NULL scenario.
@@ -721,7 +765,7 @@ public class SCIMUserManager implements UserManager {
         long totalUsers = 0;
         if (StringUtils.isNotEmpty(domainName)) {
             if (canPaginate(offset, limit)) {
-                coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName);
+                coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName, tenantDomains);
                 if (SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
                     int maxLimit = Integer.MAX_VALUE;
                     if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
@@ -739,7 +783,7 @@ public class SCIMUserManager implements UserManager {
             }
         } else {
             if (canPaginate(offset, limit)) {
-                coreUsers = listUsernamesAcrossAllDomains(offset, limit, sortBy, sortOrder);
+                coreUsers = listUsernamesAcrossAllDomains(offset, limit, sortBy, sortOrder, tenantDomains);
                 if (SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
                     int maxLimit = Integer.MAX_VALUE;
                     if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
@@ -872,7 +916,8 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private Set<org.wso2.carbon.user.core.common.User> listUsernames(int offset, int limit, String sortBy,
-                                                                     String sortOrder, String domainName)
+                                                                     String sortOrder, String domainName,
+                                                                     List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         if (isPaginatedUserStoreAvailable()) {
@@ -882,7 +927,7 @@ public class SCIMUserManager implements UserManager {
             // Operator SW set with USERNAME and empty string to get all users.
             ExpressionCondition exCond = new ExpressionCondition(ExpressionOperation.SW.toString(),
                     ExpressionAttribute.USERNAME.toString(), "");
-            return filterUsernames(exCond, offset, limit, sortBy, sortOrder, domainName);
+            return filterUsernames(exCond, offset, limit, sortBy, sortOrder, domainName, tenantDomains);
         } else {
             if (log.isDebugEnabled()) {
                 log.debug(String.format(
@@ -954,7 +999,8 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private Set<org.wso2.carbon.user.core.common.User> listUsernamesAcrossAllDomains(int offset, int limit,
-                                                                                     String sortBy, String sortOrder)
+                                                                                     String sortBy, String sortOrder,
+                                                                                     List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         Set<org.wso2.carbon.user.core.common.User> users;
@@ -969,7 +1015,7 @@ public class SCIMUserManager implements UserManager {
             } else {
                 ExpressionCondition condition = new ExpressionCondition(ExpressionOperation.SW.toString(),
                         ExpressionAttribute.USERNAME.toString(), "");
-                users = filterUsersFromMultipleDomains(null, offset, limit, sortBy, sortOrder, condition);
+                users = filterUsersFromMultipleDomains(null, offset, limit, sortBy, sortOrder, condition, tenantDomains);
             }
         } else {
             if (log.isDebugEnabled()) {
@@ -1021,6 +1067,26 @@ public class SCIMUserManager implements UserManager {
                                         Map<String, Boolean> requiredAttributes)
             throws CharonException, BadRequestException {
 
+        // Get all tenant domains of searching space.
+        List<String> tenantDomains = new ArrayList<>();
+        try {
+            // Search on all organizations.
+            String currentOrganizationId = getOrganizationId(tenantDomain);
+            List<String> childOrganizationsIds = SCIMCommonComponentHolder.getOrganizationManager()
+                    .getChildOrganizationsIds(currentOrganizationId);
+            // tenantDomains.add(tenantDomain);
+            for (String organizationId : childOrganizationsIds) {
+                tenantDomains.add(SCIMCommonComponentHolder.getOrganizationManager()
+                        .resolveTenantDomain(organizationId));
+            }
+        } catch (OrganizationManagementException e) {
+            // TODO
+            throw new CharonException("Error while retrieving tenant domains for listing users.", e);
+        } catch (IdentitySCIMException e) {
+            // TODO
+            throw new RuntimeException(e);
+        }
+
         List<User> users = new ArrayList<>();
         try {
             Map<String, String> scimToLocalClaimsMap = SCIMCommonUtils.getSCIMtoLocalMappings();
@@ -1037,7 +1103,7 @@ public class SCIMUserManager implements UserManager {
             if (isPaginatedUserStoreAvailable()) {
                 // Retrieve all SCIM users at once.
                 scimUsers = this.getSCIMUsers(coreUsers, requiredClaimsInLocalDialect, scimToLocalClaimsMap,
-                        requiredAttributes);
+                        requiredAttributes, tenantDomains);
                 users.addAll(scimUsers);
             } else {
                 // Retrieve SCIM users one by one.
@@ -1490,8 +1556,8 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse filterUsers(Node node, Map<String, Boolean> requiredAttributes, int offset, Integer limit,
-                                     String sortBy, String sortOrder, String domainName) throws CharonException,
-            BadRequestException {
+                                         String sortBy, String sortOrder, String domainName, List<String> tenantDomains)
+            throws CharonException, BadRequestException {
 
         // Handle limit equals NULL scenario.
         limit = handleLimitEqualsNULL(limit);
@@ -1499,7 +1565,7 @@ public class SCIMUserManager implements UserManager {
         // Handle single attribute search.
         if (node instanceof ExpressionNode) {
             return filterUsersBySingleAttribute((ExpressionNode) node, requiredAttributes, offset, limit, sortBy,
-                    sortOrder, domainName);
+                    sortOrder, domainName, tenantDomains);
         } else if (node instanceof OperationNode) {
             if (log.isDebugEnabled()) {
                 log.debug("Listing users by multi attribute filter");
@@ -1507,7 +1573,7 @@ public class SCIMUserManager implements UserManager {
 
             // Support multi attribute filtering.
             return getMultiAttributeFilteredUsers(node, requiredAttributes, offset, limit, sortBy, sortOrder,
-                    domainName);
+                    domainName, tenantDomains);
         } else {
             throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
         }
@@ -1528,8 +1594,9 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private UsersGetResponse filterUsersBySingleAttribute(ExpressionNode node, Map<String, Boolean> requiredAttributes,
-                                                      int offset, int limit, String sortBy, String sortOrder,
-                                                      String domainName) throws CharonException, BadRequestException {
+                                                          int offset, int limit, String sortBy, String sortOrder,
+                                                          String domainName, List<String> tenantDomains)
+            throws CharonException, BadRequestException {
 
         Set<org.wso2.carbon.user.core.common.User> users;
         List<User> filteredUsers = new ArrayList<>();
@@ -1553,13 +1620,13 @@ public class SCIMUserManager implements UserManager {
             // Check which APIs should the filter needs to follow.
             if (isUseLegacyAPIs(limit)) {
                 users = filterUsersUsingLegacyAPIs(node, limit, offset, domainName);
-                filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
+                filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes, tenantDomains));
                 if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
                     return getDetailedUsers(filteredUsers, users.size());
                 }
             } else {
-                users = filterUsers(node, offset, limit, sortBy, sortOrder, domainName);
-                filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
+                users = filterUsers(node, offset, limit, sortBy, sortOrder, domainName, tenantDomains);
+                filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes, tenantDomains));
             }
             // Check that total user count matching the client query needs to be calculated.
             if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()
@@ -1575,9 +1642,10 @@ public class SCIMUserManager implements UserManager {
                         (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC())) {
                     // Get the total user count by the filter query.
                     // This is only implemented for JDBC userstores.
-                    totalResults += getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName);
+                    totalResults +=
+                            getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName, tenantDomains);
                 } else {
-                    totalResults += getFilteredUsersCount(node, 1, maxLimit, domainName);
+                    totalResults += getFilteredUsersCount(node, 1, maxLimit, domainName, tenantDomains);
                 }
             } else {
                 totalResults += users.size();
@@ -1603,14 +1671,14 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException     Error while filtering the users.
      */
     private int getUserCountByAttribute(Node node, int offset, int limit, String sortBy,
-                                        String sortOrder, String domainName)
+                                        String sortOrder, String domainName, List<String> tenantDomains)
             throws BadRequestException, CharonException {
 
         if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
             return getUserCountByGroup(node, domainName);
         }
 
-        return getFilteredUsersCount(node, 1, limit, domainName);
+        return getFilteredUsersCount(node, 1, limit, domainName, tenantDomains);
     }
 
     /**
@@ -1791,7 +1859,7 @@ public class SCIMUserManager implements UserManager {
 
     private Set<org.wso2.carbon.user.core.common.User> filterUsersByGroup(Node node, int offset, int limit,
                                                                           String sortBy, String sortOrder,
-                                                                          String domainName)
+                                                                          String domainName, List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         // Set filter values.
@@ -1800,7 +1868,7 @@ public class SCIMUserManager implements UserManager {
 
         // Handle “Not Equal” (ne) filter on the groups attribute.
         if (SCIMCommonConstants.NE.equalsIgnoreCase(filterOperation)) {
-            return getFilteredUsersBasedOnDomain(node, offset, limit, sortBy, sortOrder, domainName);
+            return getFilteredUsersBasedOnDomain(node, offset, limit, sortBy, sortOrder, domainName, tenantDomains);
         }
 
         /*
@@ -1837,16 +1905,17 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException
      */
     private Set<org.wso2.carbon.user.core.common.User> filterUsers(Node node, int offset, int limit, String sortBy,
-                                                                   String sortOrder, String domainName)
+                                                                   String sortOrder, String domainName,
+                                                                   List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         // Filter users when filter by group.
         if (!SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
                 SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
-            return filterUsersByGroup(node, offset, limit, sortBy, sortOrder, domainName);
+            return filterUsersByGroup(node, offset, limit, sortBy, sortOrder, domainName, tenantDomains);
         }
 
-        return getFilteredUsersBasedOnDomain(node, offset, limit, sortBy, sortOrder, domainName);
+        return getFilteredUsersBasedOnDomain(node, offset, limit, sortBy, sortOrder, domainName, tenantDomains);
     }
 
     /**
@@ -1865,14 +1934,15 @@ public class SCIMUserManager implements UserManager {
      */
     private Set<org.wso2.carbon.user.core.common.User> getFilteredUsersBasedOnDomain(Node node, int offset, int limit,
                                                                                      String sortBy, String sortOrder,
-                                                                                     String domainName)
+                                                                                     String domainName,
+                                                                                     List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         if (StringUtils.isNotEmpty(domainName)) {
             return filterUsernames(createConditionForSingleAttributeFilter(domainName, node), offset, limit,
-                    sortBy, sortOrder, domainName);
+                    sortBy, sortOrder, domainName, tenantDomains);
         } else {
-            return filterUsersFromMultipleDomains(node, offset, limit, sortBy, sortOrder, null);
+            return filterUsersFromMultipleDomains(node, offset, limit, sortBy, sortOrder, null, tenantDomains);
         }
     }
 
@@ -1980,8 +2050,8 @@ public class SCIMUserManager implements UserManager {
      */
     private Set<org.wso2.carbon.user.core.common.User> filterUsersFromMultipleDomains(Node node, int offset, int limit,
                                                                                       String sortBy, String sortOrder,
-                                                                                      Condition
-                                                                                              conditionForListingUsers)
+                                                                                      Condition conditionForListingUsers,
+                                                                                      List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         // Filter users when the domain is not set in the request. Then filter through multiple domains.
@@ -2016,7 +2086,7 @@ public class SCIMUserManager implements UserManager {
             // Filter users for given condition and domain.
             Set<org.wso2.carbon.user.core.common.User> coreUsers;
             try {
-                coreUsers = filterUsernames(condition, offset, limit, sortBy, sortOrder, userStoreDomainName);
+                coreUsers = filterUsernames(condition, offset, limit, sortBy, sortOrder, userStoreDomainName, tenantDomains);
             } catch (CharonException e) {
                 log.error("Error occurred while getting the users list for domain: " + userStoreDomainName, e);
                 continue;
@@ -2027,7 +2097,7 @@ public class SCIMUserManager implements UserManager {
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Filter returned no results for original offset: %d.", offset));
                 }
-                offset = calculateOffset(condition, offset, sortBy, sortOrder, userStoreDomainName);
+                offset = calculateOffset(condition, offset, sortBy, sortOrder, userStoreDomainName, tenantDomains);
             } else {
                 // Returned user names size > 0 implies there are users in that domain which is larger than
                 // the offset.
@@ -2076,8 +2146,8 @@ public class SCIMUserManager implements UserManager {
      * @return New calculated offset
      * @throws CharonException Error while filtering the domain from index 1 to offset
      */
-    private int calculateOffset(Condition condition, int offset, String sortBy, String sortOrder, String domainName)
-            throws CharonException, BadRequestException {
+    private int calculateOffset(Condition condition, int offset, String sortBy, String sortOrder, String domainName,
+                                List<String> tenantDomains) throws CharonException, BadRequestException {
 
         if (log.isDebugEnabled()) {
             log.debug(String.format("Checking for number of matches from the beginning to the original offset: %d for "
@@ -2089,7 +2159,7 @@ public class SCIMUserManager implements UserManager {
         // Checking the number of matches till the original offset.
         int skippedUserCount;
         Set<org.wso2.carbon.user.core.common.User> skippedUsers =
-                filterUsernames(condition, initialOffset, offset, sortBy, sortOrder, domainName);
+                filterUsernames(condition, initialOffset, offset, sortBy, sortOrder, domainName, tenantDomains);
 
         skippedUserCount = skippedUsers.size();
 
@@ -2111,7 +2181,7 @@ public class SCIMUserManager implements UserManager {
      */
     private Set<org.wso2.carbon.user.core.common.User> filterUsernames(Condition condition, int offset, int limit,
                                                                        String sortBy, String sortOrder,
-                                                                       String domainName)
+                                                                       String domainName, List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         if (log.isDebugEnabled()) {
@@ -2125,10 +2195,38 @@ public class SCIMUserManager implements UserManager {
                         Comparator.comparing(org.wso2.carbon.user.core.common.User::getFullQualifiedUsername));
                 users.addAll(carbonUM.getUserListWithID(condition, domainName, UserCoreConstants.DEFAULT_PROFILE, limit,
                         offset, sortBy, sortOrder));
+                // Add sub org users
+                for (String tenantDomain : tenantDomains) {
+                    try {
+                        PrivilegedCarbonContext.startTenantFlow();
+                        PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+                        carbonContext.setTenantDomain(tenantDomain, true);
+                        if (StringUtils.isNotEmpty(tenantDomain) && !tenantDomain.equalsIgnoreCase(domainName)) {
+                            users.addAll(getCarbonUserManager(tenantDomain).getUserListWithID(condition, domainName,
+                                    UserCoreConstants.DEFAULT_PROFILE, limit, offset, sortBy, sortOrder));
+                        }
+                    } finally {
+                        PrivilegedCarbonContext.endTenantFlow();
+                    }
+                }
             } else {
                 List<org.wso2.carbon.user.core.common.User> usersList =
                         carbonUM.getUserListWithID(condition, domainName, UserCoreConstants.DEFAULT_PROFILE, limit,
                                 offset, sortBy, sortOrder);
+                // Add sub org users
+                for (String tenantDomain : tenantDomains) {
+                    try {
+                        PrivilegedCarbonContext.startTenantFlow();
+                        PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
+                        carbonContext.setTenantDomain(tenantDomain, true);
+                        if (StringUtils.isNotEmpty(tenantDomain) && !tenantDomain.equalsIgnoreCase(domainName)) {
+                            usersList.addAll(getCarbonUserManager(tenantDomain).getUserListWithID(condition, domainName,
+                                    UserCoreConstants.DEFAULT_PROFILE, limit, offset, sortBy, sortOrder));
+                        }
+                    } finally {
+                        PrivilegedCarbonContext.endTenantFlow();
+                    }
+                }
                 users = new LinkedHashSet<>(usersList);
             }
             return users;
@@ -2298,8 +2396,9 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException
      */
     private UsersGetResponse getMultiAttributeFilteredUsers(Node node, Map<String, Boolean> requiredAttributes,
-                                                        int offset, int limit, String sortBy, String sortOrder,
-                                                        String domainName) throws CharonException, BadRequestException {
+                                                            int offset, int limit, String sortBy, String sortOrder,
+                                                            String domainName, List<String> tenantDomains)
+            throws CharonException, BadRequestException {
 
         List<User> filteredUserDetails;
 
@@ -2316,7 +2415,7 @@ public class SCIMUserManager implements UserManager {
                     domainName, maxLimit, false);
         }
         filteredUserDetails = getFilteredUserDetails(new LinkedHashSet<>(paginatedUserResult.getFilteredUsers()),
-                requiredAttributes);
+                requiredAttributes, tenantDomains);
 
         int maxLimitForTotalResults = getMaxLimitForTotalResults(domainName);
         // Check that total user count matching the client query needs to be calculated.
@@ -2741,7 +2840,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException
      */
     private List<User> getFilteredUserDetails(Set<org.wso2.carbon.user.core.common.User> users,
-                                                Map<String, Boolean> requiredAttributes)
+                                                Map<String, Boolean> requiredAttributes, List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         List<User> filteredUsers = new ArrayList<>();
@@ -2770,7 +2869,7 @@ public class SCIMUserManager implements UserManager {
                 if (isPaginatedUserStoreAvailable()) {
                     if (carbonUM instanceof PaginatedUserStoreManager) {
                         scimUsers = this.getSCIMUsers(users, requiredClaimsInLocalDialect, scimToLocalClaimsMap,
-                                requiredAttributes);
+                                requiredAttributes, tenantDomains);
                         filteredUsers.addAll(scimUsers);
                     } else {
                         addSCIMUsers(filteredUsers, users, requiredClaimsInLocalDialect, scimToLocalClaimsMap);
@@ -4388,7 +4487,7 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException CharonException
      */
     private Set<User> getSCIMUsers(Set<org.wso2.carbon.user.core.common.User> users, List<String> claimURIList,
-                                   Map<String, String> scimToLocalClaimsMap, Map<String, Boolean> requiredAttributes)
+                                   Map<String, String> scimToLocalClaimsMap, Map<String, Boolean> requiredAttributes, List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         List<User> scimUsers = new ArrayList<>();
@@ -4402,6 +4501,62 @@ public class SCIMUserManager implements UserManager {
                     .stream()
                     .map(org.wso2.carbon.user.core.common.User::getUserID)
                     .collect(Collectors.toList()), claimURIList, null);
+            // Create new map with organization id, name and org handle
+            Map<String, String> organizationDetailsMap = new HashMap<>();
+            String organizationId = getOrganizationId(tenantDomain);
+            organizationDetailsMap.put("http://wso2.org/claims/identity/organization.id", organizationId);
+            organizationDetailsMap.put("http://wso2.org/claims/identity/organization.name",
+                    getOrganizationName(organizationId));
+            organizationDetailsMap.put("http://wso2.org/claims/identity/organization.handle", tenantDomain);
+
+            for (UniqueIDUserClaimSearchEntry searchEntry : searchEntries) {
+                if (searchEntry.getUser() != null && StringUtils.isNotBlank(searchEntry.getUser().getUserID())) {
+                    Map<String, String> claims = searchEntry.getClaims();
+                    claims.putAll(organizationDetailsMap);
+                    searchEntry.setClaims(claims);
+
+                    Map<String, String> searchEntryClaims = searchEntry.getUserClaimSearchEntry().getClaims();
+                    searchEntryClaims.putAll(organizationDetailsMap);
+                    searchEntry.getUserClaimSearchEntry().setClaims(searchEntryClaims);
+                }
+            }
+            // TODO split the users based on existing org and search
+            for (String tenantDomain : tenantDomains) {
+                try {
+                    PrivilegedCarbonContext.startTenantFlow();
+                    PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain, true);
+                    if (StringUtils.isNotBlank(tenantDomain)) {
+                        List<UniqueIDUserClaimSearchEntry> usersClaimValuesWithID = getCarbonUserManager(tenantDomain)
+                                .getUsersClaimValuesWithID(users
+                                .stream()
+                                .map(org.wso2.carbon.user.core.common.User::getUserID)
+                                .collect(Collectors.toList()), claimURIList, null);
+                        // Add usersClaimValuesWithID to searchEntries.
+                        // Create new map with organization id, name and org handle
+                        organizationId = getOrganizationId(tenantDomain);
+                        organizationDetailsMap.put("http://wso2.org/claims/identity/organization.id", organizationId);
+                        organizationDetailsMap.put("http://wso2.org/claims/identity/organization.name",
+                                getOrganizationName(organizationId));
+                        organizationDetailsMap.put("http://wso2.org/claims/identity/organization.handle", tenantDomain);
+
+                        for (UniqueIDUserClaimSearchEntry searchEntry : usersClaimValuesWithID) {
+                            if (searchEntry != null) {
+                                Map<String, String> claims = searchEntry.getClaims();
+                                claims.putAll(organizationDetailsMap);
+                                searchEntry.setClaims(claims);
+
+                                Map<String, String> searchEntryClaims = searchEntry.getUserClaimSearchEntry().getClaims();
+                                searchEntryClaims.putAll(organizationDetailsMap);
+                                searchEntry.getUserClaimSearchEntry().setClaims(searchEntryClaims);
+                            }
+                        }
+                        searchEntries.addAll(usersClaimValuesWithID);
+                    }
+                } finally {
+                    PrivilegedCarbonContext.endTenantFlow();
+                }
+            }
+
             if (isGroupsAttributeRequired(requiredAttributes)) {
                 if (IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()) {
                     usersRoles = searchEntries.stream().map(userClaimSearchEntry -> {
@@ -4419,6 +4574,8 @@ public class SCIMUserManager implements UserManager {
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             String errorMsg = "Error occurred while retrieving SCIM user information";
             throw resolveError(e, errorMsg);
+        } catch (IdentitySCIMException e) {
+            throw new RuntimeException(e);
         }
 
         Map<String, Group> groupMetaAttributesCache = new HashMap<>();
@@ -6874,11 +7031,11 @@ public class SCIMUserManager implements UserManager {
      * @throws CharonException     Error while filtering the users.
      * @throws BadRequestException Domain miss match in domain parameter and attribute value.
      */
-    private int getFilteredUsersCount(Node node, int offset, int maxLimit, String domainName)
+    private int getFilteredUsersCount(Node node, int offset, int maxLimit, String domainName, List<String> tenantDomains)
             throws CharonException, BadRequestException {
 
         if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
-            return filterUsersByGroup(node, offset, maxLimit, null, null, domainName).size();
+            return filterUsersByGroup(node, offset, maxLimit, null, null, domainName, tenantDomains).size();
         }
         return getFilteredUsersCountBasedOnDomain(node, offset, maxLimit, domainName);
     }
@@ -7139,5 +7296,53 @@ public class SCIMUserManager implements UserManager {
             primaryUSDomain = UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
         }
         return primaryUSDomain;
+    }
+
+    private String getOrganizationId(String tenantDomain) throws IdentitySCIMException {
+
+        String orgId;
+        try {
+            orgId = SCIMCommonComponentHolder.getOrganizationManager().resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentitySCIMException("Error while resolving org id of tenant : " + tenantDomain, e);
+        }
+        if (StringUtils.isBlank(orgId)) {
+            throw new IdentitySCIMException("Organization id not found for tenant : " + tenantDomain);
+        }
+        return orgId;
+    }
+
+    private String getOrganizationName(String organizationId) throws IdentitySCIMException {
+
+        String orgName;
+        try {
+            orgName = SCIMCommonComponentHolder.getOrganizationManager().getOrganizationNameById(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentitySCIMException("Error while resolving org name of organization Id : " + organizationId, e);
+        }
+        if (StringUtils.isBlank(orgName)) {
+            throw new IdentitySCIMException("Organization name not found for organization id : " + organizationId);
+        }
+        return orgName;
+    }
+
+    public AbstractUserStoreManager getCarbonUserManager(String tenantDomain) throws CharonException {
+
+        try {
+            // Get super tenant context and get realm service which is an osgi service.
+            RealmService realmService = SCIMCommonComponentHolder.getRealmService();
+            if (realmService != null) {
+                int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+                // Get tenant's user realm.
+                UserRealm userRealm = realmService.getTenantUserRealm(tenantId);
+                return (AbstractUserStoreManager) userRealm.getUserStoreManager();
+            } else {
+                String error = "Can not obtain carbon realm service..";
+                throw new CharonException(error);
+            }
+        } catch (UserStoreException e) {
+            String error = "Error obtaining user realm for tenant: " + tenantDomain;
+            throw new CharonException(error, e);
+        }
     }
 }
