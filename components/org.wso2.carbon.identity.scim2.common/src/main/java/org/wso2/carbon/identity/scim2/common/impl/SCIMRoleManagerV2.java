@@ -1535,6 +1535,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                     throw new BadRequestException(e.getMessage());
                 } else if (OPERATION_FORBIDDEN.getCode().equals(e.getErrorCode())) {
                     throw new ForbiddenException(e.getMessage());
+                } else if (ROLE_WORKFLOW_CREATED.getCode().equals(e.getErrorCode())) {
+                    CharonException charonException = new CharonException(e.getMessage());
+                    charonException.setStatus(ResponseCodeConstants.CODE_ACCEPTED);
+                    throw charonException;
                 }
                 throw new CharonException(
                         String.format("Error occurred while updating users in the role with ID: %s", roleId), e);
