@@ -146,6 +146,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ACCOUNT_DISABLED_CLAIM_URI;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ACCOUNT_LOCKED_CLAIM_URI;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
@@ -220,7 +222,7 @@ public class SCIMUserManager implements UserManager {
      * For example, account enable/disable is managed via http://wso2.org/claims/identity/accountDisabled claim.
      */
     private static final List<String> USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS =
-            Arrays.asList("http://wso2.org/claims/identity/accountDisabled");
+            Arrays.asList(ACCOUNT_LOCKED_CLAIM_URI, ACCOUNT_DISABLED_CLAIM_URI);
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
