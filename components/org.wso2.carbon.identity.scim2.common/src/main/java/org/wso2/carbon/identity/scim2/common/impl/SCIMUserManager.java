@@ -223,7 +223,7 @@ public class SCIMUserManager implements UserManager {
      * Only value updates are allowed.
      * For example, account enable/disable is managed via http://wso2.org/claims/identity/accountDisabled claim.
      */
-    private static final List<String> USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS =
+    private static final List<String> USER_ACCOUNT_STATE_MANAGEMENT_FLOW_CLAIMS =
             Arrays.asList(ACCOUNT_LOCKED_CLAIM_URI, ACCOUNT_DISABLED_CLAIM_URI);
 
     @Deprecated
@@ -7387,7 +7387,7 @@ public class SCIMUserManager implements UserManager {
         // it is considered a user profile claim. In that case, return true.
 
         for (String claimUri : claimUris) {
-            if (!isAccountManagementFlowInitClaim(claimUri)) {
+            if (!isAccountStateManagementFlowClaim(claimUri)) {
                 return true;
             }
         }
@@ -7395,12 +7395,12 @@ public class SCIMUserManager implements UserManager {
         return false;
     }
 
-    private boolean isAccountManagementFlowInitClaim(String claimUri) {
+    private boolean isAccountStateManagementFlowClaim(String claimUri) {
 
         if (StringUtils.isEmpty(claimUri)) {
             return false;
         }
-        return USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS.contains(claimUri);
+        return USER_ACCOUNT_STATE_MANAGEMENT_FLOW_CLAIMS.contains(claimUri);
     }
 
     /**
@@ -7427,7 +7427,7 @@ public class SCIMUserManager implements UserManager {
         Set<String> claimUris = claimMap.keySet();
         try {
             for (String claimUri : claimUris) {
-                if ((SCIMCommonUtils.isFlowInitiatorClaim(claimUri) || isAccountManagementFlowInitClaim(claimUri)) &&
+                if ((SCIMCommonUtils.isFlowInitiatorClaim(claimUri) || isAccountStateManagementFlowClaim(claimUri)) &&
                         Boolean.parseBoolean(claimMap.get(claimUri))) {
                     return false;
                 }
