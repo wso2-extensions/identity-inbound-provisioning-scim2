@@ -185,12 +185,6 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_PASSWORD_POLICY_VIOLATION = "20035";
     private static final String ERROR_CODE_INVALID_ROLE_NAME = "30011";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
-    private static final String ACCOUNT_LOCKED = "accountLocked";
-    private static final String ACCOUNT_DISABLED = "accountDisabled";
-    private static final String VERIFY_EMAIL = "verifyEmail";
-    private static final String ASK_PASSWORD = "askPassword";
-    private static final String FORCE_PASSWORD_RESET = "forcePasswordReset";
-    private static final String VERIFY_MOBILE = "verifyMobile";
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
     private String tenantDomain;
@@ -286,6 +280,7 @@ public class SCIMUserManager implements UserManager {
         }
 
         Map<String, String> claimsInLocalDialect = Collections.emptyMap();
+        Map<String, String> fullClaimMap = new HashMap<>();
         try {
 
             // Persist in carbon user store.
@@ -337,6 +332,10 @@ public class SCIMUserManager implements UserManager {
             claimsMap.remove(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
 
             claimsInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap);
+
+            for (Map.Entry<String, String> entry : claimsInLocalDialect.entrySet()) {
+                fullClaimMap.put(entry.getKey(), entry.getValue());
+            }
 
             org.wso2.carbon.user.core.common.User coreUser = null;
             /*Provide a preferred primary login identifier.Generate a unique user id as the immutable identifier of
@@ -401,7 +400,7 @@ public class SCIMUserManager implements UserManager {
             // Set the schemas of the SCIM user.
             user.setSchemas(this);
 
-            if (isUserRegistration(user)) {
+            if (isInactiveAccount(fullClaimMap)) {
                 publishEventOnUserRegistrationSuccess(user, claimsInLocalDialect, tenantDomain, userStoreDomainName);
             }
 
@@ -446,48 +445,6 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return user;
-    }
-
-    private boolean isUserRegistration(User user) {
-
-        boolean isAccountLocked = getAccountStatusAttributeValue(user, ACCOUNT_LOCKED);
-        boolean isAccountDisabled = getAccountStatusAttributeValue(user, ACCOUNT_DISABLED);
-        boolean isVerifyEmailEnabled = getAccountStatusAttributeValue(user, VERIFY_EMAIL);
-        boolean isAskPassword = getAccountStatusAttributeValue(user, ASK_PASSWORD);
-        boolean isForcedPasswordReset = getAccountStatusAttributeValue(user, FORCE_PASSWORD_RESET);
-
-        return !isAccountLocked &&
-                !isAccountDisabled &&
-                !isVerifyEmailEnabled &&
-                !isAskPassword &&
-                !isForcedPasswordReset;
-    }
-
-    private boolean getAccountStatusAttributeValue(User user, String attributeName){
-
-        if (user != null && user.getAttributeList() != null) {
-
-            Attribute customSchemaAttr = user.getAttribute(SCIM_SYSTEM_USER_CLAIM_DIALECT);
-
-            if (customSchemaAttr instanceof ComplexAttribute) {
-                ComplexAttribute wso2SchemaAttr = (ComplexAttribute) customSchemaAttr;
-
-                Attribute accountLockedAttr = null;
-                try {
-                    accountLockedAttr = wso2SchemaAttr.getSubAttribute(attributeName);
-                } catch (CharonException e) {
-                    log.warn("Error retrieving the attribute " + attributeName, e);
-                }
-
-                if (accountLockedAttr instanceof SimpleAttribute) {
-                    Object value = ((SimpleAttribute) accountLockedAttr).getValue();
-                    if (value != null) {
-                        return Boolean.parseBoolean(value.toString());
-                    }
-                }
-            }
-        }
-        return false;
     }
 
     /**
@@ -7430,7 +7387,7 @@ public class SCIMUserManager implements UserManager {
         // it is considered a user profile claim. In that case, return true.
 
         for (String claimUri : claimUris) {
-            if (!USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS.contains(claimUri)) {
+            if (!isAccountManagementFlowInitClaim(claimUri)) {
                 return true;
             }
         }
@@ -7438,4 +7395,31 @@ public class SCIMUserManager implements UserManager {
         return false;
     }
 
+    private boolean isAccountManagementFlowInitClaim(String claimUri) {
+
+        if (StringUtils.isEmpty(claimUri)) {
+            return false;
+        }
+        return USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS.contains(claimUri);
+    }
+
+    private boolean isInactiveAccount(Map<String, String> claimMap) {
+
+        if (MapUtils.isEmpty(claimMap)) {
+            return false;
+        }
+
+        Set<String> claimUris = claimMap.keySet();
+        try {
+            for (String claimUri : claimUris) {
+                if ((SCIMCommonUtils.isFlowInitiatorClaim(claimUri) || isAccountManagementFlowInitClaim(claimUri)) &&
+                        Boolean.parseBoolean(claimMap.get(claimUri))) {
+                    return true;
+                }
+            }
+        } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            log.warn("Error while retriving claim metadata. " + e);
+        }
+        return false;
+    }
 }
