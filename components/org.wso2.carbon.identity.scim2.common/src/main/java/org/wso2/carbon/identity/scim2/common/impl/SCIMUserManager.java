@@ -152,6 +152,8 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATT
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.password.policy.constants.PasswordPolicyConstants.ErrorMessages.ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildAgentSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildSystemSchema;
@@ -221,7 +223,7 @@ public class SCIMUserManager implements UserManager {
      * Only value updates are allowed.
      * For example, account enable/disable is managed via http://wso2.org/claims/identity/accountDisabled claim.
      */
-    private static final List<String> USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS =
+    private static final List<String> USER_ACCOUNT_STATE_MANAGEMENT_FLOW_CLAIMS =
             Arrays.asList(ACCOUNT_LOCKED_CLAIM_URI, ACCOUNT_DISABLED_CLAIM_URI);
 
     @Deprecated
@@ -278,6 +280,7 @@ public class SCIMUserManager implements UserManager {
         }
 
         Map<String, String> claimsInLocalDialect = Collections.emptyMap();
+        Map<String, String> fullClaimMap = new HashMap<>();
         try {
 
             // Persist in carbon user store.
@@ -329,6 +332,10 @@ public class SCIMUserManager implements UserManager {
             claimsMap.remove(SCIMConstants.UserSchemaConstants.USER_NAME_URI);
 
             claimsInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap);
+
+            for (Map.Entry<String, String> entry : claimsInLocalDialect.entrySet()) {
+                fullClaimMap.put(entry.getKey(), entry.getValue());
+            }
 
             org.wso2.carbon.user.core.common.User coreUser = null;
             /*Provide a preferred primary login identifier.Generate a unique user id as the immutable identifier of
@@ -392,6 +399,11 @@ public class SCIMUserManager implements UserManager {
 
             // Set the schemas of the SCIM user.
             user.setSchemas(this);
+
+            if (isCompleteRegistrationFlow(fullClaimMap)) {
+                publishEventOnUserRegistrationSuccess(user, claimsInLocalDialect, tenantDomain, userStoreDomainName);
+            }
+
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName()) +
                     ". %s", e.getMessage());
@@ -5971,7 +5983,7 @@ public class SCIMUserManager implements UserManager {
 
         if (SCIMCommonUtils.isUserExtensionEnabled()) {
             Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
-                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT,
+                    getMappedLocalClaimsForDialect(SCIM_ENTERPRISE_USER_CLAIM_DIALECT,
                             tenantDomain);
 
             Map<String, Attribute> filteredAttributeMap =
@@ -6005,7 +6017,7 @@ public class SCIMUserManager implements UserManager {
 
         if (SCIMCommonUtils.isUserExtensionEnabled()) {
             Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
-                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT, tenantDomain);
+                    getMappedLocalClaimsForDialect(SCIM_SYSTEM_USER_CLAIM_DIALECT, tenantDomain);
 
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
@@ -6982,7 +6994,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     private void publishEventOnUserRegistrationFailure(User user, String errorCode, String errorMessage,
-                                                       Map<String, String> claims) throws BadRequestException {
+                                                       Map<String, String> claims) {
 
         HashMap<String, Object> properties = new HashMap<>();
         properties.put(IdentityEventConstants.EventProperty.ERROR_CODE, errorCode);
@@ -7001,7 +7013,35 @@ public class SCIMUserManager implements UserManager {
         try {
             SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
         } catch (IdentityEventException e) {
-            throw new BadRequestException("Error occurred publishing event", ResponseCodeConstants.INVALID_VALUE);
+            log.warn("Error occurred publishing event " + IdentityEventConstants.Event.USER_REGISTRATION_FAILED, e);
+        }
+    }
+
+    private void publishEventOnUserRegistrationSuccess(User user, Map<String, String> claims, String tenantDomain,
+                                                       String userStoreDomainName) {
+
+        HashMap<String, Object> properties = new HashMap<>();
+
+        if (user != null) {
+            properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
+            try {
+                properties.put(IdentityEventConstants.EventProperty.USER_NAME, user.getUserName());
+            } catch (CharonException e) {
+                log.debug("Error while retrieving user name for user: " + user.getId(), e);
+            }
+        }
+        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS, claims);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
+        properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, userStoreDomainName);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getTenantId());
+
+        Event identityMgtEvent = new Event(IdentityEventConstants.Event.USER_REGISTRATION_SUCCESS, properties);
+
+        try {
+            SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
+        } catch (IdentityEventException e) {
+            log.warn("Error occurred publishing event " + IdentityEventConstants.Event.USER_REGISTRATION_SUCCESS, e);
         }
     }
 
@@ -7347,7 +7387,7 @@ public class SCIMUserManager implements UserManager {
         // it is considered a user profile claim. In that case, return true.
 
         for (String claimUri : claimUris) {
-            if (!USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS.contains(claimUri)) {
+            if (!isAccountStateManagementFlowClaim(claimUri)) {
                 return true;
             }
         }
@@ -7355,4 +7395,46 @@ public class SCIMUserManager implements UserManager {
         return false;
     }
 
+    private boolean isAccountStateManagementFlowClaim(String claimUri) {
+
+        if (StringUtils.isEmpty(claimUri)) {
+            return false;
+        }
+        return USER_ACCOUNT_STATE_MANAGEMENT_FLOW_CLAIMS.contains(claimUri);
+    }
+
+    /**
+     * Determines whether the registration is complete based on the provided claim map.
+     * The method checks for the presence of flow initiator claims (e.g., 'askPassword' or 'verifyEmail') and
+     * evaluates their values  to identify complete registrations. It also verifies account management-related claims
+     * (e.g., 'accountLocked' or 'accountDisabled') whose values, when true, indicate that the registration
+     * has not been completed.
+     * For example:
+     * - If the 'askPassword' claim is true, the registration is considered incomplete.
+     * - If the 'accountDisabled' claim is true, the registration is considered incomplete.
+     *
+     * @param claimMap A map containing user claims and their values.
+     * @return {@code true} if the registration is complete; {@code false} otherwise.
+     */
+    private boolean isCompleteRegistrationFlow(Map<String, String> claimMap) {
+
+        // Ideally claimMap cannot be empty at this point. If claim map is empty, it shouls have gone with 400
+        // before reaching this point.
+        if (MapUtils.isEmpty(claimMap)) {
+            return false;
+        }
+
+        Set<String> claimUris = claimMap.keySet();
+        try {
+            for (String claimUri : claimUris) {
+                if ((SCIMCommonUtils.isFlowInitiatorClaim(claimUri) || isAccountStateManagementFlowClaim(claimUri)) &&
+                        Boolean.parseBoolean(claimMap.get(claimUri))) {
+                    return false;
+                }
+            }
+        } catch (org.wso2.carbon.user.core.UserStoreException e) {
+            log.warn("Error while retrieving claim metadata. " + e);
+        }
+        return true;
+    }
 }

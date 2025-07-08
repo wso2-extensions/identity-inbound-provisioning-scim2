@@ -1176,18 +1176,27 @@ public class SCIMCommonUtils {
 
     private static boolean hasAnyNonFlowInitiatorClaims(Set<String> claimUriList) throws UserStoreException {
 
-        ClaimMetadataManagementService claimMetadataManagementService = SCIMCommonComponentHolder
-                .getClaimManagementService();
-        String tenantDomain = IdentityContext.getThreadLocalIdentityContext().getTenantDomain();
         for (String claimUri : claimUriList) {
-            try {
-                Optional<LocalClaim> localClaim = claimMetadataManagementService.getLocalClaim(claimUri, tenantDomain);
-                return localClaim.isPresent() && !localClaim.get().getFlowInitiator();
-            } catch (ClaimMetadataException e) {
-                throw new UserStoreException(String.format("Error while reading claim meta data of %s", claimUri), e);
+
+            if (!isFlowInitiatorClaim(claimUri)) {
+                return true;
             }
         }
         return false;
+    }
+
+    public static boolean isFlowInitiatorClaim(String claimUri) throws UserStoreException {
+
+        ClaimMetadataManagementService claimMetadataManagementService = SCIMCommonComponentHolder
+                .getClaimManagementService();
+        String tenantDomain = IdentityContext.getThreadLocalIdentityContext().getTenantDomain();
+
+        try {
+            Optional<LocalClaim> localClaim = claimMetadataManagementService.getLocalClaim(claimUri, tenantDomain);
+            return localClaim.isPresent() && localClaim.get().getFlowInitiator();
+        } catch (ClaimMetadataException e) {
+            throw new UserStoreException(String.format("Error while reading claim meta data of %s", claimUri), e);
+        }
     }
 
     public static boolean isExecutableUserProfileUpdate(Map<String, String> userClaimsExcludingMultiValuedClaimsToBeModified,
