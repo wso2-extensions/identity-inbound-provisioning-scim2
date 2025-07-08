@@ -400,7 +400,7 @@ public class SCIMUserManager implements UserManager {
             // Set the schemas of the SCIM user.
             user.setSchemas(this);
 
-            if (isInactiveAccount(fullClaimMap)) {
+            if (isCompleteRegistrationFlow(fullClaimMap)) {
                 publishEventOnUserRegistrationSuccess(user, claimsInLocalDialect, tenantDomain, userStoreDomainName);
             }
 
@@ -7403,8 +7403,23 @@ public class SCIMUserManager implements UserManager {
         return USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS.contains(claimUri);
     }
 
-    private boolean isInactiveAccount(Map<String, String> claimMap) {
+    /**
+     * Determines whether the registration is complete based on the provided claim map.
+     * The method checks for the presence of flow initiator claims (e.g., 'askPassword' or 'verifyEmail') and
+     * evaluates their values  to identify complete registrations. It also verifies account management-related claims
+     * (e.g., 'accountLocked' or 'accountDisabled') whose values, when true, indicate that the registration
+     * has not been completed.
+     * For example:
+     * - If the 'askPassword' claim is true, the registration is considered incomplete.
+     * - If the 'accountDisabled' claim is true, the registration is considered incomplete.
+     *
+     * @param claimMap A map containing user claims and their values.
+     * @return {@code true} if the registration is complete; {@code false} otherwise.
+     */
+    private boolean isCompleteRegistrationFlow(Map<String, String> claimMap) {
 
+        // Ideally claimMap cannot be empty at this point. If claim map is empty, it shouls have gone with 400
+        // before reaching this point.
         if (MapUtils.isEmpty(claimMap)) {
             return false;
         }
@@ -7414,12 +7429,12 @@ public class SCIMUserManager implements UserManager {
             for (String claimUri : claimUris) {
                 if ((SCIMCommonUtils.isFlowInitiatorClaim(claimUri) || isAccountManagementFlowInitClaim(claimUri)) &&
                         Boolean.parseBoolean(claimMap.get(claimUri))) {
-                    return true;
+                    return false;
                 }
             }
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
-            log.warn("Error while retriving claim metadata. " + e);
+            log.warn("Error while retrieving claim metadata. " + e);
         }
-        return false;
+        return true;
     }
 }
