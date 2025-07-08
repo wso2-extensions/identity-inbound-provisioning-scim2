@@ -152,6 +152,8 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATT
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.password.policy.constants.PasswordPolicyConstants.ErrorMessages.ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildAgentSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildSystemSchema;
@@ -183,6 +185,12 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_PASSWORD_POLICY_VIOLATION = "20035";
     private static final String ERROR_CODE_INVALID_ROLE_NAME = "30011";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
+    private static final String ACCOUNT_LOCKED = "accountLocked";
+    private static final String ACCOUNT_DISABLED = "accountDisabled";
+    private static final String VERIFY_EMAIL = "verifyEmail";
+    private static final String ASK_PASSWORD = "askPassword";
+    private static final String FORCE_PASSWORD_RESET = "forcePasswordReset";
+    private static final String VERIFY_MOBILE = "verifyMobile";
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
     private String tenantDomain;
@@ -392,6 +400,11 @@ public class SCIMUserManager implements UserManager {
 
             // Set the schemas of the SCIM user.
             user.setSchemas(this);
+
+            if (isUserRegistration(user)) {
+                publishEventOnUserRegistrationSuccess(user, claimsInLocalDialect, tenantDomain, userStoreDomainName);
+            }
+
         } catch (UserStoreClientException e) {
             String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName()) +
                     ". %s", e.getMessage());
@@ -433,6 +446,48 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException("Error in getting user information from Carbon User Store", e);
         }
         return user;
+    }
+
+    private boolean isUserRegistration(User user) {
+
+        boolean isAccountLocked = getAccountStatusAttributeValue(user, ACCOUNT_LOCKED);
+        boolean isAccountDisabled = getAccountStatusAttributeValue(user, ACCOUNT_DISABLED);
+        boolean isVerifyEmailEnabled = getAccountStatusAttributeValue(user, VERIFY_EMAIL);
+        boolean isAskPassword = getAccountStatusAttributeValue(user, ASK_PASSWORD);
+        boolean isForcedPasswordReset = getAccountStatusAttributeValue(user, FORCE_PASSWORD_RESET);
+
+        return !isAccountLocked &&
+                !isAccountDisabled &&
+                !isVerifyEmailEnabled &&
+                !isAskPassword &&
+                !isForcedPasswordReset;
+    }
+
+    private boolean getAccountStatusAttributeValue(User user, String attributeName){
+
+        if (user != null && user.getAttributeList() != null) {
+
+            Attribute customSchemaAttr = user.getAttribute(SCIM_SYSTEM_USER_CLAIM_DIALECT);
+
+            if (customSchemaAttr instanceof ComplexAttribute) {
+                ComplexAttribute wso2SchemaAttr = (ComplexAttribute) customSchemaAttr;
+
+                Attribute accountLockedAttr = null;
+                try {
+                    accountLockedAttr = wso2SchemaAttr.getSubAttribute(attributeName);
+                } catch (CharonException e) {
+                    log.warn("Error retrieving the attribute " + attributeName, e);
+                }
+
+                if (accountLockedAttr instanceof SimpleAttribute) {
+                    Object value = ((SimpleAttribute) accountLockedAttr).getValue();
+                    if (value != null) {
+                        return Boolean.parseBoolean(value.toString());
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -5971,7 +6026,7 @@ public class SCIMUserManager implements UserManager {
 
         if (SCIMCommonUtils.isUserExtensionEnabled()) {
             Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
-                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT,
+                    getMappedLocalClaimsForDialect(SCIM_ENTERPRISE_USER_CLAIM_DIALECT,
                             tenantDomain);
 
             Map<String, Attribute> filteredAttributeMap =
@@ -6005,7 +6060,7 @@ public class SCIMUserManager implements UserManager {
 
         if (SCIMCommonUtils.isUserExtensionEnabled()) {
             Map<ExternalClaim, LocalClaim> scimClaimToLocalClaimMap =
-                    getMappedLocalClaimsForDialect(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT, tenantDomain);
+                    getMappedLocalClaimsForDialect(SCIM_SYSTEM_USER_CLAIM_DIALECT, tenantDomain);
 
             Map<String, Attribute> filteredAttributeMap =
                     getFilteredSchemaAttributes(scimClaimToLocalClaimMap);
@@ -6982,7 +7037,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     private void publishEventOnUserRegistrationFailure(User user, String errorCode, String errorMessage,
-                                                       Map<String, String> claims) throws BadRequestException {
+                                                       Map<String, String> claims) {
 
         HashMap<String, Object> properties = new HashMap<>();
         properties.put(IdentityEventConstants.EventProperty.ERROR_CODE, errorCode);
@@ -7001,7 +7056,35 @@ public class SCIMUserManager implements UserManager {
         try {
             SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
         } catch (IdentityEventException e) {
-            throw new BadRequestException("Error occurred publishing event", ResponseCodeConstants.INVALID_VALUE);
+            log.warn("Error occurred publishing event " + IdentityEventConstants.Event.USER_REGISTRATION_FAILED, e);
+        }
+    }
+
+    private void publishEventOnUserRegistrationSuccess(User user, Map<String, String> claims, String tenantDomain,
+                                                       String userStoreDomainName) {
+
+        HashMap<String, Object> properties = new HashMap<>();
+
+        if (user != null) {
+            properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
+            try {
+                properties.put(IdentityEventConstants.EventProperty.USER_NAME, user.getUserName());
+            } catch (CharonException e) {
+                log.debug("Error while retrieving user name for user: " + user.getId(), e);
+            }
+        }
+        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS, claims);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
+        properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, userStoreDomainName);
+        properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getTenantId());
+
+        Event identityMgtEvent = new Event(IdentityEventConstants.Event.USER_REGISTRATION_SUCCESS, properties);
+
+        try {
+            SCIMCommonComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
+        } catch (IdentityEventException e) {
+            log.warn("Error occurred publishing event " + IdentityEventConstants.Event.USER_REGISTRATION_SUCCESS, e);
         }
     }
 
