@@ -5620,15 +5620,17 @@ public class SCIMUserManager implements UserManager {
             }
         }
 
-        // Prevent additional claims added while updating the claims at the user store.
-        Map<String, String> fullClaimsMap = new HashMap<>(userClaimsToBeModified);
+        /*
+        Preserve only the original claims added or updated by the user,
+        preventing any additional claims injected by the user store via update.
+         */
+        Map<String, String> claimsAddedOrUpdatedByUser = new HashMap<>(userClaimsToBeModified);
         // Update user claims.
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
 
-        // fullClaimsMap already includes the userClaimsToBeAdded as well.
         if (isExecutableUserProfileUpdate &&
-                includesAtLeastOneNonAccountManagementFlowInitClaim(fullClaimsMap.keySet())) {
-            publishUserProfileUpdateEvent(user, userClaimsToBeAdded, fullClaimsMap, claimsDeleted);
+                includesAtLeastOneNonAccountManagementFlowInitClaim(claimsAddedOrUpdatedByUser.keySet())) {
+            publishUserProfileUpdateEvent(user, userClaimsToBeAdded, claimsAddedOrUpdatedByUser, claimsDeleted);
         }
     }
 
