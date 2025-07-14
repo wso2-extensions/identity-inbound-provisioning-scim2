@@ -216,6 +216,8 @@ public class SCIMUserManager implements UserManager {
     private static final String MAX_LIMIT_RESOURCE_TYPE_NAME = "response-max-limit-configurations";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
 
+    private static final String VERIFIED_EMAIL_ADDRESSES_CLAIM_URI = "http://wso2.org/claims/verifiedEmailAddresses";
+    private static final String VERIFIED_MOBILE_NUMBERS_CLAIM_URI = "http://wso2.org/claims/verifiedMobileNumbers";
     /*
      * Claims in this set are used to trigger specific identity management flows.
      * While their values can be updated via SCIM PATCH or PUT requests,
@@ -225,6 +227,9 @@ public class SCIMUserManager implements UserManager {
      */
     private static final List<String> USER_ACCOUNT_STATE_MANAGEMENT_FLOW_CLAIMS =
             Arrays.asList(ACCOUNT_LOCKED_CLAIM_URI, ACCOUNT_DISABLED_CLAIM_URI);
+
+    private static final List<String> VERIFICATION_RELATED_CLAIMS =
+            Arrays.asList(VERIFIED_EMAIL_ADDRESSES_CLAIM_URI, VERIFIED_MOBILE_NUMBERS_CLAIM_URI);
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -7379,7 +7384,7 @@ public class SCIMUserManager implements UserManager {
     /**
      * Checks whether the given set of claim URIs contains at least one claim
      * that is not related to account management flow initiation.
-     * Any claim not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS is considered
+     * Any claim not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS or VERIFICATION_RELATED_CLAIMS is considered
      * a user profile claim.
      *
      * @param claimUris Set of claim URIs to evaluate.
@@ -7391,11 +7396,11 @@ public class SCIMUserManager implements UserManager {
             return false;
         }
 
-        // If any claim URI is not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS,
+        // If any claim URI is not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS, or VERIFICATION_RELATED_CLAIMS
         // it is considered a user profile claim. In that case, return true.
 
         for (String claimUri : claimUris) {
-            if (!isAccountStateManagementFlowClaim(claimUri)) {
+            if (!isAccountStateManagementFlowClaim(claimUri) && !isVerificationRelatedClaim(claimUri)) {
                 return true;
             }
         }
@@ -7409,6 +7414,14 @@ public class SCIMUserManager implements UserManager {
             return false;
         }
         return USER_ACCOUNT_STATE_MANAGEMENT_FLOW_CLAIMS.contains(claimUri);
+    }
+
+    private boolean isVerificationRelatedClaim(String claimUri) {
+
+        if (StringUtils.isEmpty(claimUri)) {
+            return false;
+        }
+        return VERIFICATION_RELATED_CLAIMS.contains(claimUri);
     }
 
     /**
