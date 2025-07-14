@@ -5620,12 +5620,15 @@ public class SCIMUserManager implements UserManager {
             }
         }
 
+        // Prevent additional claims added while updating the claims at the user store.
+        Map<String, String> fullClaimsMap = new HashMap<>(userClaimsToBeModified);
         // Update user claims.
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
 
-        // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
-        if (isExecutableUserProfileUpdate && includesAtLeastOneNonAccountManagementFlowInitClaim(userClaimsToBeModified.keySet())) {
-            publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModified, claimsDeleted);
+        // fullClaimsMap already includes the userClaimsToBeAdded as well.
+        if (isExecutableUserProfileUpdate &&
+                includesAtLeastOneNonAccountManagementFlowInitClaim(fullClaimsMap.keySet())) {
+            publishUserProfileUpdateEvent(user, userClaimsToBeAdded, fullClaimsMap, claimsDeleted);
         }
     }
 
@@ -5711,8 +5714,9 @@ public class SCIMUserManager implements UserManager {
         // Combine the claims to be added and modified.
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
 
-        boolean isExecutableUserProfileUpdate = SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted,
-                simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved);
+        boolean isExecutableUserProfileUpdate =
+                SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted,
+                        simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved);
         Map<String, String> userClaimsToBeModifiedIncludingMultiValueClaims = new HashMap<>(userClaimsToBeModified);
 
         if (isExecutableUserProfileUpdate) {
@@ -5722,7 +5726,8 @@ public class SCIMUserManager implements UserManager {
                             simpleMultiValuedClaimsToBeRemoved);
             userClaimsToBeModifiedIncludingMultiValueClaims.putAll(multiValuedClaimsToModify);
 
-            preUpdateProfileActionExecutor.execute(user, userClaimsToBeModifiedIncludingMultiValueClaims, userClaimsToBeDeleted);
+            preUpdateProfileActionExecutor.execute(user, userClaimsToBeModifiedIncludingMultiValueClaims,
+                    userClaimsToBeDeleted);
         }
 
         if (log.isDebugEnabled()) {
@@ -5754,7 +5759,8 @@ public class SCIMUserManager implements UserManager {
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
         if (isExecutableUserProfileUpdate &&
-                includesAtLeastOneNonAccountManagementFlowInitClaim(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
+                includesAtLeastOneNonAccountManagementFlowInitClaim(
+                        userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
