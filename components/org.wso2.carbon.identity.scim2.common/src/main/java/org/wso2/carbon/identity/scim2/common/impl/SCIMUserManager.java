@@ -216,6 +216,8 @@ public class SCIMUserManager implements UserManager {
     private static final String MAX_LIMIT_RESOURCE_TYPE_NAME = "response-max-limit-configurations";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
 
+    private static final String VERIFIED_EMAIL_ADDRESSES_CLAIM_URI = "http://wso2.org/claims/verifiedEmailAddresses";
+    private static final String VERIFIED_MOBILE_NUMBERS_CLAIM_URI = "http://wso2.org/claims/verifiedMobileNumbers";
     /*
      * Claims in this set are used to trigger specific identity management flows.
      * While their values can be updated via SCIM PATCH or PUT requests,
@@ -225,6 +227,9 @@ public class SCIMUserManager implements UserManager {
      */
     private static final List<String> USER_ACCOUNT_STATE_MANAGEMENT_FLOW_CLAIMS =
             Arrays.asList(ACCOUNT_LOCKED_CLAIM_URI, ACCOUNT_DISABLED_CLAIM_URI);
+
+    private static final List<String> VERIFICATION_TRIGGERING_CLAIMS =
+            Arrays.asList(VERIFIED_EMAIL_ADDRESSES_CLAIM_URI, VERIFIED_MOBILE_NUMBERS_CLAIM_URI);
 
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
@@ -5629,7 +5634,7 @@ public class SCIMUserManager implements UserManager {
         carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
 
         if (isExecutableUserProfileUpdate &&
-                includesAtLeastOneNonAccountManagementFlowInitClaim(claimsAddedOrUpdatedByUser.keySet())) {
+                containsNonAccountStateOrNonVerificationClaim(claimsAddedOrUpdatedByUser.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, claimsAddedOrUpdatedByUser, claimsDeleted);
         }
     }
@@ -5761,8 +5766,7 @@ public class SCIMUserManager implements UserManager {
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
         if (isExecutableUserProfileUpdate &&
-                includesAtLeastOneNonAccountManagementFlowInitClaim(
-                        userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
+                containsNonAccountStateOrNonVerificationClaim(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
@@ -7378,24 +7382,25 @@ public class SCIMUserManager implements UserManager {
 
     /**
      * Checks whether the given set of claim URIs contains at least one claim
-     * that is not related to account management flow initiation.
-     * Any claim not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS is considered
+     * that is not related to account management flow initiation(USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS)
+     * or verification triggering(VERIFICATION_TRIGGERING_CLAIMS).
+     * Any claim not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS or VERIFICATION_TRIGGERING_CLAIMS is considered
      * a user profile claim.
      *
      * @param claimUris Set of claim URIs to evaluate.
-     * @return true if at least one claim is not an account management flow initiation claim; false otherwise.
+     * @return true if at least one claim is a user profile claim; false otherwise.
      */
-    private boolean includesAtLeastOneNonAccountManagementFlowInitClaim(Set<String> claimUris) {
+    private boolean containsNonAccountStateOrNonVerificationClaim(Set<String> claimUris) {
 
         if (CollectionUtils.isEmpty(claimUris)) {
             return false;
         }
 
-        // If any claim URI is not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS,
+        // If any claim URI is not part of USER_ACCOUNT_MANAGEMENT_FLOW_CLAIMS, or VERIFICATION_TRIGGERING_CLAIMS
         // it is considered a user profile claim. In that case, return true.
 
         for (String claimUri : claimUris) {
-            if (!isAccountStateManagementFlowClaim(claimUri)) {
+            if (!isAccountStateManagementFlowClaim(claimUri) && !isVerificationTriggeringClaim(claimUri)) {
                 return true;
             }
         }
@@ -7409,6 +7414,14 @@ public class SCIMUserManager implements UserManager {
             return false;
         }
         return USER_ACCOUNT_STATE_MANAGEMENT_FLOW_CLAIMS.contains(claimUri);
+    }
+
+    private boolean isVerificationTriggeringClaim(String claimUri) {
+
+        if (StringUtils.isEmpty(claimUri)) {
+            return false;
+        }
+        return VERIFICATION_TRIGGERING_CLAIMS.contains(claimUri);
     }
 
     /**
