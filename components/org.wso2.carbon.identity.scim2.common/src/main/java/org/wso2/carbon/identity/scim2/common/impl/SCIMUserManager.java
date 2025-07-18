@@ -2572,6 +2572,9 @@ public class SCIMUserManager implements UserManager {
 
                 coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
                 userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
+                if (SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()) {
+
+                }
                 if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
                     extensionClaims = carbonClaimManager.getAllClaimMappings(
                             SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
@@ -2600,6 +2603,13 @@ public class SCIMUserManager implements UserManager {
                 }
                 if (ArrayUtils.isNotEmpty(customClaims)) {
                     for (ClaimMapping claim : customClaims) {
+                        attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
+                    }
+                }
+                if (SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()) {
+                    ClaimMapping[] agentClaims = carbonClaimManager.
+                            getAllClaimMappings(SCIMCommonConstants.SCIM_AGENT_CLAIM_DIALECT);
+                    for (ClaimMapping claim : agentClaims) {
                         attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
                     }
                 }
