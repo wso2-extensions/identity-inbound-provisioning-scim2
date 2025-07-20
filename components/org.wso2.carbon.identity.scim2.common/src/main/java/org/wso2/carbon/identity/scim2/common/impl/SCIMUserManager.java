@@ -2561,7 +2561,9 @@ public class SCIMUserManager implements UserManager {
                 attributes.putAll(getMappedAttributes(extensionURI, domainName));
             }
             attributes.putAll(getMappedAttributes(getCustomSchemaURI(), domainName));
-
+            if (SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()) {
+                attributes.putAll(getMappedAttributes(SCIMCommonConstants.SCIM_AGENT_CLAIM_DIALECT, domainName));
+            }
         } else {
             try {
                 ClaimMapping[] userClaims;
