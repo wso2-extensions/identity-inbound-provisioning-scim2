@@ -2562,7 +2562,7 @@ public class SCIMUserManager implements UserManager {
             }
             attributes.putAll(getMappedAttributes(getCustomSchemaURI(), domainName));
             // If SCIM agent flow is enabled, add the SCIM agent dialect.
-            if (SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()) {
+            if (Boolean.TRUE.equals(SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow())) {
                 attributes.putAll(getMappedAttributes(SCIMCommonConstants.SCIM_AGENT_CLAIM_DIALECT, domainName));
             }
         } else {
@@ -2607,7 +2607,7 @@ public class SCIMUserManager implements UserManager {
                     }
                 }
                 // If SCIM agent flow is enabled, add the SCIM agent dialect.
-                if (SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()) {
+                if (Boolean.TRUE.equals(SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow())) {
                     ClaimMapping[] agentClaims = carbonClaimManager.
                             getAllClaimMappings(SCIMCommonConstants.SCIM_AGENT_CLAIM_DIALECT);
                     for (ClaimMapping claim : agentClaims) {
