@@ -2561,6 +2561,7 @@ public class SCIMUserManager implements UserManager {
                 attributes.putAll(getMappedAttributes(extensionURI, domainName));
             }
             attributes.putAll(getMappedAttributes(getCustomSchemaURI(), domainName));
+            // If SCIM agent flow is enabled, add the SCIM agent dialect.
             if (SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()) {
                 attributes.putAll(getMappedAttributes(SCIMCommonConstants.SCIM_AGENT_CLAIM_DIALECT, domainName));
             }
@@ -2574,7 +2575,6 @@ public class SCIMUserManager implements UserManager {
 
                 coreClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_CORE_CLAIM_DIALECT);
                 userClaims = carbonClaimManager.getAllClaimMappings(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT);
-
                 if (SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema() != null) {
                     extensionClaims = carbonClaimManager.getAllClaimMappings(
                             SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema().getURI());
@@ -2606,6 +2606,7 @@ public class SCIMUserManager implements UserManager {
                         attributes.put(claim.getClaim().getClaimUri(), claim.getMappedAttribute(domainName));
                     }
                 }
+                // If SCIM agent flow is enabled, add the SCIM agent dialect.
                 if (SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow()) {
                     ClaimMapping[] agentClaims = carbonClaimManager.
                             getAllClaimMappings(SCIMCommonConstants.SCIM_AGENT_CLAIM_DIALECT);
