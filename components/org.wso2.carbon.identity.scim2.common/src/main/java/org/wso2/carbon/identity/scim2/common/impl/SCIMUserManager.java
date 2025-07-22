@@ -6246,7 +6246,7 @@ public class SCIMUserManager implements UserManager {
         }
 
         AbstractAttribute attribute;
-        if (isComplexCustomAttr || (isComplexAttribute(name) && !isCustomSchemaAttr)) {
+        if (isComplexCustomAttr || (isComplexAttribute(name) && !isCustomSchemaAttr && !isSystemSchemaAttr)) {
             attribute = new ComplexAttribute(name);
         } else {
             attribute = new SimpleAttribute(name, null);
@@ -6385,7 +6385,7 @@ public class SCIMUserManager implements UserManager {
         }
 
         attribute.setMultiValued(isMultivaluedCustomAttr ||
-                (isMultivaluedAttribute(attribute.getName()) && !isCustomSchemaAttr));
+                (isMultivaluedAttribute(attribute.getName()) && !isCustomSchemaAttr && !isSystemSchemaAttr));
         attribute.setReturned(SCIMDefinitions.Returned.DEFAULT);
         attribute.setUniqueness(SCIMDefinitions.Uniqueness.NONE);
 
