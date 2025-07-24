@@ -35,24 +35,23 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.BasicOrganization;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
-import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionServerException;
 import org.wso2.carbon.identity.user.action.api.model.UserActionContext;
 import org.wso2.carbon.identity.user.action.api.model.UserActionRequestDTO;
 import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.charon3.core.attributes.Attribute;
 import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.User;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -235,6 +234,15 @@ public class PreUpdateProfileActionExecutor {
     }
 
     private Organization getOrganization(String managedOrgId) throws UserActionExecutionServerException {
+
+        if (OrganizationManagementConstants.SUPER_ORG_ID.equals(managedOrgId)) {
+            return new Organization.Builder()
+                    .id(OrganizationManagementConstants.SUPER_ORG_ID)
+                    .name(OrganizationManagementConstants.SUPER)
+                    .orgHandle(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)
+                    .depth(0)
+                    .build();
+        }
 
         try {
             Map<String, BasicOrganization> orgsMap = SCIMCommonComponentHolder.getOrganizationManager()
