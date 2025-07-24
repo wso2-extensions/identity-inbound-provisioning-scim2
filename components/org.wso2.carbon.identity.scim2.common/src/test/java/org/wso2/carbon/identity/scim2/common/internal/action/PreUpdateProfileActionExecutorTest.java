@@ -38,6 +38,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.Organization;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.model.BasicOrganization;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.constants.TestConstants;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
@@ -47,6 +50,8 @@ import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionCli
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionServerException;
 import org.wso2.carbon.identity.user.action.api.model.UserActionContext;
 import org.wso2.carbon.identity.user.action.api.model.UserActionRequestDTO;
+import org.wso2.charon3.core.attributes.ComplexAttribute;
+import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.User;
@@ -58,8 +63,11 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
@@ -86,11 +94,23 @@ import static org.wso2.carbon.identity.scim2.common.test.constants.TestConstants
  */
 public class PreUpdateProfileActionExecutorTest {
 
+    public static final String TEST_RESIDENT_ORG_ID = "6a56eba9-23c4-4306-ae13-11259c2a40ae";
+    public static final String TEST_RESIDENT_ORG_NAME = "mySubOrg1";
+    public static final String TEST_RESIDENT_ORG_HANDLE = "mySubOrg1.com";
+    public static final int TEST_RESIDENT_ORG_DEPTH = 20;
+    public static final String TEST_MANAGED_BY_ORG_ID = "9a56eb19-23c4-4306-ae13-75299c2a40af";
+    public static final String TEST_MANAGED_BY_ORG_NAME = "mySubOrg2";
+    public static final String TEST_MANAGED_BY_ORG_HANDLE = "mySubOrg2.com";
+    public static final int TEST_MANAGED_BY_ORG_DEPTH = 10;
+
     @Mock
     private ActionExecutorService actionExecutorService;
 
     @Mock
     private ClaimMetadataManagementService claimMetadataManagementService;
+
+    @Mock
+    private OrganizationManager organizationManager;
 
     private PreUpdateProfileActionExecutor preUpdateProfileActionExecutor;
 
@@ -102,6 +122,7 @@ public class PreUpdateProfileActionExecutorTest {
         MockitoAnnotations.openMocks(this);
         SCIMCommonComponentHolder.setActionExecutorService(actionExecutorService);
         SCIMCommonComponentHolder.setClaimManagementService(claimMetadataManagementService);
+        SCIMCommonComponentHolder.setOrganizationManager(organizationManager);
 
         frameworkUtils = mockStatic(FrameworkUtils.class);
         frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
@@ -162,6 +183,87 @@ public class PreUpdateProfileActionExecutorTest {
 
         preUpdateProfileActionExecutor.execute(user, claimsToModify, claimsToDelete);
         verify(actionExecutorService).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
+    }
+
+    @Test
+    public void testSuccessExecutionForClaimUpdateExecutionAtPutOperationInSubOrgFlow() throws Exception {
+
+        IdentityContext.getThreadLocalIdentityContext().setOrganization(new Organization.Builder()
+                .id(TEST_RESIDENT_ORG_ID)
+                .name(TEST_RESIDENT_ORG_NAME)
+                .organizationHandle(TEST_RESIDENT_ORG_HANDLE)
+                .depth(TEST_RESIDENT_ORG_DEPTH)
+                .build());
+        when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
+
+        ActionExecutionStatus status = mock(ActionExecutionStatus.class);
+        when(status.getStatus()).thenReturn(ActionExecutionStatus.Status.SUCCESS);
+        when(actionExecutorService.execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any())).thenReturn(status);
+
+        LocalClaim newClaim = getMockedLocalClaim(NEW_SINGLEVALUE_CLAIM1);
+        LocalClaim deletingClaim = getMockedLocalClaim(DELETING_SINGLEVALUE_CLAIM4);
+        when(claimMetadataManagementService.getLocalClaim(eq(NEW_SINGLEVALUE_CLAIM1.getClaimURI()), any(String.class)))
+                .thenReturn(Optional.of(newClaim));
+        when(claimMetadataManagementService.getLocalClaim(eq(DELETING_SINGLEVALUE_CLAIM4.getClaimURI()),
+                any(String.class))).thenReturn(Optional.of(deletingClaim));
+
+        User user = getSCIMUser();
+
+        Map<String, String> claimsToModify = new HashMap<>();
+        claimsToModify.put(NEW_SINGLEVALUE_CLAIM1.getClaimURI(), NEW_SINGLEVALUE_CLAIM1.getInputValueAsString());
+
+        Map<String, String> claimsToDelete = new HashMap<>();
+        claimsToDelete.put(DELETING_SINGLEVALUE_CLAIM4.getClaimURI(),
+                DELETING_SINGLEVALUE_CLAIM4.getInputValueAsString());
+
+        preUpdateProfileActionExecutor.execute(user, claimsToModify, claimsToDelete);
+        verify(actionExecutorService).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
+        verify(organizationManager, never()).getBasicOrganizationDetailsByOrgIDs(any());
+    }
+
+    @Test
+    public void testSuccessExecutionForClaimUpdateExecutionAtPutOperationInSubOrgFlowForSharedUser() throws Exception {
+
+        IdentityContext.getThreadLocalIdentityContext().setOrganization(new Organization.Builder()
+                .id(TEST_RESIDENT_ORG_ID)
+                .name(TEST_RESIDENT_ORG_NAME)
+                .organizationHandle(TEST_RESIDENT_ORG_HANDLE)
+                .depth(TEST_RESIDENT_ORG_DEPTH)
+                .build());
+        BasicOrganization managedByOrg = new BasicOrganization();
+        managedByOrg.setId(TEST_MANAGED_BY_ORG_ID);
+        managedByOrg.setName(TEST_MANAGED_BY_ORG_NAME);
+        managedByOrg.setOrganizationHandle(TEST_MANAGED_BY_ORG_HANDLE);
+        doReturn(Collections.singletonMap(TEST_MANAGED_BY_ORG_ID, managedByOrg)).when(organizationManager)
+                .getBasicOrganizationDetailsByOrgIDs(any());
+        doReturn(TEST_MANAGED_BY_ORG_DEPTH).when(organizationManager).getOrganizationDepthInHierarchy(any());
+
+        when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
+
+        ActionExecutionStatus status = mock(ActionExecutionStatus.class);
+        when(status.getStatus()).thenReturn(ActionExecutionStatus.Status.SUCCESS);
+        when(actionExecutorService.execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any())).thenReturn(status);
+
+        LocalClaim newClaim = getMockedLocalClaim(NEW_SINGLEVALUE_CLAIM1);
+        LocalClaim deletingClaim = getMockedLocalClaim(DELETING_SINGLEVALUE_CLAIM4);
+        when(claimMetadataManagementService.getLocalClaim(eq(NEW_SINGLEVALUE_CLAIM1.getClaimURI()), any(String.class)))
+                .thenReturn(Optional.of(newClaim));
+        when(claimMetadataManagementService.getLocalClaim(eq(DELETING_SINGLEVALUE_CLAIM4.getClaimURI()),
+                any(String.class))).thenReturn(Optional.of(deletingClaim));
+
+        User user = getSCIMSharedUser();
+
+        Map<String, String> claimsToModify = new HashMap<>();
+        claimsToModify.put(NEW_SINGLEVALUE_CLAIM1.getClaimURI(), NEW_SINGLEVALUE_CLAIM1.getInputValueAsString());
+
+        Map<String, String> claimsToDelete = new HashMap<>();
+        claimsToDelete.put(DELETING_SINGLEVALUE_CLAIM4.getClaimURI(),
+                DELETING_SINGLEVALUE_CLAIM4.getInputValueAsString());
+
+        preUpdateProfileActionExecutor.execute(user, claimsToModify, claimsToDelete);
+        verify(actionExecutorService).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
+        verify(organizationManager, times(1)).getBasicOrganizationDetailsByOrgIDs(any());
+        verify(organizationManager, times(1)).getOrganizationDepthInHierarchy(any());
     }
 
     @Test
@@ -681,6 +783,20 @@ public class PreUpdateProfileActionExecutorTest {
         User user = new User();
         user.setId(TestConstants.TEST_USER_ID);
         user.setUserName(TestConstants.TEST_USER_USERNAME);
+
+        return user;
+    }
+
+    private static User getSCIMSharedUser() throws CharonException, BadRequestException {
+
+        User user = new User();
+        user.setId(TestConstants.TEST_USER_ID);
+        user.setUserName(TestConstants.TEST_USER_USERNAME);
+
+        SimpleAttribute managedOrgAttribute = new SimpleAttribute("managedOrg", TEST_MANAGED_BY_ORG_ID);
+        ComplexAttribute systemSchemaAttribute = new ComplexAttribute("urn:scim:wso2:schema");
+        systemSchemaAttribute.setSubAttribute(managedOrgAttribute);
+        user.setAttribute(systemSchemaAttribute);
 
         return user;
     }

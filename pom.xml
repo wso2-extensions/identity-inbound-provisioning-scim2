@@ -310,12 +310,12 @@
         <inbound.auth.oauth.version>6.5.3</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
         <carbon.kernel.version>4.10.64</carbon.kernel.version>
-        <identity.framework.version>7.8.260</identity.framework.version>
+        <identity.framework.version>7.8.335</identity.framework.version>
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.8.12</identity.governance.version>
         <charon.version>4.0.53</charon.version>
-        <org.wso2.carbon.identity.organization.management.core.version>1.0.76
+        <org.wso2.carbon.identity.organization.management.core.version>1.1.42
         </org.wso2.carbon.identity.organization.management.core.version>
         <org.wso2.carbon.identity.handler.event.account.lock.version>1.8.13
         </org.wso2.carbon.identity.handler.event.account.lock.version>
