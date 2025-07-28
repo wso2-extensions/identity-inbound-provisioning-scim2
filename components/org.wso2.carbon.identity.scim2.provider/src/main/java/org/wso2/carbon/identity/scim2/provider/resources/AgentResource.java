@@ -414,6 +414,7 @@ public class AgentResource extends UserResource {
         // Set agent flow context before super call
         LOG.debug("Setting thread local agent flow context to true for agent update, ID.");
         SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+        UserCoreUtil.setSkipPasswordPatternValidationThreadLocal(true);
 
         try {
             return super.updateUser(id, inputFormat, outputFormat, attribute, excludedAttributes, resourceString);
@@ -451,6 +452,7 @@ public class AgentResource extends UserResource {
         // Set agent flow context before super call
         LOG.debug("Setting thread local agent flow context to true for agent patch, ID.");
         SCIMCommonUtils.setThreadLocalIsSCIMAgentFlow(true);
+        UserCoreUtil.setSkipPasswordPatternValidationThreadLocal(true);
 
         try {
             return super.patchUser(id, inputFormat, outputFormat, attribute, excludedAttributes, resourceString);

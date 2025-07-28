@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.action.execution.api.model.ActionType;
 import org.wso2.carbon.identity.action.execution.api.model.Error;
 import org.wso2.carbon.identity.action.execution.api.model.Failure;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
+import org.wso2.carbon.identity.action.execution.api.model.Organization;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
@@ -34,18 +35,23 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.model.BasicOrganization;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
-import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionServerException;
 import org.wso2.carbon.identity.user.action.api.model.UserActionContext;
 import org.wso2.carbon.identity.user.action.api.model.UserActionRequestDTO;
 import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.charon3.core.attributes.Attribute;
+import org.wso2.charon3.core.attributes.SimpleAttribute;
+import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.User;
 
-import java.util.HashMap;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -101,7 +107,8 @@ public class PreUpdateProfileActionExecutor {
             throws UserStoreException {
 
         UserActionRequestDTO.Builder userActionRequestDTOBuilder = new UserActionRequestDTO.Builder()
-                .userId(user.getId());
+                .userId(user.getId())
+                .residentOrganization(getUserResidentOrganization(user));
 
         populateUpdatingClaimsInUserActionRequestDTO(userClaimsToBeModified, userActionRequestDTOBuilder);
         populateDeletingClaimsInUserActionRequestDTO(userClaimsToBeDeleted, userActionRequestDTOBuilder);
@@ -180,6 +187,84 @@ public class PreUpdateProfileActionExecutor {
         } catch (ClaimMetadataException e) {
             throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
                     "Error while retrieving claim metadata for claim URI: " + claimUri, e);
+        }
+    }
+
+    private Organization getUserResidentOrganization(User user) throws UserActionExecutionServerException {
+
+
+        org.wso2.carbon.identity.core.context.model.Organization accessingOrganization =
+                IdentityContext.getThreadLocalIdentityContext().getOrganization();
+        if (accessingOrganization == null) {
+            // If the accessing organization is null, it means the user is not accessing from an organization context.
+            // Hence, return null.
+            return null;
+        }
+
+        String managedOrgId = getUserManagedOrgId(user);
+        if (managedOrgId == null) {
+            // User resident organization is the accessing organization if the managed organization claim is not set.
+            return new Organization.Builder()
+                    .id(accessingOrganization.getId())
+                    .name(accessingOrganization.getName())
+                    .orgHandle(accessingOrganization.getOrganizationHandle())
+                    .depth(accessingOrganization.getDepth())
+                    .build();
+        }
+        // If the managed organization claim is set, retrieve the organization details.
+        return getOrganization(managedOrgId);
+    }
+
+    private String getUserManagedOrgId(User user) throws UserActionExecutionServerException {
+
+        try {
+            Attribute systemSchemaAttribute = user.getAttribute("urn:scim:wso2:schema");
+            if (systemSchemaAttribute == null) {
+                return null;
+            }
+            Attribute managedOrgAttribute = systemSchemaAttribute.getSubAttribute("managedOrg");
+            if (!(managedOrgAttribute instanceof SimpleAttribute)) {
+                return null;
+            }
+            return String.valueOf(((SimpleAttribute) managedOrgAttribute).getValue());
+        } catch (CharonException e) {
+            throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
+                    "Error while retrieving the user's managed by organization claim.", e);
+        }
+    }
+
+    private Organization getOrganization(String managedOrgId) throws UserActionExecutionServerException {
+
+        if (OrganizationManagementConstants.SUPER_ORG_ID.equals(managedOrgId)) {
+            return new Organization.Builder()
+                    .id(OrganizationManagementConstants.SUPER_ORG_ID)
+                    .name(OrganizationManagementConstants.SUPER)
+                    .orgHandle(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)
+                    .depth(0)
+                    .build();
+        }
+
+        try {
+            Map<String, BasicOrganization> orgsMap = SCIMCommonComponentHolder.getOrganizationManager()
+                    .getBasicOrganizationDetailsByOrgIDs(Collections.singletonList(managedOrgId));
+            BasicOrganization basicOrganization = orgsMap.get(managedOrgId);
+            if (basicOrganization == null) {
+                throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
+                        "No organization found for the user's managed organization id: " + managedOrgId);
+            }
+
+            int depth = SCIMCommonComponentHolder.getOrganizationManager()
+                    .getOrganizationDepthInHierarchy(managedOrgId);
+            return new Organization.Builder()
+                    .id(basicOrganization.getId())
+                    .name(basicOrganization.getName())
+                    .orgHandle(basicOrganization.getOrganizationHandle())
+                    .depth(depth)
+                    .build();
+        } catch (OrganizationManagementException e) {
+            throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
+                    "Error while retrieving organization details for the user's managed organization id: "
+                            + managedOrgId, e);
         }
     }
 }
