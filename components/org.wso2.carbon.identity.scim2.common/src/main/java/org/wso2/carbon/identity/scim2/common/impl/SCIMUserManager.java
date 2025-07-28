@@ -32,6 +32,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -5589,7 +5590,29 @@ public class SCIMUserManager implements UserManager {
         boolean isExecutableUserProfileUpdate =
                 SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted);
         if (isExecutableUserProfileUpdate) {
-            preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted);
+            ActionExecutionStatus<?> actionExecutionStatus = preUpdateProfileActionExecutor.execute(user,
+                    userClaimsToBeModified, userClaimsToBeDeleted);
+
+            if (actionExecutionStatus != null) {
+
+                Map<String, String> userClaimsToBeAddedFromAction = (HashMap<String, String>)
+                        actionExecutionStatus.getResponseContext().get("userClaimsToBeAdded");
+                Map<String, String> userClaimsToBeModifiedFromAction = (HashMap<String, String>)
+                        actionExecutionStatus.getResponseContext().get("userClaimsToBeModified");
+                Map<String, String> userClaimsToBeDeletedFromAction = (HashMap<String, String>)
+                        actionExecutionStatus.getResponseContext().get("userClaimsToBeRemoved");
+
+                if (userClaimsToBeAddedFromAction != null) {
+                    userClaimsToBeAdded.putAll(userClaimsToBeAddedFromAction);
+                    userClaimsToBeModified.putAll(userClaimsToBeAddedFromAction);
+                }
+                if (userClaimsToBeModifiedFromAction != null) {
+                    userClaimsToBeModified.putAll(userClaimsToBeModifiedFromAction);
+                }
+                if (userClaimsToBeDeletedFromAction != null) {
+                    userClaimsToBeDeleted.putAll(userClaimsToBeDeletedFromAction);
+                }
+            }
         }
 
         if (log.isDebugEnabled()) {
@@ -5705,12 +5728,38 @@ public class SCIMUserManager implements UserManager {
 
         if (isExecutableUserProfileUpdate) {
 
-            Map<String, String> multiValuedClaimsToModify =
-                    SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(oldClaimList, simpleMultiValuedClaimsToBeAdded,
-                            simpleMultiValuedClaimsToBeRemoved);
-            userClaimsToBeModifiedIncludingMultiValueClaims.putAll(multiValuedClaimsToModify);
+            populateMultiValuedClaimsToModify(oldClaimList, simpleMultiValuedClaimsToBeAdded,
+                    simpleMultiValuedClaimsToBeRemoved, userClaimsToBeModifiedIncludingMultiValueClaims);
 
-            preUpdateProfileActionExecutor.execute(user, userClaimsToBeModifiedIncludingMultiValueClaims, userClaimsToBeDeleted);
+            ActionExecutionStatus<?> actionExecutionStatus = preUpdateProfileActionExecutor.execute(user,
+                    userClaimsToBeModifiedIncludingMultiValueClaims, userClaimsToBeDeleted);
+            if (actionExecutionStatus != null) {
+
+                Map<String, String> userClaimsToBeAddedFromAction = (HashMap<String, String>)
+                        actionExecutionStatus.getResponseContext().get("userClaimsToBeAdded");
+                Map<String, String> userClaimsToBeModifiedFromAction = (HashMap<String, String>)
+                        actionExecutionStatus.getResponseContext().get("userClaimsToBeModified");
+                Map<String, List<String>> simpleMultiValuedClaimsToBeAddedFromAction = (HashMap<String, List<String>>)
+                        actionExecutionStatus.getResponseContext().get("multiValuedClaimsToBeAdded");
+                Map<String, List<String>> simpleMultiValuedClaimsToBeRemovedFromAction = (HashMap<String, List<String>>)
+                        actionExecutionStatus.getResponseContext().get("multiValuedClaimsToBeRemoved");
+
+                if (userClaimsToBeAddedFromAction != null) {
+                    userClaimsToBeAdded.putAll(userClaimsToBeAddedFromAction);
+                    userClaimsToBeModified.putAll(userClaimsToBeAddedFromAction);
+                }
+                if (userClaimsToBeModifiedFromAction != null) {
+                    userClaimsToBeModified.putAll(userClaimsToBeModifiedFromAction);
+                }
+                if (simpleMultiValuedClaimsToBeAddedFromAction != null) {
+                    simpleMultiValuedClaimsToBeAdded.putAll(simpleMultiValuedClaimsToBeAddedFromAction);
+                }
+                if (simpleMultiValuedClaimsToBeRemovedFromAction != null) {
+                    simpleMultiValuedClaimsToBeRemoved.putAll(simpleMultiValuedClaimsToBeRemovedFromAction);
+                }
+                populateMultiValuedClaimsToModify(oldClaimList, simpleMultiValuedClaimsToBeAdded,
+                        simpleMultiValuedClaimsToBeRemoved, userClaimsToBeModifiedIncludingMultiValueClaims);
+            }
         }
 
         if (log.isDebugEnabled()) {
@@ -5746,6 +5795,26 @@ public class SCIMUserManager implements UserManager {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
+    }
+
+    /**
+     * Populate both modifiable single and multi-valued claims.
+     *
+     * @param oldClaimList User claim list for the user's existing state.
+     * @param simpleMultiValuedClaimsToBeAdded Map of simple multi-valued claims to be added.
+     * @param simpleMultiValuedClaimsToBeRemoved Map of simple multi-valued claims to be removed.
+     * @param userClaimsToBeModifiedIncludingMultiValueClaims Map of both single and multi valued claims to be modified.
+     * @return Map with the same keys and values as lists of strings, splitting multi-valued claims if necessary.
+     */
+    private void populateMultiValuedClaimsToModify(Map<String, String> oldClaimList, Map<String, List<String>>
+            simpleMultiValuedClaimsToBeAdded, Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved,
+                                                   Map<String, String> userClaimsToBeModifiedIncludingMultiValueClaims)
+    {
+
+        Map<String, String> multiValuedClaimsToModify =
+                SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(oldClaimList, simpleMultiValuedClaimsToBeAdded,
+                        simpleMultiValuedClaimsToBeRemoved);
+        userClaimsToBeModifiedIncludingMultiValueClaims.putAll(multiValuedClaimsToModify);
     }
 
     /**
