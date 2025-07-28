@@ -37,7 +37,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.identity.organization.management.service.model.BasicOrganization;
+import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
@@ -51,7 +51,6 @@ import org.wso2.charon3.core.attributes.SimpleAttribute;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.objects.User;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -196,9 +195,8 @@ public class PreUpdateProfileActionExecutor {
         org.wso2.carbon.identity.core.context.model.Organization accessingOrganization =
                 IdentityContext.getThreadLocalIdentityContext().getOrganization();
         if (accessingOrganization == null) {
-            // If the accessing organization is null, it means the user is not accessing from an organization context.
-            // Hence, return null.
-            return null;
+            throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
+                    "Accessing organization is not present in the identity context.");
         }
 
         String managedOrgId = getUserManagedOrgId(user);
@@ -245,21 +243,18 @@ public class PreUpdateProfileActionExecutor {
         }
 
         try {
-            Map<String, BasicOrganization> orgsMap = SCIMCommonComponentHolder.getOrganizationManager()
-                    .getBasicOrganizationDetailsByOrgIDs(Collections.singletonList(managedOrgId));
-            BasicOrganization basicOrganization = orgsMap.get(managedOrgId);
-            if (basicOrganization == null) {
+            MinimalOrganization minimalOrganization = SCIMCommonComponentHolder.getOrganizationManager()
+                    .getMinimalOrganization(managedOrgId, null);
+            if (minimalOrganization == null) {
                 throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
                         "No organization found for the user's managed organization id: " + managedOrgId);
             }
 
-            int depth = SCIMCommonComponentHolder.getOrganizationManager()
-                    .getOrganizationDepthInHierarchy(managedOrgId);
             return new Organization.Builder()
-                    .id(basicOrganization.getId())
-                    .name(basicOrganization.getName())
-                    .orgHandle(basicOrganization.getOrganizationHandle())
-                    .depth(depth)
+                    .id(minimalOrganization.getId())
+                    .name(minimalOrganization.getName())
+                    .orgHandle(minimalOrganization.getOrganizationHandle())
+                    .depth(minimalOrganization.getDepth())
                     .build();
         } catch (OrganizationManagementException e) {
             throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,

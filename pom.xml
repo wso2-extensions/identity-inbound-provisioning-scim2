@@ -315,7 +315,7 @@
         <commons.lang.version>20030203.000129</commons.lang.version>
         <identity.governance.version>1.8.12</identity.governance.version>
         <charon.version>4.0.53</charon.version>
-        <org.wso2.carbon.identity.organization.management.core.version>1.1.42
+        <org.wso2.carbon.identity.organization.management.core.version>1.1.44
         </org.wso2.carbon.identity.organization.management.core.version>
         <org.wso2.carbon.identity.handler.event.account.lock.version>1.8.13
         </org.wso2.carbon.identity.handler.event.account.lock.version>
