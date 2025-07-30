@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.Organization;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.model.BasicOrganization;
+import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.constants.TestConstants;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
@@ -159,6 +160,7 @@ public class PreUpdateProfileActionExecutorTest {
     @Test
     public void testSuccessExecutionForClaimUpdateExecutionAtPutOperation() throws Exception {
 
+        setOrganizationToIdentityContext();
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
         ActionExecutionStatus status = mock(ActionExecutionStatus.class);
@@ -230,13 +232,13 @@ public class PreUpdateProfileActionExecutorTest {
                 .organizationHandle(TEST_RESIDENT_ORG_HANDLE)
                 .depth(TEST_RESIDENT_ORG_DEPTH)
                 .build());
-        BasicOrganization managedByOrg = new BasicOrganization();
-        managedByOrg.setId(TEST_MANAGED_BY_ORG_ID);
-        managedByOrg.setName(TEST_MANAGED_BY_ORG_NAME);
-        managedByOrg.setOrganizationHandle(TEST_MANAGED_BY_ORG_HANDLE);
-        doReturn(Collections.singletonMap(TEST_MANAGED_BY_ORG_ID, managedByOrg)).when(organizationManager)
-                .getBasicOrganizationDetailsByOrgIDs(any());
-        doReturn(TEST_MANAGED_BY_ORG_DEPTH).when(organizationManager).getOrganizationDepthInHierarchy(any());
+        MinimalOrganization managedByOrg = new MinimalOrganization.Builder()
+                .id(TEST_MANAGED_BY_ORG_ID)
+                .name(TEST_MANAGED_BY_ORG_NAME)
+                .organizationHandle(TEST_MANAGED_BY_ORG_HANDLE)
+                .depth(TEST_MANAGED_BY_ORG_DEPTH)
+                .build();
+        doReturn(managedByOrg).when(organizationManager).getMinimalOrganization(any(), any());
 
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
@@ -262,13 +264,13 @@ public class PreUpdateProfileActionExecutorTest {
 
         preUpdateProfileActionExecutor.execute(user, claimsToModify, claimsToDelete);
         verify(actionExecutorService).execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any());
-        verify(organizationManager, times(1)).getBasicOrganizationDetailsByOrgIDs(any());
-        verify(organizationManager, times(1)).getOrganizationDepthInHierarchy(any());
+        verify(organizationManager, times(1)).getMinimalOrganization(any(), any());
     }
 
     @Test
     public void testFailureExecutionForClaimUpdateExecutionAtPutOperation() throws Exception {
 
+        setOrganizationToIdentityContext();
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
         ActionExecutionStatus status = mock(ActionExecutionStatus.class);
@@ -307,6 +309,7 @@ public class PreUpdateProfileActionExecutorTest {
     @Test
     public void testErrorExecutionForClaimUpdateExecutionAtPutOperation() throws Exception {
 
+        setOrganizationToIdentityContext();
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
         ActionExecutionStatus status = mock(ActionExecutionStatus.class);
@@ -345,6 +348,7 @@ public class PreUpdateProfileActionExecutorTest {
     @Test
     public void testExecutionSkippedForFlowInitiatorClaimUpdateExecutionAtPutOperation() throws Exception {
 
+        setOrganizationToIdentityContext();
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
         ActionExecutionStatus status = mock(ActionExecutionStatus.class);
@@ -369,6 +373,7 @@ public class PreUpdateProfileActionExecutorTest {
     @Test
     public void testSuccessExecutionForNoClaimUpdateExecutionAtPutOperation() throws Exception {
 
+        setOrganizationToIdentityContext();
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
         ActionExecutionStatus status = mock(ActionExecutionStatus.class);
@@ -384,6 +389,7 @@ public class PreUpdateProfileActionExecutorTest {
     @Test
     public void testSuccessExecutionForClaimUpdateExecutionAtPatchOperation() throws Exception {
 
+        setOrganizationToIdentityContext();
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
         ActionExecutionStatus status = mock(ActionExecutionStatus.class);
@@ -471,6 +477,7 @@ public class PreUpdateProfileActionExecutorTest {
     @Test
     public void testUserActionRequestDTOForClaimUpdateExecutionAtPutOperation() throws Exception {
 
+        setOrganizationToIdentityContext();
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
         ActionExecutionStatus<?> status = mock(ActionExecutionStatus.class);
@@ -591,6 +598,7 @@ public class PreUpdateProfileActionExecutorTest {
     @Test
     public void testUserActionRequestDTOForClaimUpdateExecutionInPatchOperation() throws Exception {
 
+        setOrganizationToIdentityContext();
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
         ActionExecutionStatus<?> status = mock(ActionExecutionStatus.class);
@@ -755,6 +763,7 @@ public class PreUpdateProfileActionExecutorTest {
     @Test
     public void testSuccessExecutionForNoClaimUpdateExecutionAtPatchOperation() throws Exception {
 
+        setOrganizationToIdentityContext();
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
         ActionExecutionStatus status = mock(ActionExecutionStatus.class);
@@ -823,5 +832,15 @@ public class PreUpdateProfileActionExecutorTest {
         when(localClaim.getClaimProperty(ClaimConstants.MULTI_VALUED_PROPERTY)).thenReturn("false");
 
         return localClaim;
+    }
+
+    private void setOrganizationToIdentityContext() {
+
+        IdentityContext.getThreadLocalIdentityContext().setOrganization(new Organization.Builder()
+                .id(TEST_RESIDENT_ORG_ID)
+                .name(TEST_RESIDENT_ORG_NAME)
+                .organizationHandle(TEST_RESIDENT_ORG_HANDLE)
+                .depth(TEST_RESIDENT_ORG_DEPTH)
+                .build());
     }
 }
