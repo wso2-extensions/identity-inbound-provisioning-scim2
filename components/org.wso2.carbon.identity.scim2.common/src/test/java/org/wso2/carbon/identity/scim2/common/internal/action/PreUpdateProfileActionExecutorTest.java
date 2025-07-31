@@ -45,7 +45,7 @@ import org.wso2.carbon.identity.organization.management.service.model.MinimalOrg
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.constants.TestConstants;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
-import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.scim2.common.utils.ExtensionCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionServerException;
@@ -153,7 +153,7 @@ public class PreUpdateProfileActionExecutorTest {
         preUpdateProfileActionExecutor.execute(user, Collections.emptyMap(), Collections.emptyMap());
         verify(actionExecutorService, Mockito.never()).execute(any(), any(), any());
 
-        assertFalse(SCIMCommonUtils.isExecutableUserProfileUpdate(Collections.emptyMap(), Collections.emptyMap(),
+        assertFalse(ExtensionCommonUtils.isExecutableUserProfileUpdate(Collections.emptyMap(), Collections.emptyMap(),
                 Collections.emptyMap(), Collections.emptyMap()));
     }
 
@@ -367,7 +367,7 @@ public class PreUpdateProfileActionExecutorTest {
                 FLOW_INITIATOR_SINGLEVALUE_IDENTITY_CLAIM1.getInputValueAsString());
 
         Map<String, String> claimsToDelete = new HashMap<>();
-        assertFalse(SCIMCommonUtils.isExecutableUserProfileUpdate(claimsToModify, claimsToDelete));
+        assertFalse(ExtensionCommonUtils.isExecutableUserProfileUpdate(claimsToModify, claimsToDelete));
     }
 
     @Test
@@ -383,7 +383,7 @@ public class PreUpdateProfileActionExecutorTest {
         Map<String, String> claimsToModify = new HashMap<>();
         Map<String, String> claimsToDelete = new HashMap<>();
 
-        assertFalse(SCIMCommonUtils.isExecutableUserProfileUpdate(claimsToModify, claimsToDelete));
+        assertFalse(ExtensionCommonUtils.isExecutableUserProfileUpdate(claimsToModify, claimsToDelete));
     }
 
     @Test
@@ -452,7 +452,7 @@ public class PreUpdateProfileActionExecutorTest {
                 DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8.getExistingValueInUser());
 
         boolean isExecutableUserProfileUpdate =
-                SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsExcludingMultiValuedClaimsToBeModified,
+                ExtensionCommonUtils.isExecutableUserProfileUpdate(userClaimsExcludingMultiValuedClaimsToBeModified,
                         userClaimsExcludingMultiValuedClaimsToBeDeleted, simpleMultiValuedClaimsToBeAdded,
                         simpleMultiValuedClaimsToBeRemoved);
         assertTrue(isExecutableUserProfileUpdate);
@@ -461,7 +461,7 @@ public class PreUpdateProfileActionExecutorTest {
                 new HashMap<>(userClaimsExcludingMultiValuedClaimsToBeModified);
 
         Map<String, String> multiValuedClaimsToModify =
-                SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(existingClaimsOfUser,
+                ExtensionCommonUtils.getSimpleMultiValuedClaimsToModify(existingClaimsOfUser,
                         simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved);
         assertNotNull(multiValuedClaimsToModify);
 
@@ -693,7 +693,7 @@ public class PreUpdateProfileActionExecutorTest {
                 DELETING_MULTIVALUE_INPUT_VALUE_AS_STRING_LIST_CLAIM8.getExistingValueInUser());
 
         boolean isExecutableUserProfileUpdate =
-                SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsExcludingMultiValuedClaimsToBeModified,
+                ExtensionCommonUtils.isExecutableUserProfileUpdate(userClaimsExcludingMultiValuedClaimsToBeModified,
                         userClaimsExcludingMultiValuedClaimsToBeDeleted, simpleMultiValuedClaimsToBeAdded,
                         simpleMultiValuedClaimsToBeRemoved);
         assertTrue(isExecutableUserProfileUpdate);
@@ -702,7 +702,7 @@ public class PreUpdateProfileActionExecutorTest {
                 new HashMap<>(userClaimsExcludingMultiValuedClaimsToBeModified);
 
         Map<String, String> multiValuedClaimsToModify =
-                SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(existingClaimsOfUser,
+                ExtensionCommonUtils.getSimpleMultiValuedClaimsToModify(existingClaimsOfUser,
                         simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved);
         assertNotNull(multiValuedClaimsToModify);
 
@@ -781,7 +781,7 @@ public class PreUpdateProfileActionExecutorTest {
 
         Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved = new HashMap<>();
 
-        assertFalse(SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsExcludingMultiValuedClaimsToBeModified,
+        assertFalse(ExtensionCommonUtils.isExecutableUserProfileUpdate(userClaimsExcludingMultiValuedClaimsToBeModified,
                 userClaimsExcludingMultiValuedClaimsToBeDeleted,
                 simpleMultiValuedClaimsToBeAdded,
                 simpleMultiValuedClaimsToBeRemoved));

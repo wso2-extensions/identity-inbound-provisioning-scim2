@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
+import org.wso2.carbon.identity.scim2.common.utils.ExtensionCommonUtils;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
 import org.wso2.charon3.core.exceptions.CharonException;
@@ -158,7 +159,7 @@ public class MeResource extends AbstractResource {
                                @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
-        updateIdentityContext();
+        ExtensionCommonUtils.enterFlow(Flow.Name.PROFILE_UPDATE, Flow.InitiatingPersona.USER);
         String userId = SupportUtils.getAuthenticatedUserId();
         try {
             // content-type header is compulsory in post request.
@@ -195,6 +196,8 @@ public class MeResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            ExtensionCommonUtils.exitFlow();
         }
     }
 
@@ -205,7 +208,7 @@ public class MeResource extends AbstractResource {
                               @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                               String resourceString) {
 
-        updateIdentityContext();
+        ExtensionCommonUtils.enterFlow(Flow.Name.PROFILE_UPDATE, Flow.InitiatingPersona.USER);
         String userId = SupportUtils.getAuthenticatedUserId();
         try {
             // content-type header is compulsory in post request.
@@ -242,19 +245,8 @@ public class MeResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            ExtensionCommonUtils.exitFlow();
         }
-    }
-
-    /**
-     * This is used to set the flow and initiator in the identity context.
-     * These values will be used in the pre update password action.
-     */
-    private void updateIdentityContext() {
-
-        Flow flow = new Flow.Builder()
-                .name(Flow.Name.PROFILE_UPDATE)
-                .initiatingPersona(Flow.InitiatingPersona.USER)
-                .build();
-        IdentityContext.getThreadLocalIdentityContext().setFlow(flow);
     }
 }
