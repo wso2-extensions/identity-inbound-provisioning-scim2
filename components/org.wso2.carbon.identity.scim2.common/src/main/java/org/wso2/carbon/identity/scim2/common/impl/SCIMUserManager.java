@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
@@ -63,6 +64,7 @@ import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.action.PreUpdateProfileActionExecutor;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
+import org.wso2.carbon.identity.scim2.common.utils.ExtensionCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
@@ -1268,8 +1270,10 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
+                ExtensionCommonUtils.enterFlow(Flow.Name.CREDENTIAL_UPDATE, null);
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                 publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
+                ExtensionCommonUtils.exitFlow();
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect);
@@ -1459,8 +1463,10 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
+                ExtensionCommonUtils.enterFlow(Flow.Name.CREDENTIAL_UPDATE, null);
                 carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                 publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
+                ExtensionCommonUtils.exitFlow();
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect, allSimpleMultiValuedClaimsList);
@@ -5615,7 +5621,7 @@ public class SCIMUserManager implements UserManager {
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
 
         boolean isExecutableUserProfileUpdate =
-                SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted);
+                ExtensionCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted);
         if (isExecutableUserProfileUpdate) {
             preUpdateProfileActionExecutor.execute(user, userClaimsToBeModified, userClaimsToBeDeleted);
         }
@@ -5733,14 +5739,14 @@ public class SCIMUserManager implements UserManager {
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
 
         boolean isExecutableUserProfileUpdate =
-                SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted,
+                ExtensionCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted,
                         simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved);
         Map<String, String> userClaimsToBeModifiedIncludingMultiValueClaims = new HashMap<>(userClaimsToBeModified);
 
         if (isExecutableUserProfileUpdate) {
 
             Map<String, String> multiValuedClaimsToModify =
-                    SCIMCommonUtils.getSimpleMultiValuedClaimsToModify(oldClaimList, simpleMultiValuedClaimsToBeAdded,
+                    ExtensionCommonUtils.getSimpleMultiValuedClaimsToModify(oldClaimList, simpleMultiValuedClaimsToBeAdded,
                             simpleMultiValuedClaimsToBeRemoved);
             userClaimsToBeModifiedIncludingMultiValueClaims.putAll(multiValuedClaimsToModify);
 
@@ -7459,7 +7465,7 @@ public class SCIMUserManager implements UserManager {
         Set<String> claimUris = claimMap.keySet();
         try {
             for (String claimUri : claimUris) {
-                if ((SCIMCommonUtils.isFlowInitiatorClaim(claimUri) || isAccountStateManagementFlowClaim(claimUri)) &&
+                if ((ExtensionCommonUtils.isFlowInitiatorClaim(claimUri) || isAccountStateManagementFlowClaim(claimUri)) &&
                         Boolean.parseBoolean(claimMap.get(claimUri))) {
                     return false;
                 }

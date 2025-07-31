@@ -23,12 +23,12 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.core.context.model.Flow;
-import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.common.utils.AdminAttributeUtil;
+import org.wso2.carbon.identity.scim2.common.utils.ExtensionCommonUtils;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
@@ -295,8 +295,8 @@ public class UserResource extends AbstractResource {
                                @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
+        ExtensionCommonUtils.enterFlow(Flow.Name.PROFILE_UPDATE, null);
         try {
-            SupportUtils.updateIdentityContextFlow(Flow.Name.PROFILE_UPDATE);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -332,6 +332,8 @@ public class UserResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            ExtensionCommonUtils.exitFlow();
         }
     }
 
@@ -344,9 +346,8 @@ public class UserResource extends AbstractResource {
                               @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                               String resourceString) {
 
-
+        ExtensionCommonUtils.enterFlow(Flow.Name.PROFILE_UPDATE, null);
         try {
-            SupportUtils.updateIdentityContextFlow(Flow.Name.PROFILE_UPDATE);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -391,6 +392,8 @@ public class UserResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            ExtensionCommonUtils.exitFlow();
         }
     }
 

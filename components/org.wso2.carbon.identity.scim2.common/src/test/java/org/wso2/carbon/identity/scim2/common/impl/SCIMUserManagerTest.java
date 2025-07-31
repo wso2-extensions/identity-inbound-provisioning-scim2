@@ -34,6 +34,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -46,6 +47,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.ApplicationActor;
+import org.wso2.carbon.identity.core.context.model.UserActor;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
@@ -272,6 +276,8 @@ public class SCIMUserManagerTest {
                 .thenReturn(CUSTOM_EXTENSION_SCHEMA_URI);
         scimSystemSchemaExtensionBuilder.when(SCIMSystemSchemaExtensionBuilder::getInstance).thenReturn(mockSCIMSystemSchemaExtensionBuilder);
         when(mockSCIMSystemSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getClaimManagementService)
+                .thenReturn(mockClaimMetadataManagementService);
     }
 
     @AfterMethod
@@ -1603,6 +1609,10 @@ public class SCIMUserManagerTest {
         doReturn(true).when(mockedUserStoreManager).isExistingUserWithID(anyString());
         doThrow(userStoreClientException)
                 .when(mockedUserStoreManager).updateCredentialByAdminWithID(anyString(), any());
+        IdentityContext.getThreadLocalIdentityContext().setActor(new UserActor.Builder()
+                .userId("user-id")
+                .username("user-name")
+                .build());
 
         try {
             scimUserManager.updateUser(newUser, Collections.emptyMap());
@@ -1623,6 +1633,7 @@ public class SCIMUserManagerTest {
             assertEquals(badRequestException.getDetail(), TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION);
             assertEquals(badRequestException.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
         }
+        IdentityContext.destroyCurrentContext();
     }
 
     @Test
@@ -2369,16 +2380,27 @@ public class SCIMUserManagerTest {
         doNothing().when(mockedUserStoreManager).setUserClaimValuesWithID(any(), anyMap(), isNull());
         doNothing().when(mockedUserStoreManager).deleteUserClaimValueWithID(any(), any(), any());
 
-        Method m = SCIMUserManager.class.getDeclaredMethod(
-                "updateUserClaims",
-                User.class, Map.class, Map.class, Map.class
-        );
-        m.setAccessible(true);
-        m.invoke(scimUserManager, user, oldClaims, newClaims, multiValuedClaims);
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getClaimManagementService)
+                .thenReturn(mockClaimMetadataManagementService);
 
-        verify(mockedUserStoreManager).deleteUserClaimValueWithID(eq("foo"), eq("claim2"), isNull());
-        verify(mockedUserStoreManager).setUserClaimValuesWithID(eq("foo"),
-                argThat(map -> map.containsKey("claim1") && map.containsKey("claim3")), isNull());
+        IdentityEventService mockService = mock(IdentityEventService.class);
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getIdentityEventService).thenReturn(mockService);
+
+        try (MockedStatic<org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils> fw =
+                     mockStatic(org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.class)) {
+            fw.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            Method m = SCIMUserManager.class.getDeclaredMethod(
+                    "updateUserClaims",
+                    User.class, Map.class, Map.class, Map.class
+                                                              );
+            m.setAccessible(true);
+            m.invoke(scimUserManager, user, oldClaims, newClaims, multiValuedClaims);
+
+            verify(mockedUserStoreManager).deleteUserClaimValueWithID(eq("foo"), eq("claim2"), isNull());
+            verify(mockedUserStoreManager).setUserClaimValuesWithID(eq("foo"),
+                    argThat(map -> map.containsKey("claim1") && map.containsKey("claim3")), isNull());
+        }
     }
 
     @Test
@@ -2417,6 +2439,9 @@ public class SCIMUserManagerTest {
                     .thenReturn(",");
 
             doNothing().when(mockedUserStoreManager).setUserClaimValuesWithID(any(), anyMap(), anyMap(), anyMap(), anyMap(), isNull());
+
+            IdentityEventService mockService = mock(IdentityEventService.class);
+            scimCommonComponentHolder.when(SCIMCommonComponentHolder::getIdentityEventService).thenReturn(mockService);
 
             Method m = SCIMUserManager.class.getDeclaredMethod(
                     "updateUserClaims", User.class, Map.class, Map.class, Map.class
