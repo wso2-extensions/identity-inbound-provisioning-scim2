@@ -22,8 +22,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
@@ -115,9 +115,9 @@ public class UserResource extends AbstractResource {
             }
 
             if (isAskPasswordFlow(resourceString)) {
-                SupportUtils.updateIdentityContextFlow(Flow.Name.INVITE);
+                SupportUtils.enterFlow(Flow.Name.INVITE);
             } else {
-                SupportUtils.updateIdentityContextFlow(Flow.Name.REGISTER);
+                SupportUtils.enterFlow(Flow.Name.REGISTER);
             }
 
             // obtain the user store manager
@@ -144,6 +144,7 @@ public class UserResource extends AbstractResource {
             return handleFormatNotSupportedException(e);
         } finally {
             removeAskPasswordConfirmationCodeThreadLocal();
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 
@@ -152,6 +153,7 @@ public class UserResource extends AbstractResource {
     public Response deleteUser(@PathParam(SCIMProviderConstants.ID) String id,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
 
+        SupportUtils.enterFlow(Flow.Name.USER_DELETE);
         try {
             // defaults to application/scim+json.
             if (format == null) {
@@ -162,7 +164,6 @@ public class UserResource extends AbstractResource {
                 throw  new FormatNotSupportedException(error);
             }
 
-            SupportUtils.updateIdentityContextFlow(Flow.Name.USER_DELETE);
             // obtain the user store manager
             UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
 
@@ -188,6 +189,8 @@ public class UserResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 
@@ -295,8 +298,8 @@ public class UserResource extends AbstractResource {
                                @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
+        SupportUtils.enterFlow(Flow.Name.PROFILE_UPDATE);
         try {
-            SupportUtils.updateIdentityContextFlow(Flow.Name.PROFILE_UPDATE);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -332,6 +335,8 @@ public class UserResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 
@@ -345,8 +350,8 @@ public class UserResource extends AbstractResource {
                               String resourceString) {
 
 
+        SupportUtils.enterFlow(Flow.Name.PROFILE_UPDATE);
         try {
-            SupportUtils.updateIdentityContextFlow(Flow.Name.PROFILE_UPDATE);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -391,6 +396,8 @@ public class UserResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 

@@ -78,6 +78,7 @@ public class MeResource extends AbstractResource {
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String  excludedAttributes,
                                String resourceString) {
 
+        SupportUtils.enterFlow(Flow.Name.REGISTER);
         try {
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
@@ -95,7 +96,6 @@ public class MeResource extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw  new FormatNotSupportedException(error);
             }
-            SupportUtils.updateIdentityContextFlow(Flow.Name.REGISTER);
 
             // create charon-SCIM user endpoint and hand-over the request.
             MeResourceManager meResourceManager = new MeResourceManager();
@@ -115,6 +115,8 @@ public class MeResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 
@@ -255,6 +257,6 @@ public class MeResource extends AbstractResource {
                 .name(Flow.Name.PROFILE_UPDATE)
                 .initiatingPersona(Flow.InitiatingPersona.USER)
                 .build();
-        IdentityContext.getThreadLocalIdentityContext().setFlow(flow);
+        IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
     }
 }
