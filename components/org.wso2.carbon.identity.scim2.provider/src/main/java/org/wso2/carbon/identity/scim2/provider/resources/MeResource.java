@@ -78,8 +78,8 @@ public class MeResource extends AbstractResource {
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String  excludedAttributes,
                                String resourceString) {
 
-        SupportUtils.enterFlow(Flow.Name.REGISTER);
         try {
+            SupportUtils.enterFlow(Flow.Name.REGISTER);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE

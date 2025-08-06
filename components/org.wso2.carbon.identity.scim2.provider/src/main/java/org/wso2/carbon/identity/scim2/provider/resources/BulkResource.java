@@ -42,8 +42,8 @@ public class BulkResource extends AbstractResource {
     public Response createUser(@HeaderParam(SCIMProviderConstants.CONTENT_TYPE) String inputFormat,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                String resourceString) {
-        SupportUtils.enterFlow(Flow.Name.BULK_RESOURCE_UPDATE);
         try {
+            SupportUtils.enterFlow(Flow.Name.BULK_RESOURCE_UPDATE);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE

@@ -153,8 +153,8 @@ public class UserResource extends AbstractResource {
     public Response deleteUser(@PathParam(SCIMProviderConstants.ID) String id,
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
 
-        SupportUtils.enterFlow(Flow.Name.USER_DELETE);
         try {
+            SupportUtils.enterFlow(Flow.Name.USER_DELETE);
             // defaults to application/scim+json.
             if (format == null) {
                 format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
@@ -298,8 +298,8 @@ public class UserResource extends AbstractResource {
                                @QueryParam (SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
-        SupportUtils.enterFlow(Flow.Name.PROFILE_UPDATE);
         try {
+            SupportUtils.enterFlow(Flow.Name.PROFILE_UPDATE);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -350,8 +350,8 @@ public class UserResource extends AbstractResource {
                               String resourceString) {
 
 
-        SupportUtils.enterFlow(Flow.Name.PROFILE_UPDATE);
         try {
+            SupportUtils.enterFlow(Flow.Name.PROFILE_UPDATE);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE

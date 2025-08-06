@@ -367,8 +367,8 @@ public class GroupResource extends AbstractResource {
                                @QueryParam(SCIMProviderConstants.EXCLUDE_ATTRIBUTES) String excludedAttributes,
                                String resourceString) {
 
-        SupportUtils.enterFlow(Flow.Name.GROUP_UPDATE);
         try {
+            SupportUtils.enterFlow(Flow.Name.GROUP_UPDATE);
             // content-type header is compulsory in patch request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
