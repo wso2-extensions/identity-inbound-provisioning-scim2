@@ -244,19 +244,15 @@ public class SupportUtils {
      *
      * @param flowName The name of the flow to set in the identity context.
      */
-    public static void updateIdentityContextFlow(Flow.Name flowName) {
-
-        if (IdentityContext.getThreadLocalIdentityContext().getFlow() != null) {
-            return;
-        }
+    public static void enterFlow(Flow.Name flowName) {
 
         if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
             IdentityContext.getThreadLocalIdentityContext()
-                    .setFlow(new Flow.Builder().name(flowName).initiatingPersona(
+                    .enterFlow(new Flow.Builder().name(flowName).initiatingPersona(
                             Flow.InitiatingPersona.APPLICATION).build());
         } else if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
             IdentityContext.getThreadLocalIdentityContext()
-                    .setFlow(new Flow.Builder().name(flowName).initiatingPersona(
+                    .enterFlow(new Flow.Builder().name(flowName).initiatingPersona(
                             Flow.InitiatingPersona.ADMIN).build());
         }
     }
