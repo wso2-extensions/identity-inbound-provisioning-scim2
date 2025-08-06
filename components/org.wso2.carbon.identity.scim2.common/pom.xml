@@ -165,6 +165,10 @@
             <artifactId>org.wso2.carbon.identity.user.action</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.organization.management</groupId>
+            <artifactId>org.wso2.carbon.identity.organization.management.organization.user.sharing</artifactId>
+        </dependency>
+        <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
         </dependency>
@@ -270,6 +274,8 @@
                             version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.organization.management.service.*;
                             version="${org.wso2.carbon.identity.organization.management.core.version.range}",
+                            org.wso2.carbon.identity.organization.management.organization.user.sharing.*;
+                            version="${org.wso2.carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.handler.event.account.lock.*;
                             version="${carbon.identity.account.lock.handler.imp.pkg.version.range}",
                             org.wso2.carbon.idp.mgt.*;version="${carbon.identity.framework.imp.pkg.version.range}",

@@ -39,8 +39,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.Organization;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
-import org.wso2.carbon.identity.organization.management.service.model.BasicOrganization;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.constants.TestConstants;
@@ -103,6 +104,7 @@ public class PreUpdateProfileActionExecutorTest {
     public static final String TEST_MANAGED_BY_ORG_NAME = "mySubOrg2";
     public static final String TEST_MANAGED_BY_ORG_HANDLE = "mySubOrg2.com";
     public static final int TEST_MANAGED_BY_ORG_DEPTH = 10;
+    public static final String TEST_SHARED_USER_ID = "a84a536f-c3ec-4508-a9fa-ac67087a8da3";
 
     @Mock
     private ActionExecutorService actionExecutorService;
@@ -112,6 +114,9 @@ public class PreUpdateProfileActionExecutorTest {
 
     @Mock
     private OrganizationManager organizationManager;
+
+    @Mock
+    private OrganizationUserSharingService organizationUserSharingService;
 
     private PreUpdateProfileActionExecutor preUpdateProfileActionExecutor;
 
@@ -124,6 +129,7 @@ public class PreUpdateProfileActionExecutorTest {
         SCIMCommonComponentHolder.setActionExecutorService(actionExecutorService);
         SCIMCommonComponentHolder.setClaimManagementService(claimMetadataManagementService);
         SCIMCommonComponentHolder.setOrganizationManager(organizationManager);
+        SCIMCommonComponentHolder.setOrganizationUserSharingService(organizationUserSharingService);
 
         frameworkUtils = mockStatic(FrameworkUtils.class);
         frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
@@ -239,6 +245,9 @@ public class PreUpdateProfileActionExecutorTest {
                 .depth(TEST_MANAGED_BY_ORG_DEPTH)
                 .build();
         doReturn(managedByOrg).when(organizationManager).getMinimalOrganization(any(), any());
+        UserAssociation userAssociation = mock(UserAssociation.class);
+        doReturn(TestConstants.TEST_USER_ID).when(userAssociation).getAssociatedUserId();
+        doReturn(userAssociation).when(organizationUserSharingService).getUserAssociation(anyString(), anyString());
 
         when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
 
@@ -799,7 +808,7 @@ public class PreUpdateProfileActionExecutorTest {
     private static User getSCIMSharedUser() throws CharonException, BadRequestException {
 
         User user = new User();
-        user.setId(TestConstants.TEST_USER_ID);
+        user.setId(TEST_SHARED_USER_ID);
         user.setUserName(TestConstants.TEST_USER_USERNAME);
 
         SimpleAttribute managedOrgAttribute = new SimpleAttribute("managedOrg", TEST_MANAGED_BY_ORG_ID);

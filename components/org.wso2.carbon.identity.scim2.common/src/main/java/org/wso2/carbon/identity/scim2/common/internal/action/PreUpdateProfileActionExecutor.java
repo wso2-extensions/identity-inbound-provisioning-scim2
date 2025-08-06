@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
 import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.MinimalOrganization;
@@ -105,9 +106,11 @@ public class PreUpdateProfileActionExecutor {
                                                            Map<String, String> userClaimsToBeDeleted)
             throws UserStoreException {
 
+        String managedOrgId = getUserManagedOrgId(user);
         UserActionRequestDTO.Builder userActionRequestDTOBuilder = new UserActionRequestDTO.Builder()
-                .userId(user.getId())
-                .residentOrganization(getUserResidentOrganization(user));
+                .userId(getUserId(user, managedOrgId))
+                .residentOrganization(getUserResidentOrganization(managedOrgId))
+                .sharedUserId(managedOrgId != null ? user.getId(): null);
 
         populateUpdatingClaimsInUserActionRequestDTO(userClaimsToBeModified, userActionRequestDTOBuilder);
         populateDeletingClaimsInUserActionRequestDTO(userClaimsToBeDeleted, userActionRequestDTOBuilder);
@@ -189,19 +192,13 @@ public class PreUpdateProfileActionExecutor {
         }
     }
 
-    private Organization getUserResidentOrganization(User user) throws UserActionExecutionServerException {
+    private Organization getUserResidentOrganization(String managedOrgId) throws UserActionExecutionServerException {
 
-
-        org.wso2.carbon.identity.core.context.model.Organization accessingOrganization =
-                IdentityContext.getThreadLocalIdentityContext().getOrganization();
-        if (accessingOrganization == null) {
-            throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
-                    "Accessing organization is not present in the identity context.");
-        }
-
-        String managedOrgId = getUserManagedOrgId(user);
         if (managedOrgId == null) {
             // User resident organization is the accessing organization if the managed organization claim is not set.
+            org.wso2.carbon.identity.core.context.model.Organization accessingOrganization =
+                    getOrganizationFromIdentityContext();
+
             return new Organization.Builder()
                     .id(accessingOrganization.getId())
                     .name(accessingOrganization.getName())
@@ -211,6 +208,16 @@ public class PreUpdateProfileActionExecutor {
         }
         // If the managed organization claim is set, retrieve the organization details.
         return getOrganization(managedOrgId);
+    }
+
+    private org.wso2.carbon.identity.core.context.model.Organization getOrganizationFromIdentityContext()
+            throws UserActionExecutionServerException {
+
+        if (IdentityContext.getThreadLocalIdentityContext().getOrganization() == null) {
+            throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
+                    "Accessing organization is not present in the identity context.");
+        }
+        return IdentityContext.getThreadLocalIdentityContext().getOrganization();
     }
 
     private String getUserManagedOrgId(User user) throws UserActionExecutionServerException {
@@ -260,6 +267,30 @@ public class PreUpdateProfileActionExecutor {
             throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
                     "Error while retrieving organization details for the user's managed organization id: "
                             + managedOrgId, e);
+        }
+    }
+
+    private String getUserId(User user, String managedOrgId) throws UserActionExecutionServerException {
+
+        if (managedOrgId == null) {
+            // User is not a shared user.
+            return user.getId();
+        }
+
+        String accessingOrgId = getOrganizationFromIdentityContext().getId();
+        try {
+            UserAssociation userAssociation = SCIMCommonComponentHolder.getOrganizationUserSharingService()
+                    .getUserAssociation(user.getId(), accessingOrgId);
+            if (userAssociation == null) {
+                throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
+                        "No user association found for the user: " + user.getId() + " in organization: "
+                                + accessingOrgId);
+            }
+
+            return userAssociation.getAssociatedUserId();
+        } catch (OrganizationManagementException e) {
+            throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
+                    "Error while retrieving the shared user's association.", e);
         }
     }
 }
