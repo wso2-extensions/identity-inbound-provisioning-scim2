@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
+import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
@@ -42,8 +43,7 @@ public class BulkResource extends AbstractResource {
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String outputFormat,
                                String resourceString) {
         try {
-
-            SupportUtils.updateIdentityContextFlow(Flow.Name.BULK_RESOURCE_UPDATE);
+            SupportUtils.enterFlow(Flow.Name.BULK_RESOURCE_UPDATE);
             // content-type header is compulsory in post request.
             if (inputFormat == null) {
                 String error = SCIMProviderConstants.CONTENT_TYPE
@@ -81,6 +81,8 @@ public class BulkResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 }
