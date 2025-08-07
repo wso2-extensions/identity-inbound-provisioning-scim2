@@ -274,6 +274,7 @@ public class PreUpdateProfileActionExecutor {
 
         if (managedOrgId == null) {
             // User is not a shared user.
+            LOG.debug("User is not a shared user. Returning user ID: " + user.getId());
             return user.getId();
         }
 
