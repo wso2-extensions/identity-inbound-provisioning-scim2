@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorServi
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
@@ -48,6 +49,7 @@ public class SCIMCommonComponentHolder {
     private static IdentityEventService identityEventService;
     private static ConfigurationManager configurationManager;
     private static ActionExecutorService actionExecutorService;
+    private static OrganizationUserSharingService organizationUserSharingService;
     private static final List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
 
     /**
@@ -267,5 +269,25 @@ public class SCIMCommonComponentHolder {
     public static void setActionExecutorService(ActionExecutorService actionExecutorService) {
 
         SCIMCommonComponentHolder.actionExecutorService = actionExecutorService;
+    }
+
+    /**
+     * Get the organization user sharing service.
+     *
+     * @return OrganizationUserSharingService organization user sharing service.
+     */
+    public static OrganizationUserSharingService getOrganizationUserSharingService() {
+
+        return organizationUserSharingService;
+    }
+
+    /**
+     * Set the organization user sharing service.
+     *
+     * @param organizationUserSharingService Organization user sharing service.
+     */
+    public static void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        SCIMCommonComponentHolder.organizationUserSharingService = organizationUserSharingService;
     }
 }

@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
@@ -443,6 +444,34 @@ public class SCIMCommonComponent {
     protected void unsetActionExecutorService(ActionExecutorService actionExecutorService) {
 
         SCIMCommonComponentHolder.setActionExecutorService(null);
+    }
+
+    /**
+     * Set OrganizationUserSharingService.
+     *
+     * @param organizationUserSharingService OrganizationUserSharingService
+     */
+    @Reference(
+            name = "organization.user.sharing.service",
+            service = OrganizationUserSharingService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationUserSharingService")
+    protected void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        SCIMCommonComponentHolder.setOrganizationUserSharingService(organizationUserSharingService);
+        logger.debug("OrganizationUserSharingService set in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Unset OrganizationUserSharingService.
+     *
+     * @param organizationUserSharingService OrganizationUserSharingService
+     */
+    protected void unsetOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        SCIMCommonComponentHolder.setOrganizationUserSharingService(null);
+        logger.debug("OrganizationUserSharingService unset in SCIMCommonComponent bundle.");
     }
 
     @Deactivate
