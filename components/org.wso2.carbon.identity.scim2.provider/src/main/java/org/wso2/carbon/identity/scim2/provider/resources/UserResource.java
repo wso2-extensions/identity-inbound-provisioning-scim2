@@ -467,7 +467,7 @@ public class UserResource extends AbstractResource {
                             .has(ASK_PASSWORD_KEY)) {
                 return Boolean.parseBoolean(
                         String.valueOf(request.getJSONObject(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT)
-                                .getString(ASK_PASSWORD_KEY)));
+                                .get(ASK_PASSWORD_KEY)));
             }
 
         } catch (JSONException e) {
