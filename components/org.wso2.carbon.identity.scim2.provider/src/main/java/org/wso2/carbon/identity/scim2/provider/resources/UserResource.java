@@ -458,16 +458,16 @@ public class UserResource extends AbstractResource {
                     request.getJSONObject(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT)
                             .has(ASK_PASSWORD_KEY)) {
                 return Boolean.parseBoolean(
-                        request.getJSONObject(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT)
-                                .getString(ASK_PASSWORD_KEY));
+                        String.valueOf(request.getJSONObject(SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT)
+                                .get(ASK_PASSWORD_KEY)));
             }
 
             if (request.has(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT) &&
                     request.getJSONObject(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT)
                             .has(ASK_PASSWORD_KEY)) {
                 return Boolean.parseBoolean(
-                        request.getJSONObject(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT)
-                                .getString(ASK_PASSWORD_KEY));
+                        String.valueOf(request.getJSONObject(SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT)
+                                .getString(ASK_PASSWORD_KEY)));
             }
 
         } catch (JSONException e) {
