@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.scim2.common.internal.utils;
+package org.wso2.carbon.identity.scim2.common.internal.util;
 
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.Flow;
@@ -24,7 +24,7 @@ import org.wso2.carbon.identity.core.context.model.Flow;
 /**
  * Utility class for handling flow-related operations.
  */
-public class FlowUtils {
+public class FlowUtil {
 
     /**
      * Enters a flow with the specified flow name and initiating persona.

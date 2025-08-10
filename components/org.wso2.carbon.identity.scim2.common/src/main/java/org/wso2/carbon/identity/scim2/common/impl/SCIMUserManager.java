@@ -64,7 +64,7 @@ import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.action.PreUpdateProfileActionExecutor;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
-import org.wso2.carbon.identity.scim2.common.internal.utils.FlowUtils;
+import org.wso2.carbon.identity.scim2.common.internal.util.FlowUtil;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -1272,7 +1272,7 @@ public class SCIMUserManager implements UserManager {
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
                 try {
-                    FlowUtils.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    FlowUtil.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
                     carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                     publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
                 } finally {
@@ -1468,7 +1468,7 @@ public class SCIMUserManager implements UserManager {
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
                 try {
-                    FlowUtils.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    FlowUtil.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
                     carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                     publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
                 } finally {
