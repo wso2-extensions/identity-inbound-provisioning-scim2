@@ -43,6 +43,8 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.core.context.IdentityContext;
+import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
@@ -62,6 +64,7 @@ import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.action.PreUpdateProfileActionExecutor;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
+import org.wso2.carbon.identity.scim2.common.internal.util.FlowUtil;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -1268,8 +1271,13 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
-                carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
-                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
+                try {
+                    FlowUtil.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
+                    publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
+                } finally {
+                    IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                }
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect);
@@ -1459,8 +1467,13 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
-                carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
-                publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
+                try {
+                    FlowUtil.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
+                    publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
+                } finally {
+                    IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                }
             }
 
             updateUserClaims(user, oldClaimList, claimValuesInLocalDialect, allSimpleMultiValuedClaimsList);
