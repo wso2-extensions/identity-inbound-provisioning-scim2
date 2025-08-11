@@ -33,7 +33,7 @@ public class FlowUtil {
      */
     public static void enterFlow(Flow.Name flowName) {
 
-        Flow.InitiatingPersona initiatingPersona = getInitiatingPersona();
+        Flow.InitiatingPersona initiatingPersona = getFlowInitiatingPersona();
 
         Flow flow;
         if (Flow.isCredentialFlow(flowName)) {
@@ -51,7 +51,7 @@ public class FlowUtil {
         IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
     }
 
-    private static Flow.InitiatingPersona getInitiatingPersona() {
+    private static Flow.InitiatingPersona getFlowInitiatingPersona() {
 
         Flow existingFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
         if (existingFlow != null) {
