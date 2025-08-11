@@ -253,9 +253,18 @@ public class MeResource extends AbstractResource {
      */
     private void updateIdentityContext() {
 
+        Flow existingFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
+
+        Flow.InitiatingPersona initiatingPersona;
+        if (existingFlow != null) {
+            initiatingPersona = existingFlow.getInitiatingPersona();
+        } else {
+            initiatingPersona = Flow.InitiatingPersona.USER;
+        }
+
         Flow flow = new Flow.Builder()
                 .name(Flow.Name.PROFILE_UPDATE)
-                .initiatingPersona(Flow.InitiatingPersona.USER)
+                .initiatingPersona(initiatingPersona)
                 .build();
         IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
     }

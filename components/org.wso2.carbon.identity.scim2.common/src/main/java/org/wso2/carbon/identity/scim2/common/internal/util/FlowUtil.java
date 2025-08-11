@@ -33,12 +33,7 @@ public class FlowUtil {
      */
     public static void enterFlow(Flow.Name flowName) {
 
-        Flow.InitiatingPersona initiatingPersona = null;
-        if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
-            initiatingPersona = Flow.InitiatingPersona.APPLICATION;
-        } else if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
-            initiatingPersona = Flow.InitiatingPersona.ADMIN;
-        }
+        Flow.InitiatingPersona initiatingPersona = getInitiatingPersona();
 
         Flow flow;
         if (Flow.isCredentialFlow(flowName)) {
@@ -54,5 +49,18 @@ public class FlowUtil {
                     .build();
         }
         IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
+    }
+
+    private static Flow.InitiatingPersona getInitiatingPersona() {
+
+        Flow existingFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
+        if (existingFlow != null) {
+            return existingFlow.getInitiatingPersona();
+        } else if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
+            return Flow.InitiatingPersona.APPLICATION;
+        } else if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
+            return Flow.InitiatingPersona.ADMIN;
+        }
+        return null;
     }
 }

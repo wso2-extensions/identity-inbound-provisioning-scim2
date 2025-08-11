@@ -246,7 +246,13 @@ public class SupportUtils {
      */
     public static void enterFlow(Flow.Name flowName) {
 
-        if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
+        Flow.InitiatingPersona initiatingPersona = getInitiatingPersona();
+
+        if (initiatingPersona != null) {
+            IdentityContext.getThreadLocalIdentityContext()
+                    .enterFlow(new Flow.Builder().name(flowName).initiatingPersona(
+                            initiatingPersona).build());
+        } else if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
             IdentityContext.getThreadLocalIdentityContext()
                     .enterFlow(new Flow.Builder().name(flowName).initiatingPersona(
                             Flow.InitiatingPersona.APPLICATION).build());
@@ -255,6 +261,19 @@ public class SupportUtils {
                     .enterFlow(new Flow.Builder().name(flowName).initiatingPersona(
                             Flow.InitiatingPersona.ADMIN).build());
         }
+    }
+
+    private static Flow.InitiatingPersona getInitiatingPersona() {
+
+        Flow existingFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
+        if (existingFlow != null) {
+            return existingFlow.getInitiatingPersona();
+        } else if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
+            return Flow.InitiatingPersona.APPLICATION;
+        } else if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
+            return Flow.InitiatingPersona.ADMIN;
+        }
+        return null;
     }
 
     /**
