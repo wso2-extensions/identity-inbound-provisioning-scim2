@@ -413,6 +413,7 @@ public class SCIMUserManager implements UserManager {
             }
 
         } catch (UserStoreClientException e) {
+            handleAndThrowClientExceptionForActionFailure(e);
             String errorMessage = String.format("Error in adding the user: " + maskIfRequired(user.getUserName()) +
                     ". %s", e.getMessage());
             if (log.isDebugEnabled()) {
