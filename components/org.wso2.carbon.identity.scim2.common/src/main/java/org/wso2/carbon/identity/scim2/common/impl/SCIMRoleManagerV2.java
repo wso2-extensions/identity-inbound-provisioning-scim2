@@ -98,8 +98,10 @@ import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.
         ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
         ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_ROLE_NOT_FOUND;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
         ERROR_CODE_ROLE_WF_USER_NOT_FOUND;
+import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_USER_PENDING_APPROVAL_FOR_ROLE;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
         ERROR_CODE_ROLE_WF_USER_PENDING_DELETION;
 
@@ -1549,11 +1551,17 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 roleManagementService.updateUserListOfRole(roleId, new ArrayList<>(newUserIDList),
                         new ArrayList<>(deletedUserIDList), tenantDomain);
             } catch (IdentityRoleManagementException e) {
-                if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(e.getErrorCode())) {
+                String errorCode = e.getErrorCode();
+                if (RoleConstants.Error.INVALID_REQUEST.getCode().equals(errorCode) ||
+                        ERROR_CODE_ROLE_WF_USER_PENDING_DELETION.getCode().equals(errorCode) ||
+                        ERROR_CODE_ROLE_WF_USER_PENDING_APPROVAL_FOR_ROLE.getCode().equals(errorCode) ||
+                        ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getCode().equals(errorCode) ||
+                        ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getCode().equals(errorCode) ||
+                        ERROR_CODE_ROLE_WF_ROLE_NOT_FOUND.getCode().equals(errorCode)) {
                     throw new BadRequestException(e.getMessage());
-                } else if (OPERATION_FORBIDDEN.getCode().equals(e.getErrorCode())) {
+                } else if (OPERATION_FORBIDDEN.getCode().equals(errorCode)) {
                     throw new ForbiddenException(e.getMessage());
-                } else if (ROLE_WORKFLOW_CREATED.getCode().equals(e.getErrorCode())) {
+                } else if (ROLE_WORKFLOW_CREATED.getCode().equals(errorCode)) {
                     CharonException charonException = new CharonException(e.getMessage());
                     charonException.setStatus(ResponseCodeConstants.CODE_ACCEPTED);
                     throw charonException;
