@@ -1279,9 +1279,8 @@ public class SCIMCommonUtils {
 
     public static boolean isBulkRequest() {
 
-        if (IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.NORMALIZED_REQUEST_URI) != null) {
-            return IdentityUtil.threadLocalProperties.get()
-                    .get(SCIMCommonConstants.NORMALIZED_REQUEST_URI).toString()
+        if (PrivilegedCarbonContext.getThreadLocalCarbonContext().getNormalizedRequestURI() != null) {
+            return PrivilegedCarbonContext.getThreadLocalCarbonContext().getNormalizedRequestURI()
                     .contains(SCIMCommonConstants.BULK_ENDPOINT);
         }
 
@@ -1291,8 +1290,7 @@ public class SCIMCommonUtils {
     public static void validateAuthorizedScopes(List<String> requiredScopes)
             throws ForbiddenException {
 
-        List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
-                SCIMCommonConstants.AUTHORIZED_SCOPES);
+        List<String> authorizedScopes = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAllowedScopes();
 
         if (authorizedScopes != null &&
                 requiredScopes.stream().noneMatch(authorizedScopes::contains)) {
