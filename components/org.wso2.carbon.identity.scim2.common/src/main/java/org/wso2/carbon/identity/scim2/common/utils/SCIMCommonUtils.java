@@ -75,6 +75,8 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_CREATE_RESOURCE_OP;
+
 /**
  * This class is to be used as a Util class for SCIM common things.
  * TODO:rename class name.
@@ -1276,7 +1278,11 @@ public class SCIMCommonUtils {
         return multiValuedClaimsToModify;
     }
 
-
+    /**
+     * Checks whether the request is a bulk request.
+     *
+     * @return True if the request is a bulk request, false otherwise.
+     */
     public static boolean isBulkRequest() {
 
         if (PrivilegedCarbonContext.getThreadLocalCarbonContext().getNormalizedRequestURI() != null) {
@@ -1287,13 +1293,21 @@ public class SCIMCommonUtils {
         return false;
     }
 
-    public static void validateAuthorizedScopes(List<String> requiredScopes)
-            throws ForbiddenException {
+    /**
+     * Validate fine-grained scopes for the given operation name.
+     *
+     * @param operationName Name of the operation to validate.
+     * @throws ForbiddenException If the operation is not permitted.
+     */
+    public static void validateFineGrainScopes(String operationName) throws ForbiddenException {
 
-        List<String> authorizedScopes = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAllowedScopes();
+        List<String> allowedScopes = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAllowedScopes();
+        Map<String, String> operationScopeMap = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getOperationScopeMap();
+        String operationScope = operationScopeMap.get(operationName);
+        String generalScope = operationScopeMap.get(BULK_CREATE_RESOURCE_OP);
 
-        if (authorizedScopes != null &&
-                requiredScopes.stream().noneMatch(authorizedScopes::contains)) {
+        if (!(allowedScopes.contains(operationScope) || allowedScopes.contains(generalScope))) {
             throw new ForbiddenException(
                     "Operation is not permitted. You do not have permissions to make this request.");
         }

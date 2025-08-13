@@ -98,12 +98,6 @@ public class SCIMRoleManager implements RoleManager {
     public Role createRole(Role role) throws CharonException, ConflictException,
             BadRequestException, ForbiddenException {
 
-        if (SCIMCommonUtils.isBulkRequest()) {
-            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
-                    "internal_bulk_resource_create", "internal_bulk_role_create",
-                    "internal_org_bulk_resource_create", "internal_org_bulk_role_create"));
-        }
-
         if (log.isDebugEnabled()) {
             log.debug("Creating role: " + role.getDisplayName());
         }
@@ -197,12 +191,6 @@ public class SCIMRoleManager implements RoleManager {
     @Override
     public void deleteRole(String roleID) throws CharonException, NotFoundException,
             BadRequestException, ForbiddenException{
-
-        if (SCIMCommonUtils.isBulkRequest()) {
-            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
-                    "internal_bulk_resource_create", "internal_bulk_role_delete",
-                    "internal_org_bulk_resource_create", "internal_org_bulk_role_delete"));
-        }
 
         try {
             roleManagementService.deleteRole(roleID, tenantDomain);
@@ -389,12 +377,6 @@ public class SCIMRoleManager implements RoleManager {
     public Role updateRole(Role oldRole, Role newRole)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
-        if (SCIMCommonUtils.isBulkRequest()) {
-            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
-                    "internal_bulk_resource_create", "internal_bulk_role_update",
-                    "internal_org_bulk_resource_create", "internal_org_bulk_role_update"));
-        }
-
         doUpdateRoleName(oldRole, newRole);
         doUpdateUsers(oldRole, newRole);
         doUpdateGroups(oldRole, newRole);
@@ -574,12 +556,6 @@ public class SCIMRoleManager implements RoleManager {
     @Override
     public Role patchRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
-
-        if (SCIMCommonUtils.isBulkRequest()) {
-            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
-                    "internal_bulk_resource_create", "internal_bulk_role_update",
-                    "internal_org_bulk_resource_create", "internal_org_bulk_role_update"));
-        }
 
         String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
 

@@ -117,7 +117,7 @@ public class IdentitySCIMManager {
 
     public UserManager getUserManager() throws CharonException {
 
-        SCIMUserManager scimUserManager = null;
+        UserManager scimUserManager = null;
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         try {
             // Get super tenant context and get realm service which is an osgi service.
@@ -127,7 +127,8 @@ public class IdentitySCIMManager {
                 // Get tenant's user realm.
                 UserRealm userRealm = realmService.getTenantUserRealm(tenantId);
                 if (userRealm != null) {
-                    scimUserManager = new SCIMUserManager((AbstractUserStoreManager) userRealm.getUserStoreManager(),
+                    scimUserManager = new AuthzSCIMUserManager(
+                            (AbstractUserStoreManager) userRealm.getUserStoreManager(),
                             SCIMCommonComponentHolder.getClaimManagementService(), tenantDomain);
                 }
             } else {

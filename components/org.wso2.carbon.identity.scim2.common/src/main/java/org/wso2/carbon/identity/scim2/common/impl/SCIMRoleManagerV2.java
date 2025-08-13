@@ -134,12 +134,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throws CharonException, ConflictException, NotImplementedException,
             BadRequestException, ForbiddenException {
 
-        if (SCIMCommonUtils.isBulkRequest()) {
-            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
-                    "internal_bulk_resource_create", "internal_bulk_role_create",
-                    "internal_org_bulk_resource_create", "internal_org_bulk_role_create"));
-        }
-
         try {
             checkIfRoleExists(role.getId(), tenantDomain);
             validateOrganizationRoleCreation(role.getAudienceType(), role.getAudienceValue(), tenantDomain);
@@ -384,12 +378,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     public void deleteRole(String roleID) throws CharonException, NotFoundException,
             BadRequestException, ForbiddenException {
 
-        if (SCIMCommonUtils.isBulkRequest()) {
-            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
-                    "internal_bulk_resource_create", "internal_bulk_role_delete",
-                    "internal_org_bulk_resource_create", "internal_org_bulk_role_delete"));
-        }
-
         try {
             if (isSharedRole(roleID)) {
                 throw new BadRequestException("Shared role deletion is not allowed.",
@@ -435,12 +423,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     public RoleV2 updateRole(RoleV2 oldRole, RoleV2 newRole)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
-        if (SCIMCommonUtils.isBulkRequest()) {
-            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
-                    "internal_bulk_resource_create", "internal_bulk_role_update",
-                    "internal_org_bulk_resource_create", "internal_org_bulk_role_update"));
-        }
-
         doUpdateRoleName(oldRole, newRole);
         doUpdateUsers(oldRole, newRole);
         doUpdateGroups(oldRole, newRole);
@@ -458,12 +440,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     @Override
     public RoleV2 patchRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
-
-        if (SCIMCommonUtils.isBulkRequest()) {
-            SCIMCommonUtils.validateAuthorizedScopes(Arrays.asList(
-                    "internal_bulk_resource_create", "internal_bulk_role_update",
-                    "internal_org_bulk_resource_create", "internal_org_bulk_role_update"));
-        }
 
         String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
         if (LOG.isDebugEnabled()) {

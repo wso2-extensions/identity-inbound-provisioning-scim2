@@ -45,6 +45,10 @@ public class SCIMCommonConstants {
     public static final String AUTHORIZED_SCOPES = "authorizedScopes";
     public static final String NORMALIZED_REQUEST_URI = "normalizedRequestURI";
     public static final String BULK_ENDPOINT = "/scim2/Bulk";
+    public static final String BULK_CREATE_RESOURCE_OP = "createResource";
+    public static final String BULK_CREATE_USER_OP = "createUser";
+    public static final String BULK_UPDATE_USER_OP = "updateUser";
+    public static final String BULK_DELETE_USER_OP = "deleteUser";
 
     public static final int USER = 1;
     public static final int GROUP = 2;
