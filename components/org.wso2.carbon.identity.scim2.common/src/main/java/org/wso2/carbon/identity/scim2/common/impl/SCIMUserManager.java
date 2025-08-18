@@ -781,7 +781,7 @@ public class SCIMUserManager implements UserManager {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName);
                 if (SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled() &&
-                        !isJDBCUSerStore(domainName)) {
+                        !isJDBCUserStore(domainName)) {
                     int maxLimit = Integer.MAX_VALUE;
                     if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
                         maxLimit = getMaxLimit(domainName);
@@ -852,14 +852,14 @@ public class SCIMUserManager implements UserManager {
     private boolean canCountTotalUserCount(String[] userStoreDomainNames) {
 
         for (String userStoreDomainName : userStoreDomainNames) {
-            if (!isJDBCUSerStore(userStoreDomainName)) {
+            if (!isJDBCUserStore(userStoreDomainName)) {
                 return false;
             }
         }
         return true;
     }
 
-    private boolean isJDBCUSerStore(String userStoreDomainName) {
+    private boolean isJDBCUserStore(String userStoreDomainName) {
 
         AbstractUserStoreManager secondaryUserStoreManager = (AbstractUserStoreManager) carbonUM
                 .getSecondaryUserStoreManager(userStoreDomainName);
@@ -1631,7 +1631,7 @@ public class SCIMUserManager implements UserManager {
                 filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
             }
             // Check that total user count matching the client query needs to be calculated.
-            if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC()
+            if (isJDBCUserStore(domainName) || isAllConfiguredUserStoresJDBC()
                     || SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
                 int maxLimit;
                 if (!SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
@@ -1641,7 +1641,7 @@ public class SCIMUserManager implements UserManager {
                 }
                 // Get total users based on the filter query without depending on pagination params.
                 if (SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled() &&
-                        (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC())) {
+                        (isJDBCUserStore(domainName) || isAllConfiguredUserStoresJDBC())) {
                     // Get the total user count by the filter query.
                     // This is only implemented for JDBC userstores.
                     totalResults += getUserCountByAttribute(node, 1, maxLimit, sortBy, sortOrder, domainName);
@@ -1699,7 +1699,7 @@ public class SCIMUserManager implements UserManager {
             domainName = getPrimaryUserStoreDomain();
         }
         int maxLimit = getMaxLimit(domainName);
-        if (isJDBCUSerStore(domainName) && !SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
+        if (isJDBCUserStore(domainName) && !SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
             maxLimit = Integer.MAX_VALUE;
         }
         return maxLimit;
@@ -2023,7 +2023,7 @@ public class SCIMUserManager implements UserManager {
             int filteredUsersCount = 0;
             for (String userStoreDomainName : userStoreDomainNames) {
                 try {
-                    if (isJDBCUSerStore(userStoreDomainName)) {
+                    if (isJDBCUserStore(userStoreDomainName)) {
                         filteredUsersCount += (int) getTotalUsers(userStoreDomainName);
                     } else {
                         filteredUsersCount +=
@@ -2401,7 +2401,7 @@ public class SCIMUserManager implements UserManager {
                 totalResults = maxLimitForTotalResults;
             }
         } else {
-            if (isJDBCUSerStore(domainName) || isAllConfiguredUserStoresJDBC() ||
+            if (isJDBCUserStore(domainName) || isAllConfiguredUserStoresJDBC() ||
                     SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
                 // Get total users based on the filter query.
                 totalResults += getMultiAttributeFilteredUsersCount(node, 1, domainName, maxLimitForTotalResults);
