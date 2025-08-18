@@ -780,7 +780,8 @@ public class SCIMUserManager implements UserManager {
         if (StringUtils.isNotEmpty(domainName)) {
             if (canPaginate(offset, limit)) {
                 coreUsers = listUsernames(offset, limit, sortBy, sortOrder, domainName);
-                if (SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+                if (SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled() &&
+                        !isJDBCUSerStore(domainName)) {
                     int maxLimit = Integer.MAX_VALUE;
                     if (SCIMCommonUtils.isConsiderMaxLimitForTotalResultEnabled()) {
                         maxLimit = getMaxLimit(domainName);
@@ -2022,8 +2023,12 @@ public class SCIMUserManager implements UserManager {
             int filteredUsersCount = 0;
             for (String userStoreDomainName : userStoreDomainNames) {
                 try {
-                    filteredUsersCount +=
-                            getFilteredUserCountFromSingleDomain(condition, offset, maxLimit, userStoreDomainName);
+                    if (isJDBCUSerStore(userStoreDomainName)) {
+                        filteredUsersCount += (int) getTotalUsers(userStoreDomainName);
+                    } else {
+                        filteredUsersCount +=
+                                getFilteredUserCountFromSingleDomain(condition, offset, maxLimit, userStoreDomainName);
+                    }
                 } catch (CharonException e) {
                     log.error("Error occurred while getting the users count for domain: " + userStoreDomainName, e);
                 }
