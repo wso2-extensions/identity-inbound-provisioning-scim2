@@ -195,6 +195,12 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.mgt</artifactId>
+                <scope>provided</scope>
+                <version>${identity.framework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
@@ -202,6 +208,12 @@
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.user.action</artifactId>
                 <version>${identity.framework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.unique.claim.mgt</artifactId>
+                <version>${identity.framework.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management.core</groupId>

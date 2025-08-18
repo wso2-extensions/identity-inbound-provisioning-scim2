@@ -67,6 +67,7 @@ import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonCompon
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
+import org.wso2.carbon.identity.unique.claim.mgt.constants.UniqueClaimConstants;
 import org.wso2.carbon.identity.user.action.api.constant.UserActionError;
 import org.wso2.carbon.identity.user.action.api.exception.UserActionExecutionClientException;
 import org.wso2.carbon.identity.workflow.mgt.exception.WorkflowException;
@@ -433,7 +434,7 @@ public class SCIMUserManager implements UserManager {
             if (isResourceLimitReachedError(e)) {
                 handleResourceLimitReached();
             }
-
+            handleAndThrowClientExceptionForDuplicateClaim(e, errorMessage);
             publishEventOnUserRegistrationFailure(user, e.getErrorCode(), e.getMessage(), claimsInLocalDialect);
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
@@ -1160,7 +1161,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public User updateUser(User user, Map<String, Boolean> requiredAttributes) throws CharonException,
-            BadRequestException, ForbiddenException {
+            BadRequestException, ForbiddenException, ConflictException {
 
         try {
             validateOperationScopes(BULK_UPDATE_USER_OP);
@@ -1314,6 +1315,7 @@ public class SCIMUserManager implements UserManager {
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage, e);
             }
+            handleAndThrowClientExceptionForDuplicateClaim(e, errorMessage);
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
         } catch (UserStoreException e) {
             String errMsg = "Error while updating attributes of user: " + maskIfRequired(user.getUserName());
@@ -1364,7 +1366,8 @@ public class SCIMUserManager implements UserManager {
      * @throws BadRequestException Exception occurred due to a bad request.
      */
     public User updateUser(User user, Map<String, Boolean> requiredAttributes,
-                           List<String> allSimpleMultiValuedAttributes) throws CharonException, BadRequestException {
+                           List<String> allSimpleMultiValuedAttributes) throws CharonException, BadRequestException,
+            ConflictException {
 
         try {
             if (log.isDebugEnabled()) {
@@ -1512,6 +1515,10 @@ public class SCIMUserManager implements UserManager {
             return getUser(user.getId(), requiredAttributes);
         } catch (UserStoreException e) {
             handleAndThrowClientExceptionForActionFailure(e);
+            if (e instanceof UserStoreClientException) {
+                String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
+                handleAndThrowClientExceptionForDuplicateClaim((UserStoreClientException) e, errorMessage);
+            }
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw resolveError(e, "Error while updating attributes of user: " +
                     maskIfRequired(user.getUserName()));
@@ -1551,6 +1558,48 @@ public class SCIMUserManager implements UserManager {
                     (UserActionExecutionClientException) e;
             throw new BadRequestException(userActionExecutionClientException.getDescription(),
                     userActionExecutionClientException.getError());
+        }
+    }
+
+    /**
+     * Checks whether the given UserStoreClientException is a duplicate claim error.
+     *
+     * @param e UserStoreClientException to check.
+     * @return true if it is a duplicate claim error, false otherwise.
+     */
+    private boolean isDuplicateClaimError(UserStoreClientException e) {
+
+        String errorCode = e.getErrorCode();
+        return UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_SINGLE_CLAIM.getCode().equals(errorCode) ||
+                UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_MULTIPLE_CLAIMS.getCode().equals(errorCode);
+    }
+
+    /**
+     * Checks whether SCIM2 endpoints should return a 409 Conflict response instead of a 400 Bad Request when
+     * duplicate claims (uniqueness violations) are encountered.
+     *
+     * @return true if 409 Conflict responses should be returned for duplicate claims,
+     *         false if 400 Bad Request responses should be used instead.
+     */
+    private boolean isReturnConflictResponseForDuplicateClaimsEnabled() {
+
+        return Boolean.parseBoolean(
+                IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_RESPONSE_FOR_DUPLICATE_CLAIMS));
+    }
+
+    /**
+     * Handles a UserStoreClientException by throwing a ConflictException if it's a duplicate claim error
+     * and the ReturnConflictOnDuplicateClaim configuration is enabled.
+     *
+     * @param e            UserStoreClientException.
+     * @param errorMessage Error message to be thrown.
+     * @throws ConflictException If the error is a duplicate claim error and configuration is enabled.
+     */
+    private void handleAndThrowClientExceptionForDuplicateClaim(UserStoreClientException e, String errorMessage)
+            throws ConflictException {
+
+        if (isDuplicateClaimError(e) && isReturnConflictResponseForDuplicateClaimsEnabled()) {
+            throw new ConflictException(errorMessage);
         }
     }
 
@@ -2995,7 +3044,8 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public User updateMe(User user, Map<String, Boolean> requiredAttributes)
-            throws NotImplementedException, CharonException, BadRequestException, ForbiddenException {
+            throws NotImplementedException, CharonException, BadRequestException, ForbiddenException,
+            ConflictException {
 
         return updateUser(user, requiredAttributes);
     }

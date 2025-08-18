@@ -134,6 +134,8 @@ public class SCIMCommonConstants {
             "SCIM2MultiAttributeFiltering.UsePagination";
     public static final String CONSIDER_SERVER_WIDE_MAX_LIMIT_ENABLED=
             "SCIM2.ConsiderServerWideUserEndpointMaxLimit";
+    public static final String SCIM2_RETURN_CONFLICT_RESPONSE_FOR_DUPLICATE_CLAIMS =
+            "SCIM2.ReturnConflictResponseForDuplicateClaims";
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
