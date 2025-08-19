@@ -5661,7 +5661,15 @@ public class SCIMUserManager implements UserManager {
          */
         Map<String, String> claimsAddedOrUpdatedByUser = new HashMap<>(userClaimsToBeModified);
         // Update user claims.
-        carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
+        boolean isAccountManagementFlowEntered = false;
+        try {
+            isAccountManagementFlowEntered = enterAccountManagementFlow(userClaimsToBeModified);
+            carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
+        } finally {
+            if (isAccountManagementFlowEntered) {
+                IdentityContext.getThreadLocalIdentityContext().exitFlow();
+            }
+        }
 
         if (isExecutableUserProfileUpdate &&
                 containsNonAccountStateOrNonVerificationClaim(claimsAddedOrUpdatedByUser.keySet())) {
@@ -5784,14 +5792,22 @@ public class SCIMUserManager implements UserManager {
         }
 
         // Update user claims.
-        if (MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) &&
-                MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
-            // If no multi-valued attribute is modified.
-            carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
-        } else {
-            carbonUM.setUserClaimValuesWithID(user.getId(), convertClaimValuesToList(oldClaimList),
-                    simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved,
-                    convertClaimValuesToList(userClaimsToBeModified), null);
+        boolean isAccountManagementFlowEntered = false;
+        try {
+            isAccountManagementFlowEntered = enterAccountManagementFlow(userClaimsToBeModified);
+            if (MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) &&
+                    MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
+                // If no multi-valued attribute is modified.
+                carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
+            } else {
+                carbonUM.setUserClaimValuesWithID(user.getId(), convertClaimValuesToList(oldClaimList),
+                        simpleMultiValuedClaimsToBeAdded, simpleMultiValuedClaimsToBeRemoved,
+                        convertClaimValuesToList(userClaimsToBeModified), null);
+            }
+        } finally {
+            if (isAccountManagementFlowEntered) {
+                IdentityContext.getThreadLocalIdentityContext().exitFlow();
+            }
         }
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
@@ -5800,6 +5816,34 @@ public class SCIMUserManager implements UserManager {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
+    }
+
+    private boolean enterAccountManagementFlow(Map<String, String> userClaimsToBeModified) {
+
+        if (userClaimsToBeModified == null || userClaimsToBeModified.isEmpty()) {
+            return false;
+        }
+
+        // Prioritizing the account disable flow.
+        if (enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_DISABLED_CLAIM_URI,
+                Flow.Name.USER_ACCOUNT_DISABLE, Flow.Name.USER_ACCOUNT_ENABLE)) {
+            return true;
+        }
+
+        return enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_LOCKED_CLAIM_URI,
+                Flow.Name.USER_ACCOUNT_LOCK, Flow.Name.USER_ACCOUNT_UNLOCK);
+    }
+
+    private boolean enterFlowIfClaimChanged(Map<String, String> claims, String claimUri,
+                                            Flow.Name trueFlow, Flow.Name falseFlow) {
+
+        String claimValue = claims.get(claimUri);
+        if (StringUtils.isNotBlank(claimValue)) {
+            boolean state = Boolean.parseBoolean(claimValue);
+            FlowUtil.enterFlow(state ? trueFlow : falseFlow);
+            return true;
+        }
+        return false;
     }
 
     /**
