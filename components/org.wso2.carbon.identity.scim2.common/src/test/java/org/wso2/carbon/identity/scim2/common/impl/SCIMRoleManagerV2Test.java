@@ -513,8 +513,8 @@ public class SCIMRoleManagerV2Test {
             scimRoleManagerV2.createRole(roleV2);
         } catch (BadRequestException e) {
             assertEquals(e.getScimType(), errorMessage);
-        }catch (ConflictException e) {
-            assertEquals(errorMessage, e.getMessage());
+        } catch (ConflictException e) {
+            assertEquals(errorMessage, e.getDetail());
         } catch (Exception e) {
             fail("Unexpected exception occurred: " + e.getMessage(), e);
         }
