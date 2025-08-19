@@ -520,9 +520,9 @@ public class SCIMRoleManagerV2Test {
             fail("Unexpected exception occurred: " + e.getMessage(), e);
         }
 
-        roleV2.setDisplayName("123v3");
-        when(roleManagementService.addRole(eq("123v3"), any(), any(), any(), any(), any(), eq(SAMPLE_TENANT_DOMAIN)))
-                .thenThrow(new IdentityRoleManagementException(errorCode, errorMessage));
+        roleV2.setDisplayName(ROLE_NAME + "-V3");
+        when(roleManagementService.addRole(eq(ROLE_NAME + "-V3"), any(), any(), any(), any(), any(),
+                eq(SAMPLE_TENANT_DOMAIN))).thenThrow(new IdentityRoleManagementException(errorCode, errorMessage));
         try {
             // The SCIM Role V3 API uses this method to create a role.
             scimRoleManagerV2.createRoleMeta(roleV2);
