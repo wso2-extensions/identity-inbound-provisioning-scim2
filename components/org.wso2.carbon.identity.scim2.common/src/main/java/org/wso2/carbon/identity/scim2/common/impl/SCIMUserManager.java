@@ -5819,6 +5819,7 @@ public class SCIMUserManager implements UserManager {
             return false;
         }
 
+        // Prioritizing the account disable flow.
         if (enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_DISABLED_CLAIM_URI,
                 Flow.Name.USER_ACCOUNT_DISABLE, Flow.Name.USER_ACCOUNT_ENABLE)) {
             return true;
@@ -5829,7 +5830,7 @@ public class SCIMUserManager implements UserManager {
     }
 
     private boolean enterFlowIfClaimChanged(Map<String, String> claims, String claimUri,
-                                         Flow.Name trueFlow, Flow.Name falseFlow) {
+                                            Flow.Name trueFlow, Flow.Name falseFlow) {
 
         String claimValue = claims.get(claimUri);
         if (StringUtils.isNotBlank(claimValue)) {
