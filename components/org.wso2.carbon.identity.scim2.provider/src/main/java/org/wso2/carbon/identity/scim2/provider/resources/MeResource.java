@@ -124,32 +124,38 @@ public class MeResource extends AbstractResource {
     @DELETE
     public Response deleteUser(@HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
 
-        String userId = SupportUtils.getAuthenticatedUserId();
         try {
-            // defaults to application/scim+json.
-            if (format == null) {
-                format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
+            SupportUtils.enterFlow(Flow.Name.USER_ACCOUNT_DELETE);
+
+            String userId = SupportUtils.getAuthenticatedUserId();
+            try {
+                // defaults to application/scim+json.
+                if (format == null) {
+                    format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
+                }
+                if (!isValidOutputFormat(format)) {
+                    String error = format + " is not supported.";
+                    throw new FormatNotSupportedException(error);
+                }
+
+                // obtain the user store manager
+                UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
+
+                // create charon-SCIM me resource manager and hand-over the request.
+                MeResourceManager meResourceManager = new MeResourceManager();
+
+                SCIMResponse scimResponse = meResourceManager.delete(userId, userManager);
+                // needs to check the code of the response and return 200 0k or other error codes
+                // appropriately.
+                return SupportUtils.buildResponse(scimResponse);
+
+            } catch (CharonException e) {
+                return handleCharonException(e);
+            } catch (FormatNotSupportedException e) {
+                return handleFormatNotSupportedException(e);
             }
-            if(!isValidOutputFormat(format)){
-                String error = format + " is not supported.";
-                throw  new FormatNotSupportedException(error);
-            }
-
-            // obtain the user store manager
-            UserManager userManager = IdentitySCIMManager.getInstance().getUserManager();
-
-            // create charon-SCIM me resource manager and hand-over the request.
-            MeResourceManager meResourceManager = new MeResourceManager();
-
-            SCIMResponse scimResponse = meResourceManager.delete(userId, userManager);
-            // needs to check the code of the response and return 200 0k or other error codes
-            // appropriately.
-            return SupportUtils.buildResponse(scimResponse);
-
-        } catch (CharonException e) {
-            return handleCharonException(e);
-        } catch (FormatNotSupportedException e) {
-            return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 
