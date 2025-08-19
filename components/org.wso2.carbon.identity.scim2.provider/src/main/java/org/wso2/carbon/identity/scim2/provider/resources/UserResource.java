@@ -154,7 +154,7 @@ public class UserResource extends AbstractResource {
                                @HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
 
         try {
-            SupportUtils.enterFlow(Flow.Name.USER_DELETE);
+            SupportUtils.enterFlow(Flow.Name.USER_ACCOUNT_DELETE);
             // defaults to application/scim+json.
             if (format == null) {
                 format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
