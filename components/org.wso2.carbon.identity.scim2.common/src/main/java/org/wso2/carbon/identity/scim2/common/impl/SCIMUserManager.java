@@ -5819,13 +5819,13 @@ public class SCIMUserManager implements UserManager {
             return false;
         }
 
-        boolean accountLockFlowEntered = enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_LOCKED_CLAIM_URI,
+        if (enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_DISABLED_CLAIM_URI,
+                Flow.Name.USER_ACCOUNT_DISABLE, Flow.Name.USER_ACCOUNT_ENABLE)) {
+            return true;
+        }
+
+        return enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_LOCKED_CLAIM_URI,
                 Flow.Name.USER_ACCOUNT_LOCK, Flow.Name.USER_ACCOUNT_UNLOCK);
-
-        boolean accountDisableFlowEntered = enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_DISABLED_CLAIM_URI,
-                Flow.Name.USER_ACCOUNT_DISABLE, Flow.Name.USER_ACCOUNT_ENABLE);
-
-        return accountLockFlowEntered || accountDisableFlowEntered;
     }
 
     private boolean enterFlowIfClaimChanged(Map<String, String> claims, String claimUri,
