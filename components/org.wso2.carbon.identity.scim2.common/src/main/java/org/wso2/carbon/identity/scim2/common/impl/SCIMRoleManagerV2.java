@@ -178,11 +178,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             return buildSCIMRoleResponse(roleBasicInfo, locationURI);
         } catch (IdentityRoleManagementException e) {
             String errorCode = e.getErrorCode();
-            if (ROLE_ALREADY_EXISTS.getCode().equals((errorCode))) {
+            if (ROLE_ALREADY_EXISTS.getCode().equals((errorCode))
+                    || ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getCode().equals((errorCode))) {
                 throw new ConflictException(e.getMessage());
             } else if (INVALID_REQUEST.getCode().equals(errorCode) ||
-                    ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getCode().equals(errorCode) ||
-                    ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS.getCode().equals(errorCode) ||
                     ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getCode().equals(errorCode) ||
                     ERROR_CODE_ROLE_WF_USER_PENDING_DELETION.getCode().equals(errorCode)) {
                 throw new BadRequestException(e.getMessage());
@@ -540,9 +539,12 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             String locationURI = getSCIMRoleURLBasedOnVersion(roleBasicInfo.getId());
             return buildSCIMRoleResponse(roleBasicInfo, locationURI);
         } catch (IdentityRoleManagementException e) {
-            if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
+            if (StringUtils.equals(ROLE_ALREADY_EXISTS.getCode(), e.getErrorCode())
+                    || StringUtils.equals(ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getCode(), e.getErrorCode())) {
                 throw new ConflictException(e.getMessage());
-            } else if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())) {
+            } else if (StringUtils.equals(INVALID_REQUEST.getCode(), e.getErrorCode())
+                    || ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getCode().equals(e.getErrorCode())
+                    || ERROR_CODE_ROLE_WF_USER_PENDING_DELETION.getCode().equals(e.getErrorCode())) {
                 throw new BadRequestException(e.getMessage());
             } else if (INVALID_AUDIENCE.getCode().equals(e.getErrorCode()) ||
                     INVALID_PERMISSION.getCode().equals(e.getErrorCode())) {

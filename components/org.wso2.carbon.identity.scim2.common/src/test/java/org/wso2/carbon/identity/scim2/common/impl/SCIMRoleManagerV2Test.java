@@ -510,11 +510,26 @@ public class SCIMRoleManagerV2Test {
         RoleV2 roleV2 = new RoleV2();
         roleV2.setDisplayName(ROLE_NAME);
         try {
+            // The SCIM Role V2 API uses this method to create a role.
             scimRoleManagerV2.createRole(roleV2);
         } catch (BadRequestException e) {
             assertEquals(e.getScimType(), errorMessage);
-        }catch (ConflictException e) {
-            assertEquals(errorMessage, e.getMessage());
+        } catch (ConflictException e) {
+            assertEquals(errorMessage, e.getDetail());
+        } catch (Exception e) {
+            fail("Unexpected exception occurred: " + e.getMessage(), e);
+        }
+
+        roleV2.setDisplayName(ROLE_NAME + "-V3");
+        when(roleManagementService.addRole(eq(ROLE_NAME + "-V3"), any(), any(), any(), any(), any(),
+                eq(SAMPLE_TENANT_DOMAIN))).thenThrow(new IdentityRoleManagementException(errorCode, errorMessage));
+        try {
+            // The SCIM Role V3 API uses this method to create a role.
+            scimRoleManagerV2.createRoleMeta(roleV2);
+        } catch (BadRequestException e) {
+            assertEquals(e.getScimType(), errorMessage);
+        } catch (ConflictException e) {
+            assertEquals(errorMessage, e.getDetail());
         } catch (Exception e) {
             fail("Unexpected exception occurred: " + e.getMessage(), e);
         }
@@ -523,8 +538,6 @@ public class SCIMRoleManagerV2Test {
     @DataProvider
     public Object[][] provideErrorsWhenRoleCreation() {
         return new Object[][] {
-                {WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS.getCode(),
-                        WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS.getMessage()},
                 {WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getCode(),
                         WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getMessage()},
                 {WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getCode(),
