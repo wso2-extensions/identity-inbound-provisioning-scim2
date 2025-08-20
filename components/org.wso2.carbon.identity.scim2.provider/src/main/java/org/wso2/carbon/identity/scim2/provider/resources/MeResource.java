@@ -120,19 +120,19 @@ public class MeResource extends AbstractResource {
         }
     }
 
-
     @DELETE
     public Response deleteUser(@HeaderParam(SCIMProviderConstants.ACCEPT_HEADER) String format) {
 
-        String userId = SupportUtils.getAuthenticatedUserId();
         try {
+            SupportUtils.enterFlow(Flow.Name.USER_ACCOUNT_DELETE);
+            String userId = SupportUtils.getAuthenticatedUserId();
             // defaults to application/scim+json.
             if (format == null) {
                 format = SCIMProviderConstants.APPLICATION_SCIM_JSON;
             }
-            if(!isValidOutputFormat(format)){
+            if (!isValidOutputFormat(format)) {
                 String error = format + " is not supported.";
-                throw  new FormatNotSupportedException(error);
+                throw new FormatNotSupportedException(error);
             }
 
             // obtain the user store manager
@@ -150,6 +150,8 @@ public class MeResource extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } finally {
+            IdentityContext.getThreadLocalIdentityContext().exitFlow();
         }
     }
 
