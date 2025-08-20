@@ -481,7 +481,8 @@ public class SCIMRoleManagerV2Test {
 
     @Test
     public void testCreateRoleWhenWorkflowEnabled() throws ConflictException, NotImplementedException,
-            BadRequestException, CharonException, OrganizationManagementException, IdentityRoleManagementException {
+            BadRequestException, CharonException, OrganizationManagementException, IdentityRoleManagementException,
+            ForbiddenException {
 
         when(OrganizationManagementUtil.isOrganization(SAMPLE_TENANT_DOMAIN)).thenReturn(true);
         when(SCIMCommonComponentHolder.getIdpManagerService()).thenReturn(idpManager);

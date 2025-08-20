@@ -57,7 +57,6 @@ import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
 import org.wso2.charon3.core.exceptions.CharonException;
-import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
@@ -1274,30 +1273,5 @@ public class SCIMCommonUtils {
         }
 
         return multiValuedClaimsToModify;
-    }
-
-
-    public static boolean isBulkRequest() {
-
-        if (IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.NORMALIZED_REQUEST_URI) != null) {
-            return IdentityUtil.threadLocalProperties.get()
-                    .get(SCIMCommonConstants.NORMALIZED_REQUEST_URI).toString()
-                    .contains(SCIMCommonConstants.BULK_ENDPOINT);
-        }
-
-        return false;
-    }
-
-    public static void validateAuthorizedScopes(List<String> requiredScopes)
-            throws ForbiddenException {
-
-        List<String> authorizedScopes = (List<String>) IdentityUtil.threadLocalProperties.get().get(
-                SCIMCommonConstants.AUTHORIZED_SCOPES);
-
-        if (authorizedScopes != null &&
-                requiredScopes.stream().noneMatch(authorizedScopes::contains)) {
-            throw new ForbiddenException(
-                    "Operation is not permitted. You do not have permissions to make this request.");
-        }
     }
 }
