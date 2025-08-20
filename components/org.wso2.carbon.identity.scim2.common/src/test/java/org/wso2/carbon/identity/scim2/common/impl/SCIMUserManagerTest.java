@@ -63,6 +63,7 @@ import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -2117,7 +2118,7 @@ public class SCIMUserManagerTest {
     @Test(dataProvider = "provideUserDeleteWorkflowValidationErrorMessages")
     public void testDeleteUserWithWorkflowErrors(String errorMessage, String errorCode, String scimType)
             throws NotFoundException, CharonException, UserStoreException,
-            IdentityApplicationManagementException {
+            IdentityApplicationManagementException, ForbiddenException {
 
         String userId = "12345";
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
