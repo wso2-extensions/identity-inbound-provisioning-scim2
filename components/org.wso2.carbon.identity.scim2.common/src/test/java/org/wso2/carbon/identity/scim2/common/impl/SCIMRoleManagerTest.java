@@ -27,6 +27,9 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.OperationScopeValidationContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
@@ -43,6 +46,7 @@ import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.ConflictException;
+import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.NotFoundException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.objects.Group;
@@ -55,6 +59,7 @@ import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -127,6 +132,7 @@ public class SCIMRoleManagerTest {
     @BeforeMethod
     public void setUpMethod() {
 
+        initPrivilegedCarbonContext();
         scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         organizationManagementUtil = mockStatic(OrganizationManagementUtil.class);
         when(SCIMCommonUtils.getSCIMRoleURL(nullable(String.class))).thenReturn(DUMMY_SCIM_URL);
@@ -236,13 +242,86 @@ public class SCIMRoleManagerTest {
     @Test(dataProvider = "dataProviderForCreateRolePositive")
     public void testCreateRolePositive(String roleId, String roleDisplayName, String tenantDomain)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
-            OrganizationManagementException {
+            OrganizationManagementException, ForbiddenException {
 
         Role role = getDummyRole(roleId, roleDisplayName);
         when(mockRoleManagementService.addRole(nullable(String.class), anyList(), anyList(),
                 anyList(), anyString())).thenReturn(new RoleBasicInfo(roleId, roleDisplayName));
         when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
         SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
+        Role createdRole = scimRoleManager.createRole(role);
+        assertEquals(createdRole.getDisplayName(), roleDisplayName);
+        assertEquals(createdRole.getId(), roleId);
+    }
+
+    @DataProvider
+    public static Object[][] dataProviderCreateRolePositiveWithInvalidPermission() {
+
+        Map<String, String> operationScopeMap = new HashMap<>();
+        operationScopeMap.put("createRole", "scope1");
+        operationScopeMap.put("deleteRole", "scope2");
+
+        return new Object[][]{
+                {true, operationScopeMap, Collections.emptyList()},
+                {true, operationScopeMap, Collections.singletonList("scope2")}
+        };
+    }
+
+    @Test(dataProvider = "dataProviderCreateRolePositiveWithInvalidPermission",
+            expectedExceptions = {ForbiddenException.class})
+    public void testCreateRolePositiveWithInvalidPermission(boolean isValidationRequired,
+                                                            Map<String, String> operationScopeMap,
+                                                            List<String> validatedScopes)
+            throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
+            OrganizationManagementException, ForbiddenException {
+
+        testCreateRole(isValidationRequired, operationScopeMap, validatedScopes);
+    }
+
+    @DataProvider
+    public static Object[][] dataProviderCreateRolePositiveWithValidPermission() {
+
+        Map<String, String> operationScopeMap = new HashMap<>();
+        operationScopeMap.put("createRole", "scope1");
+        operationScopeMap.put("deleteRole", "scope2");
+
+        return new Object[][]{
+                {false, null, null},
+                {true, operationScopeMap, Collections.singletonList("scope1")}
+        };
+    }
+
+    @Test(dataProvider = "dataProviderCreateRolePositiveWithValidPermission")
+    public void testCreateRolePositiveWithValidPermissions(boolean isValidationRequired,
+                                                            Map<String, String> operationScopeMap,
+                                                            List<String> validatedScopes)
+            throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
+            OrganizationManagementException, ForbiddenException {
+
+        testCreateRole(isValidationRequired, operationScopeMap, validatedScopes);
+    }
+
+    private void testCreateRole(boolean isValidationRequired, Map<String, String> operationScopeMap,
+                                List<String> validatedScopes)
+            throws BadRequestException, CharonException, IdentityRoleManagementException,
+            OrganizationManagementException, ForbiddenException, ConflictException {
+
+        String roleId = SAMPLE_VALID_ROLE_ID;
+        String roleDisplayName = SAMPLE_VALID_ROLE_NAME;
+
+        OperationScopeValidationContext operationScopeValidationContext =
+                new OperationScopeValidationContext();
+        operationScopeValidationContext.setValidationRequired(isValidationRequired);
+        operationScopeValidationContext.setOperationScopeMap(operationScopeMap);
+        operationScopeValidationContext.setValidatedScopes(validatedScopes);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setOperationScopeValidationContext(
+                operationScopeValidationContext);
+
+        Role role = getDummyRole(roleId, roleDisplayName);
+        when(mockRoleManagementService.addRole(nullable(String.class), anyList(), anyList(),
+                anyList(), anyString())).thenReturn(new RoleBasicInfo(roleId, roleDisplayName));
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+        SCIMRoleManager scimRoleManager = new SCIMRoleManager(mockRoleManagementService, SAMPLE_TENANT_DOMAIN);
         Role createdRole = scimRoleManager.createRole(role);
         assertEquals(createdRole.getDisplayName(), roleDisplayName);
         assertEquals(createdRole.getId(), roleId);
@@ -388,7 +467,8 @@ public class SCIMRoleManagerTest {
 
     @Test(dataProvider = "dataProviderForDeleteRolePositive")
     public void testDeleteRolePositive(String roleId, String tenantDomain)
-            throws IdentityRoleManagementException, NotFoundException, BadRequestException, CharonException {
+            throws IdentityRoleManagementException, NotFoundException, BadRequestException,
+            CharonException, ForbiddenException {
 
         doNothing().when(mockRoleManagementService).deleteRole(roleId, tenantDomain);
         SCIMRoleManager roleManager = new SCIMRoleManager(mockRoleManagementService, tenantDomain);
@@ -648,7 +728,7 @@ public class SCIMRoleManagerTest {
     public void testUpdateRoleUpdateRoleName(String roleId, String oldRoleName, String newRoleName, String tenantDomain,
                                              String type)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
-            NotFoundException {
+            NotFoundException, ForbiddenException {
 
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
@@ -714,7 +794,7 @@ public class SCIMRoleManagerTest {
     public void testUpdateRoleUpdateRoleNameThrowingErrors(String roleId, String oldRoleName, String newRoleName,
                                                            String tenantDomain, String sError)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
-            NotFoundException {
+            NotFoundException, ForbiddenException {
 
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName);
 
@@ -767,7 +847,7 @@ public class SCIMRoleManagerTest {
     public void testUpdateRoleUpdateUserListOfRoleThrowingErrors(String roleId, String oldRoleName, String newRoleName,
                                                                  String tenantDomain, String type, String sError)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
-            NotFoundException {
+            NotFoundException, ForbiddenException {
 
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
@@ -813,7 +893,7 @@ public class SCIMRoleManagerTest {
     public void testUpdateRoleUpdateGroupListOfRoleThrowingErrors(String roleId, String oldRoleName, String newRoleName,
                                                                   String tenantDomain, String type, String sError)
             throws IdentityRoleManagementException, BadRequestException, CharonException, ConflictException,
-            NotFoundException {
+            NotFoundException, ForbiddenException {
 
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, type);
@@ -860,7 +940,7 @@ public class SCIMRoleManagerTest {
                                                                  String tenantDomain, String permissionType,
                                                                  String sError)
             throws IdentityRoleManagementException, BadRequestException, CharonException,
-            ConflictException, NotFoundException {
+            ConflictException, NotFoundException, ForbiddenException {
 
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo(roleId, newRoleName);
         Role[] oldAndNewRoles = getOldAndNewRoleDummies(roleId, oldRoleName, newRoleName, permissionType);
@@ -1378,5 +1458,14 @@ public class SCIMRoleManagerTest {
 
     private static class MockNode extends Node {
 
+    }
+
+    private static void initPrivilegedCarbonContext() {
+
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+                          );
+        PrivilegedCarbonContext.startTenantFlow();
     }
 }

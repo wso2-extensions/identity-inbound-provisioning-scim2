@@ -151,10 +151,17 @@ import java.util.stream.Collectors;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ACCOUNT_DISABLED_CLAIM_URI;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ACCOUNT_LOCKED_CLAIM_URI;
+import static org.wso2.carbon.identity.authorization.common.AuthorizationUtil.validateOperationScopes;
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.password.policy.constants.PasswordPolicyConstants.ErrorMessages.ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_CREATE_GROUP_OP;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_CREATE_USER_OP;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_DELETE_GROUP_OP;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_DELETE_USER_OP;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_GROUP_OP;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_USER_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildAgentSchema;
@@ -256,12 +263,17 @@ public class SCIMUserManager implements UserManager {
 
         String userStoreName = null;
         try {
+            validateOperationScopes(BULK_CREATE_USER_OP);
             String userStoreDomainFromSP = getUserStoreDomainFromSP();
             if (userStoreDomainFromSP != null) {
                 userStoreName = userStoreDomainFromSP;
             }
         } catch (IdentityApplicationManagementException e) {
             throw new CharonException("Error retrieving User Store name. ", e);
+        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
+            throw new ForbiddenException(
+                    "User does not have permission to create a user in the user store: " +
+                            userStoreName, e.getMessage());
         }
 
         StringBuilder userName = new StringBuilder();
@@ -589,7 +601,8 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void deleteUser(String userId) throws NotFoundException, CharonException, BadRequestException {
+    public void deleteUser(String userId)
+            throws NotFoundException, CharonException, BadRequestException, ForbiddenException {
 
         if (log.isDebugEnabled()) {
             log.debug("Deleting user: " + userId);
@@ -598,6 +611,7 @@ public class SCIMUserManager implements UserManager {
         org.wso2.carbon.user.core.common.User coreUser = null;
         String userName = null;
         try {
+            validateOperationScopes(BULK_DELETE_USER_OP);
 
             // Set thread local property to signal the downstream SCIMUserOperationListener
             // about the provisioning route.
@@ -675,6 +689,9 @@ public class SCIMUserManager implements UserManager {
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
             }
             throw resolveError(e, errorMessage);
+        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
+            throw new ForbiddenException("User does not have permission to delete user: " +
+                    maskIfRequired(userName) + " from the user store.", e.getMessage());
         }
     }
 
@@ -1144,9 +1161,10 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public User updateUser(User user, Map<String, Boolean> requiredAttributes) throws CharonException,
-            BadRequestException {
+            BadRequestException, ForbiddenException {
 
         try {
+            validateOperationScopes(BULK_UPDATE_USER_OP);
             if (log.isDebugEnabled()) {
                 log.debug("Updating user: " + user.getUserName());
             }
@@ -1327,6 +1345,9 @@ public class SCIMUserManager implements UserManager {
         } catch (CharonException e) {
             log.error("Error occurred while trying to update the user", e);
             throw new CharonException("Error occurred while trying to update the user", e);
+        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
+            throw new ForbiddenException("User does not have the required permissions to update the user.",
+                    e.getMessage());
         }
     }
 
@@ -2962,26 +2983,27 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public void deleteMe(String userId) throws NotFoundException, CharonException, BadRequestException,
-            NotImplementedException {
+            NotImplementedException, ForbiddenException {
 
         deleteUser(userId);
     }
 
     @Override
     public User updateMe(User user, Map<String, Boolean> requiredAttributes)
-            throws NotImplementedException, CharonException, BadRequestException {
+            throws NotImplementedException, CharonException, BadRequestException, ForbiddenException {
 
         return updateUser(user, requiredAttributes);
     }
 
     @Override
     public Group createGroup(Group group, Map<String, Boolean> requiredAttributes)
-            throws CharonException, ConflictException, BadRequestException {
+            throws CharonException, ConflictException, BadRequestException, ForbiddenException {
 
         if (log.isDebugEnabled()) {
             log.debug("Creating group: " + group.getDisplayName());
         }
         try {
+            validateOperationScopes(BULK_CREATE_GROUP_OP);
             // Modify display name if no domain is specified, in order to support multiple user store feature.
             String originalName = group.getDisplayName();
             String roleNameWithDomain;
@@ -3085,6 +3107,9 @@ public class SCIMUserManager implements UserManager {
                 log.debug(error, e);
             }
             throw new BadRequestException(error, ResponseCodeConstants.INVALID_VALUE);
+        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
+            throw new ForbiddenException("User does not have permission to create group: " + group.getDisplayName(),
+                    e.getMessage());
         }
         return group;
     }
@@ -3189,12 +3214,14 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void deleteGroup(String groupId) throws NotFoundException, CharonException, BadRequestException {
+    public void deleteGroup(String groupId)
+            throws NotFoundException, CharonException, BadRequestException, ForbiddenException {
 
         if (log.isDebugEnabled()) {
             log.debug("Deleting group: " + groupId);
         }
         try {
+            validateOperationScopes(BULK_DELETE_GROUP_OP);
             // Set thread local property to signal the downstream SCIMUserOperationListener
             // about the provisioning route.
             SCIMCommonUtils.setThreadLocalIsManagedThroughSCIMEP(true);
@@ -3234,6 +3261,9 @@ public class SCIMUserManager implements UserManager {
             }
         } catch (UserStoreException e) {
             throw resolveError(e, "Error occurred while deleting group " + groupId);
+        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
+            throw new ForbiddenException("User does not have permission to delete group: " + groupId,
+                    e.getMessage());
         }
     }
 
@@ -3699,7 +3729,8 @@ public class SCIMUserManager implements UserManager {
     }
 
     @Override
-    public void updateGroup(Group oldGroup, Group newGroup) throws CharonException, BadRequestException {
+    public void updateGroup(Group oldGroup, Group newGroup)
+            throws CharonException, BadRequestException, ForbiddenException {
 
         try {
             doUpdateGroup(oldGroup, newGroup);
@@ -3722,12 +3753,16 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException("Error retrieving User Store name. ", e);
         } catch (BadRequestException | CharonException e) {
             throw new CharonException("Error in updating the group", e);
+        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
+            throw new ForbiddenException("User does not have permission to update group: " + oldGroup.getDisplayName(),
+                    e.getMessage());
         }
     }
 
     @Override
     public void patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations)
-            throws NotImplementedException, BadRequestException, CharonException, NotFoundException {
+            throws NotImplementedException, BadRequestException, CharonException,
+            NotFoundException, ForbiddenException {
 
         doPatchGroup(groupId, currentGroupName, patchOperations);
     }
@@ -3735,19 +3770,21 @@ public class SCIMUserManager implements UserManager {
     @Override
     public Group patchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations,
                             Map<String, Boolean> requiredAttributes) throws NotImplementedException,
-            BadRequestException, CharonException, NotFoundException {
+            BadRequestException, CharonException, NotFoundException, ForbiddenException {
 
         doPatchGroup(groupId, currentGroupName, patchOperations);
         return getGroup(groupId, requiredAttributes);
     }
 
     private void doPatchGroup(String groupId, String currentGroupName, Map<String, List<PatchOperation>> patchOperations) throws
-            NotImplementedException, BadRequestException, CharonException, NotFoundException {
+            NotImplementedException, BadRequestException, CharonException, NotFoundException,
+            ForbiddenException {
 
         if (log.isDebugEnabled()) {
             log.debug("Updating group: " + currentGroupName);
         }
         try {
+            validateOperationScopes(BULK_UPDATE_GROUP_OP);
             List<PatchOperation> displayNameOperations = new ArrayList<>();
             List<PatchOperation> memberOperations = new ArrayList<>();
             String newGroupName = currentGroupName;
@@ -3879,6 +3916,9 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException(e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
             throw new CharonException("Error retrieving User Store name. ", e);
+        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
+            throw new ForbiddenException("User does not have permission to update group: " + currentGroupName,
+                    e.getMessage());
         }
     }
 
@@ -3963,7 +4003,7 @@ public class SCIMUserManager implements UserManager {
 
     @Override
     public Group updateGroup(Group oldGroup, Group newGroup, Map<String, Boolean> requiredAttributes)
-            throws CharonException, BadRequestException {
+            throws CharonException, BadRequestException, ForbiddenException {
 
         try {
             boolean updated = doUpdateGroup(oldGroup, newGroup);
@@ -4000,12 +4040,17 @@ public class SCIMUserManager implements UserManager {
             throw new CharonException("Error retrieving User Store name. ", e);
         } catch (CharonException e) {
             throw new CharonException("Error in updating the group", e);
+        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
+            throw new ForbiddenException("User does not have permission to update group: " + oldGroup.getDisplayName(),
+                    e.getMessage());
         }
     }
 
     public boolean doUpdateGroup(Group oldGroup, Group newGroup) throws CharonException, IdentitySCIMException,
-            BadRequestException, IdentityApplicationManagementException, org.wso2.carbon.user.core.UserStoreException {
+            BadRequestException, IdentityApplicationManagementException, org.wso2.carbon.user.core.UserStoreException,
+            org.wso2.carbon.identity.authorization.common.exception.ForbiddenException {
 
+        validateOperationScopes(BULK_UPDATE_GROUP_OP);
         setGroupDisplayName(oldGroup, newGroup);
         if (log.isDebugEnabled()) {
             log.debug("Updating group: " + oldGroup.getDisplayName());
