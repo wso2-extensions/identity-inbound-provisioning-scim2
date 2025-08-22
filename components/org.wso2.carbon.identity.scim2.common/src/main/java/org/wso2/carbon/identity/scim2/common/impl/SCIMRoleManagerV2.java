@@ -1560,7 +1560,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                         ERROR_CODE_ROLE_WF_USER_NOT_FOUND.getCode().equals(errorCode) ||
                         ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS.getCode().equals(errorCode) ||
                         ERROR_CODE_ROLE_WF_ROLE_NOT_FOUND.getCode().equals(errorCode)) {
-                    throw new BadRequestException(e.getMessage());
+                    throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
                 } else if (OPERATION_FORBIDDEN.getCode().equals(errorCode)) {
                     throw new ForbiddenException(e.getMessage());
                 } else if (ROLE_WORKFLOW_CREATED.getCode().equals(errorCode)) {
