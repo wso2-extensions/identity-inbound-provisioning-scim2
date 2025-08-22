@@ -21,11 +21,15 @@ package org.wso2.carbon.identity.scim2.common.impl;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.OperationScopeValidationContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -58,6 +62,7 @@ import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -72,7 +77,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -131,9 +135,16 @@ public class SCIMRoleManagerV2Test {
         openMocks(this);
     }
 
+    @AfterClass
+    public void tearDownClass() {
+
+        PrivilegedCarbonContext.endTenantFlow();
+    }
+
     @BeforeMethod
     public void setUpMethod() {
 
+        initPrivilegedCarbonContext();
         identityUtil = mockStatic(IdentityUtil.class);
         scimRoleManagerV2 = new SCIMRoleManagerV2(roleManagementService, SAMPLE_TENANT_DOMAIN);
         organizationManagementUtilMockedStatic = mockStatic(OrganizationManagementUtil.class);
@@ -745,5 +756,49 @@ public class SCIMRoleManagerV2Test {
             scimCommonUtils.verify(() -> SCIMCommonUtils.getIdpGroupURL(idpId1, idpGroupId1), times(1));
             scimCommonUtils.verify(() -> SCIMCommonUtils.getIdpGroupURL(idpId2, idpGroupId2), times(1));
         }
+    }
+
+    @DataProvider
+    public static Object[][] dataProviderCreateRolePositiveWithInvalidPermission() {
+
+        Map<String, String> operationScopeMap = new HashMap<>();
+        operationScopeMap.put("createRole", "scope1");
+        operationScopeMap.put("deleteRole", "scope2");
+
+        return new Object[][]{
+                {true, operationScopeMap, Collections.emptyList()},
+                {true, operationScopeMap, Collections.singletonList("scope2")}
+        };
+    }
+
+    @Test(dataProvider = "dataProviderCreateRolePositiveWithInvalidPermission",
+            expectedExceptions = {ForbiddenException.class})
+    public void testCreateRolePositiveWithInvalidPermission(boolean isValidationRequired,
+                                                            Map<String, String> operationScopeMap,
+                                                            List<String> validatedScopes)
+            throws BadRequestException, CharonException, ConflictException, ForbiddenException {
+
+        OperationScopeValidationContext operationScopeValidationContext =
+                new OperationScopeValidationContext();
+        operationScopeValidationContext.setValidationRequired(isValidationRequired);
+        operationScopeValidationContext.setOperationScopeMap(operationScopeMap);
+        operationScopeValidationContext.setValidatedScopes(validatedScopes);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setOperationScopeValidationContext(
+                operationScopeValidationContext);
+
+        RoleV2 roleV2 = new RoleV2();
+        roleV2.setDisplayName(ROLE_NAME);
+        roleV2.setDisplayName(ROLE_NAME + "-v2");
+
+        scimRoleManagerV2.createRole(roleV2);
+    }
+
+    private void initPrivilegedCarbonContext() {
+
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+                          );
+        PrivilegedCarbonContext.startTenantFlow();
     }
 }
