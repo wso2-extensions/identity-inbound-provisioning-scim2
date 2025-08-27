@@ -246,9 +246,16 @@ public class SupportUtils {
      */
     public static void enterFlow(Flow.Name flowName) {
 
-        IdentityContext.getThreadLocalIdentityContext()
-                .enterFlow(new Flow.Builder().name(flowName).initiatingPersona(
-                        getFlowInitiatingPersona()).build());
+        Flow.InitiatingPersona initiatingPersona = getFlowInitiatingPersona();
+        if (initiatingPersona == null) {
+            log.warn("Unable to resolve initiation persona. Hence, not entering the flow: " + flowName);
+            return;
+        }
+
+        IdentityContext.getThreadLocalIdentityContext().enterFlow(new Flow.Builder()
+                .name(flowName)
+                .initiatingPersona(initiatingPersona)
+                .build());
     }
 
     private static Flow.InitiatingPersona getFlowInitiatingPersona() {
@@ -261,6 +268,7 @@ public class SupportUtils {
         } else if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
             return Flow.InitiatingPersona.ADMIN;
         }
+        log.debug("Actor is not set in the identity context.");
         return null;
     }
 
