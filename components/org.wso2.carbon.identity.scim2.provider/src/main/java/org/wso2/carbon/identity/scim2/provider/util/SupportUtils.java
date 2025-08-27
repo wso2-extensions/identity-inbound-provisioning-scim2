@@ -258,10 +258,8 @@ public class SupportUtils {
             return existingFlow.getInitiatingPersona();
         } else if (IdentityContext.getThreadLocalIdentityContext().isApplicationActor()) {
             return Flow.InitiatingPersona.APPLICATION;
-        } else if (IdentityContext.getThreadLocalIdentityContext().isUserActor()) {
-            return Flow.InitiatingPersona.ADMIN;
         }
-        return null;
+        return Flow.InitiatingPersona.ADMIN;
     }
 
     /**
