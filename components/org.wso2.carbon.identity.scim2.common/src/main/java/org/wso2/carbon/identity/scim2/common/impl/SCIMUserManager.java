@@ -1290,13 +1290,13 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
-                boolean isEnteredCredentialUpdateFlow = false;
+                boolean hasEnteredCredentialUpdateFlow = false;
                 try {
-                    isEnteredCredentialUpdateFlow = enterSubFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    hasEnteredCredentialUpdateFlow = enterSubFlow(Flow.Name.CREDENTIAL_UPDATE);
                     carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                     publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
                 } finally {
-                    if (isEnteredCredentialUpdateFlow) {
+                    if (hasEnteredCredentialUpdateFlow) {
                         IdentityContext.getThreadLocalIdentityContext().exitFlow();
                     }
                 }
@@ -1492,14 +1492,14 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
-                boolean isEnteredCredentialUpdateFlow = false;
+                boolean hasEnteredCredentialUpdateFlow = false;
                 try {
-                    isEnteredCredentialUpdateFlow = enterSubFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    hasEnteredCredentialUpdateFlow = enterSubFlow(Flow.Name.CREDENTIAL_UPDATE);
                     carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                     publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
                 } finally {
-                    if (isEnteredCredentialUpdateFlow) {
-                    IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                    if (hasEnteredCredentialUpdateFlow) {
+                        IdentityContext.getThreadLocalIdentityContext().exitFlow();
                     }
                 }
             }
@@ -5711,12 +5711,12 @@ public class SCIMUserManager implements UserManager {
          */
         Map<String, String> claimsAddedOrUpdatedByUser = new HashMap<>(userClaimsToBeModified);
         // Update user claims.
-        boolean isAccountManagementFlowEntered = false;
+        boolean hasEnteredAccountManagementFlow = false;
         try {
-            isAccountManagementFlowEntered = enterAccountManagementFlow(userClaimsToBeModified);
+            hasEnteredAccountManagementFlow = enterAccountManagementSubFlow(userClaimsToBeModified);
             carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
         } finally {
-            if (isAccountManagementFlowEntered) {
+            if (hasEnteredAccountManagementFlow) {
                 IdentityContext.getThreadLocalIdentityContext().exitFlow();
             }
         }
@@ -5842,9 +5842,9 @@ public class SCIMUserManager implements UserManager {
         }
 
         // Update user claims.
-        boolean isAccountManagementFlowEntered = false;
+        boolean hasEnteredAccountManagementFlow = false;
         try {
-            isAccountManagementFlowEntered = enterAccountManagementFlow(userClaimsToBeModified);
+            hasEnteredAccountManagementFlow = enterAccountManagementSubFlow(userClaimsToBeModified);
             if (MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) &&
                     MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
                 // If no multi-valued attribute is modified.
@@ -5855,7 +5855,7 @@ public class SCIMUserManager implements UserManager {
                         convertClaimValuesToList(userClaimsToBeModified), null);
             }
         } finally {
-            if (isAccountManagementFlowEntered) {
+            if (hasEnteredAccountManagementFlow) {
                 IdentityContext.getThreadLocalIdentityContext().exitFlow();
             }
         }
@@ -5866,33 +5866,6 @@ public class SCIMUserManager implements UserManager {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
-    }
-
-    private boolean enterAccountManagementFlow(Map<String, String> userClaimsToBeModified) {
-
-        if (userClaimsToBeModified == null || userClaimsToBeModified.isEmpty()) {
-            return false;
-        }
-
-        // Prioritizing the account disable flow.
-        if (enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_DISABLED_CLAIM_URI,
-                Flow.Name.USER_ACCOUNT_DISABLE, Flow.Name.USER_ACCOUNT_ENABLE)) {
-            return true;
-        }
-
-        return enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_LOCKED_CLAIM_URI,
-                Flow.Name.USER_ACCOUNT_LOCK, Flow.Name.USER_ACCOUNT_UNLOCK);
-    }
-
-    private boolean enterFlowIfClaimChanged(Map<String, String> claims, String claimUri,
-                                            Flow.Name trueFlow, Flow.Name falseFlow) {
-
-        String claimValue = claims.get(claimUri);
-        if (StringUtils.isNotBlank(claimValue)) {
-            boolean state = Boolean.parseBoolean(claimValue);
-            return enterSubFlow(state ? trueFlow : falseFlow);
-        }
-        return false;
     }
 
     /**
@@ -7580,6 +7553,29 @@ public class SCIMUserManager implements UserManager {
             log.warn("Error while retrieving claim metadata. " + e);
         }
         return true;
+    }
+
+    private boolean enterAccountManagementSubFlow(Map<String, String> userClaims) {
+
+        if (userClaims == null || userClaims.isEmpty()) {
+            return false;
+        }
+
+        // Check account disabled claim first (prioritized)
+        String disabledClaimValue = userClaims.get(ACCOUNT_DISABLED_CLAIM_URI);
+        if (StringUtils.isNotBlank(disabledClaimValue)) {
+            boolean isDisabled = Boolean.parseBoolean(disabledClaimValue);
+            return enterSubFlow(isDisabled ? Flow.Name.USER_ACCOUNT_DISABLE : Flow.Name.USER_ACCOUNT_ENABLE);
+        }
+
+        // Check account locked claim if disabled claim not present
+        String lockedClaimValue = userClaims.get(ACCOUNT_LOCKED_CLAIM_URI);
+        if (StringUtils.isNotBlank(lockedClaimValue)) {
+            boolean isLocked = Boolean.parseBoolean(lockedClaimValue);
+            return enterSubFlow(isLocked ? Flow.Name.USER_ACCOUNT_LOCK : Flow.Name.USER_ACCOUNT_UNLOCK);
+        }
+
+        return false;
     }
 
     /**
