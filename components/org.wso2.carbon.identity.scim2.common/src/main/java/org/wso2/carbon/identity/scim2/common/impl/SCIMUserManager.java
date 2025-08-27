@@ -64,7 +64,6 @@ import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.action.PreUpdateProfileActionExecutor;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
-import org.wso2.carbon.identity.scim2.common.internal.util.FlowUtil;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -1291,12 +1290,15 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
+                boolean isEnteredCredentialUpdateFlow = false;
                 try {
-                    FlowUtil.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    isEnteredCredentialUpdateFlow = enterSubFlow(Flow.Name.CREDENTIAL_UPDATE);
                     carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                     publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
                 } finally {
-                    IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                    if (isEnteredCredentialUpdateFlow) {
+                        IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                    }
                 }
             }
 
@@ -1490,12 +1492,15 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
+                boolean isEnteredCredentialUpdateFlow = false;
                 try {
-                    FlowUtil.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    isEnteredCredentialUpdateFlow = enterSubFlow(Flow.Name.CREDENTIAL_UPDATE);
                     carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                     publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
                 } finally {
+                    if (isEnteredCredentialUpdateFlow) {
                     IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                    }
                 }
             }
 
@@ -5885,8 +5890,7 @@ public class SCIMUserManager implements UserManager {
         String claimValue = claims.get(claimUri);
         if (StringUtils.isNotBlank(claimValue)) {
             boolean state = Boolean.parseBoolean(claimValue);
-            FlowUtil.enterFlow(state ? trueFlow : falseFlow);
-            return true;
+            return enterSubFlow(state ? trueFlow : falseFlow);
         }
         return false;
     }
@@ -7575,6 +7579,39 @@ public class SCIMUserManager implements UserManager {
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             log.warn("Error while retrieving claim metadata. " + e);
         }
+        return true;
+    }
+
+    /**
+     * Enters a sub-flow within the current identity context.
+     * The initial flow should be entered from the classes in org.wso2.carbon.identity.scim2.provider.resources package.
+     *
+     * @param flowName The name of the sub-flow to enter.
+     * @return true if the sub-flow was successfully entered; false otherwise.
+     */
+    private boolean enterSubFlow(Flow.Name flowName) {
+
+        Flow existingFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
+        if (existingFlow == null) {
+            log.warn("No existing flow found in the identity context. Cannot enter sub-flow: " +
+                    flowName);
+            return false;
+        }
+
+        Flow flow;
+        if (Flow.isCredentialFlow(flowName)) {
+            flow = new Flow.CredentialFlowBuilder()
+                    .name(flowName)
+                    .initiatingPersona(existingFlow.getInitiatingPersona())
+                    .credentialType(Flow.CredentialType.PASSWORD)
+                    .build();
+        } else {
+            flow = new Flow.Builder()
+                    .name(flowName)
+                    .initiatingPersona(existingFlow.getInitiatingPersona())
+                    .build();
+        }
+        IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
         return true;
     }
 }
