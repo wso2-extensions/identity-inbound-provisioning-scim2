@@ -64,7 +64,6 @@ import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreException;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
 import org.wso2.carbon.identity.scim2.common.internal.action.PreUpdateProfileActionExecutor;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
-import org.wso2.carbon.identity.scim2.common.internal.util.FlowUtil;
 import org.wso2.carbon.identity.scim2.common.utils.AttributeMapper;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -1291,12 +1290,15 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
+                boolean hasEnteredCredentialUpdateFlow = false;
                 try {
-                    FlowUtil.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    hasEnteredCredentialUpdateFlow = enterSubFlow(Flow.Name.CREDENTIAL_UPDATE);
                     carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                     publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, false);
                 } finally {
-                    IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                    if (hasEnteredCredentialUpdateFlow) {
+                        IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                    }
                 }
             }
 
@@ -1490,12 +1492,15 @@ public class SCIMUserManager implements UserManager {
 
             // If password is updated, set it separately.
             if (user.getPassword() != null) {
+                boolean hasEnteredCredentialUpdateFlow = false;
                 try {
-                    FlowUtil.enterFlow(Flow.Name.CREDENTIAL_UPDATE);
+                    hasEnteredCredentialUpdateFlow = enterSubFlow(Flow.Name.CREDENTIAL_UPDATE);
                     carbonUM.updateCredentialByAdminWithID(user.getId(), user.getPassword());
                     publishEvent(user, IdentityEventConstants.Event.POST_UPDATE_CREDENTIAL_BY_SCIM, true);
                 } finally {
-                    IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                    if (hasEnteredCredentialUpdateFlow) {
+                        IdentityContext.getThreadLocalIdentityContext().exitFlow();
+                    }
                 }
             }
 
@@ -5706,12 +5711,12 @@ public class SCIMUserManager implements UserManager {
          */
         Map<String, String> claimsAddedOrUpdatedByUser = new HashMap<>(userClaimsToBeModified);
         // Update user claims.
-        boolean isAccountManagementFlowEntered = false;
+        boolean hasEnteredAccountManagementFlow = false;
         try {
-            isAccountManagementFlowEntered = enterAccountManagementFlow(userClaimsToBeModified);
+            hasEnteredAccountManagementFlow = enterAccountManagementSubFlow(userClaimsToBeModified);
             carbonUM.setUserClaimValuesWithID(user.getId(), userClaimsToBeModified, null);
         } finally {
-            if (isAccountManagementFlowEntered) {
+            if (hasEnteredAccountManagementFlow) {
                 IdentityContext.getThreadLocalIdentityContext().exitFlow();
             }
         }
@@ -5837,9 +5842,9 @@ public class SCIMUserManager implements UserManager {
         }
 
         // Update user claims.
-        boolean isAccountManagementFlowEntered = false;
+        boolean hasEnteredAccountManagementFlow = false;
         try {
-            isAccountManagementFlowEntered = enterAccountManagementFlow(userClaimsToBeModified);
+            hasEnteredAccountManagementFlow = enterAccountManagementSubFlow(userClaimsToBeModified);
             if (MapUtils.isEmpty(simpleMultiValuedClaimsToBeAdded) &&
                     MapUtils.isEmpty(simpleMultiValuedClaimsToBeRemoved)) {
                 // If no multi-valued attribute is modified.
@@ -5850,7 +5855,7 @@ public class SCIMUserManager implements UserManager {
                         convertClaimValuesToList(userClaimsToBeModified), null);
             }
         } finally {
-            if (isAccountManagementFlowEntered) {
+            if (hasEnteredAccountManagementFlow) {
                 IdentityContext.getThreadLocalIdentityContext().exitFlow();
             }
         }
@@ -5861,34 +5866,6 @@ public class SCIMUserManager implements UserManager {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted);
         }
-    }
-
-    private boolean enterAccountManagementFlow(Map<String, String> userClaimsToBeModified) {
-
-        if (userClaimsToBeModified == null || userClaimsToBeModified.isEmpty()) {
-            return false;
-        }
-
-        // Prioritizing the account disable flow.
-        if (enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_DISABLED_CLAIM_URI,
-                Flow.Name.USER_ACCOUNT_DISABLE, Flow.Name.USER_ACCOUNT_ENABLE)) {
-            return true;
-        }
-
-        return enterFlowIfClaimChanged(userClaimsToBeModified, ACCOUNT_LOCKED_CLAIM_URI,
-                Flow.Name.USER_ACCOUNT_LOCK, Flow.Name.USER_ACCOUNT_UNLOCK);
-    }
-
-    private boolean enterFlowIfClaimChanged(Map<String, String> claims, String claimUri,
-                                            Flow.Name trueFlow, Flow.Name falseFlow) {
-
-        String claimValue = claims.get(claimUri);
-        if (StringUtils.isNotBlank(claimValue)) {
-            boolean state = Boolean.parseBoolean(claimValue);
-            FlowUtil.enterFlow(state ? trueFlow : falseFlow);
-            return true;
-        }
-        return false;
     }
 
     /**
@@ -7575,6 +7552,62 @@ public class SCIMUserManager implements UserManager {
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             log.warn("Error while retrieving claim metadata. " + e);
         }
+        return true;
+    }
+
+    private boolean enterAccountManagementSubFlow(Map<String, String> userClaims) {
+
+        if (userClaims == null || userClaims.isEmpty()) {
+            return false;
+        }
+
+        // Check account disabled claim first (prioritized)
+        String disabledClaimValue = userClaims.get(ACCOUNT_DISABLED_CLAIM_URI);
+        if (StringUtils.isNotBlank(disabledClaimValue)) {
+            boolean isDisabled = Boolean.parseBoolean(disabledClaimValue);
+            return enterSubFlow(isDisabled ? Flow.Name.USER_ACCOUNT_DISABLE : Flow.Name.USER_ACCOUNT_ENABLE);
+        }
+
+        // Check account locked claim if disabled claim not present
+        String lockedClaimValue = userClaims.get(ACCOUNT_LOCKED_CLAIM_URI);
+        if (StringUtils.isNotBlank(lockedClaimValue)) {
+            boolean isLocked = Boolean.parseBoolean(lockedClaimValue);
+            return enterSubFlow(isLocked ? Flow.Name.USER_ACCOUNT_LOCK : Flow.Name.USER_ACCOUNT_UNLOCK);
+        }
+
+        return false;
+    }
+
+    /**
+     * Enters a sub-flow within the current identity context.
+     * The initial flow should be entered from the classes in org.wso2.carbon.identity.scim2.provider.resources package.
+     *
+     * @param flowName The name of the sub-flow to enter.
+     * @return true if the sub-flow was successfully entered; false otherwise.
+     */
+    private boolean enterSubFlow(Flow.Name flowName) {
+
+        Flow existingFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
+        if (existingFlow == null) {
+            log.warn("No existing flow found in the identity context. Cannot enter sub-flow: " +
+                    flowName);
+            return false;
+        }
+
+        Flow flow;
+        if (Flow.isCredentialFlow(flowName)) {
+            flow = new Flow.CredentialFlowBuilder()
+                    .name(flowName)
+                    .initiatingPersona(existingFlow.getInitiatingPersona())
+                    .credentialType(Flow.CredentialType.PASSWORD)
+                    .build();
+        } else {
+            flow = new Flow.Builder()
+                    .name(flowName)
+                    .initiatingPersona(existingFlow.getInitiatingPersona())
+                    .build();
+        }
+        IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
         return true;
     }
 }
