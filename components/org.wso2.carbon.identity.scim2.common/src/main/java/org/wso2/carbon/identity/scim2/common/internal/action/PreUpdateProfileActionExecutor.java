@@ -72,13 +72,13 @@ public class PreUpdateProfileActionExecutor {
      * @param userClaimsToBeDeleted  Collection of existing claims that deletes from the profile
      * @throws UserStoreException If an error occurs while executing the action
      */
-    public void execute(User user, Map<String, String> userClaimsToBeModified,
-                        Map<String, String> userClaimsToBeDeleted) throws UserStoreException {
+    public ActionExecutionStatus<?> execute(User user, Map<String, String> userClaimsToBeModified,
+                                                  Map<String, String> userClaimsToBeDeleted) throws UserStoreException {
 
         ActionExecutorService actionExecutorService = SCIMCommonComponentHolder.getActionExecutorService();
 
         if (!actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)) {
-            return;
+            return null;
         }
 
         LOG.debug("Executing pre update profile action for user: " + user.getId());
@@ -95,7 +95,7 @@ public class PreUpdateProfileActionExecutor {
                     actionExecutorService.execute(ActionType.PRE_UPDATE_PROFILE, flowContext,
                             IdentityContext.getThreadLocalIdentityContext().getTenantDomain());
 
-            handleActionExecutionStatus(actionExecutionStatus);
+            return handleActionExecutionStatus(actionExecutionStatus);
         } catch (ActionExecutionException e) {
             throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
                     "Error while executing pre update profile action.", e);
@@ -118,12 +118,12 @@ public class PreUpdateProfileActionExecutor {
         return userActionRequestDTOBuilder.build();
     }
 
-    private void handleActionExecutionStatus(ActionExecutionStatus<?> actionExecutionStatus)
+    private ActionExecutionStatus<?>  handleActionExecutionStatus(ActionExecutionStatus<?> actionExecutionStatus)
             throws UserStoreException {
 
         switch (actionExecutionStatus.getStatus()) {
             case SUCCESS:
-                return;
+                return actionExecutionStatus;
             case FAILED:
                 Failure failure = (Failure) actionExecutionStatus.getResponse();
                 throw new UserActionExecutionClientException(UserActionError.PRE_UPDATE_PROFILE_ACTION_EXECUTION_FAILED,
