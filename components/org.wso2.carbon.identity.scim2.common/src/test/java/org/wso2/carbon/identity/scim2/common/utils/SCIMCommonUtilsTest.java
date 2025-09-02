@@ -53,6 +53,9 @@ public class SCIMCommonUtilsTest {
     private String scimGroupLocation = SCIM_URL + SCIMCommonConstants.GROUPS;
     private String scimServiceProviderConfig = SCIM_URL + SCIMCommonConstants.SERVICE_PROVIDER_CONFIG;
     private String scimResourceType = SCIM_URL + SCIMCommonConstants.RESOURCE_TYPE;
+    private static final String SCIM2_ROLES_V3_LOCATION_URI_BASE = "https://localhost:9443/scim2/v3/Roles/";
+    private static final String SCIM2_ROLES_V2_LOCATION_URI_BASE = "https://localhost:9443/scim2/v2/Roles/";
+    private static final String SCIM2_ROLES_V1_LOCATION_URI_BASE = "https://localhost:9443/scim2/Roles/";
 
     @Mock
     ServiceURL serviceURL;
@@ -337,5 +340,24 @@ public class SCIMCommonUtilsTest {
         SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
     }
 
-    
+    @DataProvider
+    public Object[][] getDefaultSCIMRoleURLData() {
+
+        return new Object[][]{
+                {"v1", SCIM2_ROLES_V1_LOCATION_URI_BASE + ID},
+                {"v2", SCIM2_ROLES_V2_LOCATION_URI_BASE + ID},
+                {"v3", SCIM2_ROLES_V3_LOCATION_URI_BASE + ID},
+                {"", SCIM2_ROLES_V2_LOCATION_URI_BASE + ID},
+                {null, SCIM2_ROLES_V2_LOCATION_URI_BASE + ID},
+        };
+    }
+
+    @Test(dataProvider = "getDefaultSCIMRoleURLData")
+    public void testGetDefaultSCIMRoleURL(String defaultRoleVersionForRef, String expectedRoleURL) throws Exception {
+
+        identityUtil.when(() -> IdentityUtil.getProperty(SCIMCommonConstants.DEFAULT_ROLE_API_VERSION_FOR_REF))
+                .thenReturn(defaultRoleVersionForRef);
+        String roleURL = SCIMCommonUtils.getDefaultSCIMRoleURL(ID);
+        assertEquals(roleURL, expectedRoleURL);
+    }
 }

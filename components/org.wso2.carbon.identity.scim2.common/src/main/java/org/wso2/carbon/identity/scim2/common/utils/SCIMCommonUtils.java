@@ -74,6 +74,11 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V1;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V2;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V3;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_ROLE_API_VERSION_FOR_REF;
+
 /**
  * This class is to be used as a Util class for SCIM common things.
  * TODO:rename class name.
@@ -125,6 +130,37 @@ public class SCIMCommonUtils {
     public static String getSCIMRoleV2URL(String id) {
 
         return StringUtils.isNotBlank(id) ? getSCIMRoleV2URL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+    }
+
+    /**
+     * Returns the latest SCIM Role URL based on the configuration.
+     * If the configuration USE_ROLE_V2_EP_IN_REF is set to true, it returns the SCIM Role V2 URL.
+     * Otherwise, it returns the SCIM Role V3 URL.
+     *
+     * @param id The ID of the role.
+     * @return The latest SCIM Role URL with the given ID, or null if the ID is blank.
+     */
+    public static String getDefaultSCIMRoleURL(String id) {
+
+        String roleAPIVersion = IdentityUtil.getProperty(DEFAULT_ROLE_API_VERSION_FOR_REF);
+        String roleURL = getSCIMRoleV2URL();
+        if (StringUtils.isNotBlank(roleAPIVersion)) {
+            if (V1.getVersion().equals(roleAPIVersion)) {
+                roleURL = getSCIMRoleURL();
+            } else if (V2.getVersion().equals(roleAPIVersion)) {
+                roleURL = getSCIMRoleV2URL();
+            } else if (V3.getVersion().equals(roleAPIVersion)) {
+                roleURL = getSCIMRoleV3URL();
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("The configured role API version: " + roleAPIVersion + " is not valid. " +
+                            "Hence using the v2 role API version: " + V3.getVersion());
+                    roleURL = getSCIMRoleV2URL();
+                }
+            }
+        }
+
+        return StringUtils.isNotBlank(id) ? roleURL + SCIMCommonConstants.URL_SEPERATOR + id : null;
     }
 
     public static String getSCIMRoleURLWithVersion(String id, String scimVersion) {
