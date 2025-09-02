@@ -86,7 +86,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-import static org.wso2.carbon.identity.authorization.common.AuthorizationUtil.validateOperationScopes;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_PERMISSION;
@@ -95,9 +94,6 @@ import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPER
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_WORKFLOW_CREATED;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_CREATE_ROLE_OP;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_DELETE_ROLE_OP;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_ROLE_OP;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
         ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
@@ -137,10 +133,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     }
 
     public RoleV2 createRole(RoleV2 role)
-            throws CharonException, ConflictException, BadRequestException, ForbiddenException {
+            throws CharonException, ConflictException, NotImplementedException, BadRequestException {
 
         try {
-            validateOperationScopes(BULK_CREATE_ROLE_OP);
             checkIfRoleExists(role.getId(), tenantDomain);
             validateOrganizationRoleCreation(role.getAudienceType(), role.getAudienceValue(), tenantDomain);
 
@@ -212,8 +207,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             throw new CharonException(
                     String.format("Error occurred while checking the organization status of the tenant: %s",
                             tenantDomain), e);
-        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
-            throw new ForbiddenException("You do not have permission to create roles.", e.getMessage());
         }
     }
 
@@ -382,11 +375,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return rolePropertyValues;
     }
 
-    public void deleteRole(String roleID) throws CharonException, NotFoundException,
-            BadRequestException, ForbiddenException {
+    public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
 
         try {
-            validateOperationScopes(BULK_DELETE_ROLE_OP);
             if (isSharedRole(roleID)) {
                 throw new BadRequestException("Shared role deletion is not allowed.",
                         ResponseCodeConstants.INVALID_VALUE);
@@ -401,8 +392,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                 throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_VALUE);
             }
             throw new CharonException(String.format("Error occurred while deleting the role: %s", roleID), e);
-        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
-            throw new ForbiddenException("You do not have permission to delete roles.", e.getMessage());
         }
     }
 
@@ -431,14 +420,8 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
     @Override
     public RoleV2 updateRole(RoleV2 oldRole, RoleV2 newRole)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
+            throws BadRequestException, CharonException, ConflictException, NotFoundException {
 
-        try {
-            validateOperationScopes(BULK_UPDATE_ROLE_OP);
-        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
-            throw new ForbiddenException("Operation is not permitted. You do not have permissions to make " +
-                    "this request.", e.getMessage());
-        }
         doUpdateRoleName(oldRole, newRole);
         doUpdateUsers(oldRole, newRole);
         doUpdateGroups(oldRole, newRole);
@@ -457,12 +440,6 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     public RoleV2 patchRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
 
-        try {
-            validateOperationScopes(BULK_UPDATE_ROLE_OP);
-        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
-            throw new ForbiddenException("Operation is not permitted. You do not have permissions to make " +
-                    "this request.", e.getMessage());
-        }
         String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Updating Role: " + roleId);

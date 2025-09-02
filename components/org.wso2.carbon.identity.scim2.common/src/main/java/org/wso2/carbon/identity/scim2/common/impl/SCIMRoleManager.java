@@ -69,14 +69,10 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-import static org.wso2.carbon.identity.authorization.common.AuthorizationUtil.validateOperationScopes;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.OPERATION_FORBIDDEN;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.role.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_CREATE_ROLE_OP;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_DELETE_ROLE_OP;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_ROLE_OP;
 
 /**
  * Implementation of the {@link RoleManager} interface.
@@ -99,14 +95,12 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     @Override
-    public Role createRole(Role role) throws CharonException, ConflictException,
-            BadRequestException, ForbiddenException {
+    public Role createRole(Role role) throws CharonException, ConflictException, BadRequestException {
 
         if (log.isDebugEnabled()) {
             log.debug("Creating role: " + role.getDisplayName());
         }
         try {
-            validateOperationScopes(BULK_CREATE_ROLE_OP);
             if (!isRoleModificationAllowedForTenant(tenantDomain)) {
                 throw new BadRequestException("Role creation is not allowed for organizations.",
                         ResponseCodeConstants.INVALID_VALUE);
@@ -138,9 +132,6 @@ public class SCIMRoleManager implements RoleManager {
             }
             throw new CharonException(
                     String.format("Error occurred while adding a new role: %s", role.getDisplayName()), e);
-        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
-            throw new ForbiddenException(
-                    "Role creation is not allowed for the tenant: " + tenantDomain, e.getMessage());
         }
     }
 
@@ -197,11 +188,9 @@ public class SCIMRoleManager implements RoleManager {
     }
 
     @Override
-    public void deleteRole(String roleID) throws CharonException, NotFoundException,
-            BadRequestException, ForbiddenException{
+    public void deleteRole(String roleID) throws CharonException, NotFoundException, BadRequestException {
 
         try {
-            validateOperationScopes(BULK_DELETE_ROLE_OP);
             roleManagementService.deleteRole(roleID, tenantDomain);
         } catch (IdentityRoleManagementException e) {
             if (StringUtils.equals(ROLE_NOT_FOUND.getCode(), e.getErrorCode())) {
@@ -210,10 +199,8 @@ public class SCIMRoleManager implements RoleManager {
                 throw new BadRequestException(e.getMessage());
             }
             throw new CharonException(String.format("Error occurred while deleting the role: %s", roleID), e);
-        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
-            throw new ForbiddenException(
-                    "Role deletion is not allowed for the tenant: " + tenantDomain, e.getMessage());
         }
+
     }
 
     @Override
@@ -386,14 +373,8 @@ public class SCIMRoleManager implements RoleManager {
 
     @Override
     public Role updateRole(Role oldRole, Role newRole)
-            throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
+            throws BadRequestException, CharonException, ConflictException, NotFoundException {
 
-        try {
-            validateOperationScopes(BULK_UPDATE_ROLE_OP);
-        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
-            throw new ForbiddenException(
-                    "Role update is not allowed for the tenant: " + tenantDomain, e.getMessage());
-        }
         doUpdateRoleName(oldRole, newRole);
         doUpdateUsers(oldRole, newRole);
         doUpdateGroups(oldRole, newRole);
@@ -573,13 +554,6 @@ public class SCIMRoleManager implements RoleManager {
     @Override
     public Role patchRole(String roleId, Map<String, List<PatchOperation>> patchOperations)
             throws BadRequestException, CharonException, ConflictException, NotFoundException, ForbiddenException {
-
-        try {
-            validateOperationScopes(BULK_UPDATE_ROLE_OP);
-        } catch (org.wso2.carbon.identity.authorization.common.exception.ForbiddenException e) {
-            throw new ForbiddenException(
-                    "Role patching is not allowed for the tenant: " + tenantDomain, e.getMessage());
-        }
 
         String currentRoleName = getCurrentRoleName(roleId, tenantDomain);
 
