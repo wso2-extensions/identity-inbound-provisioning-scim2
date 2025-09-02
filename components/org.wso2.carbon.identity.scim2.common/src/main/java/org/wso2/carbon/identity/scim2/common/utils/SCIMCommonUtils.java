@@ -1029,7 +1029,7 @@ public class SCIMCommonUtils {
 
     /**
      * Returns SCIM2 agent AttributeSchema of the tenant.
-     *
+     * 
      * @param tenantId
      * @throws CharonException
      */
@@ -1274,4 +1274,5 @@ public class SCIMCommonUtils {
 
         return multiValuedClaimsToModify;
     }
+
 }
