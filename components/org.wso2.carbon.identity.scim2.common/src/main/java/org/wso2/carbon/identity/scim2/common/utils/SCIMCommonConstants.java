@@ -42,6 +42,15 @@ public class SCIMCommonConstants {
     public static final String SERVICE_PROVIDER_CONFIG = "/ServiceProviderConfig";
     public static final String RESOURCE_TYPE = "/ResourceTypes";
     public static final String DEFAULT = "default";
+    public static final String BULK_CREATE_USER_OP = "createUser";
+    public static final String BULK_UPDATE_USER_OP = "updateUser";
+    public static final String BULK_DELETE_USER_OP = "deleteUser";
+    public static final String BULK_CREATE_GROUP_OP = "createGroup";
+    public static final String BULK_UPDATE_GROUP_OP = "updateGroup";
+    public static final String BULK_DELETE_GROUP_OP = "deleteGroup";
+    public static final String BULK_CREATE_ROLE_OP = "createRole";
+    public static final String BULK_UPDATE_ROLE_OP = "updateRole";
+    public static final String BULK_DELETE_ROLE_OP = "deleteRole";
 
     public static final int USER = 1;
     public static final int GROUP = 2;
