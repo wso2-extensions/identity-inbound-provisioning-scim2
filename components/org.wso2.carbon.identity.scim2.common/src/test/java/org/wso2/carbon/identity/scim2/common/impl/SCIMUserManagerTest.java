@@ -2529,20 +2529,20 @@ public class SCIMUserManagerTest {
     public Object[][] duplicateClaimErrorDataProvider() {
 
         return new Object[][]{
-                {"true", UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_SINGLE_CLAIM.getCode(),
+                {true, UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_SINGLE_CLAIM.getCode(),
                         ConflictException.class},
-                {"false", UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_SINGLE_CLAIM.getCode(),
+                {false, UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_SINGLE_CLAIM.getCode(),
                         BadRequestException.class},
-                {"true", UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_MULTIPLE_CLAIMS.getCode(),
+                {true, UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_MULTIPLE_CLAIMS.getCode(),
                         ConflictException.class},
-                {"false", UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_MULTIPLE_CLAIMS.getCode(),
+                {false, UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_MULTIPLE_CLAIMS.getCode(),
                         BadRequestException.class}
         };
     }
 
     @Test(dataProvider = "duplicateClaimErrorDataProvider")
     public void testCreateUser_DuplicateClaimErrorReturnsExpectedResponse(
-            String isReturnConflictResponseForDuplicateClaimsEnabled,
+            boolean isConflictOnClaimUniquenessViolationEnabled,
             String duplicateClaimErrorCode, Class<? extends AbstractCharonException> expectedException)
             throws Exception {
 
@@ -2551,8 +2551,8 @@ public class SCIMUserManagerTest {
 
         when(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS))
                 .thenReturn("false");
-        when(IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_RESPONSE_FOR_DUPLICATE_CLAIMS))
-                .thenReturn(isReturnConflictResponseForDuplicateClaimsEnabled);
+        scimCommonUtils.when(SCIMCommonUtils::isConflictOnClaimUniquenessViolationEnabled)
+                .thenReturn(isConflictOnClaimUniquenessViolationEnabled);
         when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
 
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
@@ -2583,7 +2583,7 @@ public class SCIMUserManagerTest {
 
     @Test(dataProvider = "duplicateClaimErrorDataProvider")
     public void testUpdateUser_DuplicateClaimErrorReturnsExpectedResponse(
-            String isReturnConflictResponseForDuplicateClaimsEnabled,
+            boolean isConflictOnClaimUniquenessViolationEnabled,
             String duplicateClaimErrorCode, Class<? extends AbstractCharonException> expectedException)
             throws Exception {
 
@@ -2594,8 +2594,8 @@ public class SCIMUserManagerTest {
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
 
-        when(IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_RESPONSE_FOR_DUPLICATE_CLAIMS))
-                .thenReturn(isReturnConflictResponseForDuplicateClaimsEnabled);
+        scimCommonUtils.when(SCIMCommonUtils::isConflictOnClaimUniquenessViolationEnabled)
+                .thenReturn(isConflictOnClaimUniquenessViolationEnabled);
         when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
 
@@ -2624,7 +2624,7 @@ public class SCIMUserManagerTest {
 
     @Test(dataProvider = "duplicateClaimErrorDataProvider")
     public void testUpdateUserWithMultiValuedAttributes_DuplicateClaimErrorReturnsExpectedResponse(
-            String isReturnConflictResponseForDuplicateClaimsEnabled,
+            boolean isConflictOnClaimUniquenessViolationEnabled,
             String duplicateClaimErrorCode, Class<? extends AbstractCharonException> expectedException)
             throws Exception {
 
@@ -2635,8 +2635,8 @@ public class SCIMUserManagerTest {
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
 
-        when(IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_RESPONSE_FOR_DUPLICATE_CLAIMS))
-                .thenReturn(isReturnConflictResponseForDuplicateClaimsEnabled);
+        scimCommonUtils.when(SCIMCommonUtils::isConflictOnClaimUniquenessViolationEnabled)
+                .thenReturn(isConflictOnClaimUniquenessViolationEnabled);
         when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
 

@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -126,7 +127,6 @@ import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.OperationNode;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
-import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 
 import java.time.Instant;
 import java.util.AbstractMap;
@@ -161,6 +161,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildA
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildSystemSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isConflictOnClaimUniquenessViolationEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
         .isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilteringEnhancementsEnabled;
@@ -1553,21 +1554,9 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Checks whether SCIM2 endpoints should return a 409 Conflict response instead of a 400 Bad Request when
-     * duplicate claims (uniqueness violations) are encountered.
-     *
-     * @return true if 409 Conflict responses should be returned for duplicate claims,
-     *         false if 400 Bad Request responses should be used instead.
-     */
-    private boolean isReturnConflictResponseForDuplicateClaimsEnabled() {
-
-        return Boolean.parseBoolean(
-                IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_RESPONSE_FOR_DUPLICATE_CLAIMS));
-    }
-
-    /**
-     * Handles a UserStoreClientException by throwing a ConflictException if it's a duplicate claim error
-     * and the ReturnConflictOnDuplicateClaim configuration is enabled.
+     * Inspects a UserStoreClientException to see if it represents a duplicate claim error. If the exception is for a
+     * duplicate claim and the system is configured to return a 409 Conflict status for such violations,
+     * this method will throw a {@link ConflictException}
      *
      * @param e            UserStoreClientException.
      * @param errorMessage Error message to be thrown.
@@ -1576,7 +1565,7 @@ public class SCIMUserManager implements UserManager {
     private void handleAndThrowClientExceptionForDuplicateClaim(UserStoreClientException e, String errorMessage)
             throws ConflictException {
 
-        if (isDuplicateClaimError(e) && isReturnConflictResponseForDuplicateClaimsEnabled()) {
+        if (isDuplicateClaimError(e) && isConflictOnClaimUniquenessViolationEnabled()) {
             throw new ConflictException(errorMessage);
         }
     }
