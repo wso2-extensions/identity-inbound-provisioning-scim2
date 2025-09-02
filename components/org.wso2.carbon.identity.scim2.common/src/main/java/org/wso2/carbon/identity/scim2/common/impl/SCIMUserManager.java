@@ -1517,8 +1517,9 @@ public class SCIMUserManager implements UserManager {
         } catch (UserStoreException e) {
             handleAndThrowClientExceptionForActionFailure(e);
             if (e instanceof UserStoreClientException) {
+                UserStoreClientException clientException = (UserStoreClientException) e;
                 String errorMessage = String.format("Error while updating attributes of user. %s", e.getMessage());
-                handleAndThrowClientExceptionForDuplicateClaim((UserStoreClientException) e, errorMessage);
+                handleAndThrowClientExceptionForDuplicateClaim(clientException, errorMessage);
             }
             handleErrorsOnUserNameAndPasswordPolicy(e);
             throw resolveError(e, "Error while updating attributes of user: " +
@@ -1580,14 +1581,14 @@ public class SCIMUserManager implements UserManager {
      * duplicate claim and the system is configured to return a 409 Conflict status for such violations,
      * this method will throw a {@link ConflictException}
      *
-     * @param e            UserStoreClientException.
+     * @param exception    UserStoreClientException.
      * @param errorMessage Error message to be thrown.
      * @throws ConflictException If the error is a duplicate claim error and configuration is enabled.
      */
-    private void handleAndThrowClientExceptionForDuplicateClaim(UserStoreClientException e, String errorMessage)
+    private void handleAndThrowClientExceptionForDuplicateClaim(UserStoreClientException exception, String errorMessage)
             throws ConflictException {
 
-        if (isDuplicateClaimError(e) && isConflictOnClaimUniquenessViolationEnabled()) {
+        if (isDuplicateClaimError(exception) && isConflictOnClaimUniquenessViolationEnabled()) {
             throw new ConflictException(errorMessage);
         }
     }
