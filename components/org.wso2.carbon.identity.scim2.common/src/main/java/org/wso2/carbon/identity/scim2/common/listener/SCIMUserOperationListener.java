@@ -58,23 +58,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.INTERNAL_DOMAIN;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_LOCAL_CLAIM;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX_VALIDATION_DEFAULT_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_REGEX;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.COMMON_REGEX_VALIDATION_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.GROUPS_LOCAL_CLAIM;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_DISPLAYNAME;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MAX_LENGTH;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MIN_LENGTH;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.REQUIRED;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.*;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_LENGTH_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
 
@@ -264,13 +248,24 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
                 }
                 claimRegex = defaultRegex;
             }
-            if (StringUtils.isNotBlank(claimValue) && !claimValue.matches(claimRegex)) {
-                String regexError = claimProperties.get(PROP_REG_EX_VALIDATION_ERROR);
-                if (StringUtils.isEmpty(regexError)) {
-                    regexError = StringUtils.isNotBlank(defaultRegexValidationError) ? defaultRegexValidationError :
-                            String.format(COMMON_REGEX_VALIDATION_ERROR, claimProperties.get(PROP_DISPLAYNAME));
+
+            String[] claimValues;
+            // If the claim is multivalued, split and validate each value.
+            if (Boolean.parseBoolean(claimProperties.get(SCIMCommonConstants.PROP_MULTI_VALUED))) {
+                // Split the claimValues
+                claimValues = claimValue.split(SCIMCommonConstants.MULTI_ATTRIBUTE_SEPARATOR);
+            } else {
+                claimValues = new String[]{claimValue};
+            }
+            for (String value : claimValues) {
+                if (StringUtils.isNotBlank(value) && !value.matches(claimRegex)) {
+                    String regexError = claimProperties.get(PROP_REG_EX_VALIDATION_ERROR);
+                    if (StringUtils.isEmpty(regexError)) {
+                        regexError = StringUtils.isNotBlank(defaultRegexValidationError) ? defaultRegexValidationError :
+                                String.format(COMMON_REGEX_VALIDATION_ERROR, claimProperties.get(PROP_DISPLAYNAME));
+                    }
+                    throw new UserStoreClientException(regexError, ERROR_CODE_REGEX_VIOLATION.getCode());
                 }
-                throw new UserStoreClientException(regexError, ERROR_CODE_REGEX_VIOLATION.getCode());
             }
         }
     }
