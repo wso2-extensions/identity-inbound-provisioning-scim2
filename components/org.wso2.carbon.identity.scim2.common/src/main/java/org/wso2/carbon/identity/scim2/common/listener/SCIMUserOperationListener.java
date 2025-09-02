@@ -58,7 +58,25 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.*;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_LOCAL_CLAIM;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DATE_OF_BIRTH_REGEX;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.INTERNAL_DOMAIN;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_LOCAL_CLAIM;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MOBILE_REGEX_VALIDATION_DEFAULT_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_REGEX;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.COMMON_REGEX_VALIDATION_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.GROUPS_LOCAL_CLAIM;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_DISPLAYNAME;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NOT_EXISTING_GROUPS_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MAX_LENGTH;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MIN_LENGTH;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.REQUIRED;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_MULTI_VALUED;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MULTI_VALUED_CLAIM_VALUE_SEPARATOR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_LENGTH_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
 
@@ -251,9 +269,9 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
             String[] claimValues;
             // If the claim is multivalued, split and validate each value.
-            if (Boolean.parseBoolean(claimProperties.get(SCIMCommonConstants.PROP_MULTI_VALUED))) {
+            if (Boolean.parseBoolean(claimProperties.get(PROP_MULTI_VALUED))) {
                 // Split the claimValues
-                claimValues = claimValue.split(SCIMCommonConstants.MULTI_ATTRIBUTE_SEPARATOR);
+                claimValues = claimValue.split(MULTI_VALUED_CLAIM_VALUE_SEPARATOR);
             } else {
                 claimValues = new String[]{claimValue};
             }

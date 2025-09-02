@@ -168,7 +168,7 @@ public class SCIMCommonConstants {
     public static final String REQUIRED = "required";
     public static final String PROP_MULTI_VALUED = "multiValued";
 
-    public static final String MULTI_ATTRIBUTE_SEPARATOR = ",";
+    public static final String MULTI_VALUED_CLAIM_VALUE_SEPARATOR = ",";
 
 
     private static final Map<String, String> groupAttributeSchemaMap = new HashMap<>();
