@@ -33,7 +33,10 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.OperationScopeValidationContext;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
@@ -63,6 +66,7 @@ import org.wso2.carbon.user.core.UserStoreClientException;
 import org.wso2.carbon.user.core.common.PaginatedUserResponse;
 import org.wso2.charon3.core.config.SCIMConfigConstants;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.NotImplementedException;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.plainobjects.UsersGetResponse;
@@ -113,6 +117,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Paths;
 import java.security.PrivilegedActionException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -256,6 +261,8 @@ public class SCIMUserManagerTest {
 
     @BeforeMethod
     public void setUpMethod() {
+
+        initPrivilegedCarbonContext();
         initMocks(this);
         identityUtil = mockStatic(IdentityUtil.class);
         scimCommonUtils = mockStatic(SCIMCommonUtils.class);
@@ -2117,7 +2124,7 @@ public class SCIMUserManagerTest {
     @Test(dataProvider = "provideUserDeleteWorkflowValidationErrorMessages")
     public void testDeleteUserWithWorkflowErrors(String errorMessage, String errorCode, String scimType)
             throws NotFoundException, CharonException, UserStoreException,
-            IdentityApplicationManagementException {
+            IdentityApplicationManagementException, ForbiddenException {
 
         String userId = "12345";
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
@@ -2186,6 +2193,37 @@ public class SCIMUserManagerTest {
         scimUserManager.createUser(user, null);
         // This method is for testing of throwing BadRequestException, hence no assertion.
 
+    }
+
+    @DataProvider
+    public static Object[][] dataProviderCreateUserWithInvalidPermission() {
+
+        Map<String, String> operationScopeMap = new HashMap<>();
+        operationScopeMap.put("createUser", "scope1");
+        operationScopeMap.put("deleteUser", "scope2");
+
+        return new Object[][]{
+                {true, operationScopeMap, Collections.emptyList()},
+                {true, operationScopeMap, Collections.singletonList("scope2")}
+        };
+    }
+
+    @Test(expectedExceptions = ForbiddenException.class, dataProvider = "dataProviderCreateUserWithInvalidPermission")
+    public void testCreateUserWithInvalidPermission(boolean isValidationRequired,
+                                                    Map<String, String> operationScopeMap,
+                                                    List<String> validatedScopes) throws Exception {
+
+        OperationScopeValidationContext operationScopeValidationContext =
+                new OperationScopeValidationContext();
+        operationScopeValidationContext.setValidationRequired(isValidationRequired);
+        operationScopeValidationContext.setOperationScopeMap(operationScopeMap);
+        operationScopeValidationContext.setValidatedScopes(validatedScopes);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setOperationScopeValidationContext(
+                operationScopeValidationContext);
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        scimUserManager.createUser(null, null);
     }
 
     @Test(expectedExceptions = AbstractCharonException.class)
@@ -2520,5 +2558,14 @@ public class SCIMUserManagerTest {
         resource.setResourceName(MAX_LIMIT_RESOURCE_NAME);
         resource.setAttributes(getResourceAttribute());
         return resource;
+    }
+
+    private void initPrivilegedCarbonContext() {
+
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+                          );
+        PrivilegedCarbonContext.startTenantFlow();
     }
 }
