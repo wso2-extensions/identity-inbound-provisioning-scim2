@@ -133,9 +133,7 @@ public class SCIMCommonUtils {
     }
 
     /**
-     * Returns the latest SCIM Role URL based on the configuration.
-     * If the configuration USE_ROLE_V2_EP_IN_REF is set to true, it returns the SCIM Role V2 URL.
-     * Otherwise, it returns the SCIM Role V3 URL.
+     * Get the default scim role URL based on the configured role API version.
      *
      * @param id The ID of the role.
      * @return The latest SCIM Role URL with the given ID, or null if the ID is blank.
@@ -154,7 +152,7 @@ public class SCIMCommonUtils {
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("The configured role API version: " + roleAPIVersion + " is not valid. " +
-                            "Hence using the v2 role API version: " + V3.getVersion());
+                            "Hence using the v2 role API version.");
                     roleURL = getSCIMRoleV2URL();
                 }
             }
