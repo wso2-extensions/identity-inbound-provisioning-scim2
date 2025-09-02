@@ -347,8 +347,8 @@ public class SCIMCommonUtilsTest {
                 {"v1", SCIM2_ROLES_V1_LOCATION_URI_BASE + ID},
                 {"v2", SCIM2_ROLES_V2_LOCATION_URI_BASE + ID},
                 {"v3", SCIM2_ROLES_V3_LOCATION_URI_BASE + ID},
-                {"", SCIM2_ROLES_V2_LOCATION_URI_BASE + ID},
-                {null, SCIM2_ROLES_V2_LOCATION_URI_BASE + ID},
+                {"", SCIM2_ROLES_V3_LOCATION_URI_BASE + ID},
+                {null, SCIM2_ROLES_V3_LOCATION_URI_BASE + ID},
         };
     }
 
