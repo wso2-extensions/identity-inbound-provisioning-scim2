@@ -2551,7 +2551,7 @@ public class SCIMUserManagerTest {
 
         when(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS))
                 .thenReturn("false");
-        scimCommonUtils.when(SCIMCommonUtils::isConflictOnClaimUniquenessViolationEnabled)
+        scimCommonUtils.when(SCIMCommonUtils::isReturnConflictOnClaimUniquenessViolationEnabled)
                 .thenReturn(isConflictOnClaimUniquenessViolationEnabled);
         when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
 
@@ -2594,7 +2594,7 @@ public class SCIMUserManagerTest {
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
 
-        scimCommonUtils.when(SCIMCommonUtils::isConflictOnClaimUniquenessViolationEnabled)
+        scimCommonUtils.when(SCIMCommonUtils::isReturnConflictOnClaimUniquenessViolationEnabled)
                 .thenReturn(isConflictOnClaimUniquenessViolationEnabled);
         when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
@@ -2635,7 +2635,7 @@ public class SCIMUserManagerTest {
         Map<String, String> scimToLocalClaimsMap = new HashMap<>();
         scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
 
-        scimCommonUtils.when(SCIMCommonUtils::isConflictOnClaimUniquenessViolationEnabled)
+        scimCommonUtils.when(SCIMCommonUtils::isReturnConflictOnClaimUniquenessViolationEnabled)
                 .thenReturn(isConflictOnClaimUniquenessViolationEnabled);
         when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
