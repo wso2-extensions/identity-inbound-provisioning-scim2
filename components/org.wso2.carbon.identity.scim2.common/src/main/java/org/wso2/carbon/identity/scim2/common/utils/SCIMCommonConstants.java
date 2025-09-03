@@ -125,6 +125,7 @@ public class SCIMCommonConstants {
             "SCIM2MultiAttributeFiltering.UsePagination";
     public static final String CONSIDER_SERVER_WIDE_MAX_LIMIT_ENABLED=
             "SCIM2.ConsiderServerWideUserEndpointMaxLimit";
+    public static final String DEFAULT_ROLE_API_VERSION_FOR_REF = "SCIM2.DefaultRoleAPIVersionForRef";
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
@@ -180,6 +181,28 @@ public class SCIMCommonConstants {
     public static Map<String, String> getGroupAttributeSchemaMap() {
 
         return groupAttributeSchemaMap;
+    }
+
+    /**
+     * Enum which contains the API versions.
+     */
+    public enum APIVersion {
+
+        V1("v1"),
+        V2("v2"),
+        V3("v3");
+
+        private final String version;
+
+        APIVersion(String version) {
+
+            this.version = version;
+        }
+
+        public String getVersion() {
+
+            return version;
+        }
     }
 
     /**
