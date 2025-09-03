@@ -30,6 +30,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.context.IdentityContext;
@@ -1307,5 +1310,49 @@ public class SCIMCommonUtils {
         }
 
         return multiValuedClaimsToModify;
+    }
+
+    /**
+     * Checks whether SCIM2 Users endpoints should return a 409 Conflict response instead of a 400 Bad Request when
+     * duplicate claims (uniqueness violations) are encountered. This setting is retrieved from the tenant-level
+     * configuration store first. If it is not defined there, the method falls back to the server-level default
+     * configuration.
+     *
+     * @return true if 409 Conflict responses should be returned for duplicate claims,
+     *         false if 400 Bad Request responses should be used instead.
+     */
+    public static boolean isReturnConflictOnClaimUniquenessViolationEnabled() {
+
+        String returnConflictOnClaimUniquenessViolationEnabled = null;
+
+        try {
+            // Get the configuration from the config store.
+            Resource resource = SCIMCommonComponentHolder.getConfigurationManager()
+                    .getResource(SCIMCommonConstants.RESOURCE_TYPE_COMPATIBILITY_SETTINGS,
+                            SCIMCommonConstants.RESOURCE_NAME_SCIM2, true);
+
+            if (resource != null && resource.getAttributes() != null) {
+                returnConflictOnClaimUniquenessViolationEnabled = resource.getAttributes().stream()
+                        .filter(attribute ->
+                                SCIMCommonConstants.ATTRIBUTE_NAME_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION
+                                .equals(attribute.getKey()))
+                        .map(Attribute::getValue)
+                        .findFirst()
+                        .orElse(null);
+            }
+        } catch (ConfigurationManagementException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while retrieving configuration from config store for SCIM2 conflict on claim " +
+                        "uniqueness violation. Falling back to server level config.", e);
+            }
+        }
+
+        // Fallback to server level config if not found in config store.
+        if (StringUtils.isBlank(returnConflictOnClaimUniquenessViolationEnabled)) {
+            returnConflictOnClaimUniquenessViolationEnabled =
+                    IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION);
+        }
+
+        return Boolean.parseBoolean(returnConflictOnClaimUniquenessViolationEnabled);
     }
 }

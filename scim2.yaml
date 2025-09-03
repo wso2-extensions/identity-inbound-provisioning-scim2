@@ -122,6 +122,11 @@ paths:
           schema:
             $ref: '#/definitions/ErrorUserNotAvailable'
 
+        409:
+          description: User attribute value already exists
+          schema:
+            $ref: '#/definitions/ErrorUserConflict'
+
         500:
           description: Internal Server Error
           schema:
@@ -164,6 +169,10 @@ paths:
           description: User is updated
           schema:
             $ref: '#/definitions/UserResponseObject'
+        400:
+          description: Invalid Input
+          schema:
+            $ref: '#/definitions/ErrorInvalidInput'
         401:
           description: Unauthorized
           schema:
@@ -172,6 +181,10 @@ paths:
           description: Valid user is not found
           schema:
             $ref: '#/definitions/ErrorUserNotAvailable'
+        409:
+          description: User attribute value already exists
+          schema:
+            $ref: '#/definitions/ErrorUserConflict'
     delete:
       tags:
         - Me Endpoint
@@ -239,6 +252,10 @@ paths:
           description: User is updated
           schema:
             $ref: '#/definitions/PatchOperationResponseOutput'
+        400:
+          description: Invalid Input
+          schema:
+            $ref: '#/definitions/ErrorInvalidInput'
         401:
           description: Unauthorized
           schema:
@@ -247,6 +264,10 @@ paths:
           description: Valid user is not found
           schema:
             $ref: '#/definitions/ErrorUserNotAvailable'
+        409:
+          description: User attribute value already exists
+          schema:
+            $ref: '#/definitions/ErrorUserConflict'
   /Groups:
     get:
       tags:
@@ -741,6 +762,11 @@ paths:
           schema:
             $ref: '#/definitions/ErrorUserNotAvailable'
 
+        409:
+          description: User attribute value already exists
+          schema:
+            $ref: '#/definitions/ErrorUserConflict'
+
         500:
           description: Internal Server Error
           schema:
@@ -872,7 +898,10 @@ paths:
           description: Valid user is found
           schema:
             $ref: '#/definitions/UserResponseObject'
-
+        400:
+          description: Invalid Input
+          schema:
+            $ref: '#/definitions/ErrorInvalidInput'
         401:
           description: Unauthorized
           schema:
@@ -885,6 +914,10 @@ paths:
           description: Valid user is not found
           schema:
             $ref: '#/definitions/ErrorUserNotAvailable'
+        409:
+          description: User attribute value already exists
+          schema:
+            $ref: '#/definitions/ErrorUserConflict'
     delete:
       tags:
         - Users Endpoint
@@ -967,7 +1000,10 @@ paths:
           description: Valid user is found
           schema:
             $ref: '#/definitions/UserResponseObject'
-
+        400:
+          description: Invalid Input
+          schema:
+            $ref: '#/definitions/ErrorInvalidInput'
         401:
           description: Unauthorized
           schema:
@@ -980,6 +1016,10 @@ paths:
           description: Valid user is not found
           schema:
             $ref: '#/definitions/ErrorUserNotAvailable'
+        409:
+          description: User attribute value already exists
+          schema:
+            $ref: '#/definitions/ErrorUserConflict'
 
   /Roles:
     get:
@@ -4488,6 +4528,26 @@ definitions:
       scimType:
         type: string
         example: "Forbidden"
+
+  #-----------------------------------------------------
+  # The Error User Conflict - for user attribute uniqueness violations
+  #-----------------------------------------------------
+  ErrorUserConflict:
+    type: object
+    required:
+      - status
+      - schemas
+      - detail
+    properties:
+      status:
+        type: string
+        example: "409"
+      schemas:
+        type: string
+        example: "urn:ietf:params:scim:api:messages:2.0:Error"
+      detail:
+        type: string
+        example: "The value defined for Email is already in use by a different user!"
 
   #-----------------------------------------------------
   # The Error User Not Available
