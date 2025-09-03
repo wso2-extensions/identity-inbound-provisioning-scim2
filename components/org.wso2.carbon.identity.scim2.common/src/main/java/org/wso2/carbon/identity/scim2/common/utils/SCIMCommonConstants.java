@@ -123,8 +123,16 @@ public class SCIMCommonConstants {
             "SCIM2.RemoveDuplicateUsersInUsersResponse";
     public static final String SCIM2_COMPLEX_MULTI_ATTRIBUTE_FILTERING_ENABLED =
             "SCIM2MultiAttributeFiltering.UsePagination";
-    public static final String CONSIDER_SERVER_WIDE_MAX_LIMIT_ENABLED=
+    public static final String CONSIDER_SERVER_WIDE_MAX_LIMIT_ENABLED =
             "SCIM2.ConsiderServerWideUserEndpointMaxLimit";
+    public static final String SCIM2_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION =
+            "SCIM2.ConflictOnClaimUniquenessViolation";
+
+    // Constants related to backward compatibility configurations from config store.
+    public static final String RESOURCE_TYPE_COMPATIBILITY_SETTINGS = "compatibility-settings";
+    public static final String RESOURCE_NAME_SCIM2 = "scim2";
+    public static final String ATTRIBUTE_NAME_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION =
+            "conflictOnClaimUniquenessViolation";
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
