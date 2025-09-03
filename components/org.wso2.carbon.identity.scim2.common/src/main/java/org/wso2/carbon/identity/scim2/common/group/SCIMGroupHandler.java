@@ -116,7 +116,7 @@ public class SCIMGroupHandler {
         attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
 
         attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
-        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, SCIMCommonUtils.getSCIMRoleV2URL(id));
+        attributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, SCIMCommonUtils.getDefaultSCIMRoleURL(id));
         GroupDAO groupDAO = new GroupDAO();
         groupDAO.addSCIMRoleV2Attributes(tenantId, roleName, roleAudienceRefId, attributes);
     }

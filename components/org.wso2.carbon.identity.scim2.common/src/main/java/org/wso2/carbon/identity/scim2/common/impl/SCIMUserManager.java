@@ -4753,7 +4753,7 @@ public class SCIMUserManager implements UserManager {
                     RoleV2 role = new RoleV2();
                     role.setDisplayName(roleBasicInfo.getName());
                     role.setId(roleBasicInfo.getId());
-                    String location = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
+                    String location = SCIMCommonUtils.getDefaultSCIMRoleURL(roleBasicInfo.getId());
                     role.setLocation(location);
                     role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
                             roleBasicInfo.getAudience());
@@ -5001,7 +5001,7 @@ public class SCIMUserManager implements UserManager {
                     RoleV2 role = new RoleV2();
                     role.setDisplayName(roleBasicInfo.getName());
                     role.setId(roleBasicInfo.getId());
-                    String location = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
+                    String location = SCIMCommonUtils.getDefaultSCIMRoleURL(roleBasicInfo.getId());
                     role.setLocation(location);
                     role.setAudience(roleBasicInfo.getAudienceId(), roleBasicInfo.getAudienceName(),
                             roleBasicInfo.getAudience());
