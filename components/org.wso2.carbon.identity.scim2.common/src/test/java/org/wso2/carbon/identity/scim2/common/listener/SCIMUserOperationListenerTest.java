@@ -45,6 +45,7 @@ import org.wso2.carbon.user.core.common.UserStore;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -517,5 +518,61 @@ public class SCIMUserOperationListenerTest {
         userCoreUtil.when(() -> UserCoreUtil.getDomainName((RealmConfiguration) any())).thenReturn(domainName);
         userCoreUtil.when(() -> UserCoreUtil.addDomainToName(anyString(), anyString())).thenReturn("testRoleNameWithDomain");
         scimCommonUtils.when(() ->SCIMCommonUtils.getGroupNameWithDomain(anyString())).thenReturn("testRoleNameWithDomain");
+    }
+
+    @DataProvider(name = "validateClaimValueForRegexData")
+    public Object[][] validateClaimValueForRegexData() {
+        return new Object[][]{
+                // Valid email
+                {"http://wso2.org/claims/email", "user@example.com", CARBON_SUPER, "^[\\w.%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$", null, "PRIMARY"},
+                // Invalid email
+                {"http://wso2.org/claims/email", "invalid-email", CARBON_SUPER, "^[\\w.%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$", "Invalid email format", "PRIMARY"},
+                // Valid multi-valued claim
+                {"http://wso2.org/claims/groups", "group1,group2", CARBON_SUPER, "^[a-zA-Z0-9]+$", null, "PRIMARY"},
+                // Invalid multi-valued claim
+                {"http://wso2.org/claims/groups", "group1,invalid-group!", CARBON_SUPER, "^[a-zA-Z0-9]+$", "Invalid group name", "PRIMARY"}
+        };
+    }
+
+    @Test(dataProvider = "validateClaimValueForRegexData")
+    public void testValidateClaimValueForRegex(String claimURI, String claimValue, String tenantDomain, String defaultRegex,
+                                               String defaultRegexValidationError, String userStoreDomain) throws Exception {
+        Map<String, String> claimProperties = new HashMap<>();
+        claimProperties.put("RegEx", defaultRegex);
+        claimProperties.put("RegExValidationError", defaultRegexValidationError);
+    // Use correct key matching SCIMCommonConstants.PROP_MULTI_VALUED (= "multiValued") so code treats claim as multivalued.
+    claimProperties.put("multiValued", "true");
+        claimProperties.put("DisplayName", "TestClaim");
+
+        org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim localClaim =
+                new org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim(claimURI);
+        localClaim.setClaimProperties(claimProperties);
+        when(claimMetadataManagementService.getLocalClaims(tenantDomain))
+                .thenReturn(Collections.singletonList(localClaim));
+
+        try (MockedStatic<org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils> frameworkUtils =
+                     Mockito.mockStatic(org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.class)) {
+            frameworkUtils.when(() -> org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils
+                    .getMultiAttributeSeparator(userStoreDomain)).thenReturn(",");
+
+            java.lang.reflect.Method method = SCIMUserOperationListener.class.getDeclaredMethod(
+                    "validateClaimValueForRegex", String.class, String.class, String.class, String.class, String.class, String.class);
+            method.setAccessible(true);
+
+            if (defaultRegexValidationError != null && !claimValue.matches(defaultRegex)) {
+                try {
+                    method.invoke(scimUserOperationListener, claimURI, claimValue, tenantDomain, defaultRegex,
+                            defaultRegexValidationError, userStoreDomain);
+                    org.testng.Assert.fail("Expected UserStoreClientException to be thrown");
+                } catch (java.lang.reflect.InvocationTargetException e) {
+                    Throwable cause = e.getCause();
+                    assertTrue(cause instanceof org.wso2.carbon.user.core.UserStoreClientException);
+                    assertEquals(cause.getMessage(), defaultRegexValidationError);
+                }
+            } else {
+                method.invoke(scimUserOperationListener, claimURI, claimValue, tenantDomain, defaultRegex,
+                        defaultRegexValidationError, userStoreDomain);
+            }
+        }
     }
 }
