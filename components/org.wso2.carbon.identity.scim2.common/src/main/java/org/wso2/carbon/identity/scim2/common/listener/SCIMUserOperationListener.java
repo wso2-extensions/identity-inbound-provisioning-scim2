@@ -220,17 +220,18 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             throws UserStoreException {
 
         String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
         switch (claimURI) {
             case DATE_OF_BIRTH_LOCAL_CLAIM:
                 validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DATE_OF_BIRTH_REGEX,
-                        DOB_REG_EX_VALIDATION_DEFAULT_ERROR);
+                        DOB_REG_EX_VALIDATION_DEFAULT_ERROR, userStoreDomain);
                 break;
             case MOBILE_LOCAL_CLAIM:
                 validateClaimValueForRegex(claimURI, claimValue, tenantDomain, MOBILE_REGEX,
-                        MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
+                        MOBILE_REGEX_VALIDATION_DEFAULT_ERROR, userStoreDomain);
                 break;
             default:
-                validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DEFAULT_REGEX, null);
+                validateClaimValueForRegex(claimURI, claimValue, tenantDomain, DEFAULT_REGEX, null, userStoreDomain);
                 validateLength(claimURI, claimValue, tenantDomain);
                 break;
         }
@@ -247,7 +248,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
      * @throws UserStoreClientException When regex validation is failed.
      */
     private void validateClaimValueForRegex(String claimURI, String claimValue, String tenantDomain,
-                                            String defaultRegex, String defaultRegexValidationError)
+                                            String defaultRegex, String defaultRegexValidationError,
+                                            String userStoreDomain)
             throws UserStoreClientException {
 
         if (StringUtils.isBlank(claimURI)) {
@@ -271,7 +273,8 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             // If the claim is multivalued, split and validate each value.
             if (Boolean.parseBoolean(claimProperties.get(PROP_MULTI_VALUED))) {
                 // Split the claimValues
-                claimValues = claimValue.split(MULTI_VALUED_CLAIM_VALUE_SEPARATOR);
+                String multivaluedAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator(userStoreDomain);
+                claimValues = claimValue.split(multivaluedAttributeSeparator);
             } else {
                 claimValues = new String[]{claimValue};
             }
@@ -552,6 +555,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             return;
         }
         String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
         for (Map.Entry<String, String> claim : claims.entrySet()) {
             if (StringUtils.isBlank(claim.getKey())) {
                 return;
@@ -559,14 +563,14 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             switch (claim.getKey()) {
                 case DATE_OF_BIRTH_LOCAL_CLAIM:
                     validateClaimValueForRegex(DATE_OF_BIRTH_LOCAL_CLAIM, claims.get(DATE_OF_BIRTH_LOCAL_CLAIM),
-                            tenantDomain, DATE_OF_BIRTH_REGEX, DOB_REG_EX_VALIDATION_DEFAULT_ERROR);
+                            tenantDomain, DATE_OF_BIRTH_REGEX, DOB_REG_EX_VALIDATION_DEFAULT_ERROR, userStoreDomain);
                     break;
                 case MOBILE_LOCAL_CLAIM:
                     validateClaimValueForRegex(MOBILE_LOCAL_CLAIM, claims.get(MOBILE_LOCAL_CLAIM), tenantDomain,
-                            MOBILE_REGEX, MOBILE_REGEX_VALIDATION_DEFAULT_ERROR);
+                            MOBILE_REGEX, MOBILE_REGEX_VALIDATION_DEFAULT_ERROR, userStoreDomain);
                     break;
                 default:
-                    validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, DEFAULT_REGEX, null);
+                    validateClaimValueForRegex(claim.getKey(), claim.getValue(), tenantDomain, DEFAULT_REGEX, null, userStoreDomain);
                     validateLength(claim.getKey(), claim.getValue(), tenantDomain);
             }
         }
