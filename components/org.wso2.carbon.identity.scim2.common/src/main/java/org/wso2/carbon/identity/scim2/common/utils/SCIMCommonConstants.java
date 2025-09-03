@@ -142,6 +142,7 @@ public class SCIMCommonConstants {
     public static final String RESOURCE_NAME_SCIM2 = "scim2";
     public static final String ATTRIBUTE_NAME_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION =
             "conflictOnClaimUniquenessViolation";
+    public static final String DEFAULT_ROLE_API_VERSION_FOR_REF = "SCIM2.DefaultRoleAPIVersionForRef";
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
@@ -197,6 +198,28 @@ public class SCIMCommonConstants {
     public static Map<String, String> getGroupAttributeSchemaMap() {
 
         return groupAttributeSchemaMap;
+    }
+
+    /**
+     * Enum which contains the API versions.
+     */
+    public enum APIVersion {
+
+        V1("v1"),
+        V2("v2"),
+        V3("v3");
+
+        private final String version;
+
+        APIVersion(String version) {
+
+            this.version = version;
+        }
+
+        public String getVersion() {
+
+            return version;
+        }
     }
 
     /**

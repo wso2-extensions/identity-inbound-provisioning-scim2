@@ -247,7 +247,7 @@ public class SCIMRoleManagerV2Test {
 
             when(roleManagementService.getPermissionListOfRole(any(), any()))
                     .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_2_NAME)));
-            when(SCIMCommonUtils.getSCIMRoleV2URL(any()))
+            when(SCIMCommonUtils.getDefaultSCIMRoleURL(any()))
                     .thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + SAMPLE_VALID_ROLE_ID);
             when(RoleManagementUtils.isSharedRole(any(), any())).thenReturn(Boolean.FALSE);
             scimRoleManagerV2.patchRole(SAMPLE_VALID_ROLE_ID, patchOperations);
@@ -294,7 +294,7 @@ public class SCIMRoleManagerV2Test {
 
             when(roleManagementService.getPermissionListOfRole(any(), any()))
                     .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_2_NAME)));
-            when(SCIMCommonUtils.getSCIMRoleV2URL(any()))
+            when(SCIMCommonUtils.getDefaultSCIMRoleURL(any()))
                     .thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + SAMPLE_VALID_ROLE_ID);
             when(RoleManagementUtils.isSharedRole(any(), any())).thenReturn(Boolean.FALSE);
             RoleV2 patchedRole = scimRoleManagerV2.patchRole(SAMPLE_VALID_ROLE_ID, patchOperations);
@@ -341,7 +341,7 @@ public class SCIMRoleManagerV2Test {
 
             when(roleManagementService.getPermissionListOfRole(any(), any()))
                     .thenReturn(Arrays.asList(new Permission(SAMPLE_PERMISSION_1_NAME)));
-            when(SCIMCommonUtils.getSCIMRoleV2URL(any()))
+            when(SCIMCommonUtils.getDefaultSCIMRoleURL(any()))
                     .thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + SAMPLE_VALID_ROLE_ID);
             when(RoleManagementUtils.isSharedRole(any(), any())).thenReturn(Boolean.FALSE);
             RoleV2 patchedRole = scimRoleManagerV2.patchRole(SAMPLE_VALID_ROLE_ID, patchOperations);
@@ -397,7 +397,9 @@ public class SCIMRoleManagerV2Test {
             roleProperty.setValue(Boolean.TRUE.toString());
             mockedRole.setRoleProperty(roleProperty);
 
-            mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getSCIMRoleV2URL(anyString())).
+            mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getDefaultSCIMRoleURL(anyString())).
+                    thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + ROLE_ID);
+            mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getSCIMRoleURLWithVersion(ROLE_ID, "v2")).
                     thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + ROLE_ID);
 
             when(roleManagementService.getRoleWithoutUsers(anyString(), anyString())).thenReturn(mockedRole);
@@ -461,9 +463,13 @@ public class SCIMRoleManagerV2Test {
             mockedRoles.add(mockedRole1);
             mockedRoles.add(mockedRole2);
 
-            mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getSCIMRoleV2URL(ROLE_ID)).
+            mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getDefaultSCIMRoleURL(ROLE_ID)).
                     thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + ROLE_ID);
-            mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getSCIMRoleV2URL(ROLE_ID_2)).
+            mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getDefaultSCIMRoleURL(ROLE_ID_2)).
+                    thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + ROLE_ID_2);
+            mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getSCIMRoleURLWithVersion(ROLE_ID, "v2")).
+                    thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + ROLE_ID);
+            mockedSCIMCommonUtils.when(() -> SCIMCommonUtils.getSCIMRoleURLWithVersion(ROLE_ID_2, "v2")).
                     thenReturn(SCIM2_ROLES_V2_LOCATION_URI_BASE + ROLE_ID_2);
 
             when(roleManagementService.getRoles(10, 1, null, null, SAMPLE_TENANT_DOMAIN, requiredAttributes)).
