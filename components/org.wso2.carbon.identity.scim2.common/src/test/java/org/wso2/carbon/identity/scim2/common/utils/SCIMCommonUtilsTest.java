@@ -379,8 +379,8 @@ public class SCIMCommonUtilsTest {
 
     @Test(dataProvider = "conflictOnClaimUniquenessViolationData",
             description = "Test various config store and server config combinations.")
-    public void testIsConflictOnClaimUniquenessViolationEnabled(String configStoreValue, String serverConfigValue,
-                                                                boolean expectedResult) throws Exception {
+    public void testIsReturnConflictOnClaimUniquenessViolationEnabled(String configStoreValue, String serverConfigValue,
+                                                                      boolean expectedResult) throws Exception {
 
         scimComponentHolder.when(SCIMCommonComponentHolder::getConfigurationManager).thenReturn(configurationManager);
 
@@ -390,7 +390,8 @@ public class SCIMCommonUtilsTest {
                     SCIMCommonConstants.RESOURCE_TYPE_COMPATIBILITY_SETTINGS,
                     SCIMCommonConstants.RESOURCE_NAME_SCIM2,
                     true
-            )).thenReturn(createMockResource(SCIMCommonConstants.ATTRIBUTE_NAME_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION,
+            )).thenReturn(
+                    createMockResource(SCIMCommonConstants.ATTRIBUTE_NAME_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION,
                     configStoreValue));
         } else {
             // Config store doesn't have the value - trigger fallback.
@@ -403,10 +404,11 @@ public class SCIMCommonUtilsTest {
 
         // Setup server-level configuration (fallback).
         identityUtil.when(() ->
-                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
+                        IdentityUtil.getProperty(
+                                SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
                 .thenReturn(serverConfigValue);
 
-        boolean result = SCIMCommonUtils.isConflictOnClaimUniquenessViolationEnabled();
+        boolean result = SCIMCommonUtils.isReturnConflictOnClaimUniquenessViolationEnabled();
         assertEquals(result, expectedResult);
     }
 
@@ -420,8 +422,8 @@ public class SCIMCommonUtilsTest {
 
     @Test(dataProvider = "serverConfigFallbackData",
             description = "Test fallback to server config when configuration store throws exception.")
-    public void testIsConflictOnClaimUniquenessViolationEnabled_ConfigStoreException(String serverConfigValue,
-                                                                                     boolean expectedResult)
+    public void testIsReturnConflictOnClaimUniquenessViolationEnabled_ConfigStoreException(String serverConfigValue,
+                                                                                           boolean expectedResult)
             throws Exception {
 
         scimComponentHolder.when(SCIMCommonComponentHolder::getConfigurationManager).thenReturn(configurationManager);
@@ -432,16 +434,16 @@ public class SCIMCommonUtilsTest {
         )).thenThrow(new ConfigurationManagementException());
 
         identityUtil.when(() ->
-                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
+                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
                 .thenReturn(serverConfigValue);
 
-        boolean result = SCIMCommonUtils.isConflictOnClaimUniquenessViolationEnabled();
+        boolean result = SCIMCommonUtils.isReturnConflictOnClaimUniquenessViolationEnabled();
         assertEquals(result, expectedResult);
     }
 
     @Test(dataProvider = "serverConfigFallbackData",
             description = "Test fallback to server config when configuration resource has null attributes.")
-    public void testIsConflictOnClaimUniquenessViolationEnabled_ConfigStoreResourceWithNullAttributes(
+    public void testIsReturnConflictOnClaimUniquenessViolationEnabled_ConfigStoreResourceWithNullAttributes(
             String serverConfigValue, boolean expectedResult) throws Exception {
 
         scimComponentHolder.when(SCIMCommonComponentHolder::getConfigurationManager).thenReturn(configurationManager);
@@ -452,16 +454,16 @@ public class SCIMCommonUtilsTest {
         )).thenReturn(createMockResource(null, null));
 
         identityUtil.when(() ->
-                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
+                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
                 .thenReturn(serverConfigValue);
 
-        boolean result = SCIMCommonUtils.isConflictOnClaimUniquenessViolationEnabled();
+        boolean result = SCIMCommonUtils.isReturnConflictOnClaimUniquenessViolationEnabled();
         assertEquals(result, expectedResult);
     }
 
     @Test(dataProvider = "serverConfigFallbackData",
             description = "Test fallback to server config when configuration resource has different attributes.")
-    public void testIsConflictOnClaimUniquenessViolationEnabled_ConfigStoreResourceWithDifferentAttribute(
+    public void testIsReturnConflictOnClaimUniquenessViolationEnabled_ConfigStoreResourceWithDifferentAttribute(
             String serverConfigValue, boolean expectedResult) throws Exception {
 
         scimComponentHolder.when(SCIMCommonComponentHolder::getConfigurationManager).thenReturn(configurationManager);
@@ -472,10 +474,10 @@ public class SCIMCommonUtilsTest {
         )).thenReturn(createMockResource("someOtherAttribute", "someOtherValue"));
 
         identityUtil.when(() ->
-                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
+                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
                 .thenReturn(serverConfigValue);
 
-        boolean result = SCIMCommonUtils.isConflictOnClaimUniquenessViolationEnabled();
+        boolean result = SCIMCommonUtils.isReturnConflictOnClaimUniquenessViolationEnabled();
         assertEquals(result, expectedResult);
     }
 

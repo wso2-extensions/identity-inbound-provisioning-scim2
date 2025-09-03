@@ -168,7 +168,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildA
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildSystemSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.getCustomSchemaURI;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isConflictOnClaimUniquenessViolationEnabled;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isReturnConflictOnClaimUniquenessViolationEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils
         .isFilterUsersAndGroupsOnlyFromPrimaryDomainEnabled;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.isFilteringEnhancementsEnabled;
@@ -1588,7 +1588,7 @@ public class SCIMUserManager implements UserManager {
     private void handleAndThrowClientExceptionForDuplicateClaim(UserStoreClientException exception, String errorMessage)
             throws ConflictException {
 
-        if (isDuplicateClaimError(exception) && isConflictOnClaimUniquenessViolationEnabled()) {
+        if (isDuplicateClaimError(exception) && isReturnConflictOnClaimUniquenessViolationEnabled()) {
             throw new ConflictException(errorMessage);
         }
     }

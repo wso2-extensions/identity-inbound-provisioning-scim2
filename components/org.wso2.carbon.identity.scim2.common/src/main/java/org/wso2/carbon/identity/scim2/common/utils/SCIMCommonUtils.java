@@ -1321,7 +1321,7 @@ public class SCIMCommonUtils {
      * @return true if 409 Conflict responses should be returned for duplicate claims,
      *         false if 400 Bad Request responses should be used instead.
      */
-    public static boolean isConflictOnClaimUniquenessViolationEnabled() {
+    public static boolean isReturnConflictOnClaimUniquenessViolationEnabled() {
 
         String returnConflictOnClaimUniquenessViolationEnabled = null;
 
@@ -1333,7 +1333,8 @@ public class SCIMCommonUtils {
 
             if (resource != null && resource.getAttributes() != null) {
                 returnConflictOnClaimUniquenessViolationEnabled = resource.getAttributes().stream()
-                        .filter(attribute -> SCIMCommonConstants.ATTRIBUTE_NAME_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION
+                        .filter(attribute ->
+                                SCIMCommonConstants.ATTRIBUTE_NAME_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION
                                 .equals(attribute.getKey()))
                         .map(Attribute::getValue)
                         .findFirst()
@@ -1349,7 +1350,7 @@ public class SCIMCommonUtils {
         // Fallback to server level config if not found in config store.
         if (StringUtils.isBlank(returnConflictOnClaimUniquenessViolationEnabled)) {
             returnConflictOnClaimUniquenessViolationEnabled =
-                    IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION);
+                    IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION);
         }
 
         return Boolean.parseBoolean(returnConflictOnClaimUniquenessViolationEnabled);
