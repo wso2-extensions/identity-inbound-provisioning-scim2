@@ -1639,6 +1639,54 @@ public class SCIMUserManagerTest {
     }
 
     @Test
+    public void testGetUserSchemaWithDateTimeInputFormat() throws Exception {
+
+        String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
+
+        Map<String, String> dateTimeProperties = new HashMap<String, String>() {{
+            put("SupportedByDefault", "true");
+            put("dataType", SCIMCommonConstants.dateFormats.DATE.name());
+            put("inputFormat", "{\"inputType\" : \"date_picker\"}");
+        }};
+
+        List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
+            add(new LocalClaim("http://wso2.org/claims/created", null, dateTimeProperties));
+        }};
+
+        List<ExternalClaim> externalClaimList = new ArrayList<ExternalClaim>() {{
+            add(new ExternalClaim(claimDialectUri, claimDialectUri + ":created", 
+                    "http://wso2.org/claims/created"));
+        }};
+
+        when(mockClaimMetadataManagementService.getExternalClaims(SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(externalClaimList);
+        when(mockClaimMetadataManagementService.getLocalClaims(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(localClaimList);
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        List<Attribute> list = scimUserManager.getUserSchema();
+
+        // Find the created attribute
+        Attribute createdAttribute = null;
+        for (Attribute attr : list) {
+            if ("created".equals(attr.getName())) {
+                createdAttribute = attr;
+                break;
+            }
+        }
+
+        assertNotNull(createdAttribute, "Created attribute should exist in schema");
+        assertEquals(createdAttribute.getType(), SCIMDefinitions.DataType.DATE_TIME);
+        
+        // Verify that the inputFormat contains both the original inputType and the format from DataType
+        JSONObject inputFormat = createdAttribute.getAttributeJSONProperty("inputFormat");
+        assertNotNull(inputFormat, "InputFormat should not be null");
+        assertEquals(inputFormat.get("inputType"), "date_picker");
+        assertEquals(inputFormat.get("format"), SCIMCommonConstants.dateFormats.DATE.name());
+    }
+
+    @Test
     public void testGetUserSchema() throws Exception {
 
         String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
