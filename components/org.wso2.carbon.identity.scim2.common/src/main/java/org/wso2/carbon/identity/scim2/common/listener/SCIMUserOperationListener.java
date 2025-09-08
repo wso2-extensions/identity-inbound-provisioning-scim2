@@ -76,7 +76,6 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MA
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MIN_LENGTH;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.REQUIRED;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_MULTI_VALUED;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MULTI_VALUED_CLAIM_VALUE_SEPARATOR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_LENGTH_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
 
