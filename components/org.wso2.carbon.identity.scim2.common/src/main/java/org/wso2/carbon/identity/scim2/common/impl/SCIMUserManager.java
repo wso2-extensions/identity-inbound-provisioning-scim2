@@ -216,6 +216,7 @@ public class SCIMUserManager implements UserManager {
     private static final String USERNAME_CLAIM = "http://wso2.org/claims/username";
     private static final String ROLE_CLAIM = "http://wso2.org/claims/role";
     private boolean removeDuplicateUsersInUsersResponseEnabled = isRemoveDuplicateUsersInUsersResponseEnabled();
+    private static final String INPUT_FORMAT_DATA_FORMAT_PROPERTY = "format";
 
     private static final String MAX_LIMIT_RESOURCE_TYPE_NAME = "response-max-limit-configurations";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
@@ -6377,6 +6378,11 @@ public class SCIMUserManager implements UserManager {
     private SCIMDefinitions.DataType getCustomAttrDataType(String dataType) {
 
         dataType = dataType.toUpperCase();
+
+        if (SCIMCommonConstants.dateFormats.getList().contains(dataType)) {
+            return SCIMDefinitions.DataType.DATE_TIME;
+        }
+
         switch (SCIMDefinitions.DataType.valueOf(dataType)) {
             case BOOLEAN:
                 return SCIMDefinitions.DataType.BOOLEAN;
@@ -6501,6 +6507,10 @@ public class SCIMUserManager implements UserManager {
             if (StringUtils.isNotEmpty(mappedLocalClaim.getClaimProperty(ClaimConstants.INPUT_FORMAT_PROPERTY))) {
                 JSONObject inputFormat =
                         new JSONObject(mappedLocalClaim.getClaimProperty(ClaimConstants.INPUT_FORMAT_PROPERTY));
+                if (SCIMDefinitions.DataType.DATE_TIME.equals(attribute.getType())) {
+                    String format = mappedLocalClaim.getClaimProperties().get(SCIMConfigConstants.DATA_TYPE);
+                    inputFormat.put(INPUT_FORMAT_DATA_FORMAT_PROPERTY, format);
+                }
                 attribute.addAttributeJSONProperty(ClaimConstants.INPUT_FORMAT_PROPERTY, inputFormat);
             }
 
