@@ -197,7 +197,13 @@ public class PreUpdateProfileActionExecutor {
         if (managedOrgId == null) {
             // User resident organization is the accessing organization if the managed organization claim is not set.
             org.wso2.carbon.identity.core.context.model.Organization accessingOrganization =
-                    getOrganizationFromIdentityContext();
+                    IdentityContext.getThreadLocalIdentityContext().getOrganization();
+
+            if (accessingOrganization == null) {
+                LOG.warn("Accessing organization is not present in the identity context. " +
+                        "Hence cannot populate user resident organization from PreUpdateProfileActionExecutor.");
+                return null;
+            }
 
             return new Organization.Builder()
                     .id(accessingOrganization.getId())
@@ -208,16 +214,6 @@ public class PreUpdateProfileActionExecutor {
         }
         // If the managed organization claim is set, retrieve the organization details.
         return getOrganization(managedOrgId);
-    }
-
-    private org.wso2.carbon.identity.core.context.model.Organization getOrganizationFromIdentityContext()
-            throws UserActionExecutionServerException {
-
-        if (IdentityContext.getThreadLocalIdentityContext().getOrganization() == null) {
-            throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
-                    "Accessing organization is not present in the identity context.");
-        }
-        return IdentityContext.getThreadLocalIdentityContext().getOrganization();
     }
 
     private String getUserManagedOrgId(User user) throws UserActionExecutionServerException {
@@ -278,14 +274,21 @@ public class PreUpdateProfileActionExecutor {
             return user.getId();
         }
 
-        String accessingOrgId = getOrganizationFromIdentityContext().getId();
+        org.wso2.carbon.identity.core.context.model.Organization accessingOrganization = 
+            IdentityContext.getThreadLocalIdentityContext().getOrganization();
+        if (accessingOrganization == null) {
+            LOG.warn("Accessing organization is not present in the identity context. " +
+                    "Hence cannot resolve the parent user id of the shared user from PreUpdateProfileActionExecutor.");
+            return null;
+        }
         try {
             UserAssociation userAssociation = SCIMCommonComponentHolder.getOrganizationUserSharingService()
-                    .getUserAssociation(user.getId(), accessingOrgId);
+                    .getUserAssociation(user.getId(), accessingOrganization.getId());
             if (userAssociation == null) {
-                throw new UserActionExecutionServerException(UserActionError.PRE_UPDATE_PROFILE_ACTION_SERVER_ERROR,
-                        "No user association found for the user: " + user.getId() + " in organization: "
-                                + accessingOrgId);
+                LOG.warn("User association not found for the user: " + user.getId() + " in organization: "
+                        + accessingOrganization.getId() +
+                        ". Hence cannot resolve the parent user id of the shared user.");
+                return null;
             }
 
             return userAssociation.getAssociatedUserId();
