@@ -55,6 +55,7 @@ import org.wso2.carbon.identity.core.context.model.UserActor;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
@@ -112,6 +113,7 @@ import org.wso2.charon3.core.utils.codeutils.FilterTreeManager;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
+import org.wso2.carbon.identity.unique.claim.mgt.constants.UniqueClaimConstants;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -190,6 +192,7 @@ public class SCIMUserManagerTest {
     private static final String TEST_PRE_PASSWORD_ACTION_FAILURE_MESSAGE = "Compromised password";
     private static final String TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION =
             "The provided password is compromised. Provide something different.";
+    private static final String DUPLICATE_CLAIM_ERROR_MESSAGE = "Duplicate Claim!";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -2567,5 +2570,180 @@ public class SCIMUserManagerTest {
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
                           );
         PrivilegedCarbonContext.startTenantFlow();
+    }
+
+    @DataProvider(name = "duplicateClaimErrorDataProvider")
+    public Object[][] duplicateClaimErrorDataProvider() {
+
+        return new Object[][]{
+                {true, UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_SINGLE_CLAIM.getCode(),
+                        ConflictException.class},
+                {false, UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_SINGLE_CLAIM.getCode(),
+                        BadRequestException.class},
+                {true, UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_MULTIPLE_CLAIMS.getCode(),
+                        ConflictException.class},
+                {false, UniqueClaimConstants.ErrorMessages.ERROR_CODE_DUPLICATE_MULTIPLE_CLAIMS.getCode(),
+                        BadRequestException.class}
+        };
+    }
+
+    @Test(dataProvider = "duplicateClaimErrorDataProvider")
+    public void testCreateUser_DuplicateClaimErrorReturnsExpectedResponse(
+            boolean isConflictOnClaimUniquenessViolationEnabled,
+            String duplicateClaimErrorCode, Class<? extends AbstractCharonException> expectedException)
+            throws Exception {
+
+        User user = new User();
+        user.setUserName("DomainName/testUser1");
+
+        when(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS))
+                .thenReturn("false");
+        scimCommonUtils.when(SCIMCommonUtils::isReturnConflictOnClaimUniquenessViolationEnabled)
+                .thenReturn(isConflictOnClaimUniquenessViolationEnabled);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        when(mockedUserStoreManager.isExistingUser(anyString())).thenReturn(false);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
+                .thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+
+        UserStoreException duplicateClaimException = createDuplicateClaimUserStoreClientException(duplicateClaimErrorCode);
+        when(mockedUserStoreManager.addUserWithID(anyString(), any(), any(), any(), any()))
+                .thenThrow(duplicateClaimException);
+
+        IdentityEventService mockService = mock(IdentityEventService.class);
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getIdentityEventService).thenReturn(mockService);
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        try {
+            scimUserManager.createUser(user, null);
+            Assert.fail("Expected " + expectedException.getSimpleName());
+        } catch (AbstractCharonException e) {
+            verifyDuplicateClaimErrorResponse(e, expectedException);
+        }
+    }
+
+    @Test(dataProvider = "duplicateClaimErrorDataProvider")
+    public void testUpdateUser_DuplicateClaimErrorReturnsExpectedResponse(
+            boolean isConflictOnClaimUniquenessViolationEnabled,
+            String duplicateClaimErrorCode, Class<? extends AbstractCharonException> expectedException)
+            throws Exception {
+
+        User user = new User();
+        user.setId("12345");
+        user.setUserName("DomainName/testUser1");
+
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
+
+        scimCommonUtils.when(SCIMCommonUtils::isReturnConflictOnClaimUniquenessViolationEnabled)
+                .thenReturn(isConflictOnClaimUniquenessViolationEnabled);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
+
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        resourceManagerUtil.when(() -> ResourceManagerUtil.getAllAttributeURIs(any())).thenReturn(new HashMap<>());
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        doReturn(user).when(scimUserManager).getUser(anyString(), anyMap());
+        when(mockedUserStoreManager.isExistingUserWithID(anyString())).thenReturn(true);
+
+        UserStoreException duplicateClaimException = createDuplicateClaimUserStoreClientException(duplicateClaimErrorCode);
+        doThrow(duplicateClaimException).when(mockedUserStoreManager)
+                .setUserClaimValuesWithID(anyString(), anyMap(), nullable(String.class));
+
+        try {
+            scimUserManager.updateUser(user, Collections.emptyMap());
+            Assert.fail("Expected " + expectedException.getSimpleName());
+        } catch (AbstractCharonException e) {
+            verifyDuplicateClaimErrorResponse(e, expectedException);
+        }
+    }
+
+    @Test(dataProvider = "duplicateClaimErrorDataProvider")
+    public void testUpdateUserWithMultiValuedAttributes_DuplicateClaimErrorReturnsExpectedResponse(
+            boolean isConflictOnClaimUniquenessViolationEnabled,
+            String duplicateClaimErrorCode, Class<? extends AbstractCharonException> expectedException)
+            throws Exception {
+
+        User user = new User();
+        user.setId("12345");
+        user.setUserName("DomainName/testUser1");
+
+        Map<String, String> scimToLocalClaimsMap = new HashMap<>();
+        scimToLocalClaimsMap.put(SCIMConstants.CommonSchemaConstants.ID_URI, USERID_LOCAL_CLAIM);
+
+        scimCommonUtils.when(SCIMCommonUtils::isReturnConflictOnClaimUniquenessViolationEnabled)
+                .thenReturn(isConflictOnClaimUniquenessViolationEnabled);
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+        when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
+
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimsMap);
+        when(SCIMCommonUtils.convertSCIMtoLocalDialect(anyMap())).thenReturn(new HashMap<>());
+        resourceManagerUtil.when(() -> ResourceManagerUtil.getAllAttributeURIs(any())).thenReturn(new HashMap<>());
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        doReturn(user).when(scimUserManager).getUser(anyString(), anyMap());
+        when(mockedUserStoreManager.isExistingUserWithID(anyString())).thenReturn(true);
+
+        UserStoreException duplicateClaimException = createDuplicateClaimUserStoreClientException(duplicateClaimErrorCode);
+        doThrow(duplicateClaimException).when(mockedUserStoreManager)
+                .setUserClaimValuesWithID(anyString(), anyMap(), nullable(String.class));
+
+        try {
+            scimUserManager.updateUser(user, Collections.emptyMap(), Collections.emptyList());
+            Assert.fail("Expected " + expectedException.getSimpleName());
+        } catch (AbstractCharonException e) {
+            verifyDuplicateClaimErrorResponse(e, expectedException);
+        }
+    }
+
+    /**
+     * Verifies that the duplicate claim error response matches the expected exception type and contains
+     * the duplicate claim error message. For BadRequestException also validates the SCIM type.
+     *
+     * @param actualException The exception that was thrown
+     * @param expectedException The expected exception class
+     */
+    private void verifyDuplicateClaimErrorResponse(AbstractCharonException actualException,
+                                                   Class<? extends AbstractCharonException> expectedException) {
+
+        assertTrue(expectedException.isInstance(actualException),
+                "Expected " + expectedException.getSimpleName() + " but got " +
+                        actualException.getClass().getSimpleName());
+        assertTrue(actualException.getDetail().contains(DUPLICATE_CLAIM_ERROR_MESSAGE),
+                "Exception should contain '" + DUPLICATE_CLAIM_ERROR_MESSAGE + "' error message");
+
+        if (actualException instanceof BadRequestException) {
+            BadRequestException badRequestException = (BadRequestException) actualException;
+            assertEquals(badRequestException.getScimType(), ResponseCodeConstants.INVALID_VALUE,
+                    "BadRequestException should have INVALID_VALUE scim type");
+        }
+    }
+
+    /**
+     * Creates a UserStoreClientException for duplicate claim error.
+     *
+     * @param duplicateClaimErrorCode The error code for the duplicate claim
+     * @return UserStoreClientException
+     */
+    private UserStoreClientException createDuplicateClaimUserStoreClientException(String duplicateClaimErrorCode) {
+
+        return new UserStoreClientException(
+                DUPLICATE_CLAIM_ERROR_MESSAGE, duplicateClaimErrorCode,
+                new PolicyViolationException("testCode", DUPLICATE_CLAIM_ERROR_MESSAGE));
     }
 }
