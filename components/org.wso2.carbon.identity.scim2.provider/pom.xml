@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
         <artifactId>identity-inbound-provisioning-scim2</artifactId>
         <relativePath> ../../pom.xml</relativePath>
-        <version>3.5.9</version>
+        <version>3.5.10-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
