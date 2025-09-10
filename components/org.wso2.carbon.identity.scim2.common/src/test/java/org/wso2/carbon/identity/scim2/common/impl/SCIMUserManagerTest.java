@@ -1649,7 +1649,7 @@ public class SCIMUserManagerTest {
 
         Map<String, String> dateTimeProperties = new HashMap<String, String>() {{
             put("SupportedByDefault", "true");
-            put("dataType", SCIMCommonConstants.dateFormats.DATE.name());
+            put("dataType", SCIMCommonConstants.DateFormats.DATE.name());
             put("inputFormat", "{\"inputType\" : \"date_picker\"}");
         }};
 
@@ -1687,7 +1687,7 @@ public class SCIMUserManagerTest {
         JSONObject inputFormat = createdAttribute.getAttributeJSONProperty("inputFormat");
         assertNotNull(inputFormat, "InputFormat should not be null");
         assertEquals(inputFormat.get("inputType"), "date_picker");
-        assertEquals(inputFormat.get("format"), SCIMCommonConstants.dateFormats.DATE.name());
+        assertEquals(inputFormat.get("format"), SCIMCommonConstants.DateFormats.DATE.name());
     }
 
     @Test
