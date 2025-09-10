@@ -162,6 +162,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BU
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_DELETE_USER_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_GROUP_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_USER_OP;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildAgentSchema;
@@ -459,6 +460,15 @@ public class SCIMUserManager implements UserManager {
 
             try {
                 handleErrorsOnUserNameAndPasswordPolicy(e);
+                boolean isThrowUserStoreExceptionOnUserCreationErrorEnabled = Boolean.parseBoolean(IdentityUtil.
+                        getProperty(SCIMCommonConstants.SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR));
+                String errorMessage = "Error in adding the user: " + maskIfRequired(user.getUserName()) +
+                        " to the user store.";
+                if (isThrowUserStoreExceptionOnUserCreationErrorEnabled) {
+                    throw resolveError(e, errorMessage);
+                } else {
+                    log.error(errorMessage, e);
+                }
             } catch (BadRequestException | CharonException exception) {
                 publishEventOnUserRegistrationFailure(user, exception.getScimType(), exception.getDetail(),
                         claimsInLocalDialect);

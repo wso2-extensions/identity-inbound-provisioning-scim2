@@ -138,6 +138,8 @@ public class SCIMCommonConstants {
             "SCIM2.ConsiderServerWideUserEndpointMaxLimit";
     public static final String SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION =
             "SCIM2.ReturnConflictOnClaimUniquenessViolation";
+    public static final String SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR =
+            "SCIM2.ThrowUserStoreExceptionOnUserCreationError";
 
     // Constants related to backward compatibility configurations from config store.
     public static final String RESOURCE_TYPE_COMPATIBILITY_SETTINGS = "compatibility-settings";
