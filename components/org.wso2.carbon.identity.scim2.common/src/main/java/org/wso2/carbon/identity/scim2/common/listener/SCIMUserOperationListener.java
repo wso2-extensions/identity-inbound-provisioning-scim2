@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.AbstractIdentityUserOperationEventListener;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -75,7 +76,6 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.NO
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MAX_LENGTH;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MIN_LENGTH;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.REQUIRED;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_MULTI_VALUED;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_LENGTH_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
 
@@ -270,7 +270,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
 
             String[] claimValues;
             // If the claim is multivalued, split and validate each value.
-            if (Boolean.parseBoolean(claimProperties.get(PROP_MULTI_VALUED))) {
+            if (Boolean.parseBoolean(claimProperties.get(ClaimConstants.MULTI_VALUED_PROPERTY))) {
                 // Split the claimValues
                 String multivaluedAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator(userStoreDomain);
                 claimValues = claimValue.split(multivaluedAttributeSeparator);

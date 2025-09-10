@@ -28,6 +28,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -63,6 +65,8 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.PROP_REG_EX_VALIDATION_ERROR;
 
 
 public class SCIMUserOperationListenerTest {
@@ -522,41 +526,42 @@ public class SCIMUserOperationListenerTest {
 
     @DataProvider(name = "validateClaimValueForRegexData")
     public Object[][] validateClaimValueForRegexData() {
+
         return new Object[][]{
                 // Valid email
-                {"http://wso2.org/claims/email", "user@example.com", CARBON_SUPER, "^[\\w.%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$", null, "PRIMARY"},
+                {"http://wso2.org/claims/email", "user@example.com", CARBON_SUPER,
+                        "^[\\w.%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$", null, "PRIMARY"},
                 // Invalid email
-                {"http://wso2.org/claims/email", "invalid-email", CARBON_SUPER, "^[\\w.%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$", "Invalid email format", "PRIMARY"},
+                {"http://wso2.org/claims/email", "invalid-email", CARBON_SUPER,
+                        "^[\\w.%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$", "Invalid email format", "PRIMARY"},
                 // Valid multi-valued claim
                 {"http://wso2.org/claims/groups", "group1,group2", CARBON_SUPER, "^[a-zA-Z0-9]+$", null, "PRIMARY"},
                 // Invalid multi-valued claim
-                {"http://wso2.org/claims/groups", "group1,invalid-group!", CARBON_SUPER, "^[a-zA-Z0-9]+$", "Invalid group name", "PRIMARY"}
+                {"http://wso2.org/claims/groups", "group1,invalid-group!", CARBON_SUPER,
+                        "^[a-zA-Z0-9]+$", "Invalid group name", "PRIMARY"}
         };
     }
 
     @Test(dataProvider = "validateClaimValueForRegexData")
-    public void testValidateClaimValueForRegex(String claimURI, String claimValue, String tenantDomain, String defaultRegex,
-                                               String defaultRegexValidationError, String userStoreDomain) throws Exception {
-        Map<String, String> claimProperties = new HashMap<>();
-        claimProperties.put("RegEx", defaultRegex);
-        claimProperties.put("RegExValidationError", defaultRegexValidationError);
-    // Use correct key matching SCIMCommonConstants.PROP_MULTI_VALUED (= "multiValued") so code treats claim as multivalued.
-    claimProperties.put("multiValued", "true");
-        claimProperties.put("DisplayName", "TestClaim");
+    public void testValidateClaimValueForRegex(String claimURI, String claimValue, String tenantDomain,
+                                               String defaultRegex, String defaultRegexValidationError,
+                                               String userStoreDomain) throws Exception {
+        
+        final String multiValuedSeparator = ",";
+        final String testMethodName = "validateClaimValueForRegex";
 
-        org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim localClaim =
-                new org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim(claimURI);
-        localClaim.setClaimProperties(claimProperties);
+        LocalClaim localClaim = getLocalClaim(claimURI, defaultRegex, defaultRegexValidationError);
         when(claimMetadataManagementService.getLocalClaims(tenantDomain))
                 .thenReturn(Collections.singletonList(localClaim));
 
-        try (MockedStatic<org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils> frameworkUtils =
-                     Mockito.mockStatic(org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.class)) {
-            frameworkUtils.when(() -> org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils
-                    .getMultiAttributeSeparator(userStoreDomain)).thenReturn(",");
+        try (MockedStatic<org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils>
+                     frameworkUtils = Mockito.mockStatic(org.wso2.carbon.identity.application.authentication
+                .framework.util.FrameworkUtils.class)) { frameworkUtils.when(() -> org.wso2.carbon.identity.application
+                .authentication.framework.util.FrameworkUtils.getMultiAttributeSeparator(userStoreDomain))
+                .thenReturn(multiValuedSeparator);
 
             java.lang.reflect.Method method = SCIMUserOperationListener.class.getDeclaredMethod(
-                    "validateClaimValueForRegex", String.class, String.class, String.class, String.class, String.class, String.class);
+                    testMethodName, String.class, String.class, String.class, String.class, String.class, String.class);
             method.setAccessible(true);
 
             if (defaultRegexValidationError != null && !claimValue.matches(defaultRegex)) {
@@ -574,5 +579,18 @@ public class SCIMUserOperationListenerTest {
                         defaultRegexValidationError, userStoreDomain);
             }
         }
+    }
+
+    private static LocalClaim getLocalClaim(String claimURI, String defaultRegex, String defaultRegexValidationError) {
+        Map<String, String> claimProperties = new HashMap<>();
+        claimProperties.put(PROP_REG_EX, defaultRegex);
+        claimProperties.put(PROP_REG_EX_VALIDATION_ERROR, defaultRegexValidationError);
+        claimProperties.put(ClaimConstants.MULTI_VALUED_PROPERTY, "true");
+        claimProperties.put(ClaimConstants.DISPLAY_NAME_PROPERTY, "TestClaim");
+
+        LocalClaim localClaim =
+                new LocalClaim(claimURI);
+        localClaim.setClaimProperties(claimProperties);
+        return localClaim;
     }
 }
