@@ -28,7 +28,7 @@
     <artifactId>identity-inbound-provisioning-scim2</artifactId>
     <packaging>pom</packaging>
     <modelVersion>4.0.0</modelVersion>
-    <version>3.4.202</version>
+    <version>3.4.207-SNAPSHOT</version>
     <name>WSO2 Carbon - SCIM Provisioning Module</name>
     <description>
         SCIM 2.0 Implementation for C4
@@ -39,7 +39,7 @@
         <url>https://github.com/wso2-extensions/identity-inbound-provisioning-scim2.git</url>
         <developerConnection>scm:git:https://github.com/wso2-extensions/identity-inbound-provisioning-scim2.git</developerConnection>
         <connection>scm:git:https://github.com/wso2-extensions/identity-inbound-provisioning-scim2.git</connection>
-        <tag>v3.4.202</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <dependencyManagement>
@@ -195,6 +195,12 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.mgt</artifactId>
+                <scope>provided</scope>
+                <version>${identity.framework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
                 <version>${identity.framework.version}</version>
             </dependency>
@@ -202,6 +208,12 @@
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.user.action</artifactId>
                 <version>${identity.framework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.unique.claim.mgt</artifactId>
+                <version>${identity.framework.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
@@ -319,7 +331,7 @@
         <cxf-bundle.version>3.5.11</cxf-bundle.version>
         <inbound.auth.oauth.version>6.5.3</inbound.auth.oauth.version>
         <commons-collections.version>3.2.0.wso2v1</commons-collections.version>
-        <carbon.kernel.version>4.10.83</carbon.kernel.version>
+        <carbon.kernel.version>4.10.88</carbon.kernel.version>
         <identity.framework.version>7.8.482</identity.framework.version>
         <junit.version>4.13.1</junit.version>
         <commons.lang.version>20030203.000129</commons.lang.version>

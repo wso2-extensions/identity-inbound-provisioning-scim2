@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.context.OperationScopeValidationContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.IdPGroup;
@@ -95,13 +96,13 @@ import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.OPER
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_NOT_FOUND;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.ROLE_WORKFLOW_CREATED;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V2;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V3;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_CREATE_ROLE_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_DELETE_ROLE_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_ROLE_OP;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
         ERROR_CODE_ROLE_WF_PENDING_ALREADY_EXISTS;
-import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
-        ERROR_CODE_ROLE_WF_ROLE_ALREADY_EXISTS;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.ERROR_CODE_ROLE_WF_ROLE_NOT_FOUND;
 import static org.wso2.carbon.identity.workflow.mgt.util.WorkflowErrorConstants.ErrorMessages.
         ERROR_CODE_ROLE_WF_USER_NOT_FOUND;
@@ -179,7 +180,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
                         tenantDomain);
             }
 
-            String locationURI = SCIMCommonUtils.getSCIMRoleV2URL(roleBasicInfo.getId());
+            String locationURI = getSCIMRoleURLBasedOnVersion(roleBasicInfo.getId());
             return buildSCIMRoleResponse(roleBasicInfo, locationURI);
         } catch (IdentityRoleManagementException e) {
             String errorCode = e.getErrorCode();
@@ -1932,15 +1933,27 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
         return role;
     }
 
+    /**
+     * As role manager v2 handles both v2 and v3 api requests, this method is used to build the correct
+     * api version used.
+     *
+     * @param roleId ID of the role.
+     * @return SCIM Role URL with the appropriate version.
+     */
     private String getSCIMRoleURLBasedOnVersion(String roleId) {
 
-        if (IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SCIM_VERSION) != null) {
+        OperationScopeValidationContext operationScopeValidationContext =
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getOperationScopeValidationContext();
 
-            return SCIMCommonUtils.getSCIMRoleURLWithVersion(roleId,
-                    IdentityUtil.threadLocalProperties.get().get(SCIMCommonConstants.SCIM_VERSION).toString());
-        } else {
-            return SCIMCommonUtils.getSCIMRoleV2URL(roleId);
+        String scimVersion = V2.getVersion();
+        if (operationScopeValidationContext != null && operationScopeValidationContext.getApiIdentifier() != null) {
+            String apiIdentifier = operationScopeValidationContext.getApiIdentifier();
+            if (apiIdentifier.contains(V3.getVersion())) {
+                scimVersion = V3.getVersion();
+            }
         }
+
+        return SCIMCommonUtils.getSCIMRoleURLWithVersion(roleId, scimVersion);
     }
 
 }

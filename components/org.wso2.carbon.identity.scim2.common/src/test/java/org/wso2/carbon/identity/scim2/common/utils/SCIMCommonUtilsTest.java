@@ -26,14 +26,21 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.DefaultServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+
+import java.util.Collections;
 
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -53,6 +60,9 @@ public class SCIMCommonUtilsTest {
     private String scimGroupLocation = SCIM_URL + SCIMCommonConstants.GROUPS;
     private String scimServiceProviderConfig = SCIM_URL + SCIMCommonConstants.SERVICE_PROVIDER_CONFIG;
     private String scimResourceType = SCIM_URL + SCIMCommonConstants.RESOURCE_TYPE;
+    private static final String SCIM2_ROLES_V3_LOCATION_URI_BASE = "https://localhost:9443/scim2/v3/Roles/";
+    private static final String SCIM2_ROLES_V2_LOCATION_URI_BASE = "https://localhost:9443/scim2/v2/Roles/";
+    private static final String SCIM2_ROLES_V1_LOCATION_URI_BASE = "https://localhost:9443/scim2/Roles/";
 
     @Mock
     ServiceURL serviceURL;
@@ -66,10 +76,14 @@ public class SCIMCommonUtilsTest {
     @Mock
     DefaultServiceURLBuilder defaultServiceURLBuilder1;
 
+    @Mock
+    ConfigurationManager configurationManager;
+
     private MockedStatic<UserCoreUtil> userCoreUtil;
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
     private MockedStatic<ServiceURLBuilder> serviceURLBuilder;
     private MockedStatic<IdentityUtil> identityUtil;
+    private MockedStatic<SCIMCommonComponentHolder> scimComponentHolder;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -78,6 +92,7 @@ public class SCIMCommonUtilsTest {
         userCoreUtil = mockStatic(UserCoreUtil.class);
         identityTenantUtil = mockStatic(IdentityTenantUtil.class);
         serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+        scimComponentHolder = mockStatic(SCIMCommonComponentHolder.class);
         identityUtil.when(() -> IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(SCIM_URL);
         identityUtil.when(() -> IdentityUtil.getPrimaryDomainName()).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
         serviceURLBuilder.when(() -> ServiceURLBuilder.create()).thenReturn(defaultServiceURLBuilder);
@@ -96,6 +111,7 @@ public class SCIMCommonUtilsTest {
         userCoreUtil.close();
         identityTenantUtil.close();
         serviceURLBuilder.close();
+        scimComponentHolder.close();
         System.clearProperty(CarbonBaseConstants.CARBON_HOME);
     }
 
@@ -337,5 +353,175 @@ public class SCIMCommonUtilsTest {
         SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
     }
 
-    
+    @DataProvider
+    public Object[][] conflictOnClaimUniquenessViolationData() {
+        return new Object[][]{
+                // Config store value, server config value, expected result.
+
+                // Config store has values - should use config store, ignore server config.
+                {"true", "false", true},          // Config store "true" takes priority.
+                {"false", "true", false},         // Config store "false" takes priority.
+                {"TRUE", "false", true},          // Config store uppercase "TRUE".
+                {"False", "true", false},         // Config store mixed case "False".
+                {" ", "true", true},              // Config store whitespace.
+                {" ", "false", false},            // Config store whitespace.
+                {"invalid", "true", false},       // Config store invalid value.
+
+                // Config store not available - should fall back to server config.
+                {null, "true", true},             // Fallback to server "true".
+                {null, "false", false},           // Fallback to server "false".
+                {null, "TRUE", true},             // Fallback to server uppercase.
+                {null, "invalid", false},         // Fallback to server invalid value.
+                {null, "", false},                // Fallback to server empty string.
+                {null, null, false}               // No config anywhere - default false.
+        };
+    }
+
+    @Test(dataProvider = "conflictOnClaimUniquenessViolationData",
+            description = "Test various config store and server config combinations.")
+    public void testIsReturnConflictOnClaimUniquenessViolationEnabled(String configStoreValue, String serverConfigValue,
+                                                                      boolean expectedResult) throws Exception {
+
+        scimComponentHolder.when(SCIMCommonComponentHolder::getConfigurationManager).thenReturn(configurationManager);
+
+        if (configStoreValue != null) {
+            // Config store has a value.
+            when(configurationManager.getResource(
+                    SCIMCommonConstants.RESOURCE_TYPE_COMPATIBILITY_SETTINGS,
+                    SCIMCommonConstants.RESOURCE_NAME_SCIM2,
+                    true
+            )).thenReturn(
+                    createMockResource(SCIMCommonConstants.ATTRIBUTE_NAME_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION,
+                    configStoreValue));
+        } else {
+            // Config store doesn't have the value - trigger fallback.
+            when(configurationManager.getResource(
+                    SCIMCommonConstants.RESOURCE_TYPE_COMPATIBILITY_SETTINGS,
+                    SCIMCommonConstants.RESOURCE_NAME_SCIM2,
+                    true
+            )).thenReturn(null);
+        }
+
+        // Setup server-level configuration (fallback).
+        identityUtil.when(() ->
+                        IdentityUtil.getProperty(
+                                SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
+                .thenReturn(serverConfigValue);
+
+        boolean result = SCIMCommonUtils.isReturnConflictOnClaimUniquenessViolationEnabled();
+        assertEquals(result, expectedResult);
+    }
+
+    @DataProvider
+    public Object[][] serverConfigFallbackData() {
+        return new Object[][]{
+                {"true", true},
+                {"false", false}
+        };
+    }
+
+    @Test(dataProvider = "serverConfigFallbackData",
+            description = "Test fallback to server config when configuration store throws exception.")
+    public void testIsReturnConflictOnClaimUniquenessViolationEnabled_ConfigStoreException(String serverConfigValue,
+                                                                                           boolean expectedResult)
+            throws Exception {
+
+        scimComponentHolder.when(SCIMCommonComponentHolder::getConfigurationManager).thenReturn(configurationManager);
+        when(configurationManager.getResource(
+                SCIMCommonConstants.RESOURCE_TYPE_COMPATIBILITY_SETTINGS,
+                SCIMCommonConstants.RESOURCE_NAME_SCIM2,
+                true
+        )).thenThrow(new ConfigurationManagementException());
+
+        identityUtil.when(() ->
+                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
+                .thenReturn(serverConfigValue);
+
+        boolean result = SCIMCommonUtils.isReturnConflictOnClaimUniquenessViolationEnabled();
+        assertEquals(result, expectedResult);
+    }
+
+    @Test(dataProvider = "serverConfigFallbackData",
+            description = "Test fallback to server config when configuration resource has null attributes.")
+    public void testIsReturnConflictOnClaimUniquenessViolationEnabled_ConfigStoreResourceWithNullAttributes(
+            String serverConfigValue, boolean expectedResult) throws Exception {
+
+        scimComponentHolder.when(SCIMCommonComponentHolder::getConfigurationManager).thenReturn(configurationManager);
+        when(configurationManager.getResource(
+                SCIMCommonConstants.RESOURCE_TYPE_COMPATIBILITY_SETTINGS,
+                SCIMCommonConstants.RESOURCE_NAME_SCIM2,
+                true
+        )).thenReturn(createMockResource(null, null));
+
+        identityUtil.when(() ->
+                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
+                .thenReturn(serverConfigValue);
+
+        boolean result = SCIMCommonUtils.isReturnConflictOnClaimUniquenessViolationEnabled();
+        assertEquals(result, expectedResult);
+    }
+
+    @Test(dataProvider = "serverConfigFallbackData",
+            description = "Test fallback to server config when configuration resource has different attributes.")
+    public void testIsReturnConflictOnClaimUniquenessViolationEnabled_ConfigStoreResourceWithDifferentAttribute(
+            String serverConfigValue, boolean expectedResult) throws Exception {
+
+        scimComponentHolder.when(SCIMCommonComponentHolder::getConfigurationManager).thenReturn(configurationManager);
+        when(configurationManager.getResource(
+                SCIMCommonConstants.RESOURCE_TYPE_COMPATIBILITY_SETTINGS,
+                SCIMCommonConstants.RESOURCE_NAME_SCIM2,
+                true
+        )).thenReturn(createMockResource("someOtherAttribute", "someOtherValue"));
+
+        identityUtil.when(() ->
+                        IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION))
+                .thenReturn(serverConfigValue);
+
+        boolean result = SCIMCommonUtils.isReturnConflictOnClaimUniquenessViolationEnabled();
+        assertEquals(result, expectedResult);
+    }
+
+
+    /**
+     * Helper method to create a mock Resource with specified attributes.
+     *
+     * @param key   Attribute key.
+     * @param value Attribute value.
+     * @return Mock Resource object with the specified attributes.
+     */
+    private Resource createMockResource(String key, String value) {
+        Resource mockResource = new Resource();
+
+        if (key == null) {
+            mockResource.setAttributes(Collections.emptyList());
+        } else {
+            Attribute mockAttribute = new Attribute();
+            mockAttribute.setKey(key);
+            mockAttribute.setValue(value);
+            mockResource.setAttributes(Collections.singletonList(mockAttribute));
+        }
+
+        return mockResource;
+    }
+
+    @DataProvider
+    public Object[][] getDefaultSCIMRoleURLData() {
+
+        return new Object[][]{
+                {"v1", SCIM2_ROLES_V1_LOCATION_URI_BASE + ID},
+                {"v2", SCIM2_ROLES_V2_LOCATION_URI_BASE + ID},
+                {"v3", SCIM2_ROLES_V3_LOCATION_URI_BASE + ID},
+                {"", SCIM2_ROLES_V3_LOCATION_URI_BASE + ID},
+                {null, SCIM2_ROLES_V3_LOCATION_URI_BASE + ID},
+        };
+    }
+
+    @Test(dataProvider = "getDefaultSCIMRoleURLData")
+    public void testGetDefaultSCIMRoleURL(String defaultRoleVersionForRef, String expectedRoleURL) throws Exception {
+
+        identityUtil.when(() -> IdentityUtil.getProperty(SCIMCommonConstants.DEFAULT_ROLE_API_VERSION_FOR_REF))
+                .thenReturn(defaultRoleVersionForRef);
+        String roleURL = SCIMCommonUtils.getDefaultSCIMRoleURL(ID);
+        assertEquals(roleURL, expectedRoleURL);
+    }
 }

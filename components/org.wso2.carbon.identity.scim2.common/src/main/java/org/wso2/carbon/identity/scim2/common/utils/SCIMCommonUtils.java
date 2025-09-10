@@ -30,6 +30,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.context.IdentityContext;
@@ -73,6 +76,11 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V1;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V2;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V3;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_ROLE_API_VERSION_FOR_REF;
 
 /**
  * This class is to be used as a Util class for SCIM common things.
@@ -125,6 +133,35 @@ public class SCIMCommonUtils {
     public static String getSCIMRoleV2URL(String id) {
 
         return StringUtils.isNotBlank(id) ? getSCIMRoleV2URL() + SCIMCommonConstants.URL_SEPERATOR + id : null;
+    }
+
+    /**
+     * Get the default scim role URL based on the configured role API version.
+     *
+     * @param id The ID of the role.
+     * @return The default SCIM Role URL with the given ID, or null if the ID is blank.
+     */
+    public static String getDefaultSCIMRoleURL(String id) {
+
+        String roleAPIVersion = IdentityUtil.getProperty(DEFAULT_ROLE_API_VERSION_FOR_REF);
+        String roleURL = getSCIMRoleV3URL();
+        if (StringUtils.isNotBlank(roleAPIVersion)) {
+            if (V1.getVersion().equals(roleAPIVersion)) {
+                roleURL = getSCIMRoleURL();
+            } else if (V2.getVersion().equals(roleAPIVersion)) {
+                roleURL = getSCIMRoleV2URL();
+            } else if (V3.getVersion().equals(roleAPIVersion)) {
+                roleURL = getSCIMRoleV3URL();
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("The configured role API version: " + roleAPIVersion + " is not valid. " +
+                            "Hence using the v3 role API version.");
+                    roleURL = getSCIMRoleV3URL();
+                }
+            }
+        }
+
+        return StringUtils.isNotBlank(id) ? roleURL + SCIMCommonConstants.URL_SEPERATOR + id : null;
     }
 
     public static String getSCIMRoleURLWithVersion(String id, String scimVersion) {
@@ -1273,5 +1310,49 @@ public class SCIMCommonUtils {
         }
 
         return multiValuedClaimsToModify;
+    }
+
+    /**
+     * Checks whether SCIM2 Users endpoints should return a 409 Conflict response instead of a 400 Bad Request when
+     * duplicate claims (uniqueness violations) are encountered. This setting is retrieved from the tenant-level
+     * configuration store first. If it is not defined there, the method falls back to the server-level default
+     * configuration.
+     *
+     * @return true if 409 Conflict responses should be returned for duplicate claims,
+     *         false if 400 Bad Request responses should be used instead.
+     */
+    public static boolean isReturnConflictOnClaimUniquenessViolationEnabled() {
+
+        String returnConflictOnClaimUniquenessViolationEnabled = null;
+
+        try {
+            // Get the configuration from the config store.
+            Resource resource = SCIMCommonComponentHolder.getConfigurationManager()
+                    .getResource(SCIMCommonConstants.RESOURCE_TYPE_COMPATIBILITY_SETTINGS,
+                            SCIMCommonConstants.RESOURCE_NAME_SCIM2, true);
+
+            if (resource != null && resource.getAttributes() != null) {
+                returnConflictOnClaimUniquenessViolationEnabled = resource.getAttributes().stream()
+                        .filter(attribute ->
+                                SCIMCommonConstants.ATTRIBUTE_NAME_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION
+                                .equals(attribute.getKey()))
+                        .map(Attribute::getValue)
+                        .findFirst()
+                        .orElse(null);
+            }
+        } catch (ConfigurationManagementException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error while retrieving configuration from config store for SCIM2 conflict on claim " +
+                        "uniqueness violation. Falling back to server level config.", e);
+            }
+        }
+
+        // Fallback to server level config if not found in config store.
+        if (StringUtils.isBlank(returnConflictOnClaimUniquenessViolationEnabled)) {
+            returnConflictOnClaimUniquenessViolationEnabled =
+                    IdentityUtil.getProperty(SCIMCommonConstants.SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION);
+        }
+
+        return Boolean.parseBoolean(returnConflictOnClaimUniquenessViolationEnabled);
     }
 }
