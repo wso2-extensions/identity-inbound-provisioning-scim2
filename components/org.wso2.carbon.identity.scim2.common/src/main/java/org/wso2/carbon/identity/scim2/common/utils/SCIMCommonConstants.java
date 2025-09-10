@@ -192,7 +192,7 @@ public class SCIMCommonConstants {
         return groupAttributeSchemaMap;
     }
 
-    public enum dateFormats {
+    public enum DateFormats {
 
         DATE_TIME,
         DATE,

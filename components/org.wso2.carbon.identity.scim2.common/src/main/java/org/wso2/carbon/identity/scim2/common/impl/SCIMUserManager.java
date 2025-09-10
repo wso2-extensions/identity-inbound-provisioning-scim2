@@ -6379,7 +6379,7 @@ public class SCIMUserManager implements UserManager {
 
         dataType = dataType.toUpperCase();
 
-        if (SCIMCommonConstants.dateFormats.getList().contains(dataType)) {
+        if (SCIMCommonConstants.DateFormats.getList().contains(dataType)) {
             return SCIMDefinitions.DataType.DATE_TIME;
         }
 
