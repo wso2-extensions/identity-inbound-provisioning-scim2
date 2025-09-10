@@ -177,7 +177,6 @@ public class SCIMCommonConstants {
     public static final String MAX_LENGTH = "maxLength";
     public static final String REQUIRED = "required";
 
-
     private static final Map<String, String> groupAttributeSchemaMap = new HashMap<>();
 
     static {
