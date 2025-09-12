@@ -447,6 +447,15 @@ public class SCIMUserManager implements UserManager {
 
             try {
                 handleErrorsOnUserNameAndPasswordPolicy(e);
+                boolean isThrowUserStoreExceptionOnUserCreationErrorEnabled = Boolean.parseBoolean(IdentityUtil.
+                        getProperty(SCIMCommonConstants.SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR));
+                String errorMessage = "Error in adding the user: " + maskIfRequired(user.getUserName()) +
+                        " to the user store.";
+                if (isThrowUserStoreExceptionOnUserCreationErrorEnabled) {
+                    throw resolveError(e, errorMessage);
+                } else {
+                    log.error(errorMessage, e);
+                }
             } catch (BadRequestException | CharonException exception) {
                 publishEventOnUserRegistrationFailure(user, exception.getScimType(), exception.getDetail(),
                         claimsInLocalDialect);

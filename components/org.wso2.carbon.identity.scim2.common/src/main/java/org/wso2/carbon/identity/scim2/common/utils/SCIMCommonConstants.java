@@ -135,6 +135,8 @@ public class SCIMCommonConstants {
     public static final String RESOURCE_NAME_SCIM2 = "scim2";
     public static final String ATTRIBUTE_NAME_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION =
             "returnConflictOnClaimUniquenessViolation";
+    public static final String SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR =
+            "SCIM2.ThrowUserStoreExceptionOnUserCreationError";
 
     public static final String URL_SEPERATOR = "/";
     public static final String TENANT_URL_SEPERATOR = "/t/";
