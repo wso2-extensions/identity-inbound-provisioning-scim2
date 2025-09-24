@@ -21,11 +21,8 @@ package org.wso2.carbon.identity.scim2.common.utils;
 import org.wso2.carbon.user.core.UserStoreConfigConstants;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Class to hold Identity SCIM Constants.
@@ -201,18 +198,6 @@ public class SCIMCommonConstants {
     public static Map<String, String> getGroupAttributeSchemaMap() {
 
         return groupAttributeSchemaMap;
-    }
-
-    public enum DateFormats {
-
-        DATE_TIME,
-        DATE,
-        EPOCH;
-
-        public static List<String> getList() {
-
-            return Arrays.stream(values()).map(Enum::name).collect(Collectors.toList());
-        }
     }
 
     /**

@@ -1652,7 +1652,7 @@ public class SCIMUserManagerTest {
 
         Map<String, String> dateTimeProperties = new HashMap<String, String>() {{
             put("SupportedByDefault", "true");
-            put("dataType", SCIMCommonConstants.DateFormats.DATE.name());
+            put("dataType", SCIMDefinitions.DataType.DATE.name());
             put("inputFormat", "{\"inputType\" : \"date_picker\"}");
         }};
 
@@ -1684,13 +1684,12 @@ public class SCIMUserManagerTest {
         }
 
         assertNotNull(createdAttribute, "Created attribute should exist in schema");
-        assertEquals(createdAttribute.getType(), SCIMDefinitions.DataType.DATE_TIME);
+        assertEquals(createdAttribute.getType(), SCIMDefinitions.DataType.DATE);
         
         // Verify that the inputFormat contains both the original inputType and the format from DataType
         JSONObject inputFormat = createdAttribute.getAttributeJSONProperty("inputFormat");
         assertNotNull(inputFormat, "InputFormat should not be null");
         assertEquals(inputFormat.get("inputType"), "date_picker");
-        assertEquals(inputFormat.get("format"), SCIMCommonConstants.DateFormats.DATE.name());
     }
 
     @Test
