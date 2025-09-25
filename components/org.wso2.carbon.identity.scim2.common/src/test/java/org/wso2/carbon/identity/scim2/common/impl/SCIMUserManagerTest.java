@@ -1645,19 +1645,31 @@ public class SCIMUserManagerTest {
         IdentityContext.destroyCurrentContext();
     }
 
-    @Test
-    public void testGetUserSchemaWithDateTimeInputFormat() throws Exception {
+    @DataProvider(name = "temporalDataTypes")
+    public Object[][] temporalDataTypes() throws Exception {
+
+        return new Object[][]{
+                {SCIMDefinitions.DataType.DATE},
+                {SCIMDefinitions.DataType.DATE_TIME},
+                {SCIMDefinitions.DataType.EPOCH}
+        };
+    }
+
+    @Test(dataProvider = "temporalDataTypes")
+    public void testGetUserSchemaForTemporalDataTypes(SCIMDefinitions.DataType dataType) throws Exception {
 
         String claimDialectUri = SCIMCommonConstants.SCIM_USER_CLAIM_DIALECT;
 
-        Map<String, String> dateTimeProperties = new HashMap<String, String>() {{
+        Map<String, String> claimProperties = new HashMap<String, String>() {{
             put("SupportedByDefault", "true");
-            put("dataType", SCIMDefinitions.DataType.DATE.name());
-            put("inputFormat", "{\"inputType\" : \"date_picker\"}");
+            put("dataType", dataType.name());
         }};
+        if (dataType.equals(SCIMDefinitions.DataType.DATE)) {
+            claimProperties.put("inputFormat", "{\"inputType\" : \"date_picker\"}");
+        }
 
         List<LocalClaim> localClaimList = new ArrayList<LocalClaim>() {{
-            add(new LocalClaim("http://wso2.org/claims/created", null, dateTimeProperties));
+            add(new LocalClaim("http://wso2.org/claims/created", null, claimProperties));
         }};
 
         List<ExternalClaim> externalClaimList = new ArrayList<ExternalClaim>() {{
@@ -1684,12 +1696,15 @@ public class SCIMUserManagerTest {
         }
 
         assertNotNull(createdAttribute, "Created attribute should exist in schema");
-        assertEquals(createdAttribute.getType(), SCIMDefinitions.DataType.DATE);
-        
+        assertEquals(createdAttribute.getType(), dataType);
+
+
         // Verify that the inputFormat contains both the original inputType and the format from DataType
-        JSONObject inputFormat = createdAttribute.getAttributeJSONProperty("inputFormat");
-        assertNotNull(inputFormat, "InputFormat should not be null");
-        assertEquals(inputFormat.get("inputType"), "date_picker");
+        if (dataType.equals(SCIMDefinitions.DataType.DATE)) {
+            JSONObject inputFormat = createdAttribute.getAttributeJSONProperty("inputFormat");
+            assertNotNull(inputFormat, "InputFormat should not be null");
+            assertEquals(inputFormat.get("inputType"), "date_picker");
+        }
     }
 
     @Test
