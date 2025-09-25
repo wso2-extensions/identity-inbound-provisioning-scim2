@@ -1698,7 +1698,6 @@ public class SCIMUserManagerTest {
         assertNotNull(createdAttribute, "Created attribute should exist in schema");
         assertEquals(createdAttribute.getType(), dataType);
 
-
         // Verify that the inputFormat contains both the original inputType and the format from DataType
         if (dataType.equals(SCIMDefinitions.DataType.DATE)) {
             JSONObject inputFormat = createdAttribute.getAttributeJSONProperty("inputFormat");
