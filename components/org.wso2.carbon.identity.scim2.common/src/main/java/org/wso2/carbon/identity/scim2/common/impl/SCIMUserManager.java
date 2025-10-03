@@ -1690,6 +1690,10 @@ public class SCIMUserManager implements UserManager {
             throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_FILTER);
         }
         domainName = resolveDomainName(domainName, node);
+        if (domainName != null && carbonUM.getSecondaryUserStoreManager(domainName) == null) {
+            String errorMessage = String.format("Invalid user store domain: %s", domainName);
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+        }
         int totalResults = 0;
         try {
             if (limit == 0) {
@@ -1750,10 +1754,6 @@ public class SCIMUserManager implements UserManager {
     private int getUserCountByAttribute(Node node, int offset, int limit, String sortBy,
                                         String sortOrder, String domainName)
             throws BadRequestException, CharonException {
-
-        if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
-            return getUserCountByGroup(node, domainName);
-        }
 
         return getFilteredUsersCount(node, 1, limit, domainName);
     }
@@ -2019,62 +2019,6 @@ public class SCIMUserManager implements UserManager {
         } else {
             return filterUsersFromMultipleDomains(node, offset, limit, sortBy, sortOrder, null);
         }
-    }
-
-    /**
-     * Method to get User Count by Group filter
-     *
-     * @param node       Expression or Operation node.
-     * @param domainName Domain name.
-     * @return User count for the filtered group.
-     * @throws CharonException     Error while filtering the users.
-     * @throws BadRequestException Exception occurred due to a bad request.
-     */
-    private int getUserCountByGroup(Node node, String domainName)
-            throws CharonException, BadRequestException {
-
-        int count = 0;
-        // Set filter values.
-        String attributeName = ((ExpressionNode) node).getAttributeValue();
-        String filterOperation = ((ExpressionNode) node).getOperation();
-        String attributeValue = ((ExpressionNode) node).getValue();
-
-        // Handle “Not Equal” (ne) filter on the groups attribute.
-        if (SCIMCommonConstants.NE.equalsIgnoreCase(filterOperation)) {
-            return getFilteredUsersCountBasedOnDomain(node, 1, getMaxLimitForTotalResults(domainName), domainName);
-        }
-
-        /*
-        If there is a domain and if the domain separator is not found in the attribute value, append the domain
-        with the domain separator in front of the new attribute value.
-        */
-        if (StringUtils.isNotEmpty(domainName) && StringUtils
-                .containsNone(attributeValue, CarbonConstants.DOMAIN_SEPARATOR)) {
-            attributeValue = domainName.toUpperCase() + CarbonConstants.DOMAIN_SEPARATOR + attributeValue;
-        }
-
-        try {
-            List<String> roleNames = getRoleNames(attributeName, filterOperation, attributeValue);
-            count = getUserCountForGroup(roleNames);
-            return count;
-        } catch (UserStoreException e) {
-            String errorMessage = String.format("Error while filtering the users for filter with attribute name: "
-                            + "%s, filter operation: %s and attribute value: %s.", attributeName, filterOperation,
-                    attributeValue);
-            throw resolveError(e, errorMessage);
-        }
-    }
-
-    private int getUserCountForGroup(List<String> groupNames) throws
-            org.wso2.carbon.user.core.UserStoreException {
-
-        int count = 0;
-        if (groupNames != null) {
-            for (String groupName : groupNames) {
-                count += carbonUM.getUserCountForGroup(groupName);
-            }
-        }
-        return count;
     }
 
     /**
@@ -7268,7 +7212,7 @@ public class SCIMUserManager implements UserManager {
     private int getFilteredUsersCount(Node node, int offset, int maxLimit, String domainName)
             throws CharonException, BadRequestException {
 
-        if (SCIMConstants.UserSchemaConstants.GROUP_URI.equals(((ExpressionNode) node).getAttributeValue())) {
+        if (!SCIMCommonUtils.isGroupBasedUserFilteringImprovementsEnabled()) {
             return filterUsersByGroup(node, offset, maxLimit, null, null, domainName).size();
         }
         return getFilteredUsersCountBasedOnDomain(node, offset, maxLimit, domainName);
