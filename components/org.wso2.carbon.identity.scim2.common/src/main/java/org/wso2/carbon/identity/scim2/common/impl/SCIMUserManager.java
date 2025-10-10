@@ -162,6 +162,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BU
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_DELETE_USER_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_GROUP_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_USER_OP;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildAgentSchema;
@@ -459,6 +460,15 @@ public class SCIMUserManager implements UserManager {
 
             try {
                 handleErrorsOnUserNameAndPasswordPolicy(e);
+                boolean isThrowUserStoreExceptionOnUserCreationErrorEnabled = Boolean.parseBoolean(IdentityUtil.
+                        getProperty(SCIMCommonConstants.SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR));
+                String errorMessage = "Error in adding the user: " + maskIfRequired(user.getUserName()) +
+                        " to the user store.";
+                if (isThrowUserStoreExceptionOnUserCreationErrorEnabled) {
+                    throw resolveError(e, errorMessage);
+                } else {
+                    log.error(errorMessage, e);
+                }
             } catch (BadRequestException | CharonException exception) {
                 publishEventOnUserRegistrationFailure(user, exception.getScimType(), exception.getDetail(),
                         claimsInLocalDialect);
@@ -6430,10 +6440,6 @@ public class SCIMUserManager implements UserManager {
 
         dataType = dataType.toUpperCase();
 
-        if (SCIMCommonConstants.DateFormats.getList().contains(dataType)) {
-            return SCIMDefinitions.DataType.DATE_TIME;
-        }
-
         switch (SCIMDefinitions.DataType.valueOf(dataType)) {
             case BOOLEAN:
                 return SCIMDefinitions.DataType.BOOLEAN;
@@ -6443,6 +6449,10 @@ public class SCIMUserManager implements UserManager {
                 return SCIMDefinitions.DataType.INTEGER;
             case DATE_TIME:
                 return SCIMDefinitions.DataType.DATE_TIME;
+            case DATE:
+                return SCIMDefinitions.DataType.DATE;
+            case EPOCH:
+                return SCIMDefinitions.DataType.EPOCH;
             case BINARY:
                 return SCIMDefinitions.DataType.BINARY;
             case REFERENCE:
@@ -6558,10 +6568,6 @@ public class SCIMUserManager implements UserManager {
             if (StringUtils.isNotEmpty(mappedLocalClaim.getClaimProperty(ClaimConstants.INPUT_FORMAT_PROPERTY))) {
                 JSONObject inputFormat =
                         new JSONObject(mappedLocalClaim.getClaimProperty(ClaimConstants.INPUT_FORMAT_PROPERTY));
-                if (SCIMDefinitions.DataType.DATE_TIME.equals(attribute.getType())) {
-                    String format = mappedLocalClaim.getClaimProperties().get(SCIMConfigConstants.DATA_TYPE);
-                    inputFormat.put(INPUT_FORMAT_DATA_FORMAT_PROPERTY, format);
-                }
                 attribute.addAttributeJSONProperty(ClaimConstants.INPUT_FORMAT_PROPERTY, inputFormat);
             }
 
