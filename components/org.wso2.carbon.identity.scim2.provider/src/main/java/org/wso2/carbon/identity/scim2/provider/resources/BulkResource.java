@@ -29,19 +29,27 @@ import org.wso2.charon3.core.encoder.JSONDecoder;
 import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
+import org.wso2.charon3.core.exceptions.InternalErrorException;
+import org.wso2.charon3.core.exceptions.PayloadTooLargeException;
 import org.wso2.charon3.core.extensions.RoleManager;
 import org.wso2.charon3.core.extensions.RoleV2Manager;
 import org.wso2.charon3.core.extensions.UserManager;
 import org.wso2.charon3.core.objects.bulk.BulkRequestContent;
 import org.wso2.charon3.core.objects.bulk.BulkRequestData;
+import org.wso2.charon3.core.objects.bulk.BulkResponseContent;
+import org.wso2.charon3.core.objects.bulk.BulkResponseData;
 import org.wso2.charon3.core.protocol.SCIMResponse;
 import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import org.wso2.charon3.core.protocol.endpoints.BulkResourceManager;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants.BULK_CREATE_ROLE_OPERATION_NAME;
+import static org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants.BULK_DELETE_ROLE_OPERATION_NAME;
 import static org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants.BULK_UPDATE_ROLE_OPERATION_NAME;
 
 @Path("/")
@@ -77,22 +85,27 @@ public class BulkResource extends AbstractResource {
             // Obtain the role v2 manager.
             RoleV2Manager roleV2Manager = IdentitySCIMManager.getInstance().getRoleV2Manager();
 
+            List<BulkRequestContent> authorizedRoleV2BulkOperations = new ArrayList<>();
+            List<BulkRequestContent> unauthorizedRoleV2BulkOperations = new ArrayList<>();
+
             // create charon-SCIM bulk endpoint and hand-over the request.
             BulkResourceManager bulkResourceManager = new BulkResourceManager();
+            BulkRequestData bulkRequestData;
             try {
-                validateOperationScopes(resourceString, bulkResourceManager);
-            } catch (CharonException | BadRequestException e) {
+                bulkRequestData = validateOperationScopes(resourceString, bulkResourceManager,
+                        unauthorizedRoleV2BulkOperations, authorizedRoleV2BulkOperations);
+
+                // Call for process bulk data.
+                BulkResponseData bulkResponseData =
+                        bulkResourceManager.processBulkData(bulkRequestData, userManager, roleManager, roleV2Manager);
+                addUnauthorizedOperationsToResponse(bulkResponseData, unauthorizedRoleV2BulkOperations);
+                SCIMResponse scimResponse = bulkResourceManager.getEncodeSCIMResponse(bulkResponseData);
+                // needs to check the code of the response and return 200 0k or other error codes
+                // appropriately.
+                return SupportUtils.buildResponse(scimResponse);
+            } catch (CharonException | BadRequestException | PayloadTooLargeException | InternalErrorException e) {
                 return SupportUtils.buildResponse(AbstractResourceManager.encodeSCIMException(e));
-            } catch (ForbiddenException e) {
-                return SupportUtils.buildResponse(AbstractResourceManager.
-                        encodeSCIMException(new org.wso2.charon3.core.exceptions.ForbiddenException(e.getMessage())));
             }
-            // Call for process bulk data.
-            SCIMResponse scimResponse =
-                    bulkResourceManager.processBulkData(resourceString, userManager, roleManager, roleV2Manager);
-            // needs to check the code of the response and return 200 0k or other error codes
-            // appropriately.
-            return SupportUtils.buildResponse(scimResponse);
 
         } catch (CharonException e) {
             return handleCharonException(e);
@@ -103,22 +116,64 @@ public class BulkResource extends AbstractResource {
         }
     }
 
-    private void validateOperationScopes(String resourceString, BulkResourceManager bulkResourceManager)
-            throws BadRequestException, CharonException, ForbiddenException {
+    private BulkRequestData validateOperationScopes(String resourceString, BulkResourceManager bulkResourceManager,
+                                         List<BulkRequestContent> unAuthorizedBulkOperations,
+                                         List<BulkRequestContent> authorizedBulkOperations)
+            throws BadRequestException, CharonException {
 
         BulkRequestData bulkRequestData = bulkResourceManager.getDecodeBulkRequest(resourceString);
         if (!bulkRequestData.getRoleV2OperationRequests().isEmpty()) {
-            for (BulkRequestContent bulkRequestContent: bulkRequestData.getRoleV2OperationRequests()) {
-                if (bulkRequestContent.getMethod().equalsIgnoreCase(HttpMethod.POST)) {
-                    AuthorizationUtil.validateOperationScopes(BULK_CREATE_ROLE_OPERATION_NAME);
-                } else if (bulkRequestContent.getMethod().equalsIgnoreCase(HttpMethod.PUT) ||
-                        bulkRequestContent.getMethod().equalsIgnoreCase(HttpMethod.PATCH)) {
-                    AuthorizationUtil.validateOperationScopes(BULK_UPDATE_ROLE_OPERATION_NAME);
-                } else if (bulkRequestContent.getMethod().equalsIgnoreCase(HttpMethod.DELETE)) {
-                    AuthorizationUtil.validateOperationScopes(SCIMProviderConstants.BULK_DELETE_ROLE_OPERATION_NAME);
+            for (BulkRequestContent bulkRequestContent : bulkRequestData.getRoleV2OperationRequests()) {
+                String operationName = getOperationNameForMethod(bulkRequestContent.getMethod());
+                if (operationName != null) {
+                    try {
+                        AuthorizationUtil.validateOperationScopes(operationName);
+                        authorizedBulkOperations.add(bulkRequestContent);
+                    } catch (ForbiddenException e) {
+                        unAuthorizedBulkOperations.add(bulkRequestContent);
+                    }
                 }
             }
+            bulkRequestData.setRoleV2OperationRequests(authorizedBulkOperations);
         }
+        return bulkRequestData;
+    }
+
+    private String getOperationNameForMethod(String method) {
+
+        switch (method.toUpperCase()) {
+            case HttpMethod.POST:
+                return BULK_CREATE_ROLE_OPERATION_NAME;
+            case HttpMethod.PUT:
+            case HttpMethod.PATCH:
+                return BULK_UPDATE_ROLE_OPERATION_NAME;
+            case HttpMethod.DELETE:
+                return BULK_DELETE_ROLE_OPERATION_NAME;
+            default:
+                return null;
+        }
+    }
+
+    private void addUnauthorizedOperationsToResponse(BulkResponseData bulkResponseData,
+                                                 List<BulkRequestContent> unauthorizedBulkOperations) {
+
+        if (!unauthorizedBulkOperations.isEmpty()) {
+            for (BulkRequestContent bulkRequestContent : unauthorizedBulkOperations) {
+                bulkResponseData.addRoleOperation(buildForbiddenBulkResponseContent(bulkRequestContent));
+            }
+        }
+    }
+
+    private BulkResponseContent buildForbiddenBulkResponseContent(BulkRequestContent bulkRequestContent) {
+
+        BulkResponseContent bulkResponseContent = new BulkResponseContent();
+        bulkResponseContent.setBulkID(bulkRequestContent.getBulkID());
+        bulkResponseContent.setMethod(bulkRequestContent.getMethod());
+        bulkResponseContent.setScimResponse(
+                AbstractResourceManager.encodeSCIMException(
+                        new org.wso2.charon3.core.exceptions.ForbiddenException("Operation is not permitted. You do not have permissions to make " +
+                                "this request.", "You do not have permission to perform this operation.")));
+        return bulkResponseContent;
     }
 }
 
