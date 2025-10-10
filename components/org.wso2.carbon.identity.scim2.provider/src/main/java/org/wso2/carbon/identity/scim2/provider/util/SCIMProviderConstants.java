@@ -55,4 +55,8 @@ public class SCIMProviderConstants {
     public static final String REPLACE = "replace";
     public static final String VALUE_EQ = "value eq";
 
+    public static final String BULK_CREATE_ROLE_OPERATION_NAME = "createRole";
+    public static final String BULK_UPDATE_ROLE_OPERATION_NAME = "updateRole";
+    public static final String BULK_DELETE_ROLE_OPERATION_NAME = "deleteRole";
+
 }

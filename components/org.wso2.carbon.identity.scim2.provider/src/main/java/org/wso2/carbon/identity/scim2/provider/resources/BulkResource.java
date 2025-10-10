@@ -18,22 +18,31 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
+import org.wso2.carbon.identity.authorization.common.AuthorizationUtil;
+import org.wso2.carbon.identity.authorization.common.exception.ForbiddenException;
 import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.context.model.Flow;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
+import org.wso2.charon3.core.encoder.JSONDecoder;
+import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.extensions.RoleManager;
 import org.wso2.charon3.core.extensions.RoleV2Manager;
 import org.wso2.charon3.core.extensions.UserManager;
+import org.wso2.charon3.core.objects.bulk.BulkRequestContent;
+import org.wso2.charon3.core.objects.bulk.BulkRequestData;
 import org.wso2.charon3.core.protocol.SCIMResponse;
+import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 import org.wso2.charon3.core.protocol.endpoints.BulkResourceManager;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants.BULK_CREATE_ROLE_OPERATION_NAME;
+import static org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants.BULK_UPDATE_ROLE_OPERATION_NAME;
 
 @Path("/")
 public class BulkResource extends AbstractResource {
@@ -70,6 +79,14 @@ public class BulkResource extends AbstractResource {
 
             // create charon-SCIM bulk endpoint and hand-over the request.
             BulkResourceManager bulkResourceManager = new BulkResourceManager();
+            try {
+                validateOperationScopes(resourceString, bulkResourceManager);
+            } catch (CharonException | BadRequestException e) {
+                return SupportUtils.buildResponse(AbstractResourceManager.encodeSCIMException(e));
+            } catch (ForbiddenException e) {
+                return SupportUtils.buildResponse(AbstractResourceManager.
+                        encodeSCIMException(new org.wso2.charon3.core.exceptions.ForbiddenException(e.getMessage())));
+            }
             // Call for process bulk data.
             SCIMResponse scimResponse =
                     bulkResourceManager.processBulkData(resourceString, userManager, roleManager, roleV2Manager);
@@ -83,6 +100,24 @@ public class BulkResource extends AbstractResource {
             return handleFormatNotSupportedException(e);
         } finally {
             IdentityContext.getThreadLocalIdentityContext().exitFlow();
+        }
+    }
+
+    private void validateOperationScopes(String resourceString, BulkResourceManager bulkResourceManager)
+            throws BadRequestException, CharonException, ForbiddenException {
+
+        BulkRequestData bulkRequestData = bulkResourceManager.getDecodeBulkRequest(resourceString);
+        if (!bulkRequestData.getRoleV2OperationRequests().isEmpty()) {
+            for (BulkRequestContent bulkRequestContent: bulkRequestData.getRoleV2OperationRequests()) {
+                if (bulkRequestContent.getMethod().equalsIgnoreCase(HttpMethod.POST)) {
+                    AuthorizationUtil.validateOperationScopes(BULK_CREATE_ROLE_OPERATION_NAME);
+                } else if (bulkRequestContent.getMethod().equalsIgnoreCase(HttpMethod.PUT) ||
+                        bulkRequestContent.getMethod().equalsIgnoreCase(HttpMethod.PATCH)) {
+                    AuthorizationUtil.validateOperationScopes(BULK_UPDATE_ROLE_OPERATION_NAME);
+                } else if (bulkRequestContent.getMethod().equalsIgnoreCase(HttpMethod.DELETE)) {
+                    AuthorizationUtil.validateOperationScopes(SCIMProviderConstants.BULK_DELETE_ROLE_OPERATION_NAME);
+                }
+            }
         }
     }
 }
