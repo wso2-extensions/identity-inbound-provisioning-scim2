@@ -100,8 +100,7 @@ public class BulkResource extends AbstractResource {
                         bulkResourceManager.processBulkData(bulkRequestData, userManager, roleManager, roleV2Manager);
                 addUnauthorizedOperationsToResponse(bulkResponseData, unauthorizedRoleV2BulkOperations);
                 SCIMResponse scimResponse = bulkResourceManager.getEncodeSCIMResponse(bulkResponseData);
-                // needs to check the code of the response and return 200 0k or other error codes
-                // appropriately.
+                // Needs to check the code of the response and return 200 0k or other error codes  appropriately.
                 return SupportUtils.buildResponse(scimResponse);
             } catch (CharonException | BadRequestException | PayloadTooLargeException | InternalErrorException e) {
                 return SupportUtils.buildResponse(AbstractResourceManager.encodeSCIMException(e));
