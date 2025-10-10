@@ -171,8 +171,9 @@ public class BulkResource extends AbstractResource {
         bulkResponseContent.setMethod(bulkRequestContent.getMethod());
         bulkResponseContent.setScimResponse(
                 AbstractResourceManager.encodeSCIMException(
-                        new org.wso2.charon3.core.exceptions.ForbiddenException("Operation is not permitted. You do not have permissions to make " +
-                                "this request.", "You do not have permission to perform this operation.")));
+                        new org.wso2.charon3.core.exceptions.ForbiddenException(
+                                "Operation is not permitted. You do not have permissions to make this request.",
+                                "You do not have permission to perform this operation.")));
         return bulkResponseContent;
     }
 }
