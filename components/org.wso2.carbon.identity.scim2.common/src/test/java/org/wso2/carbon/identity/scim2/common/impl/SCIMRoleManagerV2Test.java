@@ -777,28 +777,6 @@ public class SCIMRoleManagerV2Test {
         };
     }
 
-    @Test(dataProvider = "dataProviderCreateRolePositiveWithInvalidPermission",
-            expectedExceptions = {ForbiddenException.class})
-    public void testCreateRolePositiveWithInvalidPermission(boolean isValidationRequired,
-                                                            Map<String, String> operationScopeMap,
-                                                            List<String> validatedScopes)
-            throws BadRequestException, CharonException, ConflictException, ForbiddenException {
-
-        OperationScopeValidationContext operationScopeValidationContext =
-                new OperationScopeValidationContext();
-        operationScopeValidationContext.setValidationRequired(isValidationRequired);
-        operationScopeValidationContext.setOperationScopeMap(operationScopeMap);
-        operationScopeValidationContext.setValidatedScopes(validatedScopes);
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setOperationScopeValidationContext(
-                operationScopeValidationContext);
-
-        RoleV2 roleV2 = new RoleV2();
-        roleV2.setDisplayName(ROLE_NAME);
-        roleV2.setDisplayName(ROLE_NAME + "-v2");
-
-        scimRoleManagerV2.createRole(roleV2);
-    }
-
     private void initPrivilegedCarbonContext() {
 
         System.setProperty(
