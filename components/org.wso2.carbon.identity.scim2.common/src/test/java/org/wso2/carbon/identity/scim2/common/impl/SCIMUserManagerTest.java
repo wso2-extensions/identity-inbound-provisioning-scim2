@@ -287,6 +287,7 @@ public class SCIMUserManagerTest {
         when(mockSCIMSystemSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
         scimCommonComponentHolder.when(SCIMCommonComponentHolder::getClaimManagementService)
                 .thenReturn(mockClaimMetadataManagementService);
+        scimCommonUtils.when(SCIMCommonUtils::isGroupBasedUserFilteringImprovementsEnabled).thenReturn(true);
     }
 
     @AfterMethod
@@ -811,7 +812,6 @@ public class SCIMUserManagerTest {
 
         when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(mockedJDBCUserStoreManager);
         when(mockedJDBCUserStoreManager.isSCIMEnabled()).thenReturn(true);
-        scimCommonUtils.when(SCIMCommonUtils::isGroupBasedUserFilteringImprovementsEnabled).thenReturn(true);
 
         when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(new String[]{"admin"});
