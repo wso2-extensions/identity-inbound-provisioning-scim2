@@ -22,7 +22,9 @@ import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
+import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.extensions.RoleV2Manager;
 import org.wso2.charon3.core.protocol.SCIMResponse;
@@ -127,6 +129,9 @@ public class RoleResourceV2 extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw new FormatNotSupportedException(error);
             }
+
+            SupportUtils.validateRoleV2AddAuthorization(resourceString);
+
             // Obtain the role manager.
             RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
@@ -137,6 +142,8 @@ public class RoleResourceV2 extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } catch (ForbiddenException e) {
+            return handleForbiddenException(e);
         }
     }
 
@@ -223,6 +230,9 @@ public class RoleResourceV2 extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw new FormatNotSupportedException(error);
             }
+
+            SupportUtils.validateRoleV2PutAuthorization(resourceString);
+
             // Obtain the role manager.
             RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
@@ -233,6 +243,10 @@ public class RoleResourceV2 extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } catch (ForbiddenException e) {
+            return handleForbiddenException(e);
+        } catch (BadRequestException e) {
+            return handleBadRequestException(e);
         }
     }
 
@@ -257,6 +271,9 @@ public class RoleResourceV2 extends AbstractResource {
                 String error = outputFormat + " is not supported.";
                 throw new FormatNotSupportedException(error);
             }
+
+            SupportUtils.validateRoleV2PatchAuthorization(resourceString);
+
             // Obtain the role manager.
             RoleV2Manager roleManager = IdentitySCIMManager.getInstance().getRoleV2Manager();
             // Create charon-SCIM role endpoint and hand-over the request.
@@ -267,6 +284,10 @@ public class RoleResourceV2 extends AbstractResource {
             return handleCharonException(e);
         } catch (FormatNotSupportedException e) {
             return handleFormatNotSupportedException(e);
+        } catch (ForbiddenException e) {
+            return handleForbiddenException(e);
+        } catch (BadRequestException e) {
+            return handleBadRequestException(e);
         }
     }
 }
