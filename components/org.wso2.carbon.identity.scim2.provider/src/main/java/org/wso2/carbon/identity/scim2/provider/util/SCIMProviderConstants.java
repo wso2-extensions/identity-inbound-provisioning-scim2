@@ -58,4 +58,16 @@ public class SCIMProviderConstants {
     public static final String BULK_CREATE_ROLE_OPERATION_NAME = "createRole";
     public static final String BULK_UPDATE_ROLE_OPERATION_NAME = "updateRole";
     public static final String BULK_DELETE_ROLE_OPERATION_NAME = "deleteRole";
+
+    public static final String SKIP_ENFORCE_ROLE_OPERATION_PERMISSION = "RoleMgt.SkipEnforceRoleOperationPermission";
+
+    /*
+     * This class contains constants related to SCIM Role operations.
+     */
+    public static class RoleV2Operations {
+
+        public static final String UPDATE_ROLE_PERMISSIONS = "updateRolePermissions";
+        public static final String UPDATE_ROLE_MEMBERS = "updateRoleMembers";
+        public static final String UPDATE_ROLE_GROUPS = "updateRoleGroups";
+    }
 }

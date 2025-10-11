@@ -23,7 +23,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
 import org.wso2.carbon.identity.scim2.provider.util.SupportUtils;
+import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
+import org.wso2.charon3.core.exceptions.ForbiddenException;
 import org.wso2.charon3.core.exceptions.FormatNotSupportedException;
 import org.wso2.charon3.core.protocol.endpoints.AbstractResourceManager;
 
@@ -134,5 +136,21 @@ public class AbstractResource {
                 format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION__JSON)
                 || format.equalsIgnoreCase(SCIMProviderConstants.APPLICATION_SCIM_JSON) ||
                 format.equalsIgnoreCase("application/*");
+    }
+
+    protected Response handleForbiddenException(ForbiddenException e) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(e.getMessage(), e);
+        }
+        return SupportUtils.buildResponse(AbstractResourceManager.encodeSCIMException(e));
+    }
+
+    protected Response handleBadRequestException(BadRequestException e) {
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(e.getMessage(), e);
+        }
+        return SupportUtils.buildResponse(AbstractResourceManager.encodeSCIMException(e));
     }
 }
