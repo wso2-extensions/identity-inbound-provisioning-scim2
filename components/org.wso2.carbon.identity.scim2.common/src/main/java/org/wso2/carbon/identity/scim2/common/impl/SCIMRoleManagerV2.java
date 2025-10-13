@@ -1861,7 +1861,7 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
     private void validateOrganizationRoleCreation(String audienceType, String audienceValue, String tenantDomain)
             throws BadRequestException, OrganizationManagementException, IdentityApplicationManagementException {
 
-        if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equals(audienceType)) {
+        if (OrganizationManagementUtil.isOrganization(tenantDomain) && APPLICATION.equalsIgnoreCase(audienceType)) {
             ServiceProvider app = ApplicationManagementService.getInstance().getApplicationByResourceId(
                     audienceValue, tenantDomain);
             if (app == null) {
