@@ -30,6 +30,9 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.OperationScopeValidationContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -61,6 +64,7 @@ import org.wso2.charon3.core.objects.plainobjects.RolesV2GetResponse;
 import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.codeutils.PatchOperation;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -119,6 +123,9 @@ public class SCIMRoleManagerV2Test {
     @Mock
     private IdpManager idpManager;
 
+    @Mock
+    private ApplicationManagementService applicationManagementService;
+
     private SCIMRoleManagerV2 scimRoleManagerV2;
 
     private MockedStatic<IdentityUtil> identityUtil;
@@ -128,6 +135,8 @@ public class SCIMRoleManagerV2Test {
     private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolderMockedStatic;
 
     private MockedStatic<RoleManagementUtils> roleManagementUtilsMockedStatic;
+
+    private MockedStatic<ApplicationManagementService> applicationManagementServiceMockedStatic;
 
     @BeforeClass
     public void setUpClass() {
@@ -150,6 +159,7 @@ public class SCIMRoleManagerV2Test {
         organizationManagementUtilMockedStatic = mockStatic(OrganizationManagementUtil.class);
         scimCommonComponentHolderMockedStatic = mockStatic(SCIMCommonComponentHolder.class);
         roleManagementUtilsMockedStatic = mockStatic(RoleManagementUtils.class);
+        applicationManagementServiceMockedStatic = mockStatic(ApplicationManagementService.class);
     }
 
     @AfterMethod
@@ -159,6 +169,7 @@ public class SCIMRoleManagerV2Test {
         organizationManagementUtilMockedStatic.close();
         scimCommonComponentHolderMockedStatic.close();
         roleManagementUtilsMockedStatic.close();
+        applicationManagementServiceMockedStatic.close();
     }
 
     @DataProvider(name = "scimOperations")
@@ -784,5 +795,25 @@ public class SCIMRoleManagerV2Test {
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
                           );
         PrivilegedCarbonContext.startTenantFlow();
+    }
+
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testValidateOrganizationRoleCreation_validApplication() throws Exception {
+
+        // Mock organization context
+        when(OrganizationManagementUtil.isOrganization(SAMPLE_TENANT_DOMAIN)).thenReturn(true);
+        // Mock valid application
+        ServiceProvider app = new ServiceProvider();
+        ServiceProviderProperty[] spProperties = new ServiceProviderProperty[]{new ServiceProviderProperty()};
+        spProperties[0] = new ServiceProviderProperty();
+        spProperties[0].setName(ApplicationConstants.IS_FRAGMENT_APP);
+        spProperties[0].setValue("true");
+        app.setSpProperties(spProperties);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getApplicationByResourceId(anyString(), anyString())).thenReturn(app);
+
+        RoleV2 roleV2 = new RoleV2();
+        roleV2.setAudience("APPLICATION", "ApplicationName", "APPLICATION");
+        scimRoleManagerV2.createRole(roleV2);
     }
 }
