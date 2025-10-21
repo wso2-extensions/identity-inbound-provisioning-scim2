@@ -822,7 +822,21 @@ public class SCIMUserManagerTest {
 
         UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, filteredUsers.size(), null, null, domain, new HashMap<>());
         assertEquals(result.getUsers().size(), filteredUsers.size());
+    }
 
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testFilteringUsersWithInvalidDomain() throws IOException, BadRequestException, NotImplementedException,
+            CharonException {
+
+        String domain = "INVALID_DOMAIN";
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(null);
+
+        SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+        FilterTreeManager filterTreeManager = new FilterTreeManager("groups eq admin", schema);
+        Node node = filterTreeManager.buildTree();
+
+        scimUserManager.listUsersWithGET(node, 1, 1, null, null, "domain", new HashMap<>());
     }
 
     @DataProvider(name = "userInfoForFiltering")
