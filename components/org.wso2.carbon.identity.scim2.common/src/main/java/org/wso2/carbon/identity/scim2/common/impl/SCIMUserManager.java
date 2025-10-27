@@ -7633,6 +7633,11 @@ public class SCIMUserManager implements UserManager {
                 StringUtils.EMPTY);
         String filter = attribute + " " + node.getOperation() + " " + node.getValue();
 
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Filtering users by single attribute of roles with filter: %s, limit: %d, " +
+                            "offset: %d, domain: %s", filter, limit, offset, domainName));
+        }
+
         try {
             List<UserBasicInfo> userBasicInfoList = roleManagementService.getUserListOfRoles(getExpressionNodes(filter),
                     limit, offset, sortBy, sortOrder, tenantDomain, domainName);
