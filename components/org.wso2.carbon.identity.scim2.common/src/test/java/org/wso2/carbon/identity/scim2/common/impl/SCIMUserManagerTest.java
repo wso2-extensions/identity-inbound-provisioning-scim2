@@ -287,6 +287,7 @@ public class SCIMUserManagerTest {
         when(mockSCIMSystemSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
         scimCommonComponentHolder.when(SCIMCommonComponentHolder::getClaimManagementService)
                 .thenReturn(mockClaimMetadataManagementService);
+        scimCommonUtils.when(SCIMCommonUtils::isGroupBasedUserFilteringImprovementsEnabled).thenReturn(true);
     }
 
     @AfterMethod
@@ -811,7 +812,6 @@ public class SCIMUserManagerTest {
 
         when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(mockedJDBCUserStoreManager);
         when(mockedJDBCUserStoreManager.isSCIMEnabled()).thenReturn(true);
-        scimCommonUtils.when(SCIMCommonUtils::isGroupBasedUserFilteringImprovementsEnabled).thenReturn(true);
 
         when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(new String[]{"admin"});
@@ -822,7 +822,36 @@ public class SCIMUserManagerTest {
 
         UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, filteredUsers.size(), null, null, domain, new HashMap<>());
         assertEquals(result.getUsers().size(), filteredUsers.size());
+    }
 
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testFilteringUsersWithInvalidDomain() throws IOException, BadRequestException, NotImplementedException,
+            CharonException {
+
+        String domain = "INVALID_DOMAIN";
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(null);
+
+        SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+        FilterTreeManager filterTreeManager = new FilterTreeManager("groups eq admin", schema);
+        Node node = filterTreeManager.buildTree();
+
+        scimUserManager.listUsersWithGET(node, 1, 1, null, null, "domain", new HashMap<>());
+    }
+
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testFilteringUsersWithInvalidFilter() throws IOException, BadRequestException, NotImplementedException,
+            CharonException {
+
+        String domain = "INVALID_DOMAIN";
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(null);
+
+        SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+        FilterTreeManager filterTreeManager = new FilterTreeManager("groups gt admin", schema);
+        Node node = filterTreeManager.buildTree();
+
+        scimUserManager.listUsersWithGET(node, 1, 1, null, null, "domain", new HashMap<>());
     }
 
     @DataProvider(name = "userInfoForFiltering")
