@@ -159,7 +159,6 @@ import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.MULTI_ATT
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_ASSOCIATED_WITH_DIFFERENT_ORGANIZATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_EMAIL_DOMAIN_NOT_MAPPED_TO_ORGANIZATION;
 import static org.wso2.carbon.identity.password.policy.constants.PasswordPolicyConstants.ErrorMessages.ERROR_CODE_LOADING_PASSWORD_POLICY_CLASSES;
-import static org.wso2.carbon.identity.role.v2.mgt.core.util.RoleManagementUtils.getExpressionNodes;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_CREATE_GROUP_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_CREATE_USER_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_DELETE_GROUP_OP;
@@ -7639,8 +7638,8 @@ public class SCIMUserManager implements UserManager {
         }
 
         try {
-            List<UserBasicInfo> userBasicInfoList = roleManagementService.getUserListOfRoles(getExpressionNodes(filter),
-                    limit, offset, sortBy, sortOrder, tenantDomain, domainName);
+            List<UserBasicInfo> userBasicInfoList = roleManagementService.getUserListOfRoles(filter, limit, offset,
+                    sortBy, sortOrder, tenantDomain, domainName);
             Set<org.wso2.carbon.user.core.common.User> users = new HashSet<>();
             for (UserBasicInfo userBasicInfo : userBasicInfoList) {
                 org.wso2.carbon.user.core.common.User user =
@@ -7650,8 +7649,8 @@ public class SCIMUserManager implements UserManager {
                 users.add(user);
             }
             filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
-            int totalResults = roleManagementService.getUserListOfRoles(getExpressionNodes(filter), limit, offset,
-                    sortBy, sortOrder, tenantDomain, domainName).size();
+            int totalResults = roleManagementService.getUserListOfRoles(filter, Integer.MAX_VALUE, 0, null, null,
+                    tenantDomain, domainName).size();
             return getDetailedUsers(filteredUsers, totalResults);
         } catch (IdentityRoleManagementClientException e) {
             throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_FILTER);
