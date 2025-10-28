@@ -37,6 +37,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.OperationScopeValidationContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.model.OperationScopeSet;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
@@ -2309,7 +2310,8 @@ public class SCIMUserManagerTest {
         OperationScopeValidationContext operationScopeValidationContext =
                 new OperationScopeValidationContext();
         operationScopeValidationContext.setValidationRequired(isValidationRequired);
-        operationScopeValidationContext.setOperationScopeMap(operationScopeMap);
+        operationScopeValidationContext.setOperationScopeSet(new OperationScopeSet());
+        operationScopeValidationContext.getOperationScopeSet().setOperationScopeMap(operationScopeMap);
         operationScopeValidationContext.setValidatedScopes(validatedScopes);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setOperationScopeValidationContext(
                 operationScopeValidationContext);
