@@ -53,8 +53,11 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementClientException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMAgentAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
@@ -162,7 +165,6 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BU
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_DELETE_USER_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_GROUP_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_USER_OP;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildAgentSchema;
@@ -1699,6 +1701,11 @@ public class SCIMUserManager implements UserManager {
             if (limit == 0) {
                 limit = getMaxLimit(domainName);
             }
+
+            if (node.getAttributeValue().startsWith(SCIMConstants.UserSchemaConstants.ROLES_URI)) {
+                return filterUsersBySingleAttributeOfRoles(node, requiredAttributes, offset, limit, sortBy, sortOrder, domainName);
+            }
+
             // Check which APIs should the filter needs to follow.
             if (isUseLegacyAPIs(limit)) {
                 users = filterUsersUsingLegacyAPIs(node, limit, offset, domainName);
@@ -7609,5 +7616,46 @@ public class SCIMUserManager implements UserManager {
         }
         IdentityContext.getThreadLocalIdentityContext().enterFlow(flow);
         return true;
+    }
+
+    private UsersGetResponse filterUsersBySingleAttributeOfRoles(ExpressionNode node,
+                                                                 Map<String, Boolean> requiredAttributes, int offset,
+                                                                 int limit, String sortBy, String sortOrder,
+                                                                 String domainName)
+            throws CharonException, BadRequestException {
+
+        List<User> filteredUsers = new ArrayList<>();
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        RoleManagementService roleManagementService = SCIMCommonComponentHolder.getRoleManagementServiceV2();
+
+        String attribute = node.getAttributeValue().replace(SCIMConstants.UserSchemaConstants.ROLES_URI + ".",
+                StringUtils.EMPTY);
+        String filter = attribute + " " + node.getOperation() + " " + node.getValue();
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Filtering users by single attribute of roles with filter: %s, limit: %d, " +
+                            "offset: %d, domain: %s", filter, limit, offset, domainName));
+        }
+
+        try {
+            List<UserBasicInfo> userBasicInfoList = roleManagementService.getUserListOfRoles(filter, limit, offset,
+                    sortBy, sortOrder, tenantDomain, domainName);
+            Set<org.wso2.carbon.user.core.common.User> users = new HashSet<>();
+            for (UserBasicInfo userBasicInfo : userBasicInfoList) {
+                org.wso2.carbon.user.core.common.User user =
+                        new org.wso2.carbon.user.core.common.User(userBasicInfo.getId());
+                user.setUsername(UserCoreUtil.removeDomainFromName(userBasicInfo.getName()));
+                user.setUserStoreDomain(UserCoreUtil.extractDomainFromName(userBasicInfo.getName()));
+                users.add(user);
+            }
+            filteredUsers.addAll(getFilteredUserDetails(users, requiredAttributes));
+            int totalResults = roleManagementService.getUserListOfRoles(filter, Integer.MAX_VALUE, 0, null, null,
+                    tenantDomain, domainName).size();
+            return getDetailedUsers(filteredUsers, totalResults);
+        } catch (IdentityRoleManagementClientException e) {
+            throw new BadRequestException(e.getMessage(), ResponseCodeConstants.INVALID_FILTER);
+        } catch (IdentityRoleManagementException e) {
+            throw new CharonException(e.getMessage(), e);
+        }
     }
 }

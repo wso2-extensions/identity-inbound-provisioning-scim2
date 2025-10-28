@@ -30,6 +30,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.OperationScopeValidationContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.model.OperationScopeSet;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
@@ -312,7 +313,8 @@ public class SCIMRoleManagerTest {
         OperationScopeValidationContext operationScopeValidationContext =
                 new OperationScopeValidationContext();
         operationScopeValidationContext.setValidationRequired(isValidationRequired);
-        operationScopeValidationContext.setOperationScopeMap(operationScopeMap);
+        operationScopeValidationContext.setOperationScopeSet(new OperationScopeSet());
+        operationScopeValidationContext.getOperationScopeSet().setOperationScopeMap(operationScopeMap);
         operationScopeValidationContext.setValidatedScopes(validatedScopes);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setOperationScopeValidationContext(
                 operationScopeValidationContext);

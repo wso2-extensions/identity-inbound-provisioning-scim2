@@ -37,6 +37,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.OperationScopeValidationContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.model.OperationScopeSet;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
@@ -56,6 +57,8 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
 import org.wso2.carbon.identity.scim2.common.extenstion.SCIMUserStoreErrorResolver;
 import org.wso2.carbon.identity.scim2.common.group.SCIMGroupHandler;
@@ -248,6 +251,9 @@ public class SCIMUserManagerTest {
     private ConfigurationManager mockedConfigurationManager;
 
     @Mock
+    private RoleManagementService mockedRoleManagementServiceV2;
+
+    @Mock
     private RolePermissionManagementService mockedRolePermissionManagementService;
     private MockedStatic<SCIMUserSchemaExtensionBuilder> scimUserSchemaExtensionBuilder;
     private MockedStatic<SCIMSystemSchemaExtensionBuilder> scimSystemSchemaExtensionBuilder;
@@ -287,6 +293,8 @@ public class SCIMUserManagerTest {
         when(mockSCIMSystemSchemaExtensionBuilder.getExtensionSchema()).thenReturn(mockedSCIMAttributeSchema);
         scimCommonComponentHolder.when(SCIMCommonComponentHolder::getClaimManagementService)
                 .thenReturn(mockClaimMetadataManagementService);
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getRoleManagementServiceV2)
+                .thenReturn(mockedRoleManagementServiceV2);
         scimCommonUtils.when(SCIMCommonUtils::isGroupBasedUserFilteringImprovementsEnabled).thenReturn(true);
     }
 
@@ -822,6 +830,36 @@ public class SCIMUserManagerTest {
 
         UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, filteredUsers.size(), null, null, domain, new HashMap<>());
         assertEquals(result.getUsers().size(), filteredUsers.size());
+    }
+
+    @Test
+    public void testFilteringUsersOfRolesWithGET() throws Exception {
+
+        String domain = "PRIMARY";
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        SCIMResourceTypeSchema schema = SCIMResourceSchemaManager.getInstance().getUserResourceSchema();
+        FilterTreeManager filterTreeManager = new FilterTreeManager("roles.name eq admin", schema);
+        Node node = filterTreeManager.buildTree();
+
+        scimCommonUtils.when(() -> SCIMCommonUtils.convertLocalToSCIMDialect(anyMap(), anyMap()))
+                .thenReturn(new HashMap<String, String>() {{
+            put(SCIMConstants.CommonSchemaConstants.ID_URI, "1f70378a-69bb-49cf-aa51-a0493c09110c");
+        }});
+
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(mockedJDBCUserStoreManager);
+        when(mockedJDBCUserStoreManager.isSCIMEnabled()).thenReturn(true);
+
+        UserBasicInfo userBasicInfo = new UserBasicInfo("testUser1", "zf70378a-69bb-59cf-aa51-a0493c09110k");
+        List<UserBasicInfo> userBasicInfoList = new ArrayList<>();
+        userBasicInfoList.add(userBasicInfo);
+
+        when(mockedRoleManagementServiceV2.getUserListOfRoles(anyString(), anyInt(), anyInt(), nullable(String.class), nullable(String.class), anyString(), anyString()))
+                .thenReturn(userBasicInfoList);
+
+        CommonTestUtils.initPrivilegedCarbonContext();
+
+        UsersGetResponse result = scimUserManager.listUsersWithGET(node, 1, 10, null, null, domain, new HashMap<>());
+        assertEquals(result.getUsers().size(), userBasicInfoList.size());
     }
 
     @Test(expectedExceptions = BadRequestException.class)
@@ -2309,7 +2347,8 @@ public class SCIMUserManagerTest {
         OperationScopeValidationContext operationScopeValidationContext =
                 new OperationScopeValidationContext();
         operationScopeValidationContext.setValidationRequired(isValidationRequired);
-        operationScopeValidationContext.setOperationScopeMap(operationScopeMap);
+        operationScopeValidationContext.setOperationScopeSet(new OperationScopeSet());
+        operationScopeValidationContext.getOperationScopeSet().setOperationScopeMap(operationScopeMap);
         operationScopeValidationContext.setValidatedScopes(validatedScopes);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setOperationScopeValidationContext(
                 operationScopeValidationContext);
