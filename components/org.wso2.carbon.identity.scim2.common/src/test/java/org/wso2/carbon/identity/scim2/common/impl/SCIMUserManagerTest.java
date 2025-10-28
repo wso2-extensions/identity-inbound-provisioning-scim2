@@ -847,6 +847,7 @@ public class SCIMUserManagerTest {
         }});
 
         when(mockedUserStoreManager.getSecondaryUserStoreManager(domain)).thenReturn(mockedJDBCUserStoreManager);
+        when(mockedJDBCUserStoreManager.isSCIMEnabled()).thenReturn(true);
 
         UserBasicInfo userBasicInfo = new UserBasicInfo("testUser1", "zf70378a-69bb-59cf-aa51-a0493c09110k");
         List<UserBasicInfo> userBasicInfoList = new ArrayList<>();
