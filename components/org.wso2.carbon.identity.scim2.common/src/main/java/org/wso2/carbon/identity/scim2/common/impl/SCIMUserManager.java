@@ -7640,7 +7640,7 @@ public class SCIMUserManager implements UserManager {
         try {
             List<UserBasicInfo> userBasicInfoList = roleManagementService.getUserListOfRoles(filter, limit, offset,
                     sortBy, sortOrder, tenantDomain, domainName);
-            Set<org.wso2.carbon.user.core.common.User> users = new HashSet<>();
+            Set<org.wso2.carbon.user.core.common.User> users = new LinkedHashSet<>();
             for (UserBasicInfo userBasicInfo : userBasicInfoList) {
                 org.wso2.carbon.user.core.common.User user =
                         new org.wso2.carbon.user.core.common.User(userBasicInfo.getId());
