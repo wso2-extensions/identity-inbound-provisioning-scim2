@@ -40,7 +40,9 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.handler.event.account.lock.constants.AccountConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.model.BasicOrganization;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.util.UserIDResolver;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMAgentAttributeSchemaCache;
@@ -1354,5 +1356,29 @@ public class SCIMCommonUtils {
         }
 
         return Boolean.parseBoolean(returnConflictOnClaimUniquenessViolationEnabled);
+    }
+
+    public static List<Integer> getOrganizationsToInvalidateCaches(int tenantId) {
+
+        List<Integer> tenantIdsToBeInvalidated = new ArrayList<>();
+        tenantIdsToBeInvalidated.add(tenantId);
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        try {
+            if (Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
+                String organizationId = SCIMCommonComponentHolder.getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                List<BasicOrganization> childOrganizations = SCIMCommonComponentHolder
+                        .getOrganizationManager()
+                        .getChildOrganizations(organizationId, true);
+                for (BasicOrganization childOrg : childOrganizations) {
+                    int childTenantId = SCIMCommonComponentHolder.getRealmService().
+                            getTenantManager().getTenantId(childOrg.getOrganizationHandle());
+                    tenantIdsToBeInvalidated.add(childTenantId);
+                }
+            }
+        } catch (OrganizationManagementException | org.wso2.carbon.user.api.UserStoreException e) {
+            log.error("Error occurred while obtaining the child organizations for tenant id: " + tenantId, e);
+        }
+        return tenantIdsToBeInvalidated;
     }
 }

@@ -21,7 +21,10 @@ package org.wso2.carbon.identity.scim2.common.cache;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.charon3.core.schema.AttributeSchema;
+
+import java.util.List;
 
 /**
  * This stores agent AttributeSchema against tenants.
@@ -95,10 +98,14 @@ public class SCIMAgentAttributeSchemaCache
      */
     public void clearSCIMAgentAttributeSchemaByTenant(int tenantId) {
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Clearing SCIMAgentAttributeSchemaCache entry by the tenant with id: " + tenantId);
+        List<Integer> tenantIdsToBeInvalidated = SCIMCommonUtils.getOrganizationsToInvalidateCaches(tenantId);
+        for (Integer tenantIdToBeInvalidated: tenantIdsToBeInvalidated) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Clearing SCIMAgentAttributeSchemaCache entry by the tenant with id: " +
+                        tenantIdToBeInvalidated);
+            }
+            SCIMAgentAttributeSchemaCacheKey cacheKey = new SCIMAgentAttributeSchemaCacheKey(tenantIdToBeInvalidated);
+            super.clearCacheEntry(cacheKey);
         }
-        SCIMAgentAttributeSchemaCacheKey cacheKey = new SCIMAgentAttributeSchemaCacheKey(tenantId);
-        super.clearCacheEntry(cacheKey);
     }
 }

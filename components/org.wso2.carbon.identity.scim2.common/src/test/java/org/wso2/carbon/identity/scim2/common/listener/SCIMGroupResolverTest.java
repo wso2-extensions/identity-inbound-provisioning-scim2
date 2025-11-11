@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.mockito.MockedStatic;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -199,5 +200,11 @@ public class SCIMGroupResolverTest {
         mockIdentityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString()))
                 .thenReturn(DEFAULT_USER_STORE_DOMAIN);
         mockIdentityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn(SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @AfterClass
+    public void tearDown() {
+
+        mockIdentityTenantUtil.close();
     }
 }

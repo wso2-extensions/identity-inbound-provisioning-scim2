@@ -1,12 +1,34 @@
+/*
+ * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.scim2.common.handlers;
 
 import org.mockito.MockedStatic;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMCustomAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.cache.SCIMSystemAttributeSchemaCache;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants;
@@ -28,6 +50,20 @@ public class SCIMClaimOperationEventHandlerTest {
 
     private SCIMClaimOperationEventHandler handler;
     private Event mockEvent;
+    private MockedStatic<IdentityTenantUtil> identityTenantUtilStaticMock;
+    private MockedStatic<Utils> utilsStaticMock;
+
+    private final String FOO_TENANT_DOMAIN = "foo.com";
+
+    @BeforeClass
+    public void setUpTests() {
+
+        identityTenantUtilStaticMock = mockStatic(IdentityTenantUtil.class);
+        utilsStaticMock = mockStatic(Utils.class);
+        identityTenantUtilStaticMock.when(() -> IdentityTenantUtil.getTenantDomain(1)).thenReturn(FOO_TENANT_DOMAIN);
+        identityTenantUtilStaticMock.when(() -> IdentityTenantUtil.getTenantId(FOO_TENANT_DOMAIN)).thenReturn(1);
+        utilsStaticMock.when(() -> Utils.isClaimAndOIDCScopeInheritanceEnabled(FOO_TENANT_DOMAIN)).thenReturn(false);
+    }
 
     @BeforeMethod
     public void setUp() {
@@ -105,5 +141,12 @@ public class SCIMClaimOperationEventHandlerTest {
         assertNotNull(cache.getSCIMCustomAttributeSchemaByTenant(1));
 
         mockUtils.close();
+    }
+
+    @AfterClass
+    public void tearDown() {
+
+        identityTenantUtilStaticMock.close();
+        utilsStaticMock.close();
     }
 }
