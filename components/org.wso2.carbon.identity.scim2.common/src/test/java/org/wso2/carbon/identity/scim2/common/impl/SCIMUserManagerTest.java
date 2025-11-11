@@ -2169,12 +2169,34 @@ public class SCIMUserManagerTest {
         // This method is for testing of throwing CharonException, hence no assertion.
     }
 
-    @Test
-    public void testListUsersWithPost() throws Exception {
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testListUsersWithPostWithInvalidDomainName() throws Exception {
 
         SearchRequest searchRequest = new SearchRequest();
         UsersGetResponse usersGetResponse = new UsersGetResponse(0, Collections.emptyList());
         Map<String, Boolean> requiredAttributes = new HashMap<>();
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        doReturn(usersGetResponse).when(scimUserManager)
+                .listUsersWithGET(any(), any(), any(), nullable(String.class), nullable(String.class), nullable(String.class), anyMap());
+        when(SCIMCommonComponentHolder.getConfigurationManager()).thenReturn(mockedConfigurationManager);
+        Resource resource = getResource();
+        when(mockedConfigurationManager.getResourceByTenantId( anyInt(), anyString(),
+                anyString() )).thenReturn(resource);
+        scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
+    }
+
+    @Test
+    public void testListUsersWithPostWithValidDomainName() throws Exception {
+
+        SearchRequest searchRequest = new SearchRequest();
+        searchRequest.setDomainName("SECONDARY");
+        UsersGetResponse usersGetResponse = new UsersGetResponse(0, Collections.emptyList());
+        Map<String, Boolean> requiredAttributes = new HashMap<>();
+        AbstractUserStoreManager mockedSecondaryUserStoreManager = mock(AbstractUserStoreManager.class);
+        // Stub the real mockedUserStoreManager so calls from the SUT return the mocked secondary store.
+        when(mockedUserStoreManager.getSecondaryUserStoreManager("SECONDARY"))
+                .thenReturn(mockedSecondaryUserStoreManager);
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
         doReturn(usersGetResponse).when(scimUserManager)
