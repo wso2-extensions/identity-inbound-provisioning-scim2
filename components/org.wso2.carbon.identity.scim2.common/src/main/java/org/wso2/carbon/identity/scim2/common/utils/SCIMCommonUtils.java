@@ -1358,6 +1358,14 @@ public class SCIMCommonUtils {
         return Boolean.parseBoolean(returnConflictOnClaimUniquenessViolationEnabled);
     }
 
+    /**
+     * Gets the list of organizations for which the cache needs to be invalidated.
+     * For v0 organizations, this is only the current organization. For v1
+     * organizations, this is the current org and its sub-organizations.
+     *
+     * @param tenantId The id of the tenant for which the cache clearing was initiated.
+     * @return The list of organizations for which the cache needs to be cleared.
+     */
     public static List<Integer> getOrganizationsToInvalidateCaches(int tenantId) {
 
         List<Integer> tenantIdsToBeInvalidated = new ArrayList<>();
