@@ -748,15 +748,6 @@ public class SCIMUserManager implements UserManager {
 
         int count = searchRequest.getCount();
 
-        // Validate that the specified user store domain exists and is active.
-        // If the provided domain is missing or disabled, throw a BadRequestException.
-        if (carbonUM.getSecondaryUserStoreManager(searchRequest.getDomainName()) == null) {
-            String errorMessage = String.format(
-                    "Invalid user store domain: '%s'. The specified domain does not exist or is currently disabled.",
-                    searchRequest.getDomainName());
-            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
-        }
-
         try {
             if (!SCIMCommonUtils.isConsiderServerWideUserEndpointMaxLimitEnabled()) {
                 Resource maxLimitResource = getResourceByTenantId(carbonUM.getTenantId());
