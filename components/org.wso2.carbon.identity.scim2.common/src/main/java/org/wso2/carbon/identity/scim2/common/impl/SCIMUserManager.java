@@ -2428,30 +2428,64 @@ public class SCIMUserManager implements UserManager {
                 totalResults = maxLimitForTotalResults;
             }
         } else {
-            if (isJDBCUserStore(domainName) || isAllConfiguredUserStoresJDBC() ||
-                    SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
-                // Get total users based on the filter query.
-                totalResults += getMultiAttributeFilteredUsersCount(node, 1, domainName, maxLimitForTotalResults);
-
-            } else {
-                totalResults += paginatedUserResult.getFilteredUsers().size();
-                if (totalResults == 0 && paginatedUserResult.getFilteredUsers().size() > 1) {
-                    totalResults = paginatedUserResult.getFilteredUsers().size() - 1;
-                }
-            }
+            totalResults = getTotalResults(node, domainName, totalResults, paginatedUserResult);
         }
 
         return getDetailedUsers(filteredUserDetails, totalResults);
     }
 
+    /**
+     * Method to get the total results for the multi-attribute filter.
+     *
+     * @param node                Filter condition tree.
+     * @param domainName          Domain that the filter should perform.
+     * @param totalResults        Current total results.
+     * @param paginatedUserResult Paginated user result.
+     * @return Total results for the multi-attribute filter.
+     * @throws CharonException    Error while filtering.
+     */
+    private int getTotalResults(Node node, String domainName, int totalResults,
+                                PaginatedUserResponse paginatedUserResult)
+            throws CharonException, BadRequestException {
+
+        if (isJDBCUserStore(domainName) || isAllConfiguredUserStoresJDBC() ||
+                SCIMCommonUtils.isConsiderTotalRecordsForTotalResultOfLDAPEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Getting total user count for multi-attribute filter from the user store for domain: "
+                        + domainName);
+            }
+            // Get total users based on the filter query.
+            totalResults +=
+                    getMultiAttributeFilteredUsersCount(node, 1, domainName,
+                            getMaxLimitForTotalResults(domainName));
+
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Accumulating total user count from paginated user results for domain: " + domainName);
+            }
+            totalResults += paginatedUserResult.getFilteredUsers().size();
+        }
+        return totalResults;
+    }
 
     private PaginatedUserResponse getMultiAttributeFilteredUsersWithMaxLimit(Node node, int offset,
-                                           String sortBy, String sortOrder, String domainName, int maxLimit, boolean paginationRequested)
+                                                                                     String sortBy, String sortOrder,
+                                                                                     String domainName, int maxLimit,
+                                                                                     boolean paginationRequested)
             throws CharonException, BadRequestException {
 
         if (StringUtils.isNotEmpty(domainName)) {
-            return getFilteredUsersFromMultiAttributeFiltering(node, offset, maxLimit, sortBy, sortOrder, domainName,
-                    false);
+            PaginatedUserResponse paginatedUserResult = getFilteredUsersFromMultiAttributeFiltering(node, offset,
+                    maxLimit, sortBy, sortOrder, domainName, false);
+            if (paginatedUserResult.getTotalResults() < 1) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Total results not provided from the user store, calculating total results" +
+                            " for domain: " + domainName);
+                }
+                paginatedUserResult.setTotalResults(getTotalResults(node, domainName, 0,
+                        paginatedUserResult));
+            }
+            return paginatedUserResult;
         } else {
             PaginatedUserResponse combinedPaginatedUserResult = new PaginatedUserResponse();
             AbstractUserStoreManager tempCarbonUM = carbonUM;
@@ -2463,9 +2497,19 @@ public class SCIMUserManager implements UserManager {
                 // Accumulate the filtered users.
                 combinedPaginatedUserResult.getFilteredUsers().addAll(paginatedUserResult.getFilteredUsers());
 
-                // Accumulate the total user counts.
-                combinedPaginatedUserResult.setTotalResults(combinedPaginatedUserResult.getTotalResults() +
-                        paginatedUserResult.getTotalResults());
+                if (paginatedUserResult.getTotalResults() > 0) {
+                    // Accumulate the total user counts.
+                    combinedPaginatedUserResult.setTotalResults(combinedPaginatedUserResult.getTotalResults() +
+                            paginatedUserResult.getTotalResults());
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Total results not provided from the user store, calculating total results" +
+                                " for domain: " + domainName);
+                    }
+                    int totalResults = getTotalResults(node, domainName,
+                            combinedPaginatedUserResult.getTotalResults(), paginatedUserResult);
+                    combinedPaginatedUserResult.setTotalResults(totalResults);
+                }
 
                 // If secondary user store manager assigned to carbonUM then global variable carbonUM will contains the
                 // secondary user store manager.
@@ -2488,6 +2532,7 @@ public class SCIMUserManager implements UserManager {
             return combinedPaginatedUserResult;
         }
     }
+
     /**
      * Get maximum user limit to retrieve.
      *
