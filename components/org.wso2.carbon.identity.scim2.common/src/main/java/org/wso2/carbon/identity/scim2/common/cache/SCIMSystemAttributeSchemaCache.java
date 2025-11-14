@@ -21,7 +21,10 @@ package org.wso2.carbon.identity.scim2.common.cache;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.charon3.core.schema.AttributeSchema;
+
+import java.util.List;
 
 /**
  * This stores system AttributeSchema against tenants.
@@ -93,14 +96,21 @@ public class SCIMSystemAttributeSchemaCache
     /**
      * Clear SCIM2 System AttributeSchema by tenantId.
      *
+     * For v0 organizations, this clears the cache of the current organization only.
+     * For v1 organizations, this clears the caches of the current organization and its child organizations.
+     *
      * @param tenantId TenantId.
      */
     public void clearSCIMSystemAttributeSchemaByTenant(int tenantId) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Clearing SCIMSystemAttributeSchemaCache entry by the tenant with id: " + tenantId);
+        List<Integer> tenantIdsToBeInvalidated = SCIMCommonUtils.getOrganizationsToInvalidateCaches(tenantId);
+        for (Integer tenantIdToBeInvalidated : tenantIdsToBeInvalidated) {
+            if (log.isDebugEnabled()) {
+                log.debug("Clearing SCIMSystemAttributeSchemaCache entry by the tenant with id: " +
+                        tenantIdToBeInvalidated);
+            }
+            SCIMSystemAttributeSchemaCacheKey cacheKey = new SCIMSystemAttributeSchemaCacheKey(tenantIdToBeInvalidated);
+            super.clearCacheEntry(cacheKey);
         }
-        SCIMSystemAttributeSchemaCacheKey cacheKey = new SCIMSystemAttributeSchemaCacheKey(tenantId);
-        super.clearCacheEntry(cacheKey);
     }
 }

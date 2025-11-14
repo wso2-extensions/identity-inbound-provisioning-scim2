@@ -18,12 +18,22 @@
 
 package org.wso2.carbon.identity.scim2.common.cache;
 
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.charon3.core.schema.AttributeSchema;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
@@ -38,6 +48,16 @@ public class SCIMAgentAttributeSchemaCacheTest {
 
     private SCIMAgentAttributeSchemaCache cache;
     private AttributeSchema mockAttributeSchema;
+    private MockedStatic<SCIMCommonUtils> scimCommonUtilsStaticMock;
+
+    private final List<Integer> v0TenantList = new ArrayList<>(Collections.singletonList(1));
+    private final List<Integer> v1TenantList = new ArrayList<>(Arrays.asList(1, 111));
+
+    @BeforeClass
+    public void setUpTests() {
+
+        scimCommonUtilsStaticMock = mockStatic(SCIMCommonUtils.class);
+    }
 
     @BeforeMethod
     public void setUp() {
@@ -69,10 +89,30 @@ public class SCIMAgentAttributeSchemaCacheTest {
 
     @Test
     public void testClearSCIMAgentAttributeSchemaByTenant() {
+
+        scimCommonUtilsStaticMock.when(() -> SCIMCommonUtils.getOrganizationsToInvalidateCaches(1))
+                .thenReturn(v0TenantList);
         cache.addSCIMAgentAttributeSchema(1, mockAttributeSchema);
+        cache.addSCIMAgentAttributeSchema(111, mockAttributeSchema);
         cache.clearSCIMAgentAttributeSchemaByTenant(1);
         AttributeSchema result = cache.getSCIMAgentAttributeSchemaByTenant(1);
         assertNull(result);
+        AttributeSchema subOrgResult = cache.getSCIMAgentAttributeSchemaByTenant(111);
+        assertNotNull(subOrgResult);
+    }
+
+    @Test
+    public void testClearSCIMAgentAttributeSchemaByV1Tenant() {
+
+        scimCommonUtilsStaticMock.when(() -> SCIMCommonUtils.getOrganizationsToInvalidateCaches(1))
+                .thenReturn(v1TenantList);
+        cache.addSCIMAgentAttributeSchema(1, mockAttributeSchema);
+        cache.addSCIMAgentAttributeSchema(111, mockAttributeSchema);
+        cache.clearSCIMAgentAttributeSchemaByTenant(1);
+        AttributeSchema result = cache.getSCIMAgentAttributeSchemaByTenant(1);
+        assertNull(result);
+        AttributeSchema subOrgResult = cache.getSCIMAgentAttributeSchemaByTenant(111);
+        assertNull(subOrgResult);
     }
 
     @Test
@@ -197,5 +237,11 @@ public class SCIMAgentAttributeSchemaCacheTest {
 
         // Verify final state
         assertEquals(schema, cache.getSCIMAgentAttributeSchemaByTenant(tenantId));
+    }
+
+    @AfterClass
+    public void tearDown() {
+
+        scimCommonUtilsStaticMock.close();
     }
 }
