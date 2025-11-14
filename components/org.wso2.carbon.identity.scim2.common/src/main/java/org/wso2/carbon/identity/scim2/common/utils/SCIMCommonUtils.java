@@ -1364,7 +1364,7 @@ public class SCIMCommonUtils {
      * organizations, this is the current org and its sub-organizations.
      *
      * @param tenantId The id of the tenant for which the cache clearing was initiated.
-     * @return The list of organizations for which the cache needs to be cleared.
+     * @return List of organizations whose caches needs to be cleared based on the specified tenant ID.
      */
     public static List<Integer> getOrganizationsToInvalidateCaches(int tenantId) {
 

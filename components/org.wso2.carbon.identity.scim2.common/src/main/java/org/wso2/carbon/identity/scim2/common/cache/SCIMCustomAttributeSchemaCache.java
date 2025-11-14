@@ -95,12 +95,15 @@ public class SCIMCustomAttributeSchemaCache extends BaseCache<SCIMCustomAttribut
     /**
      * Clear SCIM2 Custom AttributeSchema by tenantId.
      *
+     * For v0 organizations, this clears the cache of the current organization only.
+     * For v1 organizations, this clears the caches of the current organization and its child organizations.
+     *
      * @param tenantId TenantId.
      */
     public void clearSCIMCustomAttributeSchemaByTenant(int tenantId) {
 
         List<Integer> tenantIdsToBeInvalidated = SCIMCommonUtils.getOrganizationsToInvalidateCaches(tenantId);
-        for (Integer tenantIdToBeInvalidated: tenantIdsToBeInvalidated) {
+        for (Integer tenantIdToBeInvalidated : tenantIdsToBeInvalidated) {
             if (log.isDebugEnabled()) {
                 log.debug("Clearing SCIMCustomAttributeSchemaCache entry by the tenant with id: " +
                         tenantIdToBeInvalidated);

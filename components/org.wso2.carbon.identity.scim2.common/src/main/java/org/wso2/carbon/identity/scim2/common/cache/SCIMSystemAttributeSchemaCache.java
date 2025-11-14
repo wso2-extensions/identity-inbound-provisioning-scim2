@@ -96,12 +96,15 @@ public class SCIMSystemAttributeSchemaCache
     /**
      * Clear SCIM2 System AttributeSchema by tenantId.
      *
+     * For v0 organizations, this clears the cache of the current organization only.
+     * For v1 organizations, this clears the caches of the current organization and its child organizations.
+     *
      * @param tenantId TenantId.
      */
     public void clearSCIMSystemAttributeSchemaByTenant(int tenantId) {
 
         List<Integer> tenantIdsToBeInvalidated = SCIMCommonUtils.getOrganizationsToInvalidateCaches(tenantId);
-        for (Integer tenantIdToBeInvalidated: tenantIdsToBeInvalidated) {
+        for (Integer tenantIdToBeInvalidated : tenantIdsToBeInvalidated) {
             if (log.isDebugEnabled()) {
                 log.debug("Clearing SCIMSystemAttributeSchemaCache entry by the tenant with id: " +
                         tenantIdToBeInvalidated);

@@ -206,5 +206,6 @@ public class SCIMGroupResolverTest {
     public void tearDown() {
 
         mockIdentityTenantUtil.close();
+        mockIdentityUtil.close();
     }
 }

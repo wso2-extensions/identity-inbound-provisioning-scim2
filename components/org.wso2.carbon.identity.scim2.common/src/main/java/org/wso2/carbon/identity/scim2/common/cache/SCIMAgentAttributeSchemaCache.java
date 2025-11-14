@@ -94,12 +94,15 @@ public class SCIMAgentAttributeSchemaCache
     /**
      * Clear SCIM2 Agent AttributeSchema by tenantId.
      *
+     * For v0 organizations, this clears the cache of the current organization only.
+     * For v1 organizations, this clears the caches of the current organization and its child organizations.
+     *
      * @param tenantId TenantId.
      */
     public void clearSCIMAgentAttributeSchemaByTenant(int tenantId) {
 
         List<Integer> tenantIdsToBeInvalidated = SCIMCommonUtils.getOrganizationsToInvalidateCaches(tenantId);
-        for (Integer tenantIdToBeInvalidated: tenantIdsToBeInvalidated) {
+        for (Integer tenantIdToBeInvalidated : tenantIdsToBeInvalidated) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Clearing SCIMAgentAttributeSchemaCache entry by the tenant with id: " +
                         tenantIdToBeInvalidated);
