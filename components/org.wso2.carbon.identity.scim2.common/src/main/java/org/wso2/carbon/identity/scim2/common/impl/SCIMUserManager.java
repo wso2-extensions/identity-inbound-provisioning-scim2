@@ -729,6 +729,15 @@ public class SCIMUserManager implements UserManager {
                                          String sortOrder, String domainName, Map<String, Boolean> requiredAttributes)
             throws CharonException, NotImplementedException, BadRequestException {
 
+        // Validate that the specified user store domain exists and is active.
+        // If the provided domain is missing or disabled, throw a BadRequestException.
+        if (StringUtils.isNotEmpty(domainName) && carbonUM.getSecondaryUserStoreManager(domainName) == null) {
+            String errorMessage = String.format(
+                    "Invalid user store domain: '%s'. The specified domain does not exist or is currently disabled.",
+                    domainName);
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+        }
+
         // Validate NULL value for startIndex.
         startIndex = handleStartIndexEqualsNULL(startIndex);
         if (sortBy != null || sortOrder != null) {
