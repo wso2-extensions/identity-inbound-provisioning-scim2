@@ -2192,7 +2192,6 @@ public class SCIMUserManagerTest {
 
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.setDomainName("invalid_domain_name");
-        UsersGetResponse usersGetResponse = new UsersGetResponse(0, Collections.emptyList());
         Map<String, Boolean> requiredAttributes = new HashMap<>();
         SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
                 mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
@@ -2202,6 +2201,18 @@ public class SCIMUserManagerTest {
         when(mockedConfigurationManager.getResourceByTenantId( anyInt(), anyString(),
                 anyString() )).thenReturn(resource);
         scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
+    }
+
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testListUsersWithGETWithInvalidDomainName() throws Exception {
+
+        SearchRequest searchRequest = new SearchRequest();
+        searchRequest.setDomainName("invalid_domain_name");
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(null);
+        scimUserManager.listUsersWithGET(null, null, null, null, null,
+                searchRequest.getDomainName(), null);
     }
 
     @Test(expectedExceptions = NotFoundException.class)
