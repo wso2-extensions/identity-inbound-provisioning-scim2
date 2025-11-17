@@ -2187,6 +2187,23 @@ public class SCIMUserManagerTest {
         assertEquals(users, usersGetResponse);
     }
 
+    @Test(expectedExceptions = BadRequestException.class)
+    public void testListUsersWithPostWithInvalidDomainName() throws Exception {
+
+        SearchRequest searchRequest = new SearchRequest();
+        searchRequest.setDomainName("invalid_domain_name");
+        UsersGetResponse usersGetResponse = new UsersGetResponse(0, Collections.emptyList());
+        Map<String, Boolean> requiredAttributes = new HashMap<>();
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(null);
+        when(SCIMCommonComponentHolder.getConfigurationManager()).thenReturn(mockedConfigurationManager);
+        Resource resource = getResource();
+        when(mockedConfigurationManager.getResourceByTenantId( anyInt(), anyString(),
+                anyString() )).thenReturn(resource);
+        scimUserManager.listUsersWithPost(searchRequest, requiredAttributes);
+    }
+
     @Test(expectedExceptions = NotFoundException.class)
     public void testDeleteUserWithInvalidUserId() throws Exception {
 
