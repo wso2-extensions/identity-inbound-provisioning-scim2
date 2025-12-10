@@ -53,6 +53,8 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
+import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
+import static org.wso2.carbon.identity.recovery.util.Utils.getConnectorConfig;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementClientException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
@@ -231,6 +233,8 @@ public class SCIMUserManager implements UserManager {
     private static final String MAX_LIMIT_RESOURCE_TYPE_NAME = "response-max-limit-configurations";
     private static final String MAX_LIMIT_RESOURCE_NAME = "user-response-limit";
 
+    private static final String EMAIL_ADDRESS_CLAIM_URI = "http://wso2.org/claims/emailaddress";
+    private static final String MOBILE_CLAIM_URI = "http://wso2.org/claims/mobile";
     private static final String VERIFIED_EMAIL_ADDRESSES_CLAIM_URI = "http://wso2.org/claims/verifiedEmailAddresses";
     private static final String VERIFIED_MOBILE_NUMBERS_CLAIM_URI = "http://wso2.org/claims/verifiedMobileNumbers";
     /*
@@ -5779,7 +5783,8 @@ public class SCIMUserManager implements UserManager {
 
         if (isExecutableUserProfileUpdate &&
                 containsNonAccountStateOrNonVerificationClaim(claimsAddedOrUpdatedByUser.keySet())) {
-            publishUserProfileUpdateEvent(user, userClaimsToBeAdded, claimsAddedOrUpdatedByUser, claimsDeleted);
+            publishUserProfileUpdateEvent(user, userClaimsToBeAdded, claimsAddedOrUpdatedByUser, claimsDeleted,
+                    oldClaimList);
         }
     }
 
@@ -5920,7 +5925,7 @@ public class SCIMUserManager implements UserManager {
         if (isExecutableUserProfileUpdate &&
                 containsNonAccountStateOrNonVerificationClaim(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
-                    claimsDeleted);
+                    claimsDeleted, oldClaimList);
         }
     }
 
@@ -7216,12 +7221,17 @@ public class SCIMUserManager implements UserManager {
 
     private void publishUserProfileUpdateEvent(User user, Map<String, String> userClaimsAdded,
                                                Map<String, String> userClaimsAddedAndModified,
-                                               Map<String, String> userClaimsDeleted) {
+                                               Map<String, String> userClaimsDeleted,
+                                               Map<String, String> oldClaimList) {
 
         HashMap<String, Object> properties = new HashMap<>();
 
+        String userStoreDomain;
         if (user != null) {
             properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
+            userStoreDomain = IdentityUtil.extractDomainFromName(user.getUsername());
+        } else {
+            userStoreDomain = getPrimaryUserStoreDomain();
         }
 
         Map<String, String> userClaimsModified = new HashMap<>(userClaimsAddedAndModified);
@@ -7229,14 +7239,26 @@ public class SCIMUserManager implements UserManager {
             userClaimsModified.keySet().removeAll(userClaimsAdded.keySet());
         }
 
-        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS_ADDED, userClaimsAdded);
-        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS_MODIFIED, userClaimsModified);
-        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS_DELETED, userClaimsDeleted);
+        // Filter out email and mobile claims if verification on update is enabled and not already verified.
+        Map<String, String> filteredClaimsAdded = filterVerificationClaims(userClaimsAdded, oldClaimList,
+                userClaimsAddedAndModified, userStoreDomain);
+        Map<String, String> filteredClaimsModified = filterVerificationClaims(userClaimsModified, oldClaimList,
+                userClaimsAddedAndModified, userStoreDomain);
+        Map<String, String> filteredClaimsDeleted = filterVerificationClaims(userClaimsDeleted, oldClaimList,
+                userClaimsAddedAndModified, userStoreDomain);
+
+        if (MapUtils.isEmpty(filteredClaimsAdded) && MapUtils.isEmpty(filteredClaimsModified)
+                && MapUtils.isEmpty(filteredClaimsDeleted)) {
+            log.debug("No claims to be published in the user profile update event.");
+            return;
+        }
+
+        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS_ADDED, filteredClaimsAdded);
+        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS_MODIFIED, filteredClaimsModified);
+        properties.put(IdentityEventConstants.EventProperty.USER_CLAIMS_DELETED, filteredClaimsDeleted);
         properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getTenantId());
-        properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN,
-                IdentityUtil.extractDomainFromName(user.getUsername()));
         properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
 
         Event identityMgtEvent = new Event(IdentityEventConstants.Event.POST_USER_PROFILE_UPDATE, properties);
@@ -7246,6 +7268,86 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentityEventException e) {
             log.error("Error occurred publishing event POST_USER_PROFILE_UPDATE", e);
         }
+    }
+
+    /**
+     * Filter out email and mobile claims from the given claims map if verification on update is enabled.
+     * Email and mobile claims are not filtered if they are already present in the verified claims list.
+     *
+     * @param claims          The claims map to filter.
+     * @param oldClaimList    The existing user claims.
+     * @param claimsToCheck   The claims being updated (to check for email/mobile values).
+     * @param userStoreDomain The user store domain.
+     * @return Filtered claims map with email/mobile claims removed if verification is enabled and not verified.
+     */
+    private Map<String, String> filterVerificationClaims(Map<String, String> claims, Map<String, String> oldClaimList,
+                                                         Map<String, String> claimsToCheck, String userStoreDomain) {
+
+        if (MapUtils.isEmpty(claims)) {
+            return claims;
+        }
+
+        Map<String, String> filteredClaims = new HashMap<>(claims);
+
+        if (isEmailVerificationOnUpdateEnabled(tenantDomain)) {
+            if (claimsToCheck.containsKey(EMAIL_ADDRESS_CLAIM_URI)) {
+                // Remove email claim if email verification on update is enabled and email is not already verified.
+                String newEmailValue = claimsToCheck.get(EMAIL_ADDRESS_CLAIM_URI);
+                if (StringUtils.isNotEmpty(newEmailValue) &&
+                        !isValueAlreadyVerified(newEmailValue, oldClaimList.get(VERIFIED_EMAIL_ADDRESSES_CLAIM_URI),
+                                userStoreDomain)) {
+                    filteredClaims.remove(EMAIL_ADDRESS_CLAIM_URI);
+                }
+            } else if (claimsToCheck.containsKey(VERIFIED_EMAIL_ADDRESSES_CLAIM_URI)) {
+                // Remove the verified emails claim if it is being updated.
+                String newEmailValue = claimsToCheck.get(VERIFIED_EMAIL_ADDRESSES_CLAIM_URI);
+                if (StringUtils.isNotEmpty(newEmailValue)) {
+                    filteredClaims.remove(VERIFIED_EMAIL_ADDRESSES_CLAIM_URI);
+                }
+            }
+        }
+
+        if (isMobileVerificationOnUpdateEnabled(tenantDomain)) {
+            if (claimsToCheck.containsKey(MOBILE_CLAIM_URI)) {
+                // Remove mobile claim if mobile verification on update is enabled and mobile is not already verified.
+                String newMobileValue = claimsToCheck.get(MOBILE_CLAIM_URI);
+                if (StringUtils.isNotEmpty(newMobileValue) &&
+                        !isValueAlreadyVerified(newMobileValue, oldClaimList.get(VERIFIED_MOBILE_NUMBERS_CLAIM_URI),
+                                userStoreDomain)) {
+                    filteredClaims.remove(MOBILE_CLAIM_URI);
+                }
+            } else if (claimsToCheck.containsKey(VERIFIED_MOBILE_NUMBERS_CLAIM_URI)) {
+                // Remove the verified mobile numbers claim if it is being updated.
+                String newEmailValue = claimsToCheck.get(VERIFIED_MOBILE_NUMBERS_CLAIM_URI);
+                if (StringUtils.isNotEmpty(newEmailValue)) {
+                    filteredClaims.remove(VERIFIED_MOBILE_NUMBERS_CLAIM_URI);
+                }
+            }
+        }
+
+        return filteredClaims;
+    }
+
+    /**
+     * Check if a value is already present in the verified values list.
+     *
+     * @param value           The value to check (email or mobile).
+     * @param verifiedValues  The separator-delimited list of verified values.
+     * @param userStoreDomain The user store domain to get the correct separator.
+     * @return true if the value is already verified, false otherwise.
+     */
+    private boolean isValueAlreadyVerified(String value, String verifiedValues, String userStoreDomain) {
+
+        if (StringUtils.isBlank(value) || StringUtils.isBlank(verifiedValues)) {
+            return false;
+        }
+
+        String separator = getMultivaluedAttributeSeparator(userStoreDomain);
+
+        List<String> verifiedList = Arrays.asList(verifiedValues.split(separator));
+        return verifiedList.stream()
+                .map(String::trim)
+                .anyMatch(verifiedValue -> verifiedValue.equalsIgnoreCase(value.trim()));
     }
 
     /**
@@ -7711,5 +7813,40 @@ public class SCIMUserManager implements UserManager {
         } catch (IdentityRoleManagementException e) {
             throw new CharonException(e.getMessage(), e);
         }
+    }
+
+    /**
+     * Check if email verification on update is enabled.
+     *
+     * @param userTenantDomain The tenant domain of the user.
+     * @return true if email verification on update is enabled, false otherwise.
+     */
+    private boolean isEmailVerificationOnUpdateEnabled(String userTenantDomain) {
+
+        try {
+            return Boolean.parseBoolean(getConnectorConfig(
+                    IdentityRecoveryConstants.ConnectorConfig.ENABLE_EMAIL_VERIFICATION_ON_UPDATE, userTenantDomain));
+        } catch (IdentityEventException e) {
+            log.error("Error while retrieving email verification on update config for tenant: " + userTenantDomain, e);
+        }
+        return false;
+    }
+
+    /**
+     * Check if mobile verification on update is enabled.
+     *
+     * @param userTenantDomain The tenant domain of the user.
+     * @return true if mobile verification on update is enabled, false otherwise.
+     */
+    private boolean isMobileVerificationOnUpdateEnabled(String userTenantDomain) {
+
+        try {
+            return Boolean.parseBoolean(getConnectorConfig(
+                    IdentityRecoveryConstants.ConnectorConfig.ENABLE_MOBILE_NUM_VERIFICATION_ON_UPDATE, userTenantDomain));
+        } catch (IdentityEventException e) {
+            log.error("Error while retrieving email verification on update config for tenant: "
+                    + userTenantDomain, e);
+        }
+        return false;
     }
 }

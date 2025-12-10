@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorServi
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.governance.IdentityGovernanceService;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
@@ -50,6 +51,7 @@ public class SCIMCommonComponentHolder {
     private static ConfigurationManager configurationManager;
     private static ActionExecutorService actionExecutorService;
     private static OrganizationUserSharingService organizationUserSharingService;
+    private static IdentityGovernanceService identityGovernanceService;
     private static final List<SCIMUserStoreErrorResolver> scimUserStoreErrorResolvers = new ArrayList<>();
 
     /**
@@ -289,5 +291,25 @@ public class SCIMCommonComponentHolder {
     public static void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
 
         SCIMCommonComponentHolder.organizationUserSharingService = organizationUserSharingService;
+    }
+
+    /**
+     * Get the IdentityGovernanceService.
+     *
+     * @return IdentityGovernanceService instance.
+     */
+    public static IdentityGovernanceService getIdentityGovernanceService() {
+
+        return identityGovernanceService;
+    }
+
+    /**
+     * Set the IdentityGovernanceService.
+     *
+     * @param identityGovernanceService IdentityGovernanceService instance.
+     */
+    public static void setIdentityGovernanceService(IdentityGovernanceService identityGovernanceService) {
+
+        SCIMCommonComponentHolder.identityGovernanceService = identityGovernanceService;
     }
 }
