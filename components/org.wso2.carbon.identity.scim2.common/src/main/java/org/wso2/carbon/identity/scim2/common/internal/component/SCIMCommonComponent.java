@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.governance.IdentityGovernanceService;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
@@ -472,6 +473,34 @@ public class SCIMCommonComponent {
 
         SCIMCommonComponentHolder.setOrganizationUserSharingService(null);
         logger.debug("OrganizationUserSharingService unset in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Set IdentityGovernanceService.
+     *
+     * @param identityGovernanceService IdentityGovernanceService
+     */
+    @Reference(
+            name = "identity.governance.service",
+            service = IdentityGovernanceService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIdentityGovernanceService")
+    protected void setIdentityGovernanceService(IdentityGovernanceService identityGovernanceService) {
+
+        SCIMCommonComponentHolder.setIdentityGovernanceService(identityGovernanceService);
+        logger.debug("IdentityGovernanceService set in SCIMCommonComponent bundle.");
+    }
+
+    /**
+     * Unset IdentityGovernanceService.
+     *
+     * @param identityGovernanceService IdentityGovernanceService
+     */
+    protected void unsetIdentityGovernanceService(IdentityGovernanceService identityGovernanceService) {
+
+        SCIMCommonComponentHolder.setIdentityGovernanceService(null);
+        logger.debug("IdentityGovernanceService unset in SCIMCommonComponent bundle.");
     }
 
     @Deactivate
