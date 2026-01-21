@@ -7609,9 +7609,23 @@ public class SCIMUserManager implements UserManager {
             Map<String, List<String>> localToScimMappings = new HashMap<>();
             Map<String, String> syncedAttributes = new HashMap<>();
 
-            scimToLocalMappings.forEach((scimAttribute, localAttribute) ->
-                    localToScimMappings.computeIfAbsent(localAttribute, k -> new ArrayList<>()).add(scimAttribute)
-            );
+            boolean isExtensionSchemaNameChanged = false;
+            String extensionSchemaName = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getName();
+            String extensionSchemaURI = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getURI();
+            if (!StringUtils.equals(extensionSchemaName, extensionSchemaURI)) {
+                isExtensionSchemaNameChanged = true;
+            }
+            boolean issExtensionSchemaNameChanged = isExtensionSchemaNameChanged;
+
+            scimToLocalMappings.forEach((scimAttribute, localAttribute) -> {
+                localToScimMappings.computeIfAbsent(localAttribute, k -> new ArrayList<>()).add(scimAttribute);
+                if (issExtensionSchemaNameChanged && scimAttribute.startsWith(extensionSchemaURI)) {
+                    localToScimMappings.get(localAttribute).add(scimAttribute.replace(extensionSchemaURI + ":",
+                            extensionSchemaName + "."));
+                }
+            });
             localToScimMappings.values().stream()
                     .filter(scimAttributes -> scimAttributes.size() > 1)
                     .forEach(scimAttributes -> {
