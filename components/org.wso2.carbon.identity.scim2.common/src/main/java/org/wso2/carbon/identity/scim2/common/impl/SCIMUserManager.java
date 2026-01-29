@@ -3187,13 +3187,8 @@ public class SCIMUserManager implements UserManager {
         }
         Group group;
         try {
-            if (!isMemberAttributeRequired(requiredAttributes)) {
-                group = getGroupWithIdWithoutMembers(id);
-            } else if (isMemberValueRequested(requiredAttributes)) {
-                group = getGroupWithId(id);
-            } else {
-                group = getGroupWithIdWithMemberUsernameOnly(id);
-            }
+            group = doGetGroupWithGroupId(id, !isMemberAttributeRequired(requiredAttributes),
+                    !isRoleAttributeRequired(requiredAttributes));
             if (group == null) {
                 // Returning null will send a resource not found error to client by Charon.
                 return null;
@@ -3225,46 +3220,6 @@ public class SCIMUserManager implements UserManager {
         return false;
     }
 
-    private Group getGroupWithoutMembers(String groupName)
-            throws IdentitySCIMException, UserStoreException, BadRequestException, CharonException {
-
-        return doGetGroup(groupName, false, true);
-    }
-
-    private Group getGroupWithMemberUsernameOnly(String groupName)
-            throws CharonException, UserStoreException, IdentitySCIMException, BadRequestException {
-
-        return doGetGroup(groupName, false, false);
-    }
-
-    private Group getGroupWithId(String groupId)
-            throws CharonException, UserStoreException, IdentitySCIMException, BadRequestException {
-
-        return doGetGroupWithGroupId(groupId, true, false);
-    }
-
-    private Group getGroupWithIdWithoutMembers(String groupId)
-            throws IdentitySCIMException, UserStoreException, BadRequestException, CharonException {
-
-        return doGetGroupWithGroupId(groupId, false, true);
-    }
-
-    private Group getGroupWithIdWithMemberUsernameOnly(String groupId)
-            throws CharonException, UserStoreException, IdentitySCIMException, BadRequestException {
-
-        return doGetGroupWithGroupId(groupId, false, false);
-    }
-
-    private boolean isMemberValueRequested(Map<String, Boolean> requiredAttributes) {
-
-        if (requiredAttributes == null || requiredAttributes.isEmpty()) {
-            return true;
-        }
-
-        Boolean memberValueRequired = requiredAttributes.get(SCIMConstants.GroupSchemaConstants.VALUE_URI);
-        return memberValueRequired != null && memberValueRequired;
-    }
-
     private boolean isMemberAttributeRequired(Map<String, Boolean> requiredAttributes) {
 
         if (MapUtils.isEmpty(requiredAttributes)) {
@@ -3272,6 +3227,19 @@ public class SCIMUserManager implements UserManager {
         }
         for (String attribute : requiredAttributes.keySet()) {
             if (attribute.startsWith(SCIMConstants.GroupSchemaConstants.MEMBERS_URI)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isRoleAttributeRequired(Map<String, Boolean> requiredAttributes) {
+
+        if (MapUtils.isEmpty(requiredAttributes)) {
+            return true;
+        }
+        for (String attribute : requiredAttributes.keySet()) {
+            if (attribute.startsWith(SCIMConstants.GroupSchemaConstants.ROLES_URI)) {
                 return true;
             }
         }
@@ -3428,12 +3396,8 @@ public class SCIMUserManager implements UserManager {
                         log.debug(String.format("SCIM is enabled for the user-store domain: %s. Including group with " +
                                 "name: %s in the response.", userStoreDomainName, groupName));
                     }
-                    Group group;
-                    if (!isMemberAttributeRequired(requiredAttributes)) {
-                        group = getGroupWithoutMembers(groupName);
-                    } else {
-                        group = getGroupWithName(groupName);
-                    }
+                    Group group = doGetGroup(groupName, !isMemberAttributeRequired(requiredAttributes),
+                            !isRoleAttributeRequired(requiredAttributes));
                     if (group.getId() != null) {
                         groupList.add(group);
                     }
@@ -3772,10 +3736,8 @@ public class SCIMUserManager implements UserManager {
                         + "Including group with name : " + roleName + " in the response.");
             }
             try {
-                if (!isMemberAttributeRequired(requiredAttributes)) {
-                    return getGroupWithoutMembers(roleName);
-                }
-                return getGroupWithName(roleName);
+                return doGetGroup(roleName, !isMemberAttributeRequired(requiredAttributes),
+                        !isRoleAttributeRequired(requiredAttributes));
             } catch (IdentitySCIMException e) {
                 String errorMsg = "Error in retrieving SCIM Group information from database.";
                 log.error(errorMsg, e);
@@ -3996,7 +3958,7 @@ public class SCIMUserManager implements UserManager {
     private void filterExistingGroupMembers(String groupId, Set<String> addedMemberIdsFromUserstore) throws
             CharonException, UserStoreException, IdentitySCIMException, BadRequestException {
 
-        Group group = getGroupWithIdWithMemberUsernameOnly(groupId);
+        Group group = doGetGroupWithGroupId(groupId, false, true);
         if (group != null) {
             addedMemberIdsFromUserstore.removeIf(member -> group.getMembers() != null &&
                     group.getMembers().contains(member));
@@ -4901,13 +4863,7 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private Group getGroupWithName(String groupName)
-            throws CharonException, UserStoreException, IdentitySCIMException, BadRequestException {
-
-        return doGetGroup(groupName, true, false);
-    }
-
-    private Group doGetGroupWithGroupId(String groupId, boolean isMemberIdRequired, boolean excludeMembers)
+    private Group doGetGroupWithGroupId(String groupId, boolean excludeMembers, boolean excludeRoles)
             throws CharonException, org.wso2.carbon.user.core.UserStoreException, IdentitySCIMException,
             BadRequestException {
 
@@ -4933,12 +4889,15 @@ public class SCIMUserManager implements UserManager {
             // Add users from the user store who has the given group.
             addUsersToTheGroup(group);
         }
-        // Set roles of the group.
-        setGroupRoles(group);
+        if (!excludeRoles) {
+            // Set roles of the group.
+            setGroupRoles(group);
+        }
+
         return group;
     }
 
-    private Group doGetGroup(String groupName, boolean isMemberIdRequired, boolean excludeMembers)
+    private Group doGetGroup(String groupName, boolean excludeMembers, boolean excludeRoles)
             throws CharonException, org.wso2.carbon.user.core.UserStoreException, IdentitySCIMException,
             BadRequestException {
 
@@ -4959,8 +4918,10 @@ public class SCIMUserManager implements UserManager {
             // Add users from the user store who has the given group.
             addUsersToTheGroup(group);
         }
-        // Set roles of the group.
-        setGroupRoles(group);
+        if (!excludeRoles) {
+            // Set roles of the group.
+            setGroupRoles(group);
+        }
         return group;
     }
 
