@@ -175,7 +175,9 @@ public class SCIMCommonConstants {
     public static final String MIN_LENGTH = "minLength";
     public static final String MAX_LENGTH = "maxLength";
     public static final String REQUIRED = "required";
-
+    public static final String EMAIL_ADDRESS_SCIM_CLAIM = "urn:ietf:params:scim:schemas:core:2.0:User:emails";
+    public static final String EMAIL_ADDRESS_SCIM_CLAIM_VALUE_SUB_ATTRIBUTE = "value";
+    public static final String EMAIL_ADDRESS_SCIM_CLAIM_PRIMARY_SUB_ATTRIBUTE = "primary";
     private static final Map<String, String> groupAttributeSchemaMap = new HashMap<>();
 
     static {

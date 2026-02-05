@@ -348,7 +348,27 @@ public class AttributeMapper {
                     MultiValuedAttribute multiValuedAttribute = (MultiValuedAttribute) scimObject.getAttribute
                             (attributeSchema.getName());
                     // Set values.
-                    multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                    if (SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM.equals(attributeSchema.getURI())) {
+                        ComplexAttribute complexAttribute = new ComplexAttribute();
+                        SimpleAttribute valueSubAttributeOfEmail =
+                                new SimpleAttribute(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_VALUE_SUB_ATTRIBUTE,
+                                        values[0]);
+                        valueSubAttributeOfEmail.setReturned(attributeSchema.getReturned());
+                        SimpleAttribute primarySubAttributeOfEmail =
+                                new SimpleAttribute(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_PRIMARY_SUB_ATTRIBUTE,
+                                        true);
+                        primarySubAttributeOfEmail.setReturned(attributeSchema.getReturned());
+
+                        Map<String, Attribute> subAttributes = new HashMap<>();
+                        subAttributes.put(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_VALUE_SUB_ATTRIBUTE,
+                                valueSubAttributeOfEmail);
+                        subAttributes.put(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_PRIMARY_SUB_ATTRIBUTE,
+                                primarySubAttributeOfEmail);
+                        complexAttribute.setSubAttributesList(subAttributes);
+                        multiValuedAttribute.getAttributeValues().add(complexAttribute);
+                    } else {
+                        multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                    }
                 } else {
                     // Create attribute.
                     MultiValuedAttribute multiValuedAttribute = new MultiValuedAttribute(
