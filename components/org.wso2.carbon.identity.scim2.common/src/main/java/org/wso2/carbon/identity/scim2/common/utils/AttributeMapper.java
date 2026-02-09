@@ -349,23 +349,8 @@ public class AttributeMapper {
                             (attributeSchema.getName());
                     // Set values.
                     if (SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM.equals(attributeSchema.getURI())) {
-                        ComplexAttribute complexAttribute = new ComplexAttribute();
-                        SimpleAttribute valueSubAttributeOfEmail =
-                                new SimpleAttribute(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_VALUE_SUB_ATTRIBUTE,
-                                        values[0]);
-                        valueSubAttributeOfEmail.setReturned(attributeSchema.getReturned());
-                        SimpleAttribute primarySubAttributeOfEmail =
-                                new SimpleAttribute(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_PRIMARY_SUB_ATTRIBUTE,
-                                        true);
-                        primarySubAttributeOfEmail.setReturned(attributeSchema.getReturned());
-
-                        Map<String, Attribute> subAttributes = new HashMap<>();
-                        subAttributes.put(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_VALUE_SUB_ATTRIBUTE,
-                                valueSubAttributeOfEmail);
-                        subAttributes.put(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_PRIMARY_SUB_ATTRIBUTE,
-                                primarySubAttributeOfEmail);
-                        complexAttribute.setSubAttributesList(subAttributes);
-                        multiValuedAttribute.getAttributeValues().add(complexAttribute);
+                        ComplexAttribute emailComplexAttribute = createEmailComplexAttribute(attributeSchema, value);
+                        multiValuedAttribute.getAttributeValues().add(emailComplexAttribute);
                     } else {
                         multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
                     }
@@ -373,8 +358,15 @@ public class AttributeMapper {
                     // Create attribute.
                     MultiValuedAttribute multiValuedAttribute = new MultiValuedAttribute(
                             attributeSchema.getName());
-                    // Set values.
-                    multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                    if (SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM.equals(attributeSchema.getURI())) {
+                        ComplexAttribute emailComplexAttribute = createEmailComplexAttribute(attributeSchema, value);
+                        List<Attribute> complexAttributeList = new ArrayList<>();
+                        complexAttributeList.add(emailComplexAttribute);
+                        multiValuedAttribute.setAttributeValues(complexAttributeList);
+                    } else {
+                        // Set values.
+                        multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                    }
                     // Set attribute in scim object.
                     DefaultAttributeFactory.createAttribute(attributeSchema, multiValuedAttribute);
                     ((AbstractSCIMObject) scimObject).setAttribute(multiValuedAttribute);
@@ -393,6 +385,33 @@ public class AttributeMapper {
             }
         }
     }
+
+    private static ComplexAttribute createEmailComplexAttribute(AttributeSchema attributeSchema,
+                                                                String attributeValue) {
+
+        ComplexAttribute complexAttribute = new ComplexAttribute();
+        SimpleAttribute valueSubAttributeOfEmail =
+                new SimpleAttribute(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_VALUE_SUB_ATTRIBUTE, attributeValue);
+        valueSubAttributeOfEmail.setReturned(attributeSchema.getReturned());
+        valueSubAttributeOfEmail.setType(SCIMDefinitions.DataType.STRING);
+
+        SimpleAttribute primarySubAttributeOfEmail =
+                new SimpleAttribute(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_PRIMARY_SUB_ATTRIBUTE,
+                        true);
+        primarySubAttributeOfEmail.setReturned(attributeSchema.getReturned());
+
+        Map<String, Attribute> subAttributes = new HashMap<>();
+        subAttributes.put(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_VALUE_SUB_ATTRIBUTE,
+                valueSubAttributeOfEmail);
+        subAttributes.put(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_PRIMARY_SUB_ATTRIBUTE,
+                primarySubAttributeOfEmail);
+
+        complexAttribute.setSubAttributesList(subAttributes);
+        complexAttribute.setName(attributeSchema.getName());
+        complexAttribute.setType(attributeSchema.getType());
+        return complexAttribute;
+    }
+
     /**
      * Construct the SCIM Object given the attribute URIs and attribute values of the object.
      *
