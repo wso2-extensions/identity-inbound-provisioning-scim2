@@ -6501,11 +6501,8 @@ public class SCIMUserManager implements UserManager {
                         .getSubAttributeSchema(attribute.getName())
                     : SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema()
                         .getSubAttributeSchema(attribute.getName());
-            if (attributeSchema != null && attributeSchema.getType() != null) {
-                attribute.setType(attributeSchema.getType());
-            } else {
-                attribute.setType(SCIMDefinitions.DataType.STRING);
-            }
+
+            populateAttributeMetadataFromSchema(attribute, attributeSchema);
 
         } else if (isBooleanAttribute(attribute.getName())) {
             attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
@@ -6565,6 +6562,39 @@ public class SCIMUserManager implements UserManager {
                     addAttributeProfilesProperty(attribute, entry.getKey(), entry.getValue());
                 }
             }
+        }
+    }
+
+    /**
+     * Populates Charon Attribute details using the attribute schema of user schema extensions for attributes that are
+     * not defined as custom schema attributes.
+     *
+     * @param attribute        Charon Attribute.
+     * @param attributeSchema  Attribute schema of user schema extension.
+     */
+    private void populateAttributeMetadataFromSchema(AbstractAttribute attribute,
+                                                     AttributeSchema attributeSchema) {
+        if (attributeSchema == null) {
+            attribute.setType(SCIMDefinitions.DataType.STRING);
+            return;
+        }
+
+        if (attributeSchema.getType() != null) {
+            attribute.setType(attributeSchema.getType());
+        } else {
+            attribute.setType(SCIMDefinitions.DataType.STRING);
+        }
+
+        if (attributeSchema.getMutability() != null && attribute.getMutability() == null) {
+            attribute.setMutability(attributeSchema.getMutability());
+        }
+
+        if (attribute.getRequired() == null) {
+            attribute.setRequired(attributeSchema.getRequired());
+        }
+
+        if (attribute.getDescription() == null && attributeSchema.getDescription() != null) {
+            attribute.setDescription(attributeSchema.getDescription());
         }
     }
 
