@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.scim2.provider.extensions;
 
 import org.apache.commons.lang.StringUtils;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.wso2.carbon.user.mgt.common.DefaultPasswordGenerator;
@@ -46,6 +47,8 @@ import org.wso2.charon3.core.utils.CopyUtil;
 import org.wso2.charon3.core.utils.ResourceManagerUtil;
 
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.AGENTS_ENDPOINT;
+
+import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -143,6 +146,9 @@ public class AgentResourceManager extends UserResourceManager {
             Agent agent = (Agent) getDecoder().decodeResource(scimObjectString, schema, new Agent());
             String requestedUsername = agent.getUserName();
             LOG.debug("Successfully decoded agent object from request payload with username: {}", requestedUsername);
+
+            // Set isUserServingAgent value coming from the request to the thread-local.
+            setIsUserServingAgent(scimObjectString);
 
             // Generate a unique ID for the agent as the username.
             if (StringUtils.isBlank(agent.getUsername())) {
@@ -349,5 +355,22 @@ public class AgentResourceManager extends UserResourceManager {
         String agentUsername = agent.getUserName();
         LOG.debug("Agent returned attributes validation completed for agent ID: {} with username: {}",
                 agentId, agentUsername);
+    }
+
+    private void setIsUserServingAgent(String scimObjectString){
+        try {
+            JSONObject rawPayload = new JSONObject(scimObjectString);
+            boolean isUserServingAgent = false;
+            if (rawPayload.has(SCIMConstants.AGENT_SCHEMA_URI)) {
+                JSONObject agentExtension = rawPayload.getJSONObject(SCIMConstants.AGENT_SCHEMA_URI);
+                if (agentExtension.has("IsUserServingAgent")) {
+                    isUserServingAgent = agentExtension.getBoolean("IsUserServingAgent");
+                }
+            }
+            SCIMCommonUtils.setThreadLocalIsUserServingAgent(isUserServingAgent);
+        } catch (Exception e) {
+            LOG.warn("Failed to extract IsUserServingAgent flag, defaulting to false: {}", e.getMessage());
+            SCIMCommonUtils.setThreadLocalIsUserServingAgent(false);
+        }
     }
 }

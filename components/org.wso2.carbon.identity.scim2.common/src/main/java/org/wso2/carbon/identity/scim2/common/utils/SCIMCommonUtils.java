@@ -114,6 +114,7 @@ public class SCIMCommonUtils {
      */
     private static ThreadLocal<Boolean> threadLocalIsSCIMAgentFlow = new ThreadLocal<>();
 
+
     public static String getSCIMUserURL(String id) {
         // If getThreadLocalIsSCIMAgentFlow() is true, then we need to use the Agent URL for the user.
         if (Boolean.TRUE.equals(getThreadLocalIsSCIMAgentFlow())) {
@@ -443,6 +444,37 @@ public class SCIMCommonUtils {
     public static void setThreadLocalIsSCIMAgentFlow(Boolean value) {
 
         threadLocalIsSCIMAgentFlow.set(value);
+    }
+
+    /**
+     * Get the value of the "isUserServingAgent" flag from ThreadLocal.
+     * This method delegates to IdentityUtil.
+     *
+     * @return true if the agent is a user-serving agent, false otherwise
+     */
+    public static Boolean getThreadLocalIsUserServingAgent() {
+
+        return IdentityUtil.getThreadLocalIsUserServingAgent();
+    }
+
+    /**
+     * Set the value of the "isUserServingAgent" flag in ThreadLocal.
+     * This method delegates to IdentityUtil.
+     *
+     * @param value true if the agent is a user-serving agent, false otherwise
+     */
+    public static void setThreadLocalIsUserServingAgent(Boolean value) {
+
+        IdentityUtil.setThreadLocalIsUserServingAgent(value);
+    }
+
+    /**
+     * Remove the "isUserServingAgent" flag from ThreadLocal.
+     * This method delegates to IdentityUtil.
+     */
+    public static void unsetThreadLocalIsUserServingAgent() {
+
+        IdentityUtil.unsetThreadLocalIsUserServingAgent();
     }
 
     public static String getGlobalConsumerId() {
