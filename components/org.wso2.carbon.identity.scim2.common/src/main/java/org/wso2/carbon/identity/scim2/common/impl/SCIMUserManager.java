@@ -6459,16 +6459,33 @@ public class SCIMUserManager implements UserManager {
                 }
             }
 
-            attribute.setDescription(mappedLocalClaim.getClaimProperty(ClaimConstants.DESCRIPTION_PROPERTY));
-
-            attribute.setRequired(Boolean.parseBoolean(mappedLocalClaim.
-                    getClaimProperty(ClaimConstants.REQUIRED_PROPERTY)));
-
+            String descriptionProperty = mappedLocalClaim.getClaimProperty(ClaimConstants.DESCRIPTION_PROPERTY);
+            String requiredProperty = mappedLocalClaim.getClaimProperty(ClaimConstants.REQUIRED_PROPERTY);
             String readOnlyProperty = mappedLocalClaim.getClaimProperty(ClaimConstants.READ_ONLY_PROPERTY);
-            if (Boolean.parseBoolean(readOnlyProperty)) {
-                attribute.setMutability(SCIMDefinitions.Mutability.READ_ONLY);
+            if (isCustomSchemaAttr) {
+                attribute.setDescription(descriptionProperty);
+                attribute.setRequired(Boolean.parseBoolean(requiredProperty));
+                if (Boolean.parseBoolean(readOnlyProperty)) {
+                    attribute.setMutability(SCIMDefinitions.Mutability.READ_ONLY);
+                } else {
+                    attribute.setMutability(SCIMDefinitions.Mutability.READ_WRITE);
+                }
             } else {
-                attribute.setMutability(SCIMDefinitions.Mutability.READ_WRITE);
+                // For non-custom schema attributes, set the description, required and readOnly properties only if
+                // they are explicitly defined in the claim.
+                if (descriptionProperty != null) {
+                    attribute.setDescription(descriptionProperty);
+                }
+                if (requiredProperty != null) {
+                    attribute.setRequired(Boolean.parseBoolean(requiredProperty));
+                }
+                if (readOnlyProperty != null) {
+                    if (Boolean.parseBoolean(readOnlyProperty)) {
+                        attribute.setMutability(SCIMDefinitions.Mutability.READ_ONLY);
+                    } else {
+                        attribute.setMutability(SCIMDefinitions.Mutability.READ_WRITE);
+                    }
+                }
             }
         }
 
