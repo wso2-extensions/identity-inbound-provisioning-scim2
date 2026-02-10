@@ -6501,13 +6501,26 @@ public class SCIMUserManager implements UserManager {
                         .getSubAttributeSchema(attribute.getName())
                     : SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema()
                         .getSubAttributeSchema(attribute.getName());
-
-            populateAttributeMetadataFromSchema(attribute, attributeSchema);
+            if (attributeSchema != null && attributeSchema.getType() != null) {
+                attribute.setType(attributeSchema.getType());
+            } else {
+                attribute.setType(SCIMDefinitions.DataType.STRING);
+            }
 
         } else if (isBooleanAttribute(attribute.getName())) {
             attribute.setType(SCIMDefinitions.DataType.BOOLEAN);
         } else {
             attribute.setType(SCIMDefinitions.DataType.STRING);
+        }
+
+        if (isEnterpriseExtensionAttr || isSystemSchemaAttr) {
+            AttributeSchema attributeSchema = isEnterpriseExtensionAttr
+                    ? SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getSubAttributeSchema(attribute.getName())
+                    : SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getSubAttributeSchema(attribute.getName());
+
+            populateAttributeMetadataFromSchema(attribute, attributeSchema);
         }
 
         attribute.setMultiValued(isMultivaluedCustomAttr ||
@@ -6575,14 +6588,7 @@ public class SCIMUserManager implements UserManager {
     private void populateAttributeMetadataFromSchema(AbstractAttribute attribute,
                                                      AttributeSchema attributeSchema) {
         if (attributeSchema == null) {
-            attribute.setType(SCIMDefinitions.DataType.STRING);
             return;
-        }
-
-        if (attributeSchema.getType() != null) {
-            attribute.setType(attributeSchema.getType());
-        } else {
-            attribute.setType(SCIMDefinitions.DataType.STRING);
         }
 
         if (attributeSchema.getMutability() != null && attribute.getMutability() == null) {
