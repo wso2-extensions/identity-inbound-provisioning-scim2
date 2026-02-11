@@ -3187,8 +3187,7 @@ public class SCIMUserManager implements UserManager {
         }
         Group group;
         try {
-            group = doGetGroupWithGroupId(id, !isMemberAttributeRequired(requiredAttributes),
-                    !isRoleAttributeRequired(requiredAttributes));
+            group = doGetGroupWithGroupId(id, !isMemberAttributeRequired(requiredAttributes), false);
             if (group == null) {
                 // Returning null will send a resource not found error to client by Charon.
                 return null;
