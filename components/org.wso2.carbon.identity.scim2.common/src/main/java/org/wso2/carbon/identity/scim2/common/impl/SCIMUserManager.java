@@ -3735,8 +3735,7 @@ public class SCIMUserManager implements UserManager {
                         + "Including group with name : " + roleName + " in the response.");
             }
             try {
-                return doGetGroup(roleName, !isMemberAttributeRequired(requiredAttributes),
-                        !isRoleAttributeRequired(requiredAttributes));
+                return doGetGroup(roleName, !isMemberAttributeRequired(requiredAttributes), false);
             } catch (IdentitySCIMException e) {
                 String errorMsg = "Error in retrieving SCIM Group information from database.";
                 log.error(errorMsg, e);
