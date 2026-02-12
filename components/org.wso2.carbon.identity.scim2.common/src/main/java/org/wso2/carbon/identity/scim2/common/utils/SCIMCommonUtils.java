@@ -67,6 +67,10 @@ import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -496,6 +500,31 @@ public class SCIMCommonUtils {
     }
 
     /**
+     * Convert the passed time to the method into a microtimestamp.
+     *
+     * @param timestamp The timestamp to be converted.
+     * @return The converted microtimestamp.
+     */
+    private static String convertToMicroTimestamp(String timestamp) {
+
+        if (StringUtils.isBlank(timestamp)) {
+            return timestamp;
+        }
+
+        try {
+            Instant instant = Instant.parse(timestamp);
+            Instant microInstant = instant.truncatedTo(ChronoUnit.MICROS);
+            return DateTimeFormatter.ISO_INSTANT.format(microInstant);
+        } catch (DateTimeParseException e) {
+            // If the parsing fails, we return the original timestamp.
+            if (log.isDebugEnabled()) {
+                log.debug("Error occurred while converting timestamp: " + timestamp + " to microsecond precision.", e);
+            }
+            return timestamp;
+        }
+    }
+
+    /**
      * Converts claims in local WSO2 dialect to SCIM dialect.
      *
      * @param claimsMap         Map of local claims and claim values.
@@ -516,6 +545,10 @@ public class SCIMCommonUtils {
                 String claimValue = claimsMap.get(entry.getValue());
                 if (StringUtils.isNotEmpty(claimValue)) {
                     String scimClaimUri = (String) entry.getKey();
+                    if (SCIMConstants.CommonSchemaConstants.CREATED_URI.equals(scimClaimUri) ||
+                            SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI.equals(scimClaimUri)) {
+                        claimValue = convertToMicroTimestamp(claimValue);
+                    }
                     claimsInSCIMDialect.put(scimClaimUri, claimValue);
                 }
             }

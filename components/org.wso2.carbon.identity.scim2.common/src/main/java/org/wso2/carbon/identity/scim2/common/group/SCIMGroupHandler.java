@@ -38,6 +38,7 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,7 +75,7 @@ public class SCIMGroupHandler {
         String id = UUID.randomUUID().toString();
         attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
 
-        String createdDate = AttributeUtil.formatDateTime(Instant.now());
+        String createdDate = AttributeUtil.formatDateTime(Instant.now().truncatedTo(ChronoUnit.MICROS));
         attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
 
         attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
@@ -112,7 +113,7 @@ public class SCIMGroupHandler {
         }
         attributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
 
-        String createdDate = AttributeUtil.formatDateTime(Instant.now());
+        String createdDate = AttributeUtil.formatDateTime(Instant.now().truncatedTo(ChronoUnit.MICROS));
         attributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
 
         attributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
