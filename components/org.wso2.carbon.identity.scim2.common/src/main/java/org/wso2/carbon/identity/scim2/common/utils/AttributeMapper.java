@@ -350,7 +350,7 @@ public class AttributeMapper {
                     // Set values.
                     if (SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM.equals(attributeSchema.getURI())) {
                         ComplexAttribute emailComplexAttribute = createEmailComplexAttribute(attributeSchema, value);
-                        multiValuedAttribute.getAttributeValues().add(emailComplexAttribute);
+                        multiValuedAttribute.setAttributeValue(emailComplexAttribute);
                     } else {
                         multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
                     }
