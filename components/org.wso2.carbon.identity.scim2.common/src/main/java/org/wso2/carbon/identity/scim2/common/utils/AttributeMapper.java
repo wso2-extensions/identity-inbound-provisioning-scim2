@@ -387,28 +387,22 @@ public class AttributeMapper {
     }
 
     private static ComplexAttribute createEmailComplexAttribute(AttributeSchema attributeSchema,
-                                                                String attributeValue) {
+                                                                String attributeValue) throws BadRequestException,
+            CharonException {
 
-        ComplexAttribute complexAttribute = new ComplexAttribute();
-        SimpleAttribute valueSubAttributeOfEmail =
-                new SimpleAttribute(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_VALUE_SUB_ATTRIBUTE, attributeValue);
-        valueSubAttributeOfEmail.setReturned(attributeSchema.getReturned());
-        valueSubAttributeOfEmail.setType(SCIMDefinitions.DataType.STRING);
 
-        SimpleAttribute primarySubAttributeOfEmail =
-                new SimpleAttribute(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_PRIMARY_SUB_ATTRIBUTE,
-                        true);
-        primarySubAttributeOfEmail.setReturned(attributeSchema.getReturned());
-
-        Map<String, Attribute> subAttributes = new HashMap<>();
-        subAttributes.put(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_VALUE_SUB_ATTRIBUTE,
+        SimpleAttribute valueSubAttributeOfEmail = new SimpleAttribute("value", attributeValue);
+        DefaultAttributeFactory.createAttribute(attributeSchema.getSubAttributeSchema("value"),
                 valueSubAttributeOfEmail);
-        subAttributes.put(SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM_PRIMARY_SUB_ATTRIBUTE,
+
+        SimpleAttribute primarySubAttributeOfEmail = new SimpleAttribute("primary", true);
+        DefaultAttributeFactory.createAttribute(attributeSchema.getSubAttributeSchema("primary"),
                 primarySubAttributeOfEmail);
 
-        complexAttribute.setSubAttributesList(subAttributes);
-        complexAttribute.setName(attributeSchema.getName());
-        complexAttribute.setType(attributeSchema.getType());
+        ComplexAttribute complexAttribute = new ComplexAttribute();
+        complexAttribute.setSubAttribute(valueSubAttributeOfEmail);
+        complexAttribute.setSubAttribute(primarySubAttributeOfEmail);
+        DefaultAttributeFactory.createAttribute(attributeSchema, complexAttribute);
         return complexAttribute;
     }
 
