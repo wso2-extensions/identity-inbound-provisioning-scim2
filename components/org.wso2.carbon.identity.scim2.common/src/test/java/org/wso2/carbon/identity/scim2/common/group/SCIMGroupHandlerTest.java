@@ -39,6 +39,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -233,7 +234,7 @@ public class SCIMGroupHandlerTest {
         when(IdentityTenantUtil.getTenantDomain(1)).thenReturn("TENANT_DOMAIN");
         when(SCIMCommonUtils.getSCIMGroupURL()).thenReturn("https://localhost:9443/t/TENANT_DOMAIN/Groups");
 
-        Instant mockInstant = Instant.now();
+        Instant mockInstant = Instant.now().truncatedTo(ChronoUnit.MICROS);
         try (MockedStatic<AttributeUtil> mockedAttributeUtil = Mockito.mockStatic(AttributeUtil.class)) {
             mockedAttributeUtil.when(() -> AttributeUtil.parseDateTime(anyString())).thenReturn(mockInstant);
 
