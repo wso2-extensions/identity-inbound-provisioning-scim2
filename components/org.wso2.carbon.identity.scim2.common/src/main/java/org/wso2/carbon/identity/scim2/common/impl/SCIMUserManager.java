@@ -6472,6 +6472,25 @@ public class SCIMUserManager implements UserManager {
             }
         }
 
+        AttributeSchema attributeSchema = null;
+        if (isEnterpriseExtensionAttr || isSystemSchemaAttr) {
+            attributeSchema = isEnterpriseExtensionAttr
+                    ? SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getSubAttributeSchema(attribute.getName())
+                    : SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getSubAttributeSchema(attribute.getName());
+
+            if (Objects.nonNull(attributeSchema)) {
+                attribute.setRequired(attributeSchema.getRequired());
+                if (attributeSchema.getDescription() != null) {
+                    attribute.setDescription(attributeSchema.getDescription());
+                }
+                if (attributeSchema.getMutability() != null) {
+                    attribute.setMutability(attributeSchema.getMutability());
+                }
+            }
+        }
+
         // Fixed schema attributes
         attribute.setCaseExact(false);
         if (attribute instanceof ComplexAttribute) {
@@ -6479,11 +6498,6 @@ public class SCIMUserManager implements UserManager {
         } else if (customAttrDataType != null) {
             attribute.setType(getCustomAttrDataType(customAttrDataType));
         } else if (isEnterpriseExtensionAttr || isSystemSchemaAttr) {
-            AttributeSchema attributeSchema = isEnterpriseExtensionAttr
-                    ? SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
-                        .getSubAttributeSchema(attribute.getName())
-                    : SCIMSystemSchemaExtensionBuilder.getInstance().getExtensionSchema()
-                        .getSubAttributeSchema(attribute.getName());
             if (attributeSchema != null && attributeSchema.getType() != null) {
                 attribute.setType(attributeSchema.getType());
             } else {
