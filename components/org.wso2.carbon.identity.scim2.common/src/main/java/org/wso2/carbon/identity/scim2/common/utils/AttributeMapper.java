@@ -399,7 +399,7 @@ public class AttributeMapper {
         DefaultAttributeFactory.createAttribute(attributeSchema.getSubAttributeSchema("primary"),
                 primarySubAttributeOfEmail);
 
-        ComplexAttribute complexAttribute = new ComplexAttribute();
+        ComplexAttribute complexAttribute = new ComplexAttribute("emails");
         complexAttribute.setSubAttribute(valueSubAttributeOfEmail);
         complexAttribute.setSubAttribute(primarySubAttributeOfEmail);
         DefaultAttributeFactory.createAttribute(attributeSchema, complexAttribute);
