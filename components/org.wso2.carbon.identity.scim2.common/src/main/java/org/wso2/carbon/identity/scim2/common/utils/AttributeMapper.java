@@ -348,13 +348,27 @@ public class AttributeMapper {
                     MultiValuedAttribute multiValuedAttribute = (MultiValuedAttribute) scimObject.getAttribute
                             (attributeSchema.getName());
                     // Set values.
-                    multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                    if (SCIMCommonUtils.isSpecCompliantEmailHandlingEnabled() &&
+                            SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM.equals(attributeSchema.getURI())) {
+                        ComplexAttribute emailComplexAttribute = createEmailComplexAttribute(attributeSchema, value);
+                        multiValuedAttribute.setAttributeValue(emailComplexAttribute);
+                    } else {
+                        multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                    }
                 } else {
                     // Create attribute.
                     MultiValuedAttribute multiValuedAttribute = new MultiValuedAttribute(
                             attributeSchema.getName());
-                    // Set values.
-                    multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                    if (SCIMCommonUtils.isSpecCompliantEmailHandlingEnabled() &&
+                            SCIMCommonConstants.EMAIL_ADDRESS_SCIM_CLAIM.equals(attributeSchema.getURI())) {
+                        ComplexAttribute emailComplexAttribute = createEmailComplexAttribute(attributeSchema, value);
+                        List<Attribute> complexAttributeList = new ArrayList<>();
+                        complexAttributeList.add(emailComplexAttribute);
+                        multiValuedAttribute.setAttributeValues(complexAttributeList);
+                    } else {
+                        // Set values.
+                        multiValuedAttribute.setAttributePrimitiveValues(Arrays.asList(values));
+                    }
                     // Set attribute in scim object.
                     DefaultAttributeFactory.createAttribute(attributeSchema, multiValuedAttribute);
                     ((AbstractSCIMObject) scimObject).setAttribute(multiValuedAttribute);
@@ -373,6 +387,27 @@ public class AttributeMapper {
             }
         }
     }
+
+    private static ComplexAttribute createEmailComplexAttribute(AttributeSchema attributeSchema,
+                                                                String attributeValue) throws BadRequestException,
+            CharonException {
+
+
+        SimpleAttribute valueSubAttributeOfEmail = new SimpleAttribute("value", attributeValue);
+        DefaultAttributeFactory.createAttribute(attributeSchema.getSubAttributeSchema("value"),
+                valueSubAttributeOfEmail);
+
+        SimpleAttribute primarySubAttributeOfEmail = new SimpleAttribute("primary", true);
+        DefaultAttributeFactory.createAttribute(attributeSchema.getSubAttributeSchema("primary"),
+                primarySubAttributeOfEmail);
+
+        ComplexAttribute complexAttribute = new ComplexAttribute("emails");
+        complexAttribute.setSubAttribute(valueSubAttributeOfEmail);
+        complexAttribute.setSubAttribute(primarySubAttributeOfEmail);
+        DefaultAttributeFactory.createAttribute(attributeSchema, complexAttribute);
+        return complexAttribute;
+    }
+
     /**
      * Construct the SCIM Object given the attribute URIs and attribute values of the object.
      *

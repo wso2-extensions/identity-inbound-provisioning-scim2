@@ -137,6 +137,7 @@ public class SCIMCommonConstants {
             "SCIM2.ReturnConflictOnClaimUniquenessViolation";
     public static final String SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR =
             "SCIM2.ThrowUserStoreExceptionOnUserCreationError";
+    public static final String SCIM2_ENABLE_SPEC_COMPLIANT_EMAIL_HANDLING = "SCIM2.EnableSpecCompliantEmailHandling";
 
     // Constants related to backward compatibility configurations from config store.
     public static final String RESOURCE_TYPE_COMPATIBILITY_SETTINGS = "compatibility-settings";
@@ -175,7 +176,7 @@ public class SCIMCommonConstants {
     public static final String MIN_LENGTH = "minLength";
     public static final String MAX_LENGTH = "maxLength";
     public static final String REQUIRED = "required";
-
+    public static final String EMAIL_ADDRESS_SCIM_CLAIM = "urn:ietf:params:scim:schemas:core:2.0:User:emails";
     private static final Map<String, String> groupAttributeSchemaMap = new HashMap<>();
 
     static {
