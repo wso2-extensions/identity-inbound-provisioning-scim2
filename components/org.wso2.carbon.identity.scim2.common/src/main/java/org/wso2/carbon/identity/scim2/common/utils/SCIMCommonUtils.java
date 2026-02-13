@@ -1389,4 +1389,16 @@ public class SCIMCommonUtils {
         }
         return tenantIdsToBeInvalidated;
     }
+
+    /**
+     * Checks whether the identity.xml config is available to enable the spec compliant email handling. If that property
+     * enabled, then this will return true.
+     *
+     * @return whether 'EnableSpecCompliantEmailHandling' property is enabled in identity.xml.
+     */
+    public static boolean isSpecCompliantEmailHandlingEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM2_ENABLE_SPEC_COMPLIANT_EMAIL_HANDLING));
+    }
 }
