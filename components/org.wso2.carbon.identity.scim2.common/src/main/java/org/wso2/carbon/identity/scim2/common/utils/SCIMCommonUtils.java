@@ -511,17 +511,8 @@ public class SCIMCommonUtils {
             return timestamp;
         }
 
-        try {
-            Instant instant = Instant.parse(timestamp);
-            Instant microInstant = instant.truncatedTo(ChronoUnit.MICROS);
-            return DateTimeFormatter.ISO_INSTANT.format(microInstant);
-        } catch (DateTimeParseException e) {
-            // If the parsing fails, we return the original timestamp.
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while converting timestamp: " + timestamp + " to microsecond precision.", e);
-            }
-            return timestamp;
-        }
+        Instant instant = Instant.parse(timestamp);
+        return AttributeUtil.formatDateTime(instant.truncatedTo(ChronoUnit.MICROS));
     }
 
     /**
