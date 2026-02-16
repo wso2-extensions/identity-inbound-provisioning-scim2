@@ -346,7 +346,7 @@
 
         <!--Maven Plugin Version-->
         <maven.compiler.plugin.version>2.3.1</maven.compiler.plugin.version>
-        <maven.bundle.plugin.version>3.2.0</maven.bundle.plugin.version>
+        <maven.bundle.plugin.version>5.1.9</maven.bundle.plugin.version>
         <maven.buildnumber.plugin.version>1.4</maven.buildnumber.plugin.version>
 
         <!-- Axis2 Version -->
@@ -390,7 +390,7 @@
         <pax.logging.api.version>1.10.1</pax.logging.api.version>
 
         <findsecbugs-plugin.version>1.10.1</findsecbugs-plugin.version>
-        <spotbugs-maven-plugin.version>4.5.3.0</spotbugs-maven-plugin.version>
+        <spotbugs-maven-plugin.version>4.9.8.2</spotbugs-maven-plugin.version>
 
         <jaxp-ri-version>1.4.5</jaxp-ri-version>
     
@@ -516,8 +516,8 @@
                 <inherited>true</inherited>
                 <configuration>
                     <encoding>UTF-8</encoding>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>21</source>
+                    <target>21</target>
                 </configuration>
             </plugin>
             <plugin>
