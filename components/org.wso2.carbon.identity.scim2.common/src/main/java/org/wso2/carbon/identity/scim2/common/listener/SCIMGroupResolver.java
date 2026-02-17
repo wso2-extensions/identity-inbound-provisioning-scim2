@@ -48,6 +48,7 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -132,7 +133,7 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
     private void processTimestampAttributesOnGroupAdd(String groupName, int tenantId, List<Claim> claims, Group group)
             throws UserStoreException {
 
-        String createdTime = AttributeUtil.formatDateTime(Instant.now());
+        String createdTime = AttributeUtil.formatDateTime(Instant.now().truncatedTo(ChronoUnit.MICROS));
         group.setCreatedDate(createdTime);
         group.setLastModifiedDate(createdTime);
 

@@ -134,6 +134,7 @@ import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
@@ -5994,7 +5995,7 @@ public class SCIMUserManager implements UserManager {
             Map<String, String> groupAttributes = new HashMap<>();
             String id = UUID.randomUUID().toString();
             groupAttributes.put(SCIMConstants.CommonSchemaConstants.ID_URI, id);
-            String createdDate = AttributeUtil.formatDateTime(Instant.now());
+            String createdDate = AttributeUtil.formatDateTime(Instant.now().truncatedTo(ChronoUnit.MICROS));
             groupAttributes.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
             groupAttributes.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
             groupAttributes.put(SCIMConstants.CommonSchemaConstants.LOCATION_URI, SCIMCommonUtils.getSCIMGroupURL(id));

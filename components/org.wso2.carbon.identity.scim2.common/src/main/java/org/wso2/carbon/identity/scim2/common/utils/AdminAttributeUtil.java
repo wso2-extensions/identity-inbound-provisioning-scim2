@@ -45,6 +45,7 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -246,7 +247,7 @@ public class AdminAttributeUtil {
             log.debug("Generated SCIM ID : " + id + " for User : " + userName);
         }
 
-        String createdDate = AttributeUtil.formatDateTime(Instant.now());
+        String createdDate = AttributeUtil.formatDateTime(Instant.now().truncatedTo(ChronoUnit.MICROS));
         claimsList.put(SCIMConstants.CommonSchemaConstants.CREATED_URI, createdDate);
         claimsList.put(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, createdDate);
         if (log.isDebugEnabled()) {
