@@ -7818,6 +7818,7 @@ public class SCIMUserManager implements UserManager {
                 sanitizeNodeTree(opNode.getRightNode());
             }
         }
+    }
 
     /**
      * Check if email verification on update is enabled.
