@@ -51,6 +51,7 @@ import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -165,7 +166,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         // Update last-modified-date.
         try {
             AbstractUserStoreManager abstractUserStoreManager = (AbstractUserStoreManager) userStoreManager;
-            String lastModifiedDate = AttributeUtil.formatDateTime(Instant.now());
+            String lastModifiedDate = AttributeUtil.formatDateTime(Instant.now().truncatedTo(ChronoUnit.MICROS));
             abstractUserStoreManager.setUserClaimValueWithID(
                     userID, SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI, lastModifiedDate, null);
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -375,7 +376,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             validateClaimUpdate(getUsernameFromUserID(userID, userStoreManager));
         }
 
-        String lastModifiedDate = AttributeUtil.formatDateTime(Instant.now());
+        String lastModifiedDate = AttributeUtil.formatDateTime(Instant.now().truncatedTo(ChronoUnit.MICROS));
         Map<String, String> scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
         String modifiedLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI);
         claims.put(modifiedLocalClaimUri, lastModifiedDate);
@@ -777,7 +778,7 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
             String resourceTypeLocalClaimUri = scimToLocalMappings.get(SCIMConstants.CommonSchemaConstants
                     .RESOURCE_TYPE_URI);
 
-            String createdDate = AttributeUtil.formatDateTime(Instant.now());
+            String createdDate = AttributeUtil.formatDateTime(Instant.now().truncatedTo(ChronoUnit.MICROS));
             attributes.put(createdLocalClaimUri, createdDate);
             attributes.put(modifiedLocalClaimUri, createdDate);
             // If SCIMCommonUtils.getThreadLocalIsSCIMAgentFlow() is true (an agent specific operational flow),

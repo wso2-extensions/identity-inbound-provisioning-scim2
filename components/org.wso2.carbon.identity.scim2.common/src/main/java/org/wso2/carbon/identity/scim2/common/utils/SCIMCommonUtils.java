@@ -65,8 +65,11 @@ import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
 import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
+import org.wso2.charon3.core.utils.AttributeUtil;
 
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -496,6 +499,22 @@ public class SCIMCommonUtils {
     }
 
     /**
+     * Convert the passed time to the method into a microtimestamp.
+     *
+     * @param timestamp The timestamp to be converted.
+     * @return The converted microtimestamp.
+     */
+    private static String convertToMicroTimestamp(String timestamp) {
+
+        if (StringUtils.isBlank(timestamp)) {
+            return timestamp;
+        }
+
+        Instant instant = Instant.parse(timestamp);
+        return AttributeUtil.formatDateTime(instant.truncatedTo(ChronoUnit.MICROS));
+    }
+
+    /**
      * Converts claims in local WSO2 dialect to SCIM dialect.
      *
      * @param claimsMap         Map of local claims and claim values.
@@ -516,6 +535,10 @@ public class SCIMCommonUtils {
                 String claimValue = claimsMap.get(entry.getValue());
                 if (StringUtils.isNotEmpty(claimValue)) {
                     String scimClaimUri = (String) entry.getKey();
+                    if (SCIMConstants.CommonSchemaConstants.CREATED_URI.equals(scimClaimUri) ||
+                            SCIMConstants.CommonSchemaConstants.LAST_MODIFIED_URI.equals(scimClaimUri)) {
+                        claimValue = convertToMicroTimestamp(claimValue);
+                    }
                     claimsInSCIMDialect.put(scimClaimUri, claimValue);
                 }
             }
@@ -1388,5 +1411,17 @@ public class SCIMCommonUtils {
             log.error("Error occurred while obtaining the child organizations for tenant id: " + tenantId, e);
         }
         return tenantIdsToBeInvalidated;
+    }
+
+    /**
+     * Checks whether the identity.xml config is available to enable the spec compliant email handling. If that property
+     * enabled, then this will return true.
+     *
+     * @return whether 'EnableSpecCompliantEmailHandling' property is enabled in identity.xml.
+     */
+    public static boolean isSpecCompliantEmailHandlingEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil
+                .getProperty(SCIMCommonConstants.SCIM2_ENABLE_SPEC_COMPLIANT_EMAIL_HANDLING));
     }
 }
