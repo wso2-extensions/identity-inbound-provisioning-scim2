@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -54,6 +54,8 @@ import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
 import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
+
+import static org.wso2.carbon.identity.core.util.IdentityCoreConstants.SINGLE_CHARACTER_WILDCARD;
 import static org.wso2.carbon.identity.recovery.util.Utils.getConnectorConfig;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementClientException;
@@ -1656,6 +1658,7 @@ public class SCIMUserManager implements UserManager {
 
         // Handle limit equals NULL scenario.
         limit = handleLimitEqualsNULL(limit);
+        sanitizeNodeTree(node);
 
         // Handle single attribute search.
         if (node instanceof ExpressionNode) {
@@ -1671,6 +1674,33 @@ public class SCIMUserManager implements UserManager {
                     domainName);
         } else {
             throw new CharonException("Unknown operation. Not either an expression node or an operation node.");
+        }
+    }
+
+    private void sanitizeNodeTree(Node node) {
+
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(SINGLE_CHARACTER_WILDCARD))) {
+            return;
+        }
+        if (node instanceof ExpressionNode) {
+            ExpressionNode exp = (ExpressionNode) node;
+            String operation = exp.getOperation();
+            String value = exp.getValue();
+
+            // Escape SQL wildcards for operations that use LIKE clause.
+            if (SCIMCommonConstants.SW.equals(operation) || SCIMCommonConstants.EW.equals(operation)
+                    || SCIMCommonConstants.CO.equals(operation)) {
+                exp.setValue(IdentityUtil.processSingleCharWildcard(value));
+            }
+        } else if (node instanceof OperationNode) {
+            OperationNode opNode = (OperationNode) node;
+
+            if (opNode.getLeftNode() != null) {
+                sanitizeNodeTree(opNode.getLeftNode());
+            }
+            if (opNode.getRightNode() != null) {
+                sanitizeNodeTree(opNode.getRightNode());
+            }
         }
     }
 
