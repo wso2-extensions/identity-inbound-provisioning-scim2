@@ -176,6 +176,7 @@ public class AgentResource extends UserResource {
             // Unset agent flow context after operations
             LOG.debug("Unsetting thread local agent flow context after agent creation");
             SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
+            SCIMCommonUtils.unsetThreadLocalIsUserServingAgent();
             UserCoreUtil.setSkipUsernamePatternValidationThreadLocal(false);
             UserCoreUtil.setSkipPasswordPatternValidationThreadLocal(false);
         }
