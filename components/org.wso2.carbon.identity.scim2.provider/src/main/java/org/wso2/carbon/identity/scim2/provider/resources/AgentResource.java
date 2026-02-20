@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.scim2.provider.resources;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.jaxrs.designator.PATCH;
 import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
@@ -175,7 +176,9 @@ public class AgentResource extends UserResource {
         } finally {
             // Unset agent flow context after operations
             LOG.debug("Unsetting thread local agent flow context after agent creation");
+            IdentityUtil.unsetthreadLocalApplicationClientId();
             SCIMCommonUtils.unsetThreadLocalIsSCIMAgentFlow();
+            SCIMCommonUtils.unsetThreadLocalIsUserServingAgent();
             UserCoreUtil.setSkipUsernamePatternValidationThreadLocal(false);
             UserCoreUtil.setSkipPasswordPatternValidationThreadLocal(false);
         }
