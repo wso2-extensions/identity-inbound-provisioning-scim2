@@ -205,7 +205,7 @@ public class AgentResourceManager extends UserResourceManager {
                 // Log agent creation success with ID.
                 String agentId = createdAgent.getId();
 
-                String agentClientId = IdentityUtil.getthreadLocalApplicationClientId();
+                String agentClientId = IdentityUtil.getThreadLocalApplicationClientId();
 
                 // Build agent location URL for response headers.
                 String agentLocationUrl = getResourceEndpointURL(AGENTS_ENDPOINT) + "/" + agentId;
