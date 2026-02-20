@@ -448,6 +448,16 @@ public class SCIMCommonUtils {
         threadLocalIsSCIMAgentFlow.set(value);
     }
 
+    public static void setThreadLocalIsUserServingAgent(Boolean value) {
+
+        IdentityUtil.setThreadLocalIsUserServingAgent(value);
+    }
+
+    public static void unsetThreadLocalIsUserServingAgent() {
+
+        IdentityUtil.unsetThreadLocalIsUserServingAgent();
+    }
+
     public static String getGlobalConsumerId() {
         return getTenantDomainFromContext();
     }
