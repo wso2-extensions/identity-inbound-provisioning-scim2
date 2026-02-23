@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.mgt.common.DefaultPasswordGenerator;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -205,7 +206,7 @@ public class AgentResourceManager extends UserResourceManager {
                 // Log agent creation success with ID.
                 String agentId = createdAgent.getId();
 
-                String agentClientId = IdentityUtil.getThreadLocalApplicationClientId();
+                String agentClientId = (String) IdentityUtil.threadLocalProperties.get().get("applicationClientId");
 
                 // Build agent location URL for response headers.
                 String agentLocationUrl = getResourceEndpointURL(AGENTS_ENDPOINT) + "/" + agentId;
@@ -385,10 +386,11 @@ public class AgentResourceManager extends UserResourceManager {
                     isUserServingAgent = agentExtension.getBoolean("IsUserServingAgent");
                 }
             }
-            SCIMCommonUtils.setThreadLocalIsUserServingAgent(isUserServingAgent);
+
+            IdentityUtil.threadLocalProperties.get().put("isUserServingAgent", isUserServingAgent);
         } catch (Exception e) {
             LOG.warn("Failed to extract IsUserServingAgent flag, defaulting to false: {}", e.getMessage());
-            SCIMCommonUtils.setThreadLocalIsUserServingAgent(false);
+            IdentityUtil.threadLocalProperties.get().put("isUserServingAgent",false);
         }
     }
 }
