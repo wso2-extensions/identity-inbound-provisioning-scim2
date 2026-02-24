@@ -19,11 +19,10 @@
 package org.wso2.carbon.identity.scim2.provider.extensions;
 
 import org.apache.commons.lang.StringUtils;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
-import org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils;
 import org.wso2.carbon.user.mgt.common.DefaultPasswordGenerator;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -206,8 +205,6 @@ public class AgentResourceManager extends UserResourceManager {
                 // Log agent creation success with ID.
                 String agentId = createdAgent.getId();
 
-                String agentClientId = (String) IdentityUtil.threadLocalProperties.get().get("applicationClientId");
-
                 // Build agent location URL for response headers.
                 String agentLocationUrl = getResourceEndpointURL(AGENTS_ENDPOINT) + "/" + agentId;
                 LOG.debug("Agent location URL generated: {} for agent ID: {}", agentLocationUrl, agentId);
@@ -223,24 +220,6 @@ public class AgentResourceManager extends UserResourceManager {
 
                 // Encode the agent object to JSON for response body.
                 encodedAgent = encoder.encodeSCIMObject(copiedAgent);
-
-
-                // Inject the OAuth client ID into the agent schema extension in the response body
-                // so the frontend receives the client ID needed to interact with the agent application.
-                if (StringUtils.isNotBlank(agentClientId)) {
-                    JSONObject responseJson = new JSONObject(encodedAgent);
-                    JSONObject agentExtension;
-                    if (responseJson.has(SCIMConstants.AGENT_SCHEMA_URI)) {
-                        agentExtension = responseJson.getJSONObject(SCIMConstants.AGENT_SCHEMA_URI);
-                    } else {
-                        agentExtension = new JSONObject();
-                        responseJson.put(SCIMConstants.AGENT_SCHEMA_URI, agentExtension);
-                    }
-                    agentExtension.put("ClientId", agentClientId);
-                    encodedAgent = responseJson.toString();
-                    LOG.debug("Injected agent application clientId into SCIM response for agent ID: {}",
-                            agentId);
-                }
 
                 // Add agent-specific location header.
                 responseHeaders.put(SCIMConstants.LOCATION_HEADER,
@@ -388,8 +367,8 @@ public class AgentResourceManager extends UserResourceManager {
             }
 
             IdentityUtil.threadLocalProperties.get().put("isUserServingAgent", isUserServingAgent);
-        } catch (Exception e) {
-            LOG.warn("Failed to extract IsUserServingAgent flag, defaulting to false: {}", e.getMessage());
+        } catch (JSONException error) {
+            LOG.error("Failed to extract IsUserServingAgent flag, defaulting to false: {}", error.getMessage());
             IdentityUtil.threadLocalProperties.get().put("isUserServingAgent",false);
         }
     }
