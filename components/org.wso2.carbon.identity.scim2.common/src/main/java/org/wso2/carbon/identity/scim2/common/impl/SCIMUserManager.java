@@ -7266,6 +7266,7 @@ public class SCIMUserManager implements UserManager {
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID, PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getTenantId());
         properties.put(IdentityEventConstants.EventProperty.USER_ID, user.getId());
+        properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, userStoreDomain);
 
         Event identityMgtEvent = new Event(IdentityEventConstants.Event.POST_USER_PROFILE_UPDATE, properties);
 
