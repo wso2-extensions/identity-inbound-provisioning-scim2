@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.provisioning.scim2</groupId>
         <artifactId>identity-inbound-provisioning-scim2</artifactId>
         <relativePath> ../../pom.xml</relativePath>
-        <version>3.6.2-SNAPSHOT</version>
+        <version>3.4.228</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -95,6 +95,21 @@
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
             <version>${jacoco.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-testng</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
