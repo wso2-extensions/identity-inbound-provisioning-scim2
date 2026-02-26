@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -30,9 +30,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Unit test for the setIsUserServingAgent() method in AgentResourceManagerTest.
+ * Unit test for the setIsUserServingAgent() method in AgentResourceManager.
  *
- * Tests the new method added in AgentResourceManagerTest.java:
+ * Tests the new method added in AgentResourceManager.java:
  * - Extracts IsUserServingAgent flag from SCIM agent schema
  * - Sets it in thread local properties
  * - Handles missing fields and exceptions gracefully
