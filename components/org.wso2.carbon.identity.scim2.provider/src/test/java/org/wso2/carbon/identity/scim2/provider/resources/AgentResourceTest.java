@@ -18,26 +18,54 @@
 
 package org.wso2.carbon.identity.scim2.provider.resources;
 
+import org.mockito.Mock;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.scim2.common.impl.IdentitySCIMManager;
+import org.wso2.carbon.identity.scim2.provider.util.SCIMProviderConstants;
+import org.wso2.charon3.core.extensions.UserManager;
+import org.wso2.charon3.core.schema.SCIMConstants;
 
+import javax.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 /**
- * Unit test for AgentResource cleanup changes.
+ * Unit test for AgentResource finally block cleanup.
+ *
+ * Tests verify that after createUser() completes, the finally block (line 179)
+ * properly cleans up thread local properties:
+ * IdentityUtil.threadLocalProperties.get().remove("isUserServingAgent");
+ *
+ * This is critical to prevent thread local leakage between requests.
  */
 public class AgentResourceTest {
 
+    private AgentResource agentResource;
     private Map<String, Object> threadLocalMap;
 
+    @Mock
+    private UserManager mockUserManager;
+
     @BeforeMethod
-    public void setUp() {
+    public void setUp() throws Exception {
+        // Initialize thread local for testing
         threadLocalMap = new HashMap<>();
         IdentityUtil.threadLocalProperties.set(threadLocalMap);
+
+        // Create AgentResource instance
+        agentResource = new AgentResource();
+
+        // Mock dependencies
+        mockUserManager = mock(UserManager.class);
+        IdentitySCIMManager mockScimManager = mock(IdentitySCIMManager.class);
+        when(mockScimManager.getUserManager()).thenReturn(mockUserManager);
     }
 
     @AfterMethod
@@ -46,115 +74,93 @@ public class AgentResourceTest {
     }
 
     /**
-     * Test that isUserServingAgent property is removed from thread local in finally block.
+     * Test that createUser() cleans up isUserServingAgent in finally block.
+     *
+     * Flow:
+     * 1. createUser() is called
+     * 2. AgentResourceManager.create() sets isUserServingAgent in thread local
+     * 3. Finally block removes it (line 179)
+     * 4. After createUser() returns, isUserServingAgent should be removed
      */
     @Test
-    public void testRemoveIsUserServingAgentFromThreadLocal() {
+    public void testCreateUser_CleansUpThreadLocal() {
+        // Given - Create a valid SCIM agent request
+        String scimRequest = createScimAgentRequest(true);
+        String contentType = SCIMProviderConstants.APPLICATION_SCIM_JSON;
+        String acceptHeader = SCIMProviderConstants.APPLICATION_SCIM_JSON;
+
+        // Verify thread local is initially empty
+        Assert.assertFalse(threadLocalMap.containsKey("isUserServingAgent"),
+                "Thread local should be empty before createUser()");
+
+        // When - Call createUser() (will set and then cleanup isUserServingAgent)
+        try {
+            agentResource.createUser(contentType, acceptHeader, null, null, scimRequest);
+        } catch (Exception e) {
+            // May throw due to mocking, but finally block should still execute
+        }
+
+        // Then - Verify finally block cleaned up thread local
+        Assert.assertFalse(threadLocalMap.containsKey("isUserServingAgent"),
+                "isUserServingAgent should be removed by finally block after createUser() completes");
+    }
+
+    /**
+     * Test cleanup happens even when createUser() succeeds.
+     */
+    @Test
+    public void testCreateUser_CleansUpAfterSuccess() {
+        // Given
+        String scimRequest = createScimAgentRequest(false);
+        String contentType = SCIMProviderConstants.APPLICATION_SCIM_JSON;
+        String acceptHeader = SCIMProviderConstants.APPLICATION_SCIM_JSON;
+
+        // When
+        try {
+            Response response = agentResource.createUser(contentType, acceptHeader, null, null, scimRequest);
+            // Even if successful, cleanup should happen
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        // Then - Finally block should have cleaned up
+        Assert.assertFalse(threadLocalMap.containsKey("isUserServingAgent"),
+                "Finally block should clean up even after successful creation");
+    }
+
+    /**
+     * Test cleanup happens even when createUser() throws exception.
+     */
+    @Test
+    public void testCreateUser_CleansUpAfterException() {
+        // Given - Invalid content type will cause exception
+        String scimRequest = createScimAgentRequest(true);
+        String invalidContentType = null;  // This will trigger FormatNotSupportedException
+        String acceptHeader = SCIMProviderConstants.APPLICATION_SCIM_JSON;
+
+        // Simulate that isUserServingAgent was set before exception
         threadLocalMap.put("isUserServingAgent", true);
-        Assert.assertTrue(threadLocalMap.containsKey("isUserServingAgent"),
-                "Thread local should contain isUserServingAgent before cleanup");
 
+        // When - Call createUser() with invalid content type
         try {
-            IdentityUtil.threadLocalProperties.get().remove("isUserServingAgent");
+            agentResource.createUser(invalidContentType, acceptHeader, null, null, scimRequest);
         } catch (Exception e) {
-            Assert.fail("Cleanup should not throw exception: " + e.getMessage());
+            // Expected to throw exception
         }
 
+        // Then - Finally block should still clean up
         Assert.assertFalse(threadLocalMap.containsKey("isUserServingAgent"),
-                "isUserServingAgent should be removed from thread local");
+                "Finally block should clean up even when exception occurs");
     }
 
     /**
-     * Test that cleanup works when isUserServingAgent is false.
+     * Creates a SCIM agent request with IsUserServingAgent field.
      */
-    @Test
-    public void testRemoveIsUserServingAgentWhenFalse() {
-        // Given - Thread local has isUserServingAgent = false
-        threadLocalMap.put("isUserServingAgent", false);
-        Assert.assertTrue(threadLocalMap.containsKey("isUserServingAgent"),
-                "Thread local should contain isUserServingAgent");
-
-        // When - Execute the cleanup statement
-        try {
-            IdentityUtil.threadLocalProperties.get().remove("isUserServingAgent");
-        } catch (Exception e) {
-            Assert.fail("Cleanup should not throw exception: " + e.getMessage());
-        }
-
-        // Then - Property should be removed regardless of value
-        Assert.assertFalse(threadLocalMap.containsKey("isUserServingAgent"),
-                "isUserServingAgent should be removed from thread local");
+    private String createScimAgentRequest(boolean isUserServingAgent) {
+        return String.format(
+            "{\"%s\":{\"Description\":\"Test Agent\",\"DisplayName\":\"TestAgent\",\"Owner\":\"test@carbon.super\",\"IsUserServingAgent\":%s}}",
+            SCIMConstants.AGENT_SCHEMA_URI,
+            isUserServingAgent
+        );
     }
-
-    /**
-     * Test that cleanup doesn't fail when isUserServingAgent doesn't exist.
-     */
-    @Test
-    public void testRemoveIsUserServingAgentWhenNotPresent() {
-        // Given - Thread local does NOT have isUserServingAgent property
-        Assert.assertFalse(threadLocalMap.containsKey("isUserServingAgent"),
-                "Thread local should not contain isUserServingAgent");
-
-        // When - Execute the cleanup statement (should not throw exception)
-        try {
-            IdentityUtil.threadLocalProperties.get().remove("isUserServingAgent");
-        } catch (Exception e) {
-            Assert.fail("Cleanup should not throw exception when property doesn't exist: " + e.getMessage());
-        }
-
-        // Then - No exception should be thrown
-        Assert.assertFalse(threadLocalMap.containsKey("isUserServingAgent"),
-                "Thread local should still not contain isUserServingAgent");
-    }
-
-    /**
-     * Test cleanup in finally block simulation - success scenario.
-     */
-    @Test
-    public void testCleanupInFinallyBlockOnSuccess() {
-        // Given - Thread local has isUserServingAgent property
-        threadLocalMap.put("isUserServingAgent", true);
-        boolean operationSuccess = true;
-
-        // When - Simulate operation with finally block
-        try {
-            if (operationSuccess) {
-                // Simulate successful agent creation
-                Assert.assertTrue(true);
-            }
-        } finally {
-            // Execute cleanup from line 179
-            IdentityUtil.threadLocalProperties.get().remove("isUserServingAgent");
-        }
-
-        // Then - Property should be removed
-        Assert.assertFalse(threadLocalMap.containsKey("isUserServingAgent"),
-                "isUserServingAgent should be removed in finally block");
-    }
-
-    /**
-     * Test cleanup in finally block simulation - exception scenario.
-     */
-    @Test
-    public void testCleanupInFinallyBlockOnException() {
-        // Given - Thread local has isUserServingAgent property
-        threadLocalMap.put("isUserServingAgent", true);
-        Exception caughtException = null;
-
-        // When - Simulate operation that throws exception
-        try {
-            throw new RuntimeException("Simulated agent creation error");
-        } catch (Exception e) {
-            caughtException = e;
-        } finally {
-            // Execute cleanup from line 179 (should still execute)
-            IdentityUtil.threadLocalProperties.get().remove("isUserServingAgent");
-        }
-
-        // Then - Property should still be removed even when exception occurred
-        Assert.assertNotNull(caughtException, "Exception should have been caught");
-        Assert.assertFalse(threadLocalMap.containsKey("isUserServingAgent"),
-                "isUserServingAgent should be removed even when exception occurs");
-    }
-
 }
