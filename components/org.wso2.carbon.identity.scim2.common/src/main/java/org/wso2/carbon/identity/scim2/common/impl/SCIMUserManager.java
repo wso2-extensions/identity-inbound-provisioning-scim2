@@ -199,6 +199,7 @@ public class SCIMUserManager implements UserManager {
     private static final String SQL_FILTERING_DELIMITER = "%";
     private static final String ERROR_CODE_INVALID_USERNAME = "31301";
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
+    private static final String ERROR_CODE_USER_ALREADY_EXISTS = "30004";
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
     private static final String ERROR_CODE_PASSWORD_POLICY_VIOLATION = "20035";
@@ -462,6 +463,19 @@ public class SCIMUserManager implements UserManager {
                 if (ex instanceof UserStoreClientException && isResourceLimitReachedError((UserStoreClientException) ex)) {
                     handleResourceLimitReached();
                 }
+
+                if (ex instanceof UserStoreClientException &&
+                        ERROR_CODE_USER_ALREADY_EXISTS.equals(((UserStoreClientException) ex).getErrorCode())) {
+                    String duplicateUserErrorMessage = "Username: " + user.getUserName() +
+                            " already exists in the system.";
+
+                    if (log.isDebugEnabled()) {
+                        log.debug(duplicateUserErrorMessage);
+                    }
+
+                    throw new ConflictException(duplicateUserErrorMessage);
+                }
+
                 publishEventOnUserRegistrationFailure(user, ResponseCodeConstants.INVALID_VALUE, ex.getMessage(),
                         claimsInLocalDialect);
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
