@@ -6512,11 +6512,11 @@ public class SCIMUserManager implements UserManager {
                     .getSubAttributeSchema(attribute.getName());
 
             if (Objects.nonNull(attributeSchema)) {
-                attribute.setRequired(attributeSchema.getRequired());
-                if (attributeSchema.getDescription() != null) {
-                    attribute.setDescription(attributeSchema.getDescription());
+                if (attribute.getRequired()) {
+                    attribute.setRequired(attributeSchema.getRequired());
                 }
-                if (attributeSchema.getMutability() != null) {
+                if (attributeSchema.getMutability() != null &&
+                        SCIMDefinitions.Mutability.READ_ONLY.equals(attributeSchema.getMutability())) {
                     attribute.setMutability(attributeSchema.getMutability());
                 }
             }
