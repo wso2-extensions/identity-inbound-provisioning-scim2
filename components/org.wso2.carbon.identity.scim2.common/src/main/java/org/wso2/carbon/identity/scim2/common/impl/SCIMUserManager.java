@@ -42,6 +42,9 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManagerImpl;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.core.context.IdentityContext;
@@ -240,6 +243,10 @@ public class SCIMUserManager implements UserManager {
     private static final String MOBILE_CLAIM_URI = "http://wso2.org/claims/mobile";
     private static final String VERIFIED_EMAIL_ADDRESSES_CLAIM_URI = "http://wso2.org/claims/verifiedEmailAddresses";
     private static final String VERIFIED_MOBILE_NUMBERS_CLAIM_URI = "http://wso2.org/claims/verifiedMobileNumbers";
+
+    private static final String COMPATIBILITY_SETTING_GROUP_SCIM2 = "scim2";
+    private static final String COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT =
+            "disablePasswordUpdateInMeEndpoint";
     /*
      * Claims in this set are used to trigger specific identity management flows.
      * While their values can be updated via SCIM PATCH or PUT requests,
@@ -3087,6 +3094,11 @@ public class SCIMUserManager implements UserManager {
     public User updateMe(User user, Map<String, Boolean> requiredAttributes)
             throws NotImplementedException, CharonException, BadRequestException, ForbiddenException,
             ConflictException {
+
+        // If user password is updated, validate if allowed.
+        if (user.getPassword() != null) {
+            blockScim2MePasswordUpdateIfRequired();
+        }
 
         return updateUser(user, requiredAttributes);
     }
@@ -7857,5 +7869,52 @@ public class SCIMUserManager implements UserManager {
                     + userTenantDomain, e);
         }
         return false;
+    }
+
+    /**
+     * Blocks password updates through the SCIM2 Me endpoint when the tenant compatibility setting
+     * to disable this operation is enabled.
+     *
+     * @throws BadRequestException If password updates are disabled for the SCIM2 Me endpoint.
+     */
+    private void blockScim2MePasswordUpdateIfRequired() throws BadRequestException {
+
+        CompatibilitySettingsManagerImpl compatibilitySettingsManager =
+                (CompatibilitySettingsManagerImpl) SCIMCommonComponentHolder.getCompatibilitySettingsManager();
+
+        CompatibilitySetting disablePasswordUpdateInMeEndpointCompatibilitySetting = null;
+        try {
+            if (compatibilitySettingsManager != null) {
+                disablePasswordUpdateInMeEndpointCompatibilitySetting =
+                        compatibilitySettingsManager.getCompatibilitySettingsByGroupAndSetting(tenantDomain,
+                                COMPATIBILITY_SETTING_GROUP_SCIM2,
+                                COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT);
+            }
+
+            boolean isDisablePasswordUpdateInMeEndpoint = false;
+
+            if (disablePasswordUpdateInMeEndpointCompatibilitySetting != null &&
+                    disablePasswordUpdateInMeEndpointCompatibilitySetting.getCompatibilitySettings() != null &&
+                    disablePasswordUpdateInMeEndpointCompatibilitySetting.getCompatibilitySettings()
+                            .get(COMPATIBILITY_SETTING_GROUP_SCIM2) != null) {
+
+                String settingValue = disablePasswordUpdateInMeEndpointCompatibilitySetting.getCompatibilitySettings()
+                        .get(COMPATIBILITY_SETTING_GROUP_SCIM2)
+                        .getSettingValue(COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT);
+                isDisablePasswordUpdateInMeEndpoint = Boolean.parseBoolean(settingValue);
+            }
+
+            if (isDisablePasswordUpdateInMeEndpoint) {
+                String errorMessage = "Password update is not allowed for scim2/Me endpoint";
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage);
+                }
+                throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_REQUEST);
+            }
+        } catch (CompatibilitySettingException e) {
+            log.error(
+                    "Error while retrieving compatibility setting for disablePasswordUpdateInMeEndpoint for tenant: " +
+                            tenantDomain, e);
+        }
     }
 }
