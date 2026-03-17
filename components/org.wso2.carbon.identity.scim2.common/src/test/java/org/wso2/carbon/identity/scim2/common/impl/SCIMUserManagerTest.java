@@ -38,6 +38,9 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.OperationScopeValidationContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.context.model.OperationScopeSet;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManagerImpl;
+import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
+import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
@@ -196,6 +199,9 @@ public class SCIMUserManagerTest {
     private static final String TEST_PRE_PASSWORD_ACTION_FAILURE_DESCRIPTION =
             "The provided password is compromised. Provide something different.";
     private static final String DUPLICATE_CLAIM_ERROR_MESSAGE = "Duplicate Claim!";
+    private static final String COMPATIBILITY_SETTING_GROUP_SCIM2 = "scim2";
+    private static final String COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT =
+            "disablePasswordUpdateInMeEndpoint";
 
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
@@ -1710,6 +1716,94 @@ public class SCIMUserManagerTest {
             assertEquals(badRequestException.getStatus(), HttpServletResponse.SC_BAD_REQUEST);
         }
         IdentityContext.destroyCurrentContext();
+    }
+
+    @Test
+    public void testUpdateMeThrowsBadRequestWhenDisablePasswordUpdateInMeEndpointEnabled() throws Exception {
+
+        User user = new User();
+        user.setPassword("Password@123");
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+
+        CompatibilitySettingsManagerImpl compatibilitySettingsManager = mock(CompatibilitySettingsManagerImpl.class);
+        CompatibilitySetting compatibilitySetting = mock(CompatibilitySetting.class, Mockito.RETURNS_DEEP_STUBS);
+
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getCompatibilitySettingsManager)
+                .thenReturn(compatibilitySettingsManager);
+        when(compatibilitySettingsManager.getCompatibilitySettingsByGroupAndSetting(
+                eq(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME),
+                eq(COMPATIBILITY_SETTING_GROUP_SCIM2),
+                eq(COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT)))
+                .thenReturn(compatibilitySetting);
+        when(compatibilitySetting.getCompatibilitySettings()
+                .get(COMPATIBILITY_SETTING_GROUP_SCIM2)
+                .getSettingValue(COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT))
+                .thenReturn("true");
+
+        Assert.expectThrows(BadRequestException.class,
+                () -> scimUserManager.updateMe(user, Collections.emptyMap()));
+
+        verify(scimUserManager, never()).updateUser(any(User.class), anyMap());
+    }
+
+    @Test
+    public void testUpdateMeContinuesWhenDisablePasswordUpdateInMeEndpointDisabled() throws Exception {
+
+        User user = new User();
+        user.setPassword("Password@123");
+        User updatedUser = new User();
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        doReturn(updatedUser).when(scimUserManager).updateUser(any(User.class), anyMap());
+
+        CompatibilitySettingsManagerImpl compatibilitySettingsManager = mock(CompatibilitySettingsManagerImpl.class);
+        CompatibilitySetting compatibilitySetting = mock(CompatibilitySetting.class, Mockito.RETURNS_DEEP_STUBS);
+
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getCompatibilitySettingsManager)
+                .thenReturn(compatibilitySettingsManager);
+        when(compatibilitySettingsManager.getCompatibilitySettingsByGroupAndSetting(
+                eq(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME),
+                eq(COMPATIBILITY_SETTING_GROUP_SCIM2),
+                eq(COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT)))
+                .thenReturn(compatibilitySetting);
+        when(compatibilitySetting.getCompatibilitySettings()
+                .get(COMPATIBILITY_SETTING_GROUP_SCIM2)
+                .getSettingValue(COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT))
+                .thenReturn("false");
+
+        User result = scimUserManager.updateMe(user, Collections.emptyMap());
+
+        assertTrue(result == updatedUser);
+        verify(scimUserManager, times(1)).updateUser(any(User.class), anyMap());
+    }
+
+    @Test
+    public void testUpdateMeContinuesWhenCompatibilitySettingRetrievalFails() throws Exception {
+
+        User user = new User();
+        user.setPassword("Password@123");
+        User updatedUser = new User();
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME));
+        doReturn(updatedUser).when(scimUserManager).updateUser(any(User.class), anyMap());
+
+        CompatibilitySettingsManagerImpl compatibilitySettingsManager = mock(CompatibilitySettingsManagerImpl.class);
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getCompatibilitySettingsManager)
+                .thenReturn(compatibilitySettingsManager);
+        when(compatibilitySettingsManager.getCompatibilitySettingsByGroupAndSetting(
+                eq(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME),
+                eq(COMPATIBILITY_SETTING_GROUP_SCIM2),
+                eq(COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT)))
+                .thenThrow(mock(CompatibilitySettingException.class));
+
+        User result = scimUserManager.updateMe(user, Collections.emptyMap());
+
+        assertTrue(result == updatedUser);
+        verify(scimUserManager, times(1)).updateUser(any(User.class), anyMap());
     }
 
     @DataProvider(name = "temporalDataTypes")

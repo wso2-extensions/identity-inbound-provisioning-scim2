@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -30,6 +30,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySettingsManager;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -501,6 +502,25 @@ public class SCIMCommonComponent {
 
         SCIMCommonComponentHolder.setIdentityGovernanceService(null);
         logger.debug("IdentityGovernanceService unset in SCIMCommonComponent bundle.");
+    }
+
+    @Reference(
+            name = "compatibilitySettingsManager",
+            service = CompatibilitySettingsManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetCompatibilitySettingsManager"
+    )
+    protected void setCompatibilitySettingsManager(CompatibilitySettingsManager compatibilitySettingsManager) {
+
+        logger.debug("Setting the compatibility settings service.");
+        SCIMCommonComponentHolder.setCompatibilitySettingsManager(compatibilitySettingsManager);
+    }
+
+    protected void unsetCompatibilitySettingsManager(CompatibilitySettingsManager compatibilitySettingsManager) {
+
+        logger.debug("Unset compatibility settings service.");
+        SCIMCommonComponentHolder.setCompatibilitySettingsManager(null);
     }
 
     @Deactivate
