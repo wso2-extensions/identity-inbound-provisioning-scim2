@@ -72,6 +72,25 @@ public class SCIMAgentAttributeSchemaCache
     }
 
     /**
+     * Add agent attribute schema to cache against tenantId during a read flow.
+     * This method does not send cache invalidation messages to other cluster nodes,
+     * preventing redundant invalidations when populating the cache from a DB read.
+     *
+     * @param tenantId             TenantId.
+     * @param agentAttributeSchema AgentAttributeSchema.
+     */
+    public void addSCIMAgentAttributeSchemaOnRead(int tenantId, AttributeSchema agentAttributeSchema) {
+
+        SCIMAgentAttributeSchemaCacheKey cacheKey = new SCIMAgentAttributeSchemaCacheKey(tenantId);
+        SCIMAgentAttributeSchemaCacheEntry cacheEntry = new SCIMAgentAttributeSchemaCacheEntry(agentAttributeSchema);
+        super.addToCacheOnRead(cacheKey, cacheEntry);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[AddToCacheOnRead] Successfully added scim agent attributes into SCIMAgentSchemaCache "
+                    + "for the tenant: " + tenantId);
+        }
+    }
+
+    /**
      * Get SCIM2 Agent AttributeSchema by tenantId.
      *
      * @param tenantId TenantId.
