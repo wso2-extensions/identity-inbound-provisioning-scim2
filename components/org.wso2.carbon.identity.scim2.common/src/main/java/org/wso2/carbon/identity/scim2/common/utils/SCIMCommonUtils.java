@@ -1059,7 +1059,7 @@ public class SCIMCommonUtils {
                             getCustomSchemaURI());
             AttributeSchema attributeSchema = SCIMCustomSchemaExtensionBuilder.getInstance()
                     .buildUserCustomSchemaExtension(attributes);
-            SCIMCustomAttributeSchemaCache.getInstance().addSCIMCustomAttributeSchema(tenantId, attributeSchema);
+            SCIMCustomAttributeSchemaCache.getInstance().addSCIMCustomAttributeSchemaOnRead(tenantId, attributeSchema);
             return attributeSchema;
         } catch (InternalErrorException | IdentitySCIMException e) {
             throw new CharonException("Error while building scim custom schema", e);
@@ -1082,7 +1082,7 @@ public class SCIMCommonUtils {
                             SCIMConstants.SYSTEM_USER_SCHEMA_URI);
             AttributeSchema attributeSchema = SCIMSystemSchemaExtensionBuilder.getInstance()
                     .buildSystemSchemaExtension(attributes);
-            SCIMSystemAttributeSchemaCache.getInstance().addSCIMSystemAttributeSchema(tenantId, attributeSchema);
+            SCIMSystemAttributeSchemaCache.getInstance().addSCIMSystemAttributeSchemaOnRead(tenantId, attributeSchema);
             return attributeSchema;
         } catch (InternalErrorException | IdentitySCIMException e) {
             throw new CharonException("Error while building scim system schema", e);
@@ -1104,7 +1104,7 @@ public class SCIMCommonUtils {
                     SCIMConstants.AGENT_SCHEMA_URI);
             AttributeSchema attributeSchema = SCIMAgentSchemaExtensionBuilder.getInstance()
                     .buildAgentSchemaExtension(attributes);
-            SCIMAgentAttributeSchemaCache.getInstance().addSCIMAgentAttributeSchema(tenantId, attributeSchema);
+            SCIMAgentAttributeSchemaCache.getInstance().addSCIMAgentAttributeSchemaOnRead(tenantId, attributeSchema);
             return attributeSchema;
         } catch (InternalErrorException | IdentitySCIMException e) {
             log.error("Error while building SCIM agent schema", e);
