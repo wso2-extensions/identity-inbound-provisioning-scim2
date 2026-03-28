@@ -174,6 +174,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BU
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_GROUP_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.BULK_UPDATE_USER_OP;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_ENTERPRISE_USER_CLAIM_DIALECT;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_LEGACY_ENTERPRISE_USER;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.SCIM_SYSTEM_USER_CLAIM_DIALECT;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildAgentSchema;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonUtils.buildCustomSchema;
@@ -7630,9 +7631,26 @@ public class SCIMUserManager implements UserManager {
             Map<String, List<String>> localToScimMappings = new HashMap<>();
             Map<String, String> syncedAttributes = new HashMap<>();
 
-            scimToLocalMappings.forEach((scimAttribute, localAttribute) ->
-                    localToScimMappings.computeIfAbsent(localAttribute, k -> new ArrayList<>()).add(scimAttribute)
-            );
+            boolean enableSCIMEnterpriseUser =
+                    Boolean.parseBoolean(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_SCIM_ENTERPRISE_USER));
+
+            String extensionSchemaName = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getName();
+            String extensionSchemaURI = SCIMUserSchemaExtensionBuilder.getInstance().getExtensionSchema()
+                    .getURI();
+
+            boolean isExtensionSchemaNameChanged = enableSCIMEnterpriseUser &&
+                    SCIM_LEGACY_ENTERPRISE_USER.equals(extensionSchemaName) &&
+                    !StringUtils.equals(extensionSchemaName, extensionSchemaURI);
+
+            scimToLocalMappings.forEach((scimAttribute, localAttribute) -> {
+                localToScimMappings.computeIfAbsent(localAttribute, k -> new ArrayList<>()).add(scimAttribute);
+                if (isExtensionSchemaNameChanged && scimAttribute.startsWith(extensionSchemaURI)) {
+                    localToScimMappings.get(localAttribute).add(scimAttribute.replace(extensionSchemaURI + ":",
+                            extensionSchemaName + "."));
+                }
+            });
+
             localToScimMappings.values().stream()
                     .filter(scimAttributes -> scimAttributes.size() > 1)
                     .forEach(scimAttributes -> {
