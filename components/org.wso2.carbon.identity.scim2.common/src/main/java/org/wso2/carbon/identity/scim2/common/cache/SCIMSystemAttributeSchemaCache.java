@@ -72,6 +72,25 @@ public class SCIMSystemAttributeSchemaCache
 
     }
 
+    /**
+     * Add system attribute schema to cache against tenantId during a read flow.
+     * This method does not send cache invalidation messages to other cluster nodes,
+     * preventing redundant invalidations when populating the cache from a DB read.
+     *
+     * @param tenantId TenantId.
+     * @param systemAttributeSchema SystemAttributeSchema.
+     */
+    public void addSCIMSystemAttributeSchemaOnRead(int tenantId, AttributeSchema systemAttributeSchema) {
+
+        SCIMSystemAttributeSchemaCacheKey cacheKey = new SCIMSystemAttributeSchemaCacheKey(tenantId);
+        SCIMSystemAttributeSchemaCacheEntry cacheEntry = new SCIMSystemAttributeSchemaCacheEntry(systemAttributeSchema);
+        super.addToCacheOnRead(cacheKey, cacheEntry);
+        if (log.isDebugEnabled()) {
+            log.debug("[AddToCacheOnRead] Successfully added scim system attributes into SCIMSystemSchemaCache "
+                    + "for the tenant: " + tenantId);
+        }
+    }
+
 
     /**
      * Get SCIM2 System AttributeSchema by tenantId.
