@@ -58,6 +58,7 @@ public class SCIMCommonConstants {
     public static final String SCIM_USER_CLAIM_DIALECT = "urn:ietf:params:scim:schemas:core:2.0:User";
     public static final String SCIM_ENTERPRISE_USER_CLAIM_DIALECT =
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
+    public static final String SCIM_LEGACY_ENTERPRISE_USER = "EnterpriseUser";
     public static final String SCIM_SYSTEM_USER_CLAIM_DIALECT = "urn:scim:wso2:schema";
     public static final String SCIM_AGENT_CLAIM_DIALECT = "urn:scim:wso2:agent:schema";
 
@@ -133,6 +134,7 @@ public class SCIMCommonConstants {
             "SCIM2MultiAttributeFiltering.UsePagination";
     public static final String CONSIDER_SERVER_WIDE_MAX_LIMIT_ENABLED =
             "SCIM2.ConsiderServerWideUserEndpointMaxLimit";
+    public static final String ENABLE_SCIM_ENTERPRISE_USER = "EnableSCIMLegacyEnterpriseUser";
     public static final String SCIM2_RETURN_CONFLICT_ON_CLAIM_UNIQUENESS_VIOLATION =
             "SCIM2.ReturnConflictOnClaimUniquenessViolation";
     public static final String SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR =
