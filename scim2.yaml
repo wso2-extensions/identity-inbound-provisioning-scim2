@@ -2265,6 +2265,73 @@ paths:
         409:
           description: Users already exists
 
+  /Schemas:
+    get:
+      tags:
+        - Schemas Endpoint
+      summary: Get All Schemas
+      description: |
+        This API returns all supported SCIM 2.0 schema definitions.
+
+        <b>Permission required:</b>
+
+            * No permissions required
+      operationId: getSchemas
+      produces:
+        - application/scim+json
+        - application/json
+      parameters: []
+      responses:
+        200:
+          description: Schemas are found
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/SchemaObject'
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
+          description: Schema not found
+          schema:
+            $ref: '#/definitions/ErrorSchemaNotFound'
+
+  '/Schemas/{id}':
+    get:
+      tags:
+        - Schemas Endpoint
+      summary: Get Schema by ID
+      description: |
+        This API returns the SCIM 2.0 schema definition identified by the given id.
+
+        <b>Permission required:</b>
+
+            * No permissions required
+      operationId: getSchemaById
+      produces:
+        - application/scim+json
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          description: Unique ID of the schema (e.g., urn:ietf:params:scim:schemas:core:2.0:User).
+          required: true
+          type: string
+      responses:
+        200:
+          description: Schema is found
+          schema:
+            $ref: '#/definitions/SchemaObject'
+        401:
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorUnauthorized'
+        404:
+          description: Schema not found
+          schema:
+            $ref: '#/definitions/ErrorSchemaNotFound'
+
   /ResourceTypes:
     get:
       tags:
@@ -4415,6 +4482,250 @@ definitions:
       id:
         type: string
         example: "User"
+
+  #-----------------------------------------------------
+  # Schema Object
+  #-----------------------------------------------------
+  SchemaObject:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The name of the schema.
+        example: "User"
+      description:
+        type: string
+        description: The description of the schema.
+        example: "User Account"
+      attributes:
+        type: array
+        description: The list of attributes defined in the schema.
+        items:
+          $ref: '#/definitions/SchemaAttribute'
+      id:
+        type: string
+        description: The unique URI of the schema.
+        example: "urn:ietf:params:scim:schemas:core:2.0:User"
+
+  #-----------------------------------------------------
+  # Schema Attribute
+  #-----------------------------------------------------
+  SchemaAttribute:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The attribute's name.
+        example: "userName"
+      type:
+        type: string
+        description: The attribute's data type.
+        enum:
+          - STRING
+          - COMPLEX
+          - BOOLEAN
+          - DECIMAL
+          - INTEGER
+          - DATE_TIME
+          - DATE
+          - BINARY
+          - REFERENCE
+        example: "STRING"
+      multiValued:
+        type: boolean
+        description: Whether the attribute is multi-valued.
+        example: false
+      description:
+        type: string
+        description: The attribute's human-readable description.
+        example: "Username"
+      required:
+        type: boolean
+        description: Whether the attribute is required.
+        example: false
+      caseExact:
+        type: boolean
+        description: Whether the string attribute is case sensitive.
+        example: false
+      mutability:
+        type: string
+        description: Indicates whether the attribute is mutable.
+        enum:
+          - READ_ONLY
+          - READ_WRITE
+          - IMMUTABLE
+          - WRITE_ONLY
+        example: "READ_WRITE"
+      returned:
+        type: string
+        description: Indicates when an attribute is returned in a response.
+        enum:
+          - ALWAYS
+          - NEVER
+          - DEFAULT
+          - REQUEST
+        example: "DEFAULT"
+      uniqueness:
+        type: string
+        description: Indicates how unique a value must be.
+        enum:
+          - NONE
+          - SERVER
+          - GLOBAL
+        example: "NONE"
+      displayName:
+        type: string
+        description: The display name of the attribute.
+        example: "Username"
+      displayOrder:
+        type: string
+        description: The display order of the attribute.
+        example: "1"
+      supportedByDefault:
+        type: string
+        description: Whether the attribute is supported by default.
+        example: "true"
+      sharedProfileValueResolvingMethod:
+        type: string
+        description: The method used to resolve shared profile values.
+        example: "FromOrigin"
+      regEx:
+        type: string
+        description: The regular expression for validating the attribute value.
+        example: "^([a-zA-Z0-9_\\.\\-])+\\@(([a-zA-Z0-9\\-])+\\.)+([a-zA-Z0-9]{2,10})+$"
+      subAttributes:
+        type: array
+        description: The sub-attributes of a COMPLEX attribute.
+        items:
+          $ref: '#/definitions/SchemaSubAttribute'
+      profiles:
+        type: object
+        description: Profile-specific configurations for the attribute.
+        properties:
+          console:
+            type: object
+            properties:
+              supportedByDefault:
+                type: boolean
+                example: true
+      inputFormat:
+        type: object
+        description: The input format configuration for the attribute.
+        properties:
+          inputType:
+            type: string
+            example: "text_input"
+      excludedUserStores:
+        type: string
+        description: Comma-separated list of excluded user stores.
+        example: ""
+
+  #-----------------------------------------------------
+  # Schema Sub Attribute
+  #-----------------------------------------------------
+  SchemaSubAttribute:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The sub-attribute's name.
+        example: "familyName"
+      type:
+        type: string
+        description: The sub-attribute's data type.
+        enum:
+          - STRING
+          - COMPLEX
+          - BOOLEAN
+          - DECIMAL
+          - INTEGER
+          - DATE_TIME
+          - DATE
+          - BINARY
+          - REFERENCE
+        example: "STRING"
+      multiValued:
+        type: boolean
+        description: Whether the sub-attribute is multi-valued.
+        example: false
+      description:
+        type: string
+        description: The sub-attribute's human-readable description.
+        example: "Last Name"
+      required:
+        type: boolean
+        description: Whether the sub-attribute is required.
+        example: false
+      caseExact:
+        type: boolean
+        description: Whether the string sub-attribute is case sensitive.
+        example: false
+      mutability:
+        type: string
+        description: Indicates whether the sub-attribute is mutable.
+        enum:
+          - READ_ONLY
+          - READ_WRITE
+          - IMMUTABLE
+          - WRITE_ONLY
+        example: "READ_WRITE"
+      returned:
+        type: string
+        description: Indicates when a sub-attribute is returned in a response.
+        enum:
+          - ALWAYS
+          - NEVER
+          - DEFAULT
+          - REQUEST
+        example: "DEFAULT"
+      uniqueness:
+        type: string
+        description: Indicates how unique a value must be.
+        enum:
+          - NONE
+          - SERVER
+          - GLOBAL
+        example: "NONE"
+      displayName:
+        type: string
+        description: The display name of the sub-attribute.
+        example: "Last Name"
+      displayOrder:
+        type: string
+        description: The display order of the sub-attribute.
+        example: "3"
+      supportedByDefault:
+        type: string
+        description: Whether the sub-attribute is supported by default.
+        example: "true"
+      sharedProfileValueResolvingMethod:
+        type: string
+        description: The method used to resolve shared profile values.
+        example: "FromOrigin"
+      regEx:
+        type: string
+        description: The regular expression for validating the sub-attribute value.
+      profiles:
+        type: object
+        description: Profile-specific configurations for the sub-attribute.
+        properties:
+          console:
+            type: object
+            properties:
+              supportedByDefault:
+                type: boolean
+                example: true
+      inputFormat:
+        type: object
+        description: The input format configuration for the sub-attribute.
+        properties:
+          inputType:
+            type: string
+            example: "text_input"
+      excludedUserStores:
+        type: string
+        description: Comma-separated list of excluded user stores.
+        example: ""
 
   #-----------------------------------------------------
   # SP Config Response Object
