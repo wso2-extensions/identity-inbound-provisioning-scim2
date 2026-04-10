@@ -4574,13 +4574,13 @@ definitions:
         description: The display name of the attribute.
         example: "Username"
       displayOrder:
-        type: string
+        type: integer
         description: The display order of the attribute.
-        example: "1"
+        example: 1
       supportedByDefault:
-        type: string
+        type: boolean
         description: Whether the attribute is supported by default.
-        example: "true"
+        example: true
       sharedProfileValueResolvingMethod:
         type: string
         description: The method used to resolve shared profile values.
@@ -4685,13 +4685,13 @@ definitions:
         description: The display name of the sub-attribute.
         example: "Last Name"
       displayOrder:
-        type: string
+        type: integer
         description: The display order of the sub-attribute.
-        example: "3"
+        example: 3
       supportedByDefault:
-        type: string
+        type: boolean
         description: Whether the sub-attribute is supported by default.
-        example: "true"
+        example: true
       sharedProfileValueResolvingMethod:
         type: string
         description: The method used to resolve shared profile values.
