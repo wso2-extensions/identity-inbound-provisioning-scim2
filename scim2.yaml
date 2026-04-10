@@ -2278,7 +2278,6 @@ paths:
             * No permissions required
       operationId: getSchemas
       produces:
-        - application/scim+json
         - application/json
       parameters: []
       responses:
@@ -2310,7 +2309,6 @@ paths:
             * No permissions required
       operationId: getSchemaById
       produces:
-        - application/scim+json
         - application/json
       parameters:
         - name: id
@@ -4570,8 +4568,6 @@ definitions:
         description: Indicates how unique a value must be.
         enum:
           - NONE
-          - SERVER
-          - GLOBAL
         example: "NONE"
       displayName:
         type: string
@@ -4683,8 +4679,6 @@ definitions:
         description: Indicates how unique a value must be.
         enum:
           - NONE
-          - SERVER
-          - GLOBAL
         example: "NONE"
       displayName:
         type: string
