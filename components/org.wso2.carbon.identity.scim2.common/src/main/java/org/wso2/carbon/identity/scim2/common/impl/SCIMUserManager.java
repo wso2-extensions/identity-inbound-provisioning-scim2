@@ -283,6 +283,7 @@ public class SCIMUserManager implements UserManager {
             IDENTITY_CLAIM_URI + "/accountState",
             IDENTITY_CLAIM_URI + "/lockedReason",
             IDENTITY_CLAIM_URI + "/unlockTime",
+            IDENTITY_CLAIM_URI + "/accountDisabled",
             // System managed timestamps.
             IDENTITY_CLAIM_URI + "/lastLoginTime",
             IDENTITY_CLAIM_URI + "/lastLogonTime",
