@@ -239,6 +239,90 @@ public class SCIMAgentAttributeSchemaCacheTest {
         assertEquals(schema, cache.getSCIMAgentAttributeSchemaByTenant(tenantId));
     }
 
+    // --- Read-path (addSCIMAgentAttributeSchemaOnRead) tests ---
+    // Use dedicated tenant IDs (500+) to avoid collisions with write-path tests
+    // running in the same singleton cache instance.
+
+    @Test
+    public void testAddSCIMAgentAttributeSchemaOnRead() {
+
+        cache.addSCIMAgentAttributeSchemaOnRead(501, mockAttributeSchema);
+        AttributeSchema result = cache.getSCIMAgentAttributeSchemaByTenant(501);
+        assertNotNull(result);
+        assertEquals(mockAttributeSchema, result);
+    }
+
+    @Test
+    public void testAddSCIMAgentAttributeSchemaOnRead_NullSchema() {
+
+        cache.addSCIMAgentAttributeSchemaOnRead(502, null);
+        assertNull(cache.getSCIMAgentAttributeSchemaByTenant(502));
+    }
+
+    @Test
+    public void testAddSCIMAgentAttributeSchemaOnRead_MultipleTenants() {
+
+        AttributeSchema schema1 = mock(AttributeSchema.class);
+        AttributeSchema schema2 = mock(AttributeSchema.class);
+
+        cache.addSCIMAgentAttributeSchemaOnRead(510, schema1);
+        cache.addSCIMAgentAttributeSchemaOnRead(520, schema2);
+
+        assertEquals(schema1, cache.getSCIMAgentAttributeSchemaByTenant(510));
+        assertEquals(schema2, cache.getSCIMAgentAttributeSchemaByTenant(520));
+    }
+
+    @Test
+    public void testAddSCIMAgentAttributeSchemaOnRead_DoesNotOverwriteExistingEntry() {
+
+        AttributeSchema firstSchema = mock(AttributeSchema.class);
+        AttributeSchema secondSchema = mock(AttributeSchema.class);
+
+        cache.addSCIMAgentAttributeSchemaOnRead(503, firstSchema);
+        cache.addSCIMAgentAttributeSchemaOnRead(503, secondSchema);
+
+        // putOnRead is a no-op if entry already exists; first value retained.
+        AttributeSchema result = cache.getSCIMAgentAttributeSchemaByTenant(503);
+        assertEquals(firstSchema, result);
+        assertNotEquals(secondSchema, result);
+    }
+
+    @Test
+    public void testAddSCIMAgentAttributeSchemaOnRead_WritePathOverridesOnReadEntry() {
+
+        AttributeSchema readSchema = mock(AttributeSchema.class);
+        AttributeSchema writeSchema = mock(AttributeSchema.class);
+
+        cache.addSCIMAgentAttributeSchemaOnRead(504, readSchema);
+        cache.addSCIMAgentAttributeSchema(504, writeSchema);
+
+        assertEquals(writeSchema, cache.getSCIMAgentAttributeSchemaByTenant(504));
+    }
+
+    @Test
+    public void testAddSCIMAgentAttributeSchemaOnRead_OnReadDoesNotOverwriteWritePathEntry() {
+
+        AttributeSchema writeSchema = mock(AttributeSchema.class);
+        AttributeSchema readSchema = mock(AttributeSchema.class);
+
+        cache.addSCIMAgentAttributeSchema(505, writeSchema);
+        cache.addSCIMAgentAttributeSchemaOnRead(505, readSchema);
+
+        // putOnRead should not overwrite; write-path value retained.
+        assertEquals(writeSchema, cache.getSCIMAgentAttributeSchemaByTenant(505));
+    }
+
+    @Test
+    public void testOnReadEntry_ClearedByTenantClear() {
+
+        final List<Integer> tenantList = new ArrayList<>(Collections.singletonList(506));
+        scimCommonUtilsStaticMock.when(() -> SCIMCommonUtils.getOrganizationsToInvalidateCaches(506))
+                .thenReturn(tenantList);
+        cache.addSCIMAgentAttributeSchemaOnRead(506, mockAttributeSchema);
+        cache.clearSCIMAgentAttributeSchemaByTenant(506);
+        assertNull(cache.getSCIMAgentAttributeSchemaByTenant(506));
+    }
+
     @AfterClass
     public void tearDown() {
 
