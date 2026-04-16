@@ -203,6 +203,18 @@ public class SCIMUserManagerTest {
     private static final String COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT =
             "disablePasswordUpdateInMeEndpoint";
 
+    private static final String IDENTITY_CLAIM_URI = "http://wso2.org/claims/identity";
+
+    // A few representative SCIM claim URIs that map to restricted local claims.
+    private static final String SCIM_FAILED_TOTP_ATTEMPTS =
+            "urn:scim:wso2:schema:failedTOTPAttempts";
+    private static final String SCIM_ACCOUNT_LOCKED =
+            "urn:scim:wso2:schema:accountLocked";
+    private static final String SCIM_ENTERPRISE_ACCOUNT_LOCKED =
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:accountLocked";
+    private static final String SCIM_DISPLAY_NAME =
+            "urn:ietf:params:scim:schemas:core:2.0:User:displayName";
+
     @Mock
     private AbstractUserStoreManager mockedUserStoreManager;
     @Mock
@@ -2996,5 +3008,122 @@ public class SCIMUserManagerTest {
         return new UserStoreClientException(
                 DUPLICATE_CLAIM_ERROR_MESSAGE, duplicateClaimErrorCode,
                 new PolicyViolationException("testCode", DUPLICATE_CLAIM_ERROR_MESSAGE));
+    }
+
+    @DataProvider(name = "restrictedClaimsForMeUpdateData")
+    public Object[][] restrictedClaimsForMeUpdateData() {
+
+        // scimClaimsInRequest : SCIM claim URIs present in the user payload
+        // scimToLocalMap      : the mapping getSCIMtoLocalMappings() will return
+        // expectException     : whether a BadRequestException is expected
+        Map<String, String> allowedOnlyMap = new HashMap<>();
+        allowedOnlyMap.put(SCIM_DISPLAY_NAME, "http://wso2.org/claims/displayName");
+
+        // Single restricted claim via urn:scim:wso2:schema dialect.
+        Map<String, String> restrictedWso2Map = new HashMap<>();
+        restrictedWso2Map.put(SCIM_FAILED_TOTP_ATTEMPTS, IDENTITY_CLAIM_URI + "/failedTOTPAttempts");
+        restrictedWso2Map.put(SCIM_DISPLAY_NAME, "http://wso2.org/claims/displayName");
+
+        // Single restricted claim via enterprise dialect.
+        Map<String, String> restrictedEnterpriseMap = new HashMap<>();
+        restrictedEnterpriseMap.put(SCIM_ENTERPRISE_ACCOUNT_LOCKED, IDENTITY_CLAIM_URI + "/accountLocked");
+
+        // Mix of restricted and allowed claims.
+        Map<String, String> mixedMap = new HashMap<>();
+        mixedMap.put(SCIM_FAILED_TOTP_ATTEMPTS, IDENTITY_CLAIM_URI + "/failedTOTPAttempts");
+        mixedMap.put(SCIM_ACCOUNT_LOCKED, IDENTITY_CLAIM_URI + "/accountLocked");
+        mixedMap.put(SCIM_DISPLAY_NAME, "http://wso2.org/claims/displayName");
+
+        // Case-insensitive: local claim URI returned with different casing.
+        Map<String, String> caseInsensitiveMap = new HashMap<>();
+        caseInsensitiveMap.put(SCIM_ACCOUNT_LOCKED, IDENTITY_CLAIM_URI.toUpperCase() + "/ACCOUNTLOCKED");
+
+        // SCIM claim present but has no local mapping entry (unknown claim) — should be allowed.
+        Map<String, String> noMappingMap = new HashMap<>();
+        // empty: SCIM_DISPLAY_NAME has no mapping
+
+        return new Object[][] {
+                // description, claimsInPayload, scimToLocalMap, expectBadRequest
+                { "no_restricted_claims", allowedOnlyMap.keySet().stream().collect(java.util.stream.Collectors.toMap(k -> k, k -> "value")), allowedOnlyMap, false },
+                { "restricted_wso2_dialect", restrictedWso2Map.keySet().stream().collect(java.util.stream.Collectors.toMap(k -> k, k -> "value")), restrictedWso2Map, true },
+                { "restricted_enterprise_dialect", restrictedEnterpriseMap.keySet().stream().collect(java.util.stream.Collectors.toMap(k -> k, k -> "value")), restrictedEnterpriseMap, true },
+                { "multiple_restricted_claims", mixedMap.keySet().stream().collect(java.util.stream.Collectors.toMap(k -> k, k -> "value")), mixedMap, true },
+                { "case_insensitive_local_claim", caseInsensitiveMap.keySet().stream().collect(java.util.stream.Collectors.toMap(k -> k, k -> "value")), caseInsensitiveMap, true },
+                { "scim_claim_without_local_mapping", Collections.singletonMap(SCIM_DISPLAY_NAME, "value"), noMappingMap, false },
+        };
+    }
+
+    @Test(dataProvider = "restrictedClaimsForMeUpdateData")
+    public void testValidateRestrictedClaimsForMeUpdate(String description,
+                                                        Map<String, String> claimsInPayload,
+                                                        Map<String, String> scimToLocalMap,
+                                                        boolean expectBadRequest) throws Exception {
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        User user = mock(User.class);
+
+        try (MockedStatic<AttributeMapper> mockedAttributeMapper = mockStatic(AttributeMapper.class)) {
+            mockedAttributeMapper.when(() -> AttributeMapper.getClaimsMap(user)).thenReturn(claimsInPayload);
+            scimCommonUtils.when(SCIMCommonUtils::getSCIMtoLocalMappings).thenReturn(scimToLocalMap);
+
+            Method method = SCIMUserManager.class.getDeclaredMethod("validateRestrictedClaimsForMeUpdate", User.class);
+            method.setAccessible(true);
+
+            try {
+                method.invoke(scimUserManager, user);
+                if (expectBadRequest) {
+                    Assert.fail("Expected BadRequestException for case: " + description);
+                }
+            } catch (InvocationTargetException e) {
+                if (!expectBadRequest) {
+                    Assert.fail("Unexpected exception for case: " + description + " — " + e.getCause());
+                }
+                Throwable cause = e.getCause();
+                assertTrue(cause instanceof BadRequestException,
+                        "Expected BadRequestException but got: " + cause.getClass().getSimpleName());
+                BadRequestException badRequestEx = (BadRequestException) cause;
+                assertEquals(badRequestEx.getScimType(), ResponseCodeConstants.MUTABILITY,
+                        "SCIM type should be MUTABILITY for case: " + description);
+                // The error detail should contain at least one of the SCIM claim URIs that was restricted.
+                String detail = badRequestEx.getDetail();
+                boolean containsRestrictedScimUri = claimsInPayload.keySet().stream()
+                        .filter(scimUri -> (IDENTITY_CLAIM_URI + "/failedTOTPAttempts")
+                                        .equalsIgnoreCase(scimToLocalMap.get(scimUri))
+                                || (IDENTITY_CLAIM_URI + "/accountLocked")
+                                        .equalsIgnoreCase(scimToLocalMap.get(scimUri)))
+                        .anyMatch(scimUri -> detail != null && detail.contains(scimUri));
+                assertTrue(containsRestrictedScimUri,
+                        "Error detail should contain the SCIM claim URI for case: " + description);
+            }
+        }
+    }
+
+    @Test
+    public void testValidateRestrictedClaimsForMeUpdate_UserStoreExceptionThrowsCharonException() throws Exception {
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        User user = mock(User.class);
+
+        try (MockedStatic<AttributeMapper> mockedAttributeMapper = mockStatic(AttributeMapper.class)) {
+            mockedAttributeMapper.when(() -> AttributeMapper.getClaimsMap(user))
+                    .thenReturn(Collections.singletonMap(SCIM_ACCOUNT_LOCKED, "true"));
+            scimCommonUtils.when(SCIMCommonUtils::getSCIMtoLocalMappings)
+                    .thenThrow(new org.wso2.carbon.user.core.UserStoreException("DB error"));
+
+            Method method = SCIMUserManager.class.getDeclaredMethod("validateRestrictedClaimsForMeUpdate", User.class);
+            method.setAccessible(true);
+
+            try {
+                method.invoke(scimUserManager, user);
+                Assert.fail("Expected CharonException to be thrown");
+            } catch (InvocationTargetException e) {
+                assertTrue(e.getCause() instanceof CharonException,
+                        "Expected CharonException but got: " + e.getCause().getClass().getSimpleName());
+            }
+        }
     }
 }

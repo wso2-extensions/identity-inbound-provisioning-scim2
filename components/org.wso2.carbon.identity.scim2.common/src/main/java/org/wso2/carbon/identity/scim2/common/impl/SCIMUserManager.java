@@ -262,6 +262,34 @@ public class SCIMUserManager implements UserManager {
     private static final List<String> VERIFICATION_TRIGGERING_CLAIMS =
             Arrays.asList(VERIFIED_EMAIL_ADDRESSES_CLAIM_URI, VERIFIED_MOBILE_NUMBERS_CLAIM_URI);
 
+    /*
+     * Local claims in this set are system-managed security and audit attributes that must not be modified by the
+     * authenticated user via the /Me endpoint. These include failed-attempt counters, account lock/state
+     * attributes, system-managed timestamps, and password-expiry information.
+     */
+    private static final Set<String> ME_ENDPOINT_NOT_UPDATABLE_LOCAL_CLAIMS = new HashSet<>(Arrays.asList(
+            // Failed Attempts related claims
+            IDENTITY_CLAIM_URI + "/failedLoginAttempts",
+            IDENTITY_CLAIM_URI + "/failedLoginAttemptsBeforeSuccess",
+            IDENTITY_CLAIM_URI + "/failedLoginLockoutCount",
+            IDENTITY_CLAIM_URI + "/failedPasswordRecoveryAttempts",
+            IDENTITY_CLAIM_URI + "/failedSMSOTPAttempts",
+            IDENTITY_CLAIM_URI + "/failedTOTPAttempts",
+            IDENTITY_CLAIM_URI + "/failedEmailOTPAttempts",
+            IDENTITY_CLAIM_URI + "/failedBackupCodeAttempts",
+            IDENTITY_CLAIM_URI + "/failedPushAuthAttempts",
+            // Account related claims.
+            IDENTITY_CLAIM_URI + "/accountLocked",
+            IDENTITY_CLAIM_URI + "/accountState",
+            IDENTITY_CLAIM_URI + "/lockedReason",
+            IDENTITY_CLAIM_URI + "/unlockTime",
+            // System managed timestamps.
+            IDENTITY_CLAIM_URI + "/lastLoginTime",
+            IDENTITY_CLAIM_URI + "/lastLogonTime",
+            IDENTITY_CLAIM_URI + "/lastPasswordUpdateTime",
+            IDENTITY_CLAIM_URI + "/passwordExpiryTime"
+    ));
+
     @Deprecated
     public SCIMUserManager(UserStoreManager carbonUserStoreManager, ClaimManager claimManager) {
 
@@ -3114,6 +3142,9 @@ public class SCIMUserManager implements UserManager {
         if (user.getPassword() != null) {
             blockScim2MePasswordUpdateIfRequired();
         }
+
+        // Validate that the user is not attempting to update system-managed security claims.
+        validateRestrictedClaimsForMeUpdate(user);
 
         return updateUser(user, requiredAttributes);
     }
@@ -7901,6 +7932,47 @@ public class SCIMUserManager implements UserManager {
                     + userTenantDomain, e);
         }
         return false;
+    }
+
+    /**
+     * Validates that the user update request via the /Me endpoint does not attempt to modify
+     * system-managed security claims (e.g., failed-attempt counters, account lock attributes,
+     * or system-managed timestamps). These claims must only be managed by the system or by an
+     * administrator via the /Users endpoint.
+     *
+     * @param user The {@link User} object from the Me update request.
+     * @throws BadRequestException If the request contains one or more restricted claims.
+     * @throws CharonException     If an error occurs while extracting claims from the user object.
+     */
+    private void validateRestrictedClaimsForMeUpdate(User user) throws BadRequestException, CharonException {
+
+        Map<String, String> scimToLocalMappings;
+        try {
+            scimToLocalMappings = SCIMCommonUtils.getSCIMtoLocalMappings();
+        } catch (UserStoreException e) {
+            throw new CharonException("Error while retrieving SCIM to local claim mappings.", e);
+        }
+
+        Map<String, String> claims = AttributeMapper.getClaimsMap(user);
+
+        // Map each SCIM claim URI to its local claim URI and check if it matches any restricted local claim.
+        // Collect all restricted SCIM claim URIs found in the request.
+        List<String> restrictedClaimsFound = claims.keySet().stream()
+                .filter(scimClaimUri -> {
+                    String localClaimUri = scimToLocalMappings.get(scimClaimUri);
+                    return localClaimUri != null && ME_ENDPOINT_NOT_UPDATABLE_LOCAL_CLAIMS.stream()
+                            .anyMatch(restricted -> restricted.equalsIgnoreCase(localClaimUri));
+                })
+                .collect(Collectors.toList());
+
+        if (!restrictedClaimsFound.isEmpty()) {
+            String errorMessage = "The following claims are not allowed to be updated via the scim2/Me "
+                    + "endpoint: " + String.join(", ", restrictedClaimsFound);
+            if (log.isDebugEnabled()) {
+                log.debug(errorMessage);
+            }
+            throw new BadRequestException(errorMessage, ResponseCodeConstants.MUTABILITY);
+        }
     }
 
     /**
