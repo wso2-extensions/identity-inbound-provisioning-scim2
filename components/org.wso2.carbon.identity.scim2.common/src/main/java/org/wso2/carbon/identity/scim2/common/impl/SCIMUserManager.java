@@ -268,7 +268,7 @@ public class SCIMUserManager implements UserManager {
      * attributes, system-managed timestamps, and password-expiry information.
      */
     private static final Set<String> ME_ENDPOINT_NOT_UPDATABLE_LOCAL_CLAIMS = new HashSet<>(Arrays.asList(
-            // Failed Attempts related claims
+            // Failed Attempts related claims.
             IDENTITY_CLAIM_URI + "/failedLoginAttempts",
             IDENTITY_CLAIM_URI + "/failedLoginAttemptsBeforeSuccess",
             IDENTITY_CLAIM_URI + "/failedLoginLockoutCount",
