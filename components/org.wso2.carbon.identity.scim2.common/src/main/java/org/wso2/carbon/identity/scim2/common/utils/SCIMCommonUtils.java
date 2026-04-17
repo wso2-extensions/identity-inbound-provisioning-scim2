@@ -1455,6 +1455,10 @@ public class SCIMCommonUtils {
      */
     public static void validateBlockedClaimsForMeEndpoint(Set<String> localClaimUris) throws BadRequestException {
 
+        if (localClaimUris == null || localClaimUris.isEmpty()) {
+            return;
+        }
+
         List<String> blockedClaims = getBlockedLocalClaimsForMeEndpoint();
         if (blockedClaims.isEmpty()) {
             return;
