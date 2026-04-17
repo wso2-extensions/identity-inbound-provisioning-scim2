@@ -5905,6 +5905,9 @@ public class SCIMUserManager implements UserManager {
         Flow currentFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
         if (currentFlow != null && Flow.InitiatingPersona.USER.equals(currentFlow.getInitiatingPersona())) {
             Set<String> claimsBeingUpdated = new HashSet<>(userClaimsToBeModified.keySet());
+            claimsBeingUpdated.addAll(userClaimsToBeDeleted.keySet());
+            claimsBeingUpdated.addAll(simpleMultiValuedClaimsToBeAdded.keySet());
+            claimsBeingUpdated.addAll(simpleMultiValuedClaimsToBeRemoved.keySet());
             SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claimsBeingUpdated);
         }
 
