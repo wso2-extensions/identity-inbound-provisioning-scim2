@@ -537,7 +537,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
@@ -555,7 +555,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
@@ -572,7 +572,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(extendedClaims);
 
         List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
@@ -594,7 +594,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(extendedClaims);
 
         List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
@@ -610,7 +610,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         // Should NOT throw.
@@ -631,7 +631,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         // Claims being updated are NOT in the blocked list — should NOT throw.
@@ -652,7 +652,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         Set<String> claims = new HashSet<>(Arrays.asList(
@@ -672,7 +672,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         // Using different casing for the blocked claim.
@@ -691,7 +691,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(extendedClaims);
 
         Set<String> claims = new HashSet<>(Arrays.asList(
@@ -710,7 +710,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         // Empty set of claims — should NOT throw.
@@ -728,7 +728,7 @@ public class SCIMCommonUtilsTest {
                 SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         Set<String> claims = new HashSet<>(Arrays.asList(

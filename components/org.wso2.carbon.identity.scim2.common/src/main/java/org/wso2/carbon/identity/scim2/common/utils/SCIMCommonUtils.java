@@ -88,7 +88,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.AP
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V2;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V3;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_ROLE_API_VERSION_FOR_REF;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS;
 
 /**
@@ -1441,7 +1441,7 @@ public class SCIMCommonUtils {
 
         List<String> blockedClaims =
                 new ArrayList<>(IdentityUtil.getPropertyAsList(ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS));
-        blockedClaims.addAll(IdentityUtil.getPropertyAsList(ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS));
+        blockedClaims.addAll(IdentityUtil.getPropertyAsList(ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS));
         return blockedClaims;
     }
 
