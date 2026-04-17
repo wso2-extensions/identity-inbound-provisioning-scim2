@@ -61,8 +61,10 @@ import org.wso2.charon3.core.config.SCIMAgentSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
+import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
@@ -86,6 +88,8 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.AP
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V2;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V3;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_ROLE_API_VERSION_FOR_REF;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS;
 
 /**
  * This class is to be used as a Util class for SCIM common things.
@@ -1423,5 +1427,46 @@ public class SCIMCommonUtils {
 
         return Boolean.parseBoolean(IdentityUtil
                 .getProperty(SCIMCommonConstants.SCIM2_ENABLE_SPEC_COMPLIANT_EMAIL_HANDLING));
+    }
+
+    /**
+     * Returns the combined list of local claim URIs that are blocked from being updated via the
+     * /scim2/Me endpoint. This merges both the base blocked identity claims
+     * ({@code SCIM2.Me.BlockedIdentityClaims}) and the extended blocked claims
+     * ({@code SCIM2.Me.ExtendedBlockedIdentityClaims}) configured in identity.xml.
+     *
+     * @return List of blocked local claim URIs for the Me endpoint.
+     */
+    public static List<String> getBlockedLocalClaimsForMeEndpoint() {
+
+        List<String> blockedClaims =
+                new ArrayList<>(IdentityUtil.getPropertyAsList(ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS));
+        blockedClaims.addAll(IdentityUtil.getPropertyAsList(ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS));
+        return blockedClaims;
+    }
+
+    /**
+     * Validates that none of the provided local claim URIs are restricted from being updated via
+     * the /scim2/Me endpoint. The blocked claim lists are sourced from identity.xml via
+     * {@link #getBlockedLocalClaimsForMeEndpoint()}.
+     *
+     * @param localClaimUris Set of local claim URIs that are about to be updated.
+     * @throws BadRequestException If one or more of the provided claims are blocked.
+     */
+    public static void validateBlockedClaimsForMeEndpoint(Set<String> localClaimUris) throws BadRequestException {
+
+        List<String> blockedClaims = getBlockedLocalClaimsForMeEndpoint();
+        if (blockedClaims.isEmpty()) {
+            return;
+        }
+        List<String> restrictedClaimsFound = localClaimUris.stream()
+                .filter(uri -> blockedClaims.stream().anyMatch(blocked -> blocked.equalsIgnoreCase(uri)))
+                .collect(Collectors.toList());
+        if (!restrictedClaimsFound.isEmpty()) {
+            throw new BadRequestException(
+                    "The following claims are not allowed to be updated via the scim2/Me endpoint: "
+                            + String.join(", ", restrictedClaimsFound),
+                    ResponseCodeConstants.MUTABILITY);
+        }
     }
 }

@@ -140,6 +140,10 @@ public class SCIMCommonConstants {
     public static final String SCIM2_THROW_USER_STORE_EXCEPTION_ON_USER_CREATION_ERROR =
             "SCIM2.ThrowUserStoreExceptionOnUserCreationError";
     public static final String SCIM2_ENABLE_SPEC_COMPLIANT_EMAIL_HANDLING = "SCIM2.EnableSpecCompliantEmailHandling";
+    public static final String ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS = "SCIM2.Me.BlockedIdentityClaims" +
+            ".BlockedIdentityClaim";
+    public static final String ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS = "SCIM2.Me.ExtendedBlockedIdentityClaims" +
+            ".ExtendedBlockedIdentityClaim";
 
     // Constants related to backward compatibility configurations from config store.
     public static final String RESOURCE_TYPE_COMPATIBILITY_SETTINGS = "compatibility-settings";
