@@ -71,6 +71,25 @@ public class SCIMCustomAttributeSchemaCache extends BaseCache<SCIMCustomAttribut
 
     }
 
+    /**
+     * Add custom attribute schema to cache against tenantId during a read flow.
+     * This method does not send cache invalidation messages to other cluster nodes,
+     * preventing redundant invalidations when populating the cache from a DB read.
+     *
+     * @param tenantId TenantId.
+     * @param customAttributeSchema CustomAttributeSchema.
+     */
+    public void addSCIMCustomAttributeSchemaOnRead(int tenantId, AttributeSchema customAttributeSchema) {
+
+        SCIMCustomAttributeSchemaCacheKey cacheKey = new SCIMCustomAttributeSchemaCacheKey(tenantId);
+        SCIMCustomAttributeSchemaCacheEntry cacheEntry = new SCIMCustomAttributeSchemaCacheEntry(customAttributeSchema);
+        super.addToCacheOnRead(cacheKey, cacheEntry);
+        if (log.isDebugEnabled()) {
+            log.debug("[AddToCacheOnRead] Successfully added scim custom attributes into SCIMCustomSchemaCache "
+                    + "for the tenant: " + tenantId);
+        }
+    }
+
 
     /**
      * Get SCIM2 Custom AttributeSchema by tenantId.
