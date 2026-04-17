@@ -38,9 +38,14 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.scim2.common.internal.component.SCIMCommonComponentHolder;
 import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -523,5 +528,223 @@ public class SCIMCommonUtilsTest {
                 .thenReturn(defaultRoleVersionForRef);
         String roleURL = SCIMCommonUtils.getDefaultSCIMRoleURL(ID);
         assertEquals(roleURL, expectedRoleURL);
+    }
+
+    @Test(description = "Both blocked claim lists are empty — should return an empty list.")
+    public void testGetBlockedLocalClaimsForMeEndpoint_BothListsEmpty() {
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(Collections.emptyList());
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(Collections.emptyList());
+
+        List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
+        assertTrue(blocked.isEmpty());
+    }
+
+    @Test(description = "Only base identity claims are configured — should return those claims.")
+    public void testGetBlockedLocalClaimsForMeEndpoint_OnlyBaseClaims() {
+
+        List<String> baseClaims = Arrays.asList(
+                "http://wso2.org/claims/identity/accountLocked",
+                "http://wso2.org/claims/identity/accountDisabled");
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(baseClaims);
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(Collections.emptyList());
+
+        List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
+        assertEquals(blocked.size(), 2);
+        assertTrue(blocked.containsAll(baseClaims));
+    }
+
+    @Test(description = "Only extended claims are configured — should return those claims.")
+    public void testGetBlockedLocalClaimsForMeEndpoint_OnlyExtendedClaims() {
+
+        List<String> extendedClaims = Collections.singletonList("http://wso2.org/claims/customClaim");
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(Collections.emptyList());
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(extendedClaims);
+
+        List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
+        assertEquals(blocked.size(), 1);
+        assertTrue(blocked.containsAll(extendedClaims));
+    }
+
+    @Test(description = "Both lists are populated — should return the merged list.")
+    public void testGetBlockedLocalClaimsForMeEndpoint_BothListsPopulated() {
+
+        List<String> baseClaims = Arrays.asList(
+                "http://wso2.org/claims/identity/accountLocked",
+                "http://wso2.org/claims/identity/accountDisabled");
+        List<String> extendedClaims = Arrays.asList(
+                "http://wso2.org/claims/customClaim1",
+                "http://wso2.org/claims/customClaim2");
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(baseClaims);
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(extendedClaims);
+
+        List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
+        assertEquals(blocked.size(), 4);
+        assertTrue(blocked.containsAll(baseClaims));
+        assertTrue(blocked.containsAll(extendedClaims));
+    }
+
+    @Test(description = "No blocked claims configured — validation should pass for any input set.")
+    public void testValidateBlockedClaimsForMeEndpoint_NoBlockedClaims() throws BadRequestException {
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(Collections.emptyList());
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(Collections.emptyList());
+
+        // Should NOT throw.
+        Set<String> claims = new HashSet<>(Arrays.asList(
+                "http://wso2.org/claims/identity/accountLocked",
+                "http://wso2.org/claims/emailaddress"));
+        SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claims);
+    }
+
+    @Test(description = "Input set contains no blocked claims — validation should pass.")
+    public void testValidateBlockedClaimsForMeEndpoint_NoneOfTheClaimsAreBlocked() throws BadRequestException {
+
+        List<String> baseClaims = Arrays.asList(
+                "http://wso2.org/claims/identity/accountLocked",
+                "http://wso2.org/claims/identity/accountDisabled");
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(baseClaims);
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(Collections.emptyList());
+
+        // Claims being updated are NOT in the blocked list — should NOT throw.
+        Set<String> claims = new HashSet<>(Arrays.asList(
+                "http://wso2.org/claims/emailaddress",
+                "http://wso2.org/claims/mobile"));
+        SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claims);
+    }
+
+    @Test(description = "Input set contains a blocked claim — should throw BadRequestException.",
+            expectedExceptions = BadRequestException.class)
+    public void testValidateBlockedClaimsForMeEndpoint_BlockedClaimFound() throws BadRequestException {
+
+        List<String> baseClaims = Collections.singletonList(
+                "http://wso2.org/claims/identity/accountLocked");
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(baseClaims);
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(Collections.emptyList());
+
+        Set<String> claims = new HashSet<>(Arrays.asList(
+                "http://wso2.org/claims/emailaddress",
+                "http://wso2.org/claims/identity/accountLocked"));
+        SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claims);
+    }
+
+    @Test(description = "Blocked claim matching should be case-insensitive — should throw BadRequestException.",
+            expectedExceptions = BadRequestException.class)
+    public void testValidateBlockedClaimsForMeEndpoint_CaseInsensitiveMatch() throws BadRequestException {
+
+        List<String> baseClaims = Collections.singletonList(
+                "http://wso2.org/claims/identity/accountLocked");
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(baseClaims);
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(Collections.emptyList());
+
+        // Using different casing for the blocked claim.
+        Set<String> claims = new HashSet<>(
+                Collections.singletonList("HTTP://WSO2.ORG/CLAIMS/IDENTITY/ACCOUNTLOCKED"));
+        SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claims);
+    }
+
+    @Test(description = "Input set contains a blocked extended claim — should throw BadRequestException.",
+            expectedExceptions = BadRequestException.class)
+    public void testValidateBlockedClaimsForMeEndpoint_ExtendedBlockedClaimFound() throws BadRequestException {
+
+        List<String> extendedClaims = Collections.singletonList("http://wso2.org/claims/customClaim");
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(Collections.emptyList());
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(extendedClaims);
+
+        Set<String> claims = new HashSet<>(Arrays.asList(
+                "http://wso2.org/claims/emailaddress",
+                "http://wso2.org/claims/customClaim"));
+        SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claims);
+    }
+
+    @Test(description = "Empty input set with blocked claims configured — validation should pass.")
+    public void testValidateBlockedClaimsForMeEndpoint_EmptyInputSet() throws BadRequestException {
+
+        List<String> baseClaims = Collections.singletonList(
+                "http://wso2.org/claims/identity/accountLocked");
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(baseClaims);
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(Collections.emptyList());
+
+        // Empty set of claims — should NOT throw.
+        SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(Collections.emptySet());
+    }
+
+    @Test(description = "Multiple blocked claims found in input — exception message should list all of them.")
+    public void testValidateBlockedClaimsForMeEndpoint_MultipleBlockedClaimsFoundInMessage() {
+
+        List<String> baseClaims = Arrays.asList(
+                "http://wso2.org/claims/identity/accountLocked",
+                "http://wso2.org/claims/identity/accountDisabled");
+
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                .thenReturn(baseClaims);
+        identityUtil.when(() -> IdentityUtil.getPropertyAsList(
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_LOCAL_CLAIMS))
+                .thenReturn(Collections.emptyList());
+
+        Set<String> claims = new HashSet<>(Arrays.asList(
+                "http://wso2.org/claims/identity/accountLocked",
+                "http://wso2.org/claims/identity/accountDisabled",
+                "http://wso2.org/claims/emailaddress"));
+
+        try {
+            SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claims);
+            throw new AssertionError("Expected BadRequestException to be thrown.");
+        } catch (BadRequestException e) {
+            String detail = e.getDetail();
+            assertTrue(detail != null
+                            && (detail.contains("http://wso2.org/claims/identity/accountLocked")
+                            || detail.contains("http://wso2.org/claims/identity/accountDisabled")),
+                    "Exception detail should list the blocked claims.");
+        }
     }
 }
