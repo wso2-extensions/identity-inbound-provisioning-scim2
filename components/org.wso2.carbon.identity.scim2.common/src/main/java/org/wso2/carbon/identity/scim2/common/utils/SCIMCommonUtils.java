@@ -88,8 +88,8 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.AP
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V2;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V3;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DEFAULT_ROLE_API_VERSION_FOR_REF;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS;
-import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS;
 
 /**
  * This class is to be used as a Util class for SCIM common things.
@@ -1440,8 +1440,8 @@ public class SCIMCommonUtils {
     public static List<String> getBlockedLocalClaimsForMeEndpoint() {
 
         List<String> blockedClaims =
-                new ArrayList<>(IdentityUtil.getPropertyAsList(ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS));
-        blockedClaims.addAll(IdentityUtil.getPropertyAsList(ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS));
+                new ArrayList<>(IdentityUtil.getPropertyAsList(ME_ENDPOINT_NOT_UPDATABLE_CLAIMS));
+        blockedClaims.addAll(IdentityUtil.getPropertyAsList(ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS));
         return blockedClaims;
     }
 

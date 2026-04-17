@@ -534,10 +534,10 @@ public class SCIMCommonUtilsTest {
     public void testGetBlockedLocalClaimsForMeEndpoint_BothListsEmpty() {
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
@@ -552,10 +552,10 @@ public class SCIMCommonUtilsTest {
                 "http://wso2.org/claims/identity/accountDisabled");
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
@@ -569,10 +569,10 @@ public class SCIMCommonUtilsTest {
         List<String> extendedClaims = Collections.singletonList("http://wso2.org/claims/customClaim");
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(extendedClaims);
 
         List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
@@ -591,10 +591,10 @@ public class SCIMCommonUtilsTest {
                 "http://wso2.org/claims/customClaim2");
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(extendedClaims);
 
         List<String> blocked = SCIMCommonUtils.getBlockedLocalClaimsForMeEndpoint();
@@ -607,10 +607,10 @@ public class SCIMCommonUtilsTest {
     public void testValidateBlockedClaimsForMeEndpoint_NoBlockedClaims() throws BadRequestException {
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         // Should NOT throw.
@@ -628,10 +628,10 @@ public class SCIMCommonUtilsTest {
                 "http://wso2.org/claims/identity/accountDisabled");
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         // Claims being updated are NOT in the blocked list — should NOT throw.
@@ -649,10 +649,10 @@ public class SCIMCommonUtilsTest {
                 "http://wso2.org/claims/identity/accountLocked");
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         Set<String> claims = new HashSet<>(Arrays.asList(
@@ -669,10 +669,10 @@ public class SCIMCommonUtilsTest {
                 "http://wso2.org/claims/identity/accountLocked");
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         // Using different casing for the blocked claim.
@@ -688,10 +688,10 @@ public class SCIMCommonUtilsTest {
         List<String> extendedClaims = Collections.singletonList("http://wso2.org/claims/customClaim");
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(extendedClaims);
 
         Set<String> claims = new HashSet<>(Arrays.asList(
@@ -707,10 +707,10 @@ public class SCIMCommonUtilsTest {
                 "http://wso2.org/claims/identity/accountLocked");
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         // Empty set of claims — should NOT throw.
@@ -725,10 +725,10 @@ public class SCIMCommonUtilsTest {
                 "http://wso2.org/claims/identity/accountDisabled");
 
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(baseClaims);
         identityUtil.when(() -> IdentityUtil.getPropertyAsList(
-                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_IDENTITY_CLAIMS))
+                SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS))
                 .thenReturn(Collections.emptyList());
 
         Set<String> claims = new HashSet<>(Arrays.asList(
