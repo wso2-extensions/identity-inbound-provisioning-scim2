@@ -104,6 +104,7 @@ public class SCIMGroupResolver extends AbstractIdentityGroupResolver {
             throw new UserStoreException(
                     String.format("Group id cannot be empty the group: %s in tenant: %s. ", groupWithDomain, tenantId));
         }
+        group.setGroupName(groupWithDomain);
         group.setDisplayName(groupWithDomain);
         group.setUserStoreDomain(domain);
         processTimestampAttributesOnGroupAdd(groupName, tenantId, claims, group);
