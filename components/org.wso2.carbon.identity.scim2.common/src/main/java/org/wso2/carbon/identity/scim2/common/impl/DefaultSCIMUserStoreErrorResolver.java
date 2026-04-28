@@ -49,6 +49,11 @@ public class DefaultSCIMUserStoreErrorResolver implements SCIMUserStoreErrorReso
                 (UserCoreConstants.ErrorCode.USER_DELETION_WORKFLOW_CREATED.equals(((org.wso2.carbon.user.core.UserStoreException) e).
                         getErrorCode()))) {
             return new SCIMUserStoreException("User deletion has sent for the approval", HttpStatus.SC_ACCEPTED);
+        } else if (e instanceof org.wso2.carbon.user.core.UserStoreException &&
+                (UserCoreConstants.ErrorCode.UPDATE_GROUP_USERS_WORKFLOW_CREATED.equals(((org.wso2.carbon.user.core.UserStoreException) e).
+                        getErrorCode()))) {
+            return new SCIMUserStoreException("Update group users request has been sent for the approval",
+                    HttpStatus.SC_ACCEPTED);
         } else if (e.getMessage().contains(ERROR_CODE_EXISTING_ROLE_NAME) ||
                 (e instanceof org.wso2.carbon.user.core.UserStoreClientException &&
                         ((UserStoreClientException) e).getErrorCode() != null &&
