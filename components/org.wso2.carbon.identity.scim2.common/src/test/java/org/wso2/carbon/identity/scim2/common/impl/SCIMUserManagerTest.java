@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.identity.scim2.common.DAO.GroupDAO;
@@ -273,6 +274,7 @@ public class SCIMUserManagerTest {
     private MockedStatic<SCIMCommonComponentHolder> scimCommonComponentHolder;
     private MockedStatic<ResourceManagerUtil> resourceManagerUtil;
     private MockedStatic<UserCoreUtil> userCoreUtil;
+    private MockedStatic<OrganizationManagementUtil> organizationManagementUtil;
 
     @BeforeMethod
     public void setUpMethod() {
@@ -289,6 +291,9 @@ public class SCIMUserManagerTest {
         scimSystemSchemaExtensionBuilder = mockStatic(SCIMSystemSchemaExtensionBuilder.class);
         claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);
         resourceManagerUtil = mockStatic(ResourceManagerUtil.class);
+        organizationManagementUtil = mockStatic(OrganizationManagementUtil.class);
+        organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                .thenReturn(false);
         SCIMUserSchemaExtensionBuilder mockSCIMUserSchemaExtensionBuilder = mock(SCIMUserSchemaExtensionBuilder.class);
         SCIMSystemSchemaExtensionBuilder mockSCIMSystemSchemaExtensionBuilder = mock(SCIMSystemSchemaExtensionBuilder.class);
         scimUserSchemaExtensionBuilder.when(SCIMUserSchemaExtensionBuilder::getInstance).thenReturn(mockSCIMUserSchemaExtensionBuilder);
@@ -316,6 +321,7 @@ public class SCIMUserManagerTest {
         scimSystemSchemaExtensionBuilder.close();
         claimMetadataHandler.close();
         resourceManagerUtil.close();
+        organizationManagementUtil.close();
     }
 
     @DataProvider(name = "ClaimData")

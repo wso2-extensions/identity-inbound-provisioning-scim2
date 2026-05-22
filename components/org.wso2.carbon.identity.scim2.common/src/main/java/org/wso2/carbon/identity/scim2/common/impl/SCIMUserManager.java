@@ -56,6 +56,11 @@ import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.mgt.policy.PolicyViolationException;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.provisioning.IdentityProvisioningConstants;
 import org.wso2.carbon.identity.recovery.IdentityRecoveryConstants;
 
@@ -3067,6 +3072,7 @@ public class SCIMUserManager implements UserManager {
                 requiredClaimsInLocalDialect = new ArrayList<>();
             }
 
+            userId = resolveSharedUserId(userId);
             org.wso2.carbon.user.core.common.User coreUser = carbonUM.getUser(userId, null);
 
             // We assume (since id is unique per user) only one user exists for a given id.
@@ -3089,7 +3095,36 @@ public class SCIMUserManager implements UserManager {
             throw resolveError(e, "Error from getting the authenticated user");
         } catch (BadRequestException | NotImplementedException e) {
             throw new CharonException("Error from getting the authenticated user");
+        } catch (OrganizationManagementException e) {
+            throw new CharonException("Error while resolving the shared user association.", e);
         }
+    }
+
+    /**
+     * Resolve the shared user ID if the user is shared to the accessing organization.
+     *
+     * @param userId ID of the user.
+     * @return Shared user ID.
+     * @throws OrganizationManagementException If an error occurs while resolving user association.
+     */
+    private String resolveSharedUserId(String userId) throws OrganizationManagementException {
+
+        if (!OrganizationManagementUtil.isOrganization(
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())) {
+            return userId;
+        }
+
+        OrganizationUserSharingService organizationUserSharingService =
+                SCIMCommonComponentHolder.getOrganizationUserSharingService();
+        OrganizationManager organizationManager = SCIMCommonComponentHolder.getOrganizationManager();
+        String accessingOrgId = organizationManager.resolveOrganizationId(
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+        UserAssociation userAssociation = organizationUserSharingService.getUserAssociationOfAssociatedUserByOrgId(
+                userId, accessingOrgId);
+        if (userAssociation != null) {
+            return userAssociation.getUserId();
+        }
+        return userId;
     }
 
     @Override
