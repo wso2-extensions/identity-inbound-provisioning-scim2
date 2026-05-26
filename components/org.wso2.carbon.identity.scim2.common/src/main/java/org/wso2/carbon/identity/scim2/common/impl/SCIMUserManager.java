@@ -5935,7 +5935,7 @@ public class SCIMUserManager implements UserManager {
             populateMultiValuedClaimsToModify(oldClaimList, simpleMultiValuedClaimsToBeAdded,
                     simpleMultiValuedClaimsToBeRemoved, userClaimsToBeModifiedIncludingMultiValueClaims);
 
-            ActionExecutionStatus<?> actionExecutionStatus = preUpdateProfileActionExecutor.execute(user,
+            ActionExecutionStatus<?> actionExecutionStatus = preUpdateProfileActionExecutor.executeAndGetStatus(user,
                     userClaimsToBeModifiedIncludingMultiValueClaims, userClaimsToBeDeleted);
             if (actionExecutionStatus != null) {
 

@@ -2620,7 +2620,7 @@ public class SCIMUserManagerTest {
         PreUpdateProfileActionExecutor executorMock = mock(PreUpdateProfileActionExecutor.class);
         preUpdateField.set(scimUserManager, executorMock);
 
-        when(executorMock.execute(any(User.class), anyMap(), anyMap())).thenReturn(null);
+        doNothing().when(executorMock).execute(any(User.class), anyMap(), anyMap());
 
         Field carbonUMField = SCIMUserManager.class.getDeclaredField("carbonUM");
         carbonUMField.setAccessible(true);
@@ -2668,7 +2668,7 @@ public class SCIMUserManagerTest {
         PreUpdateProfileActionExecutor executorMock = mock(PreUpdateProfileActionExecutor.class);
         preUpdateField.set(scimUserManager, executorMock);
 
-        when(executorMock.execute(any(User.class), anyMap(), anyMap())).thenReturn(null);
+        doNothing().when(executorMock).execute(any(User.class), anyMap(), anyMap());
 
         Field carbonUMField = SCIMUserManager.class.getDeclaredField("carbonUM");
         carbonUMField.setAccessible(true);
@@ -2724,7 +2724,7 @@ public class SCIMUserManagerTest {
         PreUpdateProfileActionExecutor executorMock = mock(PreUpdateProfileActionExecutor.class);
         preUpdateField.set(scimUserManager, executorMock);
 
-        when(executorMock.execute(any(User.class), anyMap(), anyMap())).thenReturn(null);
+        doNothing().when(executorMock).execute(any(User.class), anyMap(), anyMap());
 
         Field carbonUMField = SCIMUserManager.class.getDeclaredField("carbonUM");
         carbonUMField.setAccessible(true);

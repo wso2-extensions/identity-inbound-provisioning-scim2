@@ -73,8 +73,16 @@ public class PreUpdateProfileActionExecutor {
      * @param userClaimsToBeDeleted  Collection of existing claims that deletes from the profile
      * @throws UserStoreException If an error occurs while executing the action
      */
-    public ActionExecutionStatus<?> execute(User user, Map<String, String> userClaimsToBeModified,
-                                            Map<String, String> userClaimsToBeDeleted) throws UserStoreException {
+    public void execute(User user, Map<String, String> userClaimsToBeModified,
+                        Map<String, String> userClaimsToBeDeleted) throws UserStoreException {
+
+        executeAndGetStatus(user, userClaimsToBeModified, userClaimsToBeDeleted);
+    }
+
+    // Triggers the execution of pre update profile extension at profile update with PUT and returns execution status.
+    public ActionExecutionStatus<?> executeAndGetStatus(User user, Map<String, String> userClaimsToBeModified,
+                                                        Map<String, String> userClaimsToBeDeleted)
+            throws UserStoreException {
 
         ActionExecutorService actionExecutorService = SCIMCommonComponentHolder.getActionExecutorService();
 
