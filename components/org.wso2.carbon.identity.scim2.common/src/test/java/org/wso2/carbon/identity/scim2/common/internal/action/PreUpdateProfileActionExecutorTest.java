@@ -164,6 +164,51 @@ public class PreUpdateProfileActionExecutorTest {
     }
 
     @Test
+    public void testExecuteAndGetStatusReturnsNullWhenActionExecutionIsDisabled() throws Exception {
+
+        when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(false);
+
+        User user = getSCIMUser();
+        ActionExecutionStatus<?> status =
+                preUpdateProfileActionExecutor.executeAndGetStatus(user, Collections.emptyMap(),
+                        Collections.emptyMap());
+
+        assertEquals(status, null);
+        verify(actionExecutorService, Mockito.never()).execute(any(), any(), any());
+    }
+
+    @Test
+    public void testExecuteAndGetStatusReturnsSuccessStatusWhenActionSucceeds() throws Exception {
+
+        setOrganizationToIdentityContext();
+        when(actionExecutorService.isExecutionEnabled(ActionType.PRE_UPDATE_PROFILE)).thenReturn(true);
+
+        ActionExecutionStatus<?> successStatus = mock(ActionExecutionStatus.class);
+        when(successStatus.getStatus()).thenReturn(ActionExecutionStatus.Status.SUCCESS);
+        when(actionExecutorService.execute(eq(ActionType.PRE_UPDATE_PROFILE), any(), any())).thenReturn(successStatus);
+
+        LocalClaim newClaim = getMockedLocalClaim(NEW_SINGLEVALUE_CLAIM1);
+        LocalClaim deletingClaim = getMockedLocalClaim(DELETING_SINGLEVALUE_CLAIM4);
+        when(claimMetadataManagementService.getLocalClaim(eq(NEW_SINGLEVALUE_CLAIM1.getClaimURI()), any(String.class)))
+                .thenReturn(Optional.of(newClaim));
+        when(claimMetadataManagementService.getLocalClaim(eq(DELETING_SINGLEVALUE_CLAIM4.getClaimURI()),
+                any(String.class))).thenReturn(Optional.of(deletingClaim));
+
+        User user = getSCIMUser();
+        Map<String, String> claimsToModify = new HashMap<>();
+        claimsToModify.put(NEW_SINGLEVALUE_CLAIM1.getClaimURI(), NEW_SINGLEVALUE_CLAIM1.getInputValueAsString());
+        Map<String, String> claimsToDelete = new HashMap<>();
+        claimsToDelete.put(DELETING_SINGLEVALUE_CLAIM4.getClaimURI(),
+                DELETING_SINGLEVALUE_CLAIM4.getInputValueAsString());
+
+        ActionExecutionStatus<?> status =
+                preUpdateProfileActionExecutor.executeAndGetStatus(user, claimsToModify, claimsToDelete);
+
+        assertNotNull(status);
+        assertEquals(status, successStatus);
+    }
+
+    @Test
     public void testSuccessExecutionForClaimUpdateExecutionAtPutOperation() throws Exception {
 
         setOrganizationToIdentityContext();

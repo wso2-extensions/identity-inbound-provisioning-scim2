@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.compatibility.settings.core.CompatibilitySetting
 import org.wso2.carbon.identity.compatibility.settings.core.exception.CompatibilitySettingException;
 import org.wso2.carbon.identity.compatibility.settings.core.model.CompatibilitySetting;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundProvisioningConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -2750,6 +2751,139 @@ public class SCIMUserManagerTest {
                     eq("foo"), anyMap(), anyMap(),
                     anyMap(), anyMap(), isNull()
             );
+        }
+    }
+
+    @Test
+    public void testUpdateUserClaims_WhenActionResponseContainsAddedModifiedRemovedClaims() throws Exception {
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(
+                mockedUserStoreManager,
+                mockClaimMetadataManagementService,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
+        ));
+        User user = mock(User.class);
+        when(user.getId()).thenReturn("foo");
+
+        String accountLocked = "http://wso2.org/claims/identity/accountLocked";
+        String accountState = "http://wso2.org/claims/identity/accountState";
+        String accountDisabled = "http://wso2.org/claims/identity/accountDisabled";
+
+        Map<String, String> oldClaims = new HashMap<>();
+        oldClaims.put(accountLocked, "old");
+        oldClaims.put(accountState, "deleteMe");
+
+        Map<String, String> newClaims = new HashMap<>();
+        newClaims.put(accountLocked, "new");
+
+        Map<String, String> multiValuedClaims = Collections.emptyMap();
+
+        Field preUpdateField = SCIMUserManager.class.getDeclaredField("preUpdateProfileActionExecutor");
+        preUpdateField.setAccessible(true);
+        PreUpdateProfileActionExecutor executorMock = mock(PreUpdateProfileActionExecutor.class);
+        preUpdateField.set(scimUserManager, executorMock);
+
+        ActionExecutionStatus<?> actionExecutionStatus = mock(ActionExecutionStatus.class);
+        Map<String, Object> responseContext = new HashMap<>();
+        Map<String, String> addedFromAction = new HashMap<>();
+        addedFromAction.put(accountDisabled, "addedValue");
+        Map<String, String> modifiedFromAction = new HashMap<>();
+        modifiedFromAction.put(accountState, "modifiedValue");
+        Map<String, String> removedFromAction = new HashMap<>();
+        removedFromAction.put(accountLocked, "");
+
+        responseContext.put("userClaimsToBeAdded", addedFromAction);
+        responseContext.put("userClaimsToBeModified", modifiedFromAction);
+        responseContext.put("userClaimsToBeRemoved", removedFromAction);
+        when(actionExecutionStatus.getResponseContext()).thenReturn(responseContext);
+        scimCommonUtils.when(() -> SCIMCommonUtils.isExecutableUserProfileUpdate(anyMap(), anyMap(), anyMap(), anyMap()))
+                .thenReturn(true);
+        doReturn(actionExecutionStatus).when(executorMock)
+                .executeAndGetStatus(any(User.class), anyMap(), anyMap());
+
+        Field carbonUMField = SCIMUserManager.class.getDeclaredField("carbonUM");
+        carbonUMField.setAccessible(true);
+        carbonUMField.set(scimUserManager, mockedUserStoreManager);
+
+        doNothing().when(mockedUserStoreManager).setUserClaimValuesWithID(anyString(), anyMap(), isNull());
+        doNothing().when(mockedUserStoreManager).deleteUserClaimValueWithID(anyString(), anyString(), isNull());
+
+        Method m = SCIMUserManager.class.getDeclaredMethod(
+                "updateUserClaims", User.class, Map.class, Map.class, Map.class
+        );
+        m.setAccessible(true);
+        m.invoke(scimUserManager, user, oldClaims, newClaims, multiValuedClaims);
+
+        verify(mockedUserStoreManager).setUserClaimValuesWithID(eq("foo"),
+                argThat(map -> map.containsKey(accountDisabled)
+                        && map.containsKey(accountState)
+                        && !map.containsKey(accountLocked)),
+                isNull());
+    }
+
+    @Test
+    public void testUpdateUserClaims_WhenActionResponseContainsMultiValuedClaims() throws Exception {
+
+        SCIMUserManager scimUserManager = spy(new SCIMUserManager(
+                mockedUserStoreManager,
+                mockClaimMetadataManagementService,
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
+        ));
+        User user = mock(User.class);
+        when(user.getId()).thenReturn("foo");
+
+        Map<String, String> oldClaims = new HashMap<>();
+        oldClaims.put("emails", "a@wso2.com,b@wso2.com");
+
+        Map<String, String> newClaims = new HashMap<>();
+        newClaims.put("emails", "a@wso2.com,b@wso2.com");
+
+        Map<String, String> multiValuedClaims = new HashMap<>();
+        multiValuedClaims.put("emails", "");
+
+        Field preUpdateField = SCIMUserManager.class.getDeclaredField("preUpdateProfileActionExecutor");
+        preUpdateField.setAccessible(true);
+        PreUpdateProfileActionExecutor executorMock = mock(PreUpdateProfileActionExecutor.class);
+        preUpdateField.set(scimUserManager, executorMock);
+
+        ActionExecutionStatus<?> actionExecutionStatus = mock(ActionExecutionStatus.class);
+        Map<String, Object> responseContext = new HashMap<>();
+        Map<String, List<String>> multiAddedFromAction = new HashMap<>();
+        multiAddedFromAction.put("emails", Collections.singletonList("c@wso2.com"));
+        Map<String, List<String>> multiRemovedFromAction = new HashMap<>();
+        multiRemovedFromAction.put("emails", Collections.singletonList("a@wso2.com"));
+
+        responseContext.put("multiValuedClaimsToBeAdded", multiAddedFromAction);
+        responseContext.put("multiValuedClaimsToBeRemoved", multiRemovedFromAction);
+        when(actionExecutionStatus.getResponseContext()).thenReturn(responseContext);
+        scimCommonUtils.when(() -> SCIMCommonUtils.isExecutableUserProfileUpdate(anyMap(), anyMap(), anyMap(), anyMap()))
+                .thenReturn(true);
+        doReturn(actionExecutionStatus).when(executorMock)
+                .executeAndGetStatus(any(User.class), anyMap(), anyMap());
+
+        Field carbonUMField = SCIMUserManager.class.getDeclaredField("carbonUM");
+        carbonUMField.setAccessible(true);
+        carbonUMField.set(scimUserManager, mockedUserStoreManager);
+
+        try (MockedStatic<FrameworkUtils> fw = mockStatic(FrameworkUtils.class)) {
+            fw.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
+
+            doNothing().when(mockedUserStoreManager).setUserClaimValuesWithID(anyString(), anyMap(), anyMap(),
+                    anyMap(), anyMap(), isNull());
+
+            Method m = SCIMUserManager.class.getDeclaredMethod(
+                    "updateUserClaims", User.class, Map.class, Map.class, Map.class
+            );
+            m.setAccessible(true);
+            m.invoke(scimUserManager, user, oldClaims, newClaims, multiValuedClaims);
+
+            verify(mockedUserStoreManager, times(1)).setUserClaimValuesWithID(
+                    eq("foo"),
+                    anyMap(),
+                    argThat(map -> map.containsKey("emails") && map.get("emails").contains("c@wso2.com")),
+                    argThat(map -> map.containsKey("emails") && map.get("emails").contains("a@wso2.com")),
+                    anyMap(),
+                    isNull());
         }
     }
 
