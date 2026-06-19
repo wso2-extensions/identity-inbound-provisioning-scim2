@@ -116,6 +116,7 @@ import org.wso2.charon3.core.schema.SCIMResourceSchemaManager;
 import org.wso2.charon3.core.schema.SCIMResourceTypeSchema;
 import org.wso2.charon3.core.utils.ResourceManagerUtil;
 import org.wso2.charon3.core.utils.codeutils.ExpressionNode;
+import org.wso2.charon3.core.utils.codeutils.PatchOperation;
 import org.wso2.charon3.core.utils.codeutils.FilterTreeManager;
 import org.wso2.charon3.core.utils.codeutils.Node;
 import org.wso2.charon3.core.utils.codeutils.SearchRequest;
@@ -451,6 +452,70 @@ public class SCIMUserManagerTest {
                 {"123456", null, "userStoreDomain", null},
                 {"567890", "roleName", null, "roleName"}
         };
+    }
+
+    @Test
+    public void testPatchGroupMembershipOnlyDoesNotUpdateGroupName() throws Exception {
+
+        // A membership-only PATCH (no displayName change) must not trigger a redundant group rename.
+        String groupId = "group-id-1";
+        String groupName = "Internal/engineering";
+        String memberName = "Internal/john";
+        String memberId = "member-id-1";
+
+        identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenReturn("Internal");
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.getUserIDFromProperties(anyString(), anyString(), anyString()))
+                .thenReturn(memberId);
+
+        Map<String, String> memberObject = new HashMap<>();
+        memberObject.put(SCIMConstants.GroupSchemaConstants.DISPLAY, memberName);
+        memberObject.put(SCIMConstants.GroupSchemaConstants.VALUE, memberId);
+        PatchOperation memberOperation = new PatchOperation();
+        memberOperation.setOperation(SCIMConstants.OperationalConstants.ADD);
+        memberOperation.setAttributeName(SCIMConstants.GroupSchemaConstants.MEMBERS);
+        memberOperation.setValues(memberObject);
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        patchOperations.put(SCIMConstants.GroupSchemaConstants.MEMBERS,
+                Collections.singletonList(memberOperation));
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        scimUserManager.patchGroup(groupId, groupName, patchOperations);
+
+        verify(mockedUserStoreManager).updateUserListOfRoleWithID(eq(groupName), any(), any());
+        verify(mockedUserStoreManager, never()).updateGroupName(any(), any());
+    }
+
+    @Test
+    public void testPatchGroupRenameUpdatesGroupName() throws Exception {
+
+        // A genuine rename PATCH (displayName changes) must still trigger the group rename exactly once.
+        String groupId = "group-id-2";
+        String currentGroupName = "Internal/engineering";
+        String newGroupName = "Internal/platform";
+
+        identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenReturn("Internal");
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
+                .thenReturn(currentGroupName);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(newGroupName))
+                .thenReturn(newGroupName);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        PatchOperation displayNameOperation = new PatchOperation();
+        displayNameOperation.setOperation(SCIMConstants.OperationalConstants.REPLACE);
+        displayNameOperation.setAttributeName(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME);
+        displayNameOperation.setValues(newGroupName);
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        patchOperations.put(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
+                Collections.singletonList(displayNameOperation));
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        scimUserManager.patchGroup(groupId, currentGroupName, patchOperations);
+
+        verify(mockedUserStoreManager, times(1)).updateGroupName(currentGroupName, newGroupName);
     }
 
     @Test(dataProvider = "getGroupException")
