@@ -4012,8 +4012,10 @@ public class SCIMUserManager implements UserManager {
                         addedMemberIdsFromUserstore.toArray(new String[0]));
             }
 
-            // Update the group name in UM_HYBRID_GROUP_ROLE table.
-            carbonUM.updateGroupName(currentGroupName, newGroupName);
+            // Update the group name in UM_HYBRID_GROUP_ROLE table only when the group name actually changed.
+            if (!StringUtils.equals(currentGroupName, newGroupName)) {
+                carbonUM.updateGroupName(currentGroupName, newGroupName);
+            }
         } catch (UserStoreException e) {
             if (e instanceof org.wso2.carbon.user.core.UserStoreException && (StringUtils
                     .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_WRITING_TO_DATABASE
