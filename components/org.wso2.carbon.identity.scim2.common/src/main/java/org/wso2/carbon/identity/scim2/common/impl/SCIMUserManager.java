@@ -5837,8 +5837,10 @@ public class SCIMUserManager implements UserManager {
             }
         }
 
-        if (isExecutableUserProfileUpdate &&
-                containsNonAccountStateOrNonVerificationClaim(claimsAddedOrUpdatedByUser.keySet())) {
+        boolean isNonAccountStateOrNonVerificationClaimChanged =
+                containsNonAccountStateOrNonVerificationClaim(claimsAddedOrUpdatedByUser.keySet()) ||
+                containsNonAccountStateOrNonVerificationClaim(claimsDeleted.keySet());
+        if (isExecutableUserProfileUpdate && isNonAccountStateOrNonVerificationClaimChanged) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, claimsAddedOrUpdatedByUser, claimsDeleted,
                     oldClaimList);
         }
@@ -5978,8 +5980,10 @@ public class SCIMUserManager implements UserManager {
         }
 
         // userClaimsToBeModified already includes the userClaimsToBeAdded as well.
-        if (isExecutableUserProfileUpdate &&
-                containsNonAccountStateOrNonVerificationClaim(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())) {
+        boolean isNonAccountStateOrNonVerificationClaimChanged =
+                containsNonAccountStateOrNonVerificationClaim(userClaimsToBeModifiedIncludingMultiValueClaims.keySet())
+                        || containsNonAccountStateOrNonVerificationClaim(claimsDeleted.keySet());
+        if (isExecutableUserProfileUpdate && isNonAccountStateOrNonVerificationClaimChanged) {
             publishUserProfileUpdateEvent(user, userClaimsToBeAdded, userClaimsToBeModifiedIncludingMultiValueClaims,
                     claimsDeleted, oldClaimList);
         }
