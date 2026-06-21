@@ -209,6 +209,8 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_INVALID_USERNAME = "31301";
     private static final String ERROR_CODE_INVALID_CREDENTIAL = "30003";
     private static final String ERROR_CODE_USER_ALREADY_EXISTS = "30004";
+    private static final String ERROR_CODE_DUPLICATE_WHILE_ADDING_A_USER = "31309";
+    private static final String ERROR_MSG_USER_ALREADY_EXISTS = "Username: %s already exists in the system.";
     private static final String ERROR_CODE_INVALID_CREDENTIAL_DURING_UPDATE = "36001";
     private static final String ERROR_CODE_PASSWORD_HISTORY_VIOLATION = "22001";
     private static final String ERROR_CODE_PASSWORD_POLICY_VIOLATION = "20035";
@@ -477,21 +479,24 @@ public class SCIMUserManager implements UserManager {
                     handleResourceLimitReached();
                 }
 
-                if (ex instanceof UserStoreClientException &&
-                        ERROR_CODE_USER_ALREADY_EXISTS.equals(((UserStoreClientException) ex).getErrorCode())) {
-                    String duplicateUserErrorMessage = "Username: " + user.getUserName() +
-                            " already exists in the system.";
-
-                    if (log.isDebugEnabled()) {
-                        log.debug(duplicateUserErrorMessage);
-                    }
-
-                    throw new ConflictException(duplicateUserErrorMessage);
-                }
-
                 publishEventOnUserRegistrationFailure(user, ResponseCodeConstants.INVALID_VALUE, ex.getMessage(),
                         claimsInLocalDialect);
                 throw new BadRequestException(errorMessage, ResponseCodeConstants.INVALID_VALUE);
+            }
+
+            // Handle UserStoreException thrown with a duplicate-user error code from the user store
+            // (e.g. NameAlreadyBoundException from LDAP caught and rethrown with the error code).
+            String errorCode = (e instanceof org.wso2.carbon.user.core.UserStoreException)
+                    ? ((org.wso2.carbon.user.core.UserStoreException) e).getErrorCode() : null;
+            if ((e.getMessage() != null && e.getMessage().contains(ERROR_CODE_USER_ALREADY_EXISTS))
+                    || ERROR_CODE_USER_ALREADY_EXISTS.equals(errorCode)
+                    || ERROR_CODE_DUPLICATE_WHILE_ADDING_A_USER.equals(errorCode)) {
+                String duplicateUserErrorMessage = String.format(ERROR_MSG_USER_ALREADY_EXISTS,
+                        maskIfRequired(user.getUserName()));
+                if (log.isDebugEnabled()) {
+                    log.debug(duplicateUserErrorMessage);
+                }
+                throw new ConflictException(duplicateUserErrorMessage);
             }
 
             try {
