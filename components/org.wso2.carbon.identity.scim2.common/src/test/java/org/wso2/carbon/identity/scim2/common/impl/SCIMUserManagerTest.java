@@ -3068,4 +3068,64 @@ public class SCIMUserManagerTest {
                 DUPLICATE_CLAIM_ERROR_MESSAGE, duplicateClaimErrorCode,
                 new PolicyViolationException("testCode", DUPLICATE_CLAIM_ERROR_MESSAGE));
     }
+
+    @DataProvider(name = "duplicateUserUserStoreExceptionDataProvider")
+    public Object[][] duplicateUserUserStoreExceptionDataProvider() {
+
+        // {exceptionMessage, errorCode}
+        // Case 1: UserStoreException with errorCode "30004" (kernel rethrows NameAlreadyBoundException).
+        // Case 2: UserStoreException with errorCode "31309" (JDBC duplicate-key violation).
+        // Case 3: UserStoreException with message containing "30004" but no errorCode set
+        //         (legacy path where only the message carries the code).
+        return new Object[][]{
+                {"30004 - Username already exists in the system.", "30004"},
+                {"31309 - Error occurred while adding the user to the user store.", "31309"},
+                {"30004 - Username already exists in the system.", null}
+        };
+    }
+
+    /**
+     * Verifies that when the underlying user store throws a UserStoreException carrying a duplicate-user
+     * error code (either via getErrorCode() or embedded in the exception message), createUser surfaces it
+     * as a 409 ConflictException rather than a 500 / generic error. This is the regression test for the
+     * race condition where two concurrent SCIM POST /Users requests pass the pre-existing-user check and
+     * both attempt to add the same user.
+     */
+    @Test(dataProvider = "duplicateUserUserStoreExceptionDataProvider",
+            expectedExceptions = ConflictException.class)
+    public void testCreateUser_DuplicateUserUserStoreExceptionReturnsConflict(String exceptionMessage,
+                                                                              String errorCode) throws Exception {
+
+        User user = new User();
+        user.setUserName("DomainName/testUser1");
+
+        when(IdentityUtil.getProperty(SCIMCommonConstants.ENABLE_LOGIN_IDENTIFIERS))
+                .thenReturn("false");
+        when(IdentityUtil.extractDomainFromName(anyString())).thenCallRealMethod();
+
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        // The pre-existing-user check passes (returns false), simulating the race condition where
+        // the duplicate is not detected until the user store layer attempts to persist the user.
+        when(mockedUserStoreManager.isExistingUser(anyString())).thenReturn(false);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString()))
+                .thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+
+        UserStoreException duplicateUserException = (errorCode != null)
+                ? new UserStoreException(exceptionMessage, errorCode)
+                : new UserStoreException(exceptionMessage);
+        when(mockedUserStoreManager.addUserWithID(anyString(), any(), any(), any(), any()))
+                .thenThrow(duplicateUserException);
+
+        IdentityEventService mockService = mock(IdentityEventService.class);
+        scimCommonComponentHolder.when(SCIMCommonComponentHolder::getIdentityEventService).thenReturn(mockService);
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager,
+                mockClaimMetadataManagementService, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+        scimUserManager.createUser(user, null);
+        // The expectedExceptions attribute asserts that ConflictException is thrown.
+    }
 }
