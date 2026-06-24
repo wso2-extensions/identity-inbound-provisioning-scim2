@@ -493,9 +493,7 @@ public class SCIMUserManager implements UserManager {
                     || ERROR_CODE_DUPLICATE_WHILE_ADDING_A_USER.equals(errorCode)) {
                 String duplicateUserErrorMessage = String.format(ERROR_MSG_USER_ALREADY_EXISTS,
                         maskIfRequired(user.getUserName()));
-                if (log.isDebugEnabled()) {
-                    log.debug(duplicateUserErrorMessage);
-                }
+                log.debug(duplicateUserErrorMessage);
                 throw new ConflictException(duplicateUserErrorMessage);
             }
 
