@@ -601,9 +601,21 @@ public class SCIMUserOperationListenerTest {
                 {"9999-12-31", SCIMCommonConstants.DOB_FUTURE_DATE_VALIDATION_ERROR},
                 {java.time.LocalDate.now().plusYears(2).toString(),
                         SCIMCommonConstants.DOB_FUTURE_DATE_VALIDATION_ERROR},
-                // Non existing calendar dates.
-                {"2025-02-30", SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR},
-                {"2023-02-29", SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR}
+                // Non existing calendar dates. These match the YYYY-MM-DD pattern, so they must report the
+                // invalid-date message rather than the regex format message.
+                {"2025-02-30", SCIMCommonConstants.DOB_INVALID_DATE_VALIDATION_ERROR},
+                {"2023-02-29", SCIMCommonConstants.DOB_INVALID_DATE_VALIDATION_ERROR},
+                {"2025-13-01", SCIMCommonConstants.DOB_INVALID_DATE_VALIDATION_ERROR},
+                {"2025-00-10", SCIMCommonConstants.DOB_INVALID_DATE_VALIDATION_ERROR},
+                {"2025-04-31", SCIMCommonConstants.DOB_INVALID_DATE_VALIDATION_ERROR},
+                // Malformed values. These must report the format message, not the invalid-date message: the
+                // shape is what is wrong with them. Reachable because the caller's regex check is skipped when
+                // the claim has no metadata, and because a tenant can configure a looser regex.
+                {"20-04-2027", SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR},
+                {"2025/02/10", SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR},
+                {"1990-5-15", SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR},
+                {"1990-05-15T00:00:00", SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR},
+                {"not-a-date", SCIMCommonConstants.DOB_REG_EX_VALIDATION_DEFAULT_ERROR}
         };
     }
 

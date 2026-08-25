@@ -166,6 +166,7 @@ public class SCIMCommonConstants {
     public static final String DOB_REG_EX_VALIDATION_DEFAULT_ERROR =
             "Date of Birth is not in the correct format of YYYY-MM-DD";
     public static final String DOB_FUTURE_DATE_VALIDATION_ERROR = "Date of Birth cannot be a future date";
+    public static final String DOB_INVALID_DATE_VALIDATION_ERROR = "Date of Birth is not a valid calendar date";
     public static final String MOBILE_REGEX_VALIDATION_DEFAULT_ERROR =
             "Mobile number is not in the correct format. Valid format is [+][country code][area code][local phone number]";
     public static final String COMMON_REGEX_VALIDATION_ERROR = "%s is not in the correct format.";
