@@ -80,6 +80,7 @@ import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MA
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.MIN_LENGTH;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.REQUIRED;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_FUTURE_DATE_VALIDATION_ERROR;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.DOB_INVALID_DATE_VALIDATION_ERROR;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_INVALID_DATE_OF_BIRTH;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_LENGTH_VIOLATION;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ErrorMessages.ERROR_CODE_REGEX_VIOLATION;
@@ -308,12 +309,23 @@ public class SCIMUserOperationListener extends AbstractIdentityUserOperationEven
         if (StringUtils.isBlank(claimValue)) {
             return;
         }
+        /*
+         * The expected shape is checked here rather than assumed from the caller. validateClaimValueForRegex skips
+         * validation altogether when the claim has no metadata, and a tenant can configure a regex looser than
+         * YYYY-MM-DD, so reaching this point is not a guarantee that the value is well formed. Without this check a
+         * malformed value such as "20-04-2027" would fail LocalDate.parse and be reported as a date that does not
+         * exist, which is the opposite of what is wrong with it.
+         */
+        if (!claimValue.matches(DATE_OF_BIRTH_REGEX)) {
+            throw new UserStoreClientException(DOB_REG_EX_VALIDATION_DEFAULT_ERROR,
+                    ERROR_CODE_INVALID_DATE_OF_BIRTH.getCode());
+        }
         LocalDate dateOfBirth;
         try {
             dateOfBirth = LocalDate.parse(claimValue);
         } catch (DateTimeParseException e) {
             // Value matches the YYYY-MM-DD pattern but is not an existing calendar date. Ex: 2025-02-30.
-            throw new UserStoreClientException(DOB_REG_EX_VALIDATION_DEFAULT_ERROR,
+            throw new UserStoreClientException(DOB_INVALID_DATE_VALIDATION_ERROR,
                     ERROR_CODE_INVALID_DATE_OF_BIRTH.getCode());
         }
         if (dateOfBirth.isAfter(LocalDate.now())) {
