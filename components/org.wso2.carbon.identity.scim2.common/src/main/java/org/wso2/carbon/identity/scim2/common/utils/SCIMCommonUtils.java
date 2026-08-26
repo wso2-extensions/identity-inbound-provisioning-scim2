@@ -113,9 +113,14 @@ public class SCIMCommonUtils {
     private static ThreadLocal<Boolean> threadLocalIsManagedThroughSCIMEP = new ThreadLocal<>();
 
     /**
-     * ThreadLocal to indicate if the agent flow is managed through SCIM.
+     * ThreadLocal to indicate if the agent flow is managed through SCIM. Retained for backward compatibility.
      */
     private static ThreadLocal<Boolean> threadLocalIsSCIMAgentFlow = new ThreadLocal<>();
+
+    /**
+     * Key used in IdentityUtil.threadLocalProperties to signal an agent flow from non-SCIM components.
+     */
+    private static final String THREAD_LOCAL_IS_AGENT_FLOW = "isAgentFlow";
 
     public static String getSCIMUserURL(String id) {
         // If getThreadLocalIsSCIMAgentFlow() is true, then we need to use the Agent URL for the user.
@@ -440,7 +445,10 @@ public class SCIMCommonUtils {
 
     public static Boolean getThreadLocalIsSCIMAgentFlow() {
 
-        return threadLocalIsSCIMAgentFlow.get();
+        if (Boolean.TRUE.equals(threadLocalIsSCIMAgentFlow.get())) {
+            return true;
+        }
+        return (Boolean) IdentityUtil.threadLocalProperties.get().get(THREAD_LOCAL_IS_AGENT_FLOW);
     }
 
     public static void setThreadLocalIsSCIMAgentFlow(Boolean value) {
