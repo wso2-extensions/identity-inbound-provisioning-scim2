@@ -61,8 +61,10 @@ import org.wso2.charon3.core.config.SCIMAgentSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMCustomSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMSystemSchemaExtensionBuilder;
 import org.wso2.charon3.core.config.SCIMUserSchemaExtensionBuilder;
+import org.wso2.charon3.core.exceptions.BadRequestException;
 import org.wso2.charon3.core.exceptions.CharonException;
 import org.wso2.charon3.core.exceptions.InternalErrorException;
+import org.wso2.charon3.core.protocol.ResponseCodeConstants;
 import org.wso2.charon3.core.schema.AttributeSchema;
 import org.wso2.charon3.core.schema.SCIMConstants;
 import org.wso2.charon3.core.utils.AttributeUtil;
@@ -74,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,6 +85,8 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS;
+import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.ME_ENDPOINT_NOT_UPDATABLE_CLAIMS;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V1;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V2;
 import static org.wso2.carbon.identity.scim2.common.utils.SCIMCommonConstants.APIVersion.V3;
@@ -1423,5 +1428,54 @@ public class SCIMCommonUtils {
 
         return Boolean.parseBoolean(IdentityUtil
                 .getProperty(SCIMCommonConstants.SCIM2_ENABLE_SPEC_COMPLIANT_EMAIL_HANDLING));
+    }
+
+    /**
+     * Returns the combined list of local claim URIs that are blocked from being updated via the
+     * /scim2/Me endpoint. This merges both the base blocked claims.
+     * ({@code SCIM2.Me.BlockedClaims}) and the extended blocked claims
+     * ({@code SCIM2.Me.ExtendedBlockedClaims}) configured in identity.xml.
+     *
+     * @return Set of blocked local claim URIs for Me endpoint.
+     */
+    public static LinkedHashSet<String> getBlockedLocalClaimsForMeEndpoint() {
+
+        LinkedHashSet<String> blockedClaims =
+                new LinkedHashSet<>(IdentityUtil.getPropertyAsList(ME_ENDPOINT_NOT_UPDATABLE_CLAIMS));
+        blockedClaims.addAll(IdentityUtil.getPropertyAsList(ME_ENDPOINT_EXTENDED_NOT_UPDATABLE_CLAIMS));
+        return blockedClaims;
+    }
+
+    /**
+     * Validates that none of the provided local claim URIs are restricted from being updated via
+     * the /scim2/Me endpoint. The blocked claim lists are sourced from identity.xml via
+     * {@link #getBlockedLocalClaimsForMeEndpoint()}.
+     *
+     * @param localClaimUris Set of local claim URIs that are about to be updated.
+     * @throws BadRequestException If one or more of the provided claims are blocked.
+     */
+    public static void validateBlockedClaimsForMeEndpoint(Set<String> localClaimUris) throws BadRequestException {
+
+        if (localClaimUris == null || localClaimUris.isEmpty()) {
+            return;
+        }
+
+        LinkedHashSet<String> blockedClaims = getBlockedLocalClaimsForMeEndpoint();
+        if (blockedClaims.isEmpty()) {
+            return;
+        }
+        Set<String> blockedClaimsLower = blockedClaims.stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+        List<String> restrictedClaimsFound = localClaimUris.stream()
+                .filter(uri -> blockedClaimsLower.contains(uri.toLowerCase()))
+                .sorted()
+                .collect(Collectors.toList());
+        if (!restrictedClaimsFound.isEmpty()) {
+            throw new BadRequestException(
+                    "The following claims are not allowed to be updated via the scim2/Me endpoint: "
+                            + String.join(", ", restrictedClaimsFound),
+                    ResponseCodeConstants.MUTABILITY);
+        }
     }
 }

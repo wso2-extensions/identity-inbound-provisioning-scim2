@@ -5784,9 +5784,11 @@ public class SCIMUserManager implements UserManager {
      * @param newClaimList User claim list for the user's new state.
      * @throws UserStoreException Error while accessing the user store.
      * @throws CharonException    {@link CharonException}.
+     * @throws BadRequestException If a blocked claim is targeted via the /scim2/Me endpoint.
      */
     private void updateUserClaims(User user, Map<String, String> oldClaimList,
-                                  Map<String, String> newClaimList) throws UserStoreException, CharonException {
+                                  Map<String, String> newClaimList)
+            throws UserStoreException, CharonException, BadRequestException {
 
         Map<String, String> userClaimsToBeAdded = new HashMap<>(newClaimList);
         Map<String, String> userClaimsToBeDeleted = new HashMap<>(oldClaimList);
@@ -5808,6 +5810,15 @@ public class SCIMUserManager implements UserManager {
 
         // Combine the claims to be added and modified.
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
+
+        // For self-service (Me endpoint) requests, validate that none of the claims being
+        // added or modified are blocked for the /scim2/Me endpoint.
+        Flow currentFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
+        if (currentFlow != null && Flow.InitiatingPersona.USER.equals(currentFlow.getInitiatingPersona())) {
+            Set<String> claimsBeingUpdated = new HashSet<>(userClaimsToBeModified.keySet());
+            claimsBeingUpdated.addAll(userClaimsToBeDeleted.keySet());
+            SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claimsBeingUpdated);
+        }
 
         boolean isExecutableUserProfileUpdate =
                 SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted);
@@ -5865,12 +5876,13 @@ public class SCIMUserManager implements UserManager {
      * @param newClaimList                   User claim list for the user's new state.
      * @param allSimpleMultiValuedClaimsList User claim list which maps to simple multi-valued attributes in SCIM
      *                                       schema.
-     * @throws UserStoreException Error while accessing the user store.
-     * @throws CharonException    {@link CharonException}.
+     * @throws UserStoreException  Error while accessing the user store.
+     * @throws CharonException     {@link CharonException}.
+     * @throws BadRequestException If a blocked claim is targeted via the /scim2/Me endpoint.
      */
     private void updateUserClaims(User user, Map<String, String> oldClaimList,
                                   Map<String, String> newClaimList, Map<String, String> allSimpleMultiValuedClaimsList)
-            throws UserStoreException, CharonException {
+            throws UserStoreException, CharonException, BadRequestException {
 
         Map<String, List<String>> simpleMultiValuedClaimsToBeAdded = new HashMap<>();
         Map<String, List<String>> simpleMultiValuedClaimsToBeRemoved = new HashMap<>();
@@ -5937,6 +5949,17 @@ public class SCIMUserManager implements UserManager {
 
         // Combine the claims to be added and modified.
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
+
+        // For self-service (Me endpoint) requests, validate that none of the claims being
+        // added or modified are blocked for the /scim2/Me endpoint.
+        Flow currentFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
+        if (currentFlow != null && Flow.InitiatingPersona.USER.equals(currentFlow.getInitiatingPersona())) {
+            Set<String> claimsBeingUpdated = new HashSet<>(userClaimsToBeModified.keySet());
+            claimsBeingUpdated.addAll(userClaimsToBeDeleted.keySet());
+            claimsBeingUpdated.addAll(simpleMultiValuedClaimsToBeAdded.keySet());
+            claimsBeingUpdated.addAll(simpleMultiValuedClaimsToBeRemoved.keySet());
+            SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claimsBeingUpdated);
+        }
 
         boolean isExecutableUserProfileUpdate =
                 SCIMCommonUtils.isExecutableUserProfileUpdate(userClaimsToBeModified, userClaimsToBeDeleted,
