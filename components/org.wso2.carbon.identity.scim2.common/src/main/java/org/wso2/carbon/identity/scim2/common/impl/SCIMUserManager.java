@@ -1349,7 +1349,8 @@ public class SCIMUserManager implements UserManager {
             oldClaimList.remove(RESOURCE_TYPE_CLAIM);
 
             // Get user claims mapped from SCIM dialect to WSO2 dialect.
-            Map<String, String> claimValuesInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claims);
+            Map<String, String> claimValuesInLocalDialect =
+                    SCIMCommonUtils.convertSCIMtoLocalDialect(claims, oldClaimList);
             // If the primary login identifier claim is enabled, pass that as a claim for userstoremanger.
             if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {
                 claimValuesInLocalDialect.put(getPrimaryLoginIdentifierClaim(),
@@ -1552,7 +1553,8 @@ public class SCIMUserManager implements UserManager {
             oldClaimList.remove(RESOURCE_TYPE_CLAIM);
 
             // Get user claims mapped from SCIM dialect to WSO2 dialect.
-            Map<String, String> claimValuesInLocalDialect = SCIMCommonUtils.convertSCIMtoLocalDialect(claims);
+            Map<String, String> claimValuesInLocalDialect =
+                    SCIMCommonUtils.convertSCIMtoLocalDialect(claims, oldClaimList);
 
             // If the primary login identifier claim is enabled, pass that as a claim for userstoremanger.
             if (isLoginIdentifiersEnabled() && StringUtils.isNotBlank(getPrimaryLoginIdentifierClaim())) {

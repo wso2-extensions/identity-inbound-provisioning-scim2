@@ -2632,6 +2632,7 @@ public class SCIMUserManagerTest {
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
 
         when(SCIMCommonUtils.convertSCIMtoLocalDialect(anyMap())).thenCallRealMethod();
+        when(SCIMCommonUtils.convertSCIMtoLocalDialect(anyMap(), any())).thenCallRealMethod();
         when(SCIMCommonUtils.getSCIMtoLocalMappings()).thenReturn(scimToLocalClaimMappings);
 
         mockedUserStoreManager = mock(AbstractUserStoreManager.class);
