@@ -74,6 +74,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -475,7 +476,6 @@ public class SCIMCommonUtils {
         return formattedDate;
     }
 
-
     /**
      * Converts claims in SCIM dialect to local WSO2 dialect.
      *
@@ -486,16 +486,53 @@ public class SCIMCommonUtils {
     public static Map<String, String> convertSCIMtoLocalDialect(Map<String, String> claimsMap)
             throws UserStoreException {
 
+        return convertSCIMtoLocalDialect(claimsMap, new HashMap<>());
+    }
+
+    /**
+     * Converts claims in SCIM dialect to local WSO2 dialect. When more than one SCIM claim is mapped to the same
+     * local claim (a duplicate mapping, common in migrated environments), the value that differs from the currently
+     * stored value is preferred, so an update is not silently discarded due to the iteration order of the claims map.
+     *
+     * @param claimsMap         Map of SCIM claims and claim values.
+     * @param oldClaims         Currently stored claim values in local dialect, used to resolve duplicate mappings.
+     *                          May be null or empty, in which case the last resolved value is kept.
+     * @return                  map of Local WSO2 Claims and corresponding claim values.
+     * @throws UserStoreException if the SCIM to local claim mappings cannot be retrieved.
+     */
+    public static Map<String, String> convertSCIMtoLocalDialect(Map<String, String> claimsMap,
+                                                                Map<String, String> oldClaims)
+            throws UserStoreException {
+
+        Map<String, String> existingClaims = oldClaims == null ? Collections.emptyMap() : oldClaims;
+
         // Retrieve SCIM to Local Claim Mappings.
         Map<String, String> scimToLocalClaimMappings;
         Map<String, String> claimsInLocalDialect = new HashMap<>();
         scimToLocalClaimMappings = getSCIMtoLocalMappings();
         if (MapUtils.isNotEmpty(scimToLocalClaimMappings)) {
             for (Map.Entry entry : claimsMap.entrySet()) {
-                String scimClaimtUri = (String) entry.getKey();
-                String localClaimUri = scimToLocalClaimMappings.get(scimClaimtUri);
+                String scimClaimUri = (String) entry.getKey();
+                String localClaimUri = scimToLocalClaimMappings.get(scimClaimUri);
                 if (StringUtils.isNotEmpty(localClaimUri)) {
-                    claimsInLocalDialect.put(localClaimUri, (String) entry.getValue());
+                    if (!claimsInLocalDialect.containsKey(localClaimUri)) {
+                        claimsInLocalDialect.put(localClaimUri, (String) entry.getValue());
+                    } else {
+                        String incomingClaimValue = (String) entry.getValue();
+                        String storedClaimValue = existingClaims.get(localClaimUri);
+                        if (!StringUtils.equals(incomingClaimValue, storedClaimValue)) {
+                            claimsInLocalDialect.put(localClaimUri, incomingClaimValue);
+                            if (log.isDebugEnabled()) {
+                                log.debug("Multiple SCIM claims are mapped to the local claim: " + localClaimUri
+                                        + ". Preferring the updated value received for the SCIM claim: "
+                                        + scimClaimUri);
+                            }
+                        } else if (log.isDebugEnabled()) {
+                            log.debug("Multiple SCIM claims are mapped to the local claim: " + localClaimUri
+                                    + ". Retaining the already resolved value over the unchanged value received for "
+                                    + "the SCIM claim: " + scimClaimUri);
+                        }
+                    }
                 }
             }
         }

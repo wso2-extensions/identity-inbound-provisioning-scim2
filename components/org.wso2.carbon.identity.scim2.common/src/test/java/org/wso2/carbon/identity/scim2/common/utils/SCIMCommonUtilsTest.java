@@ -43,12 +43,17 @@ import org.wso2.charon3.core.exceptions.BadRequestException;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -747,5 +752,100 @@ public class SCIMCommonUtilsTest {
                             && detail.contains("http://wso2.org/claims/identity/accountDisabled")),
                     "Exception detail should list the blocked claims.");
         }
+    }
+
+    private static final String SCIM_NICK_NAME_CLAIM = "urn:ietf:params:scim:schemas:core:2.0:User:nickName";
+    private static final String SCIM_TITLE_CLAIM = "urn:ietf:params:scim:schemas:core:2.0:User:title";
+    private static final String SCIM_EMAIL_CLAIM = "urn:ietf:params:scim:schemas:core:2.0:User:emails";
+    private static final String LOCAL_NICK_NAME_CLAIM = "http://wso2.org/claims/nickname";
+    private static final String LOCAL_EMAIL_CLAIM = "http://wso2.org/claims/emailaddress";
+
+    @DataProvider(name = "duplicateClaimMappingOrderData")
+    public Object[][] duplicateClaimMappingOrderData() {
+
+        return new Object[][]{
+                // Updated SCIM claim is iterated before the sibling holding the stored value.
+                {new String[]{SCIM_NICK_NAME_CLAIM, SCIM_TITLE_CLAIM}},
+                // Sibling holding the stored value is iterated before the updated SCIM claim.
+                {new String[]{SCIM_TITLE_CLAIM, SCIM_NICK_NAME_CLAIM}}
+        };
+    }
+
+    @Test(dataProvider = "duplicateClaimMappingOrderData",
+            description = "Updated value should win over the stored value regardless of the claim iteration order.")
+    public void testConvertSCIMtoLocalDialectPrefersUpdatedValueOnDuplicateMapping(String[] claimOrder)
+            throws Exception {
+
+        Map<String, String> claimValues = new HashMap<>();
+        claimValues.put(SCIM_NICK_NAME_CLAIM, "new");
+        claimValues.put(SCIM_TITLE_CLAIM, "old");
+        Map<String, String> claimsMap = new LinkedHashMap<>();
+        for (String claim : claimOrder) {
+            claimsMap.put(claim, claimValues.get(claim));
+        }
+        claimsMap.put(SCIM_EMAIL_CLAIM, "user@example.com");
+
+        Map<String, String> oldClaims = new HashMap<>();
+        oldClaims.put(LOCAL_NICK_NAME_CLAIM, "old");
+
+        try (MockedStatic<SCIMCommonUtils> scimCommonUtils = mockSCIMtoLocalMappings()) {
+
+            Map<String, String> localClaims = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap, oldClaims);
+
+            assertEquals(localClaims.size(), 2);
+            assertEquals(localClaims.get(LOCAL_NICK_NAME_CLAIM), "new");
+            assertEquals(localClaims.get(LOCAL_EMAIL_CLAIM), "user@example.com");
+        }
+    }
+
+    @Test(description = "Without stored values, the last resolved value should be kept on a duplicate mapping.")
+    public void testConvertSCIMtoLocalDialectWithoutStoredValuesKeepsLastValue() throws Exception {
+
+        Map<String, String> claimsMap = new LinkedHashMap<>();
+        claimsMap.put(SCIM_NICK_NAME_CLAIM, "first");
+        claimsMap.put(SCIM_TITLE_CLAIM, "second");
+
+        try (MockedStatic<SCIMCommonUtils> scimCommonUtils = mockSCIMtoLocalMappings()) {
+
+            assertEquals(SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap).get(LOCAL_NICK_NAME_CLAIM), "second");
+            assertEquals(SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap, null).get(LOCAL_NICK_NAME_CLAIM),
+                    "second");
+        }
+    }
+
+    @Test(description = "When both duplicated claims carry new values, the last resolved value should be kept.")
+    public void testConvertSCIMtoLocalDialectWithConflictingUpdatedValues() throws Exception {
+
+        Map<String, String> claimsMap = new LinkedHashMap<>();
+        claimsMap.put(SCIM_NICK_NAME_CLAIM, "first");
+        claimsMap.put(SCIM_TITLE_CLAIM, "second");
+        Map<String, String> oldClaims = new HashMap<>();
+        oldClaims.put(LOCAL_NICK_NAME_CLAIM, "old");
+
+        try (MockedStatic<SCIMCommonUtils> scimCommonUtils = mockSCIMtoLocalMappings()) {
+
+            Map<String, String> localClaims = SCIMCommonUtils.convertSCIMtoLocalDialect(claimsMap, oldClaims);
+
+            assertEquals(localClaims.get(LOCAL_NICK_NAME_CLAIM), "second");
+        }
+    }
+
+    private MockedStatic<SCIMCommonUtils> mockSCIMtoLocalMappings() {
+
+        MockedStatic<SCIMCommonUtils> scimCommonUtils = mockStatic(SCIMCommonUtils.class);
+        scimCommonUtils.when(SCIMCommonUtils::getSCIMtoLocalMappings).thenReturn(getDuplicateClaimMappings());
+        scimCommonUtils.when(() -> SCIMCommonUtils.convertSCIMtoLocalDialect(anyMap())).thenCallRealMethod();
+        scimCommonUtils.when(() -> SCIMCommonUtils.convertSCIMtoLocalDialect(anyMap(), any()))
+                .thenCallRealMethod();
+        return scimCommonUtils;
+    }
+
+    private Map<String, String> getDuplicateClaimMappings() {
+
+        Map<String, String> scimToLocalClaimMappings = new HashMap<>();
+        scimToLocalClaimMappings.put(SCIM_NICK_NAME_CLAIM, LOCAL_NICK_NAME_CLAIM);
+        scimToLocalClaimMappings.put(SCIM_TITLE_CLAIM, LOCAL_NICK_NAME_CLAIM);
+        scimToLocalClaimMappings.put(SCIM_EMAIL_CLAIM, LOCAL_EMAIL_CLAIM);
+        return scimToLocalClaimMappings;
     }
 }
