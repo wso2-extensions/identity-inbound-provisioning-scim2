@@ -216,6 +216,7 @@ public class SCIMUserManager implements UserManager {
     private static final String ERROR_CODE_PASSWORD_POLICY_VIOLATION = "20035";
     private static final String ERROR_CODE_INVALID_ROLE_NAME = "30011";
     private static final Log log = LogFactory.getLog(SCIMUserManager.class);
+    private static final String SQL_AND_SCIM_FILTER_METACHARACTERS = "%_*?";
     private AbstractUserStoreManager carbonUM;
     private ClaimManager carbonClaimManager;
     private String tenantDomain;
@@ -3477,22 +3478,28 @@ public class SCIMUserManager implements UserManager {
         List<Group> groupList = new ArrayList<>();
         int totalGroupCount;
         try {
-            Set<String> groupNames;
-            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-                groupNames = getGroupNamesForGroupsEndpoint(domainName);
+            String pagedFilter = resolvePagedGroupNameFilter(domainName, SCIMCommonConstants.ANY);
+            Set<String> groupNames = listPagedGroupNames(pagedFilter, domainName, startIndex, count);
+            Integer pagedGroupCount = countPagedGroupNames(pagedFilter, domainName, startIndex, count, groupNames);
+            if (pagedGroupCount != null) {
+                totalGroupCount = pagedGroupCount;
             } else {
-                groupNames = getRoleNamesForGroupsEndpoint(domainName);
+                if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                    groupNames = getGroupNamesForGroupsEndpoint(domainName);
+                } else {
+                    groupNames = getRoleNamesForGroupsEndpoint(domainName);
+                }
+
+                totalGroupCount = groupNames.size();
+                // Adjust startIndex and endIndex to ensure they are within bounds
+                startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
+                int endIndex = (count == null) ? totalGroupCount : Math.min(startIndex + count, totalGroupCount);
+
+                groupNames = groupNames.stream()
+                        .skip(startIndex)
+                        .limit(endIndex - startIndex)
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
             }
-
-            totalGroupCount = groupNames.size();
-            // Adjust startIndex and endIndex to ensure they are within bounds
-            startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
-            int endIndex = (count == null) ? totalGroupCount : Math.min(startIndex + count, totalGroupCount);
-
-            groupNames = groupNames.stream()
-                    .skip(startIndex)
-                    .limit(endIndex - startIndex)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
 
             for (String groupName : groupNames) {
                 String userStoreDomainName = IdentityUtil.extractDomainFromName(groupName);
@@ -3543,6 +3550,130 @@ public class SCIMUserManager implements UserManager {
         groupsResponse.setTotalGroups(totalGroupCount);
         groupsResponse.setGroups(groupList);
         return groupsResponse;
+    }
+
+    /**
+     * Maps a displayName filter to a user store role filter, or returns null if it cannot be pushed down.
+     */
+    private String buildGroupNameFilterPattern(ExpressionNode node) {
+
+        // Filters on members or user attributes resolve groups through their users.
+        if (!SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI.equals(node.getAttributeValue())) {
+            return null;
+        }
+        String value = node.getValue();
+        // The unpaginated path escapes '_' and maps '*' and '?', so such values keep that path.
+        if (value == null || StringUtils.containsAny(value, SQL_AND_SCIM_FILTER_METACHARACTERS)) {
+            return null;
+        }
+        String operation = node.getOperation();
+        if (SCIMCommonConstants.EQ.equalsIgnoreCase(operation)) {
+            return value;
+        } else if (SCIMCommonConstants.SW.equalsIgnoreCase(operation)) {
+            return value + SCIMCommonConstants.ANY;
+        } else if (SCIMCommonConstants.EW.equalsIgnoreCase(operation)) {
+            return SCIMCommonConstants.ANY + value;
+        } else if (SCIMCommonConstants.CO.equalsIgnoreCase(operation)) {
+            return SCIMCommonConstants.ANY + value + SCIMCommonConstants.ANY;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the domain qualified role filter if a single user store can serve the listing, otherwise null.
+     */
+    private String resolvePagedGroupNameFilter(String domainName, String filter) {
+
+        // Hybrid roles live outside the user store, and a request without a domain spans every user store.
+        if (filter == null || StringUtils.isBlank(domainName) || isInternalOrApplicationGroup(domainName)) {
+            return null;
+        }
+        // An unknown domain keeps the unpaginated path, which reports the error.
+        if (carbonUM.getSecondaryUserStoreManager(domainName) == null) {
+            return null;
+        }
+        return domainName + CarbonConstants.DOMAIN_SEPARATOR + filter;
+    }
+
+    /**
+     * Lists one page of group names from the user store, or returns null if the store cannot page.
+     */
+    private Set<String> listPagedGroupNames(String pagedFilter, String domainName, int startIndex, Integer count)
+            throws org.wso2.carbon.user.core.UserStoreException {
+
+        if (pagedFilter == null) {
+            return null;
+        }
+        int limit = resolveGroupPageLimit(domainName, count);
+        if (limit <= 0) {
+            return null;
+        }
+        int offset = Math.max(startIndex - 1, 0);
+        try {
+            return new LinkedHashSet<>(Arrays.asList(carbonUM.listRoleNames(pagedFilter, limit, offset)));
+        } catch (org.wso2.carbon.user.core.NotImplementedException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Paginated group listing is not available for the user store domain: " + domainName, e);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Returns the total for a paged listing, or null if the caller should list the names itself.
+     */
+    private Integer countPagedGroupNames(String pagedFilter, String domainName, int startIndex, Integer count,
+                                         Set<String> page) throws org.wso2.carbon.user.core.UserStoreException {
+
+        if (page == null) {
+            return null;
+        }
+        // Listing and count share a predicate, so a short first page already holds every match.
+        if (startIndex <= 1 && page.size() < resolveGroupPageLimit(domainName, count)) {
+            return page.size();
+        }
+        try {
+            return (int) Math.min(carbonUM.countRoleNames(pagedFilter), Integer.MAX_VALUE);
+        } catch (org.wso2.carbon.user.core.NotImplementedException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Paginated group count is not available for the user store domain: " + domainName, e);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Page size: the smaller of the requested count and the user store's MaxRoleNameListLength.
+     */
+    private int resolveGroupPageLimit(String domainName, Integer count) {
+
+        int pageSize = getMaxGroupPageSize(domainName);
+        return count == null ? pageSize : Math.min(count, pageSize);
+    }
+
+    /**
+     * Reads MaxRoleNameListLength of the user store, falling back to the user core default.
+     */
+    private int getMaxGroupPageSize(String domainName) {
+
+        int givenMax = UserCoreConstants.MAX_USER_ROLE_LIST;
+        UserStoreManager userStoreManager = carbonUM.getSecondaryUserStoreManager(domainName);
+        if (userStoreManager == null) {
+            return givenMax;
+        }
+        String maxGroupListLength = userStoreManager.getRealmConfiguration()
+                .getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_ROLE_LIST);
+        if (StringUtils.isNotBlank(maxGroupListLength)) {
+            try {
+                givenMax = Integer.parseInt(maxGroupListLength);
+            } catch (NumberFormatException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid " + UserCoreConstants.RealmConfig.PROPERTY_MAX_ROLE_LIST + " in the user "
+                            + "store domain: " + domainName + ". Using the default: " + givenMax, e);
+                }
+            }
+        }
+        return givenMax;
     }
 
     /**
@@ -3690,20 +3821,31 @@ public class SCIMUserManager implements UserManager {
         List<Group> filteredGroups = new ArrayList<>();
         int totalGroupCount;
         try {
-            List<String> groupsList = new ArrayList<>(getGroupList(node, domainName));
+            List<String> groupsList;
+            String pagedFilter = resolvePagedGroupNameFilter(domainName, buildGroupNameFilterPattern(node));
+            Integer pageCount = count == 0 ? null : count;
+            Set<String> pagedNames = listPagedGroupNames(pagedFilter, domainName, startIndex, pageCount);
+            Integer pagedGroupCount = countPagedGroupNames(pagedFilter, domainName, startIndex, pageCount,
+                    pagedNames);
+            if (pagedGroupCount != null) {
+                groupsList = new ArrayList<>(pagedNames);
+                totalGroupCount = pagedGroupCount;
+            } else {
+                groupsList = new ArrayList<>(getGroupList(node, domainName));
 
-            // Remove roles, if the role and group separation feature is enabled.
-            if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-                groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+                // Remove roles, if the role and group separation feature is enabled.
+                if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+                    groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+                }
+
+                totalGroupCount = groupsList.size();
+                // Adjust startIndex and endIndex to ensure they are within bounds
+                startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
+                int endIndex = (count == 0 || count > Integer.MAX_VALUE - startIndex) ?
+                        totalGroupCount : Math.min(startIndex + count, totalGroupCount);
+
+                groupsList = groupsList.subList(startIndex, endIndex);
             }
-
-            totalGroupCount = groupsList.size();
-            // Adjust startIndex and endIndex to ensure they are within bounds
-            startIndex = Math.max(0, Math.min(startIndex - 1, totalGroupCount));
-            int endIndex = (count == 0 || count > Integer.MAX_VALUE - startIndex) ?
-                    totalGroupCount : Math.min(startIndex + count, totalGroupCount);
-
-            groupsList = groupsList.subList(startIndex, endIndex);
 
             for (String groupName : groupsList) {
                 if (groupName != null && carbonUM.isExistingRole(groupName, false)) {

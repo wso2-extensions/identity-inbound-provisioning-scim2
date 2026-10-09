@@ -278,10 +278,11 @@ public class SCIMUserManagerTest {
     private MockedStatic<OrganizationManagementUtil> organizationManagementUtil;
 
     @BeforeMethod
-    public void setUpMethod() {
+    public void setUpMethod() throws Exception {
 
         initPrivilegedCarbonContext();
         initMocks(this);
+        mockUnpaginatedRoleListing(mockedUserStoreManager);
         identityUtil = mockStatic(IdentityUtil.class);
         scimCommonUtils = mockStatic(SCIMCommonUtils.class);
         carbonConstants = mockStatic(CarbonConstants.class);
@@ -688,6 +689,7 @@ public class SCIMUserManagerTest {
                 .thenReturn(groups);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
 
         when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
         for (String group : groups) {
@@ -702,6 +704,170 @@ public class SCIMUserManagerTest {
 
         assertEquals(groupsResponse.getGroups().size(), results);
         assertEquals(groupsResponse.getTotalGroups(), totalResult);
+    }
+
+    @DataProvider(name = "paginatedGroupListing")
+    public Object[][] paginatedGroupListing() {
+
+        return new Object[][]{
+                // startIndex, count, MaxRoleNameListLength, limit, offset, page size, store total, total, counted.
+                {101, 50, "100", 50, 100, 50, 151, 151, true},
+                {1, null, "100", 100, 0, 100, 151, 151, true},
+                {1, 200, "100", 100, 0, 100, 151, 151, true},
+                {1, null, null, UserCoreConstants.MAX_USER_ROLE_LIST, 0, 6, 6, 6, false},
+                {1, 10, "100", 10, 0, 6, 6, 6, false},
+                {141, 20, "100", 20, 140, 11, 151, 151, true}
+        };
+    }
+
+    @Test(dataProvider = "paginatedGroupListing")
+    public void testListGroupsWithPaginatedUserStore(Integer startIndex, Integer count, String maxRoleNameListLength,
+                                                     int expectedLimit, int expectedOffset, int pageSize,
+                                                     int storeTotal, int expectedTotal, boolean countQueried)
+            throws Exception {
+
+        String[] page = new String[pageSize];
+        for (int i = 0; i < pageSize; i++) {
+            page[i] = "group" + (expectedOffset + i + 1);
+            when(mockedUserStoreManager.getGroupByGroupName(page[i], null))
+                    .thenReturn(buildUserCoreGroupResponse(page[i], "id-" + page[i], null));
+        }
+        when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
+        when(mockedRealmConfig.getUserStoreProperty(UserCoreConstants.RealmConfig.PROPERTY_MAX_ROLE_LIST))
+                .thenReturn(maxRoleNameListLength);
+        doReturn(page).when(mockedUserStoreManager).listRoleNames("PRIMARY/*", expectedLimit, expectedOffset);
+        when(mockedUserStoreManager.countRoleNames("PRIMARY/*")).thenReturn((long) storeTotal);
+        when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(null, startIndex, count,
+                null, null, "PRIMARY", null);
+
+        assertEquals(groupsResponse.getGroups().size(), pageSize);
+        assertEquals(groupsResponse.getTotalGroups(), expectedTotal);
+        assertEquals(groupsResponse.getGroups().get(0).getDisplayName(), page[0]);
+        verify(mockedUserStoreManager).listRoleNames("PRIMARY/*", expectedLimit, expectedOffset);
+        verify(mockedUserStoreManager, times(countQueried ? 1 : 0)).countRoleNames(anyString());
+        verify(mockedUserStoreManager, never()).getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(),
+                anyBoolean());
+    }
+
+    @Test
+    public void testListGroupsFallsBackWhenUserStoreCannotCount() throws Exception {
+
+        String[] groups = new String[]{"group1", "group2", "group3"};
+        when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(groups);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
+        doReturn(new String[]{"group1", "group2"}).when(mockedUserStoreManager).listRoleNames("PRIMARY/*", 2, 0);
+        when(mockedUserStoreManager.countRoleNames(anyString()))
+                .thenThrow(new org.wso2.carbon.user.core.NotImplementedException("Not implemented."));
+        when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
+        for (String group : groups) {
+            when(mockedUserStoreManager.getGroupByGroupName(group, null))
+                    .thenReturn(buildUserCoreGroupResponse(group, "id-" + group, null));
+        }
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(null, 1, 2,
+                null, null, "PRIMARY", null);
+
+        assertEquals(groupsResponse.getGroups().size(), 2);
+        assertEquals(groupsResponse.getTotalGroups(), 3);
+        verify(mockedUserStoreManager).getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean());
+    }
+
+    @Test
+    public void testListGroupsFallsBackWhenUserStoreDeclinesPaging() throws Exception {
+
+        // setUpMethod makes listRoleNames throw NotImplementedException, as a store with custom role SQL does.
+        String[] groups = new String[]{"group1", "group2", "group3"};
+        when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(groups);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
+        when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
+        for (String group : groups) {
+            when(mockedUserStoreManager.getGroupByGroupName(group, null))
+                    .thenReturn(buildUserCoreGroupResponse(group, "id-" + group, null));
+        }
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(null, 2, 5,
+                null, null, "PRIMARY", null);
+
+        assertEquals(groupsResponse.getGroups().size(), 2);
+        assertEquals(groupsResponse.getTotalGroups(), 3);
+        verify(mockedUserStoreManager).listRoleNames("PRIMARY/*", 5, 1);
+        verify(mockedUserStoreManager, never()).countRoleNames(anyString());
+        verify(mockedUserStoreManager).getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean());
+    }
+
+    @DataProvider(name = "paginatedGroupFilters")
+    public Object[][] paginatedGroupFilters() {
+
+        return new Object[][]{
+                {"filter " + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI + " eq grp", "PRIMARY/grp"},
+                {"filter " + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI + " sw grp", "PRIMARY/grp*"},
+                {"filter " + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI + " ew grp", "PRIMARY/*grp"},
+                {"filter " + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI + " co grp", "PRIMARY/*grp*"},
+                {"filter " + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI + " co g_p", null},
+                {"filter " + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI + " co g%p", null},
+                {"filter " + SCIMConstants.GroupSchemaConstants.DISPLAY_NAME_URI + " co g*p", null}
+        };
+    }
+
+    @Test(dataProvider = "paginatedGroupFilters")
+    public void testFilterGroupsWithPaginatedUserStore(String filter, String expectedPagedFilter) throws Exception {
+
+        String[] groups = new String[]{"grp1", "grp2", "grp3"};
+        Node node = new ExpressionNode(filter);
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenReturn(groups);
+        if (expectedPagedFilter != null) {
+            doReturn(new String[]{"grp2", "grp3"}).when(mockedUserStoreManager)
+                    .listRoleNames(expectedPagedFilter, 2, 1);
+            when(mockedUserStoreManager.countRoleNames(expectedPagedFilter)).thenReturn(3L);
+        }
+        when(mockedUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockRealmConfig);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(any())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        for (String group : groups) {
+            when(mockedUserStoreManager.getGroupByGroupName(group, null))
+                    .thenReturn(buildUserCoreGroupResponse(group, "id-" + group, "PRIMARY"));
+        }
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+        userCoreUtil = mockStatic(UserCoreUtil.class);
+        try {
+            userCoreUtil.when(() -> UserCoreUtil.isEveryoneRole(anyString(), any())).thenReturn(false);
+
+            SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+            GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(node, 2, 2,
+                    null, null, "PRIMARY", null);
+
+            assertEquals(groupsResponse.getGroups().size(), 2);
+            assertEquals(groupsResponse.getTotalGroups(), 3);
+            if (expectedPagedFilter != null) {
+                verify(mockedUserStoreManager, never()).getRoleNames(anyString(), anyInt(), anyBoolean(),
+                        anyBoolean(), anyBoolean());
+            } else {
+                verify(mockedUserStoreManager, never()).listRoleNames(anyString(), anyInt(), anyInt());
+            }
+        } finally {
+            userCoreUtil.close();
+        }
     }
 
     @Test(dataProvider = "listUser")
@@ -2847,6 +3013,16 @@ public class SCIMUserManagerTest {
                 {scimToLocalMappings2, expectedSyncedAttributes2, false},
                 {null, null, true}
         };
+    }
+
+    /**
+     * Makes the mock report what a user store without a paginated role listing reports.
+     */
+    private void mockUnpaginatedRoleListing(AbstractUserStoreManager userStoreManager) throws UserStoreException {
+
+        when(userStoreManager.listRoleNames(anyString(), anyInt(), anyInt()))
+                .thenThrow(new org.wso2.carbon.user.core.NotImplementedException(
+                        "Paginated role listing is not implemented."));
     }
 
     /**
