@@ -3608,9 +3608,9 @@ public class SCIMUserManager implements UserManager {
         if (limit <= 0) {
             return null;
         }
-        int offset = Math.max(startIndex - 1, 0);
         try {
-            return new LinkedHashSet<>(Arrays.asList(carbonUM.listRoleNames(pagedFilter, limit, offset)));
+            // The user store takes the one based start index as its offset.
+            return new LinkedHashSet<>(Arrays.asList(carbonUM.listRoleNames(pagedFilter, limit, startIndex)));
         } catch (org.wso2.carbon.user.core.NotImplementedException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Paginated group listing is not available for the user store domain: " + domainName, e);

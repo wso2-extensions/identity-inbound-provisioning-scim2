@@ -711,12 +711,12 @@ public class SCIMUserManagerTest {
 
         return new Object[][]{
                 // startIndex, count, MaxRoleNameListLength, limit, offset, page size, store total, total, counted.
-                {101, 50, "100", 50, 100, 50, 151, 151, true},
-                {1, null, "100", 100, 0, 100, 151, 151, true},
-                {1, 200, "100", 100, 0, 100, 151, 151, true},
-                {1, null, null, UserCoreConstants.MAX_USER_ROLE_LIST, 0, 6, 6, 6, false},
-                {1, 10, "100", 10, 0, 6, 6, 6, false},
-                {141, 20, "100", 20, 140, 11, 151, 151, true}
+                {101, 50, "100", 50, 101, 50, 151, 151, true},
+                {1, null, "100", 100, 1, 100, 151, 151, true},
+                {1, 200, "100", 100, 1, 100, 151, 151, true},
+                {1, null, null, UserCoreConstants.MAX_USER_ROLE_LIST, 1, 6, 6, 6, false},
+                {1, 10, "100", 10, 1, 6, 6, 6, false},
+                {141, 20, "100", 20, 141, 11, 151, 151, true}
         };
     }
 
@@ -728,7 +728,7 @@ public class SCIMUserManagerTest {
 
         String[] page = new String[pageSize];
         for (int i = 0; i < pageSize; i++) {
-            page[i] = "group" + (expectedOffset + i + 1);
+            page[i] = "group" + (expectedOffset + i);
             when(mockedUserStoreManager.getGroupByGroupName(page[i], null))
                     .thenReturn(buildUserCoreGroupResponse(page[i], "id-" + page[i], null));
         }
@@ -766,7 +766,7 @@ public class SCIMUserManagerTest {
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
         when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
-        doReturn(new String[]{"group1", "group2"}).when(mockedUserStoreManager).listRoleNames("PRIMARY/*", 2, 0);
+        doReturn(new String[]{"group1", "group2"}).when(mockedUserStoreManager).listRoleNames("PRIMARY/*", 2, 1);
         when(mockedUserStoreManager.countRoleNames(anyString()))
                 .thenThrow(new org.wso2.carbon.user.core.NotImplementedException("Not implemented."));
         when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
@@ -809,7 +809,7 @@ public class SCIMUserManagerTest {
 
         assertEquals(groupsResponse.getGroups().size(), 2);
         assertEquals(groupsResponse.getTotalGroups(), 3);
-        verify(mockedUserStoreManager).listRoleNames("PRIMARY/*", 5, 1);
+        verify(mockedUserStoreManager).listRoleNames("PRIMARY/*", 5, 2);
         verify(mockedUserStoreManager, never()).countRoleNames(anyString());
         verify(mockedUserStoreManager).getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean());
     }
@@ -837,7 +837,7 @@ public class SCIMUserManagerTest {
                 .thenReturn(groups);
         if (expectedPagedFilter != null) {
             doReturn(new String[]{"grp2", "grp3"}).when(mockedUserStoreManager)
-                    .listRoleNames(expectedPagedFilter, 2, 1);
+                    .listRoleNames(expectedPagedFilter, 2, 2);
             when(mockedUserStoreManager.countRoleNames(expectedPagedFilter)).thenReturn(3L);
         }
         when(mockedUserStoreManager.isExistingRole(anyString(), anyBoolean())).thenReturn(true);
