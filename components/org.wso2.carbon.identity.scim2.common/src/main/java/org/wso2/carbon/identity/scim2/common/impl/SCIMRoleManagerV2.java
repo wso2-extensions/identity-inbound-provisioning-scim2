@@ -31,6 +31,8 @@ import org.wso2.carbon.identity.application.common.model.IdPGroup;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -1871,11 +1873,33 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
 
             if (app.getSpProperties() != null && Arrays.stream(app.getSpProperties())
                     .anyMatch(property -> ApplicationConstants.IS_FRAGMENT_APP.equals(property.getName())
-                            && Boolean.parseBoolean(property.getValue()))) {
+                            && Boolean.parseBoolean(property.getValue()))
+                    && !isSharedAppRoleManagementEnabled(audienceValue)) {
                 throw new BadRequestException("Role creation for shared applications is not allowed at " +
                         "organization level.");
             }
         }
+    }
+
+    /**
+     * Check whether the main application of the given shared application allows organizations to create application
+     * roles for its shared applications.
+     *
+     * @param sharedAppId ID of the shared application.
+     * @return True if application role creation is enabled for the shared application.
+     * @throws IdentityApplicationManagementException IdentityApplicationManagementException.
+     */
+    private boolean isSharedAppRoleManagementEnabled(String sharedAppId) throws IdentityApplicationManagementException {
+
+        ApplicationManagementService applicationManagementService = ApplicationManagementService.getInstance();
+        String mainAppId = applicationManagementService.getMainAppId(sharedAppId);
+        if (StringUtils.isBlank(mainAppId)) {
+            return false;
+        }
+        String mainAppTenantDomain =
+                IdentityTenantUtil.getTenantDomain(applicationManagementService.getTenantIdByApp(mainAppId));
+        return ApplicationMgtUtil.isSharedAppRoleManagementEnabled(
+                applicationManagementService.getApplicationByResourceId(mainAppId, mainAppTenantDomain));
     }
 
     private List<Permission> buildPermissionList(List<String> permissionValues) {
