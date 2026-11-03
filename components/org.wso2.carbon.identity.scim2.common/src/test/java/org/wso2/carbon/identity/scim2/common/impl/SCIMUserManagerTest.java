@@ -3001,12 +3001,32 @@ public class SCIMUserManagerTest {
     @Test
     public void testPatchGroupMembershipOnlyDoesNotUpdateGroupName() throws Exception {
 
+        String groupId = "group-id-1";
         String groupName = "Internal/engineering";
+        String memberName = "Internal/john";
+        String memberId = "member-id-1";
+
         identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenReturn("Internal");
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.getUserIDFromProperties(anyString(), anyString(), anyString()))
+                .thenReturn(memberId);
+
+        Map<String, String> memberObject = new HashMap<>();
+        memberObject.put(SCIMConstants.GroupSchemaConstants.DISPLAY, memberName);
+        memberObject.put(SCIMConstants.GroupSchemaConstants.VALUE, memberId);
+        PatchOperation memberOperation = new PatchOperation();
+        memberOperation.setOperation(SCIMConstants.OperationalConstants.REMOVE);
+        memberOperation.setAttributeName(SCIMConstants.GroupSchemaConstants.MEMBERS);
+        memberOperation.setValues(memberObject);
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        patchOperations.put(SCIMConstants.GroupSchemaConstants.MEMBERS,
+                Collections.singletonList(memberOperation));
 
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
-        scimUserManager.patchGroup("group-id-1", groupName, Collections.emptyMap());
+        scimUserManager.patchGroup(groupId, groupName, patchOperations);
 
+        verify(mockedUserStoreManager).updateUserListOfRoleWithID(eq(groupName), any(), any());
         verify(mockedUserStoreManager, never()).updateGroupName(anyString(), anyString());
     }
 
