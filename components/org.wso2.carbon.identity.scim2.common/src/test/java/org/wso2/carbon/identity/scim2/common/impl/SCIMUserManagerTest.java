@@ -139,6 +139,7 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -3026,7 +3027,8 @@ public class SCIMUserManagerTest {
         SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
         scimUserManager.patchGroup(groupId, groupName, patchOperations);
 
-        verify(mockedUserStoreManager).updateUserListOfRoleWithID(eq(groupName), any(), any());
+        verify(mockedUserStoreManager).updateUserListOfRoleWithID(eq(groupName),
+                aryEq(new String[]{memberId}), aryEq(new String[0]));
         verify(mockedUserStoreManager, never()).updateGroupName(anyString(), anyString());
     }
 
@@ -3058,6 +3060,35 @@ public class SCIMUserManagerTest {
         scimUserManager.patchGroup(groupId, currentGroupName, patchOperations);
 
         verify(mockedUserStoreManager, times(1)).updateGroupName(currentGroupName, newGroupName);
+        verify(mockedUserStoreManager, times(1)).renameGroup(groupId, newGroupName);
+    }
+
+    @Test
+    public void testPatchGroupDisplayNameUnchangedDoesNotUpdateGroupName() throws Exception {
+
+        String groupId = "group-id-3";
+        String currentGroupName = "Internal/engineering";
+
+        identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenReturn("Internal");
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
+                .thenReturn(currentGroupName);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        PatchOperation displayNameOperation = new PatchOperation();
+        displayNameOperation.setOperation(SCIMConstants.OperationalConstants.REPLACE);
+        displayNameOperation.setAttributeName(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME);
+        displayNameOperation.setValues(currentGroupName);
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        patchOperations.put(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
+                Collections.singletonList(displayNameOperation));
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        scimUserManager.patchGroup(groupId, currentGroupName, patchOperations);
+
+        verify(mockedUserStoreManager, never()).updateGroupName(anyString(), anyString());
+        verify(mockedUserStoreManager, never()).renameGroup(anyString(), anyString());
     }
 
 }
