@@ -3263,4 +3263,52 @@ public class SCIMUserManagerTest {
     }
 
 
+    @Test
+    public void testPatchGroupDisplayNameAndRemoveMembershipTogether() throws Exception {
+
+        String groupId = "group-id-8";
+        String currentGroupName = "Internal/engineering";
+        String newGroupName = "Internal/platform";
+        String memberName = "Internal/jane";
+        String memberId = "member-id-5";
+
+        identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenReturn("Internal");
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
+                .thenReturn(currentGroupName);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(newGroupName))
+                .thenReturn(newGroupName);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.getUserIDFromProperties(anyString(), anyString(), anyString()))
+                .thenReturn(memberId);
+
+        PatchOperation displayNameOperation = new PatchOperation();
+        displayNameOperation.setOperation(SCIMConstants.OperationalConstants.REPLACE);
+        displayNameOperation.setAttributeName(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME);
+        displayNameOperation.setValues(newGroupName);
+
+        Map<String, String> memberObject = new HashMap<>();
+        memberObject.put(SCIMConstants.GroupSchemaConstants.DISPLAY, memberName);
+        memberObject.put(SCIMConstants.GroupSchemaConstants.VALUE, memberId);
+        PatchOperation memberOperation = new PatchOperation();
+        memberOperation.setOperation(SCIMConstants.OperationalConstants.REMOVE);
+        memberOperation.setAttributeName(SCIMConstants.GroupSchemaConstants.MEMBERS);
+        memberOperation.setValues(memberObject);
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        patchOperations.put(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
+                Collections.singletonList(displayNameOperation));
+        patchOperations.put(SCIMConstants.GroupSchemaConstants.MEMBERS,
+                Collections.singletonList(memberOperation));
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        scimUserManager.patchGroup(groupId, currentGroupName, patchOperations);
+
+        verify(mockedUserStoreManager).renameGroup(groupId, newGroupName);
+        verify(mockedUserStoreManager).updateUserListOfRoleWithID(eq(newGroupName),
+                aryEq(new String[]{memberId}), aryEq(new String[0]));
+        verify(mockedUserStoreManager).updateGroupName(currentGroupName, newGroupName);
+    }
+
 }
