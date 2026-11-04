@@ -3889,7 +3889,7 @@ public class SCIMUserManager implements UserManager {
 
             if (isNotEmpty(displayNameOperations)) {
                 newGroupName = (String) displayNameOperations.get(0).getValues();
-                setGroupDisplayName(groupId, currentGroupName, newGroupName);
+                newGroupName = setGroupDisplayName(groupId, currentGroupName, newGroupName);
             }
 
             Collections.sort(memberOperations);
@@ -3977,8 +3977,10 @@ public class SCIMUserManager implements UserManager {
                         addedMemberIdsFromUserstore.toArray(new String[0]));
             }
 
-            // Update the group name in UM_HYBRID_GROUP_ROLE table.
-            carbonUM.updateGroupName(currentGroupName, newGroupName);
+            // Update the group name in UM_HYBRID_GROUP_ROLE table only when the name has changed.
+            if (!StringUtils.equals(currentGroupName, newGroupName)) {
+                carbonUM.updateGroupName(currentGroupName, newGroupName);
+            }
         } catch (UserStoreException e) {
             if (e instanceof org.wso2.carbon.user.core.UserStoreException && (StringUtils
                     .equals(UserCoreErrorConstants.ErrorMessages.ERROR_CODE_DUPLICATE_WHILE_WRITING_TO_DATABASE
@@ -4049,7 +4051,7 @@ public class SCIMUserManager implements UserManager {
         }
     }
 
-    private void setGroupDisplayName(String groupId, String oldGroupName, String newGroupName)
+    private String setGroupDisplayName(String groupId, String oldGroupName, String newGroupName)
             throws IdentityApplicationManagementException, CharonException, BadRequestException, IdentitySCIMException,
             UserStoreException {
 
@@ -4084,6 +4086,7 @@ public class SCIMUserManager implements UserManager {
             // Update group name in carbon UM.
             carbonUM.renameGroup(groupId, newGroupName);
         }
+        return newGroupName;
     }
 
     @Override
