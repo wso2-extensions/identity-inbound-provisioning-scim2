@@ -189,11 +189,6 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>org.wso2.carbon.identity.organization.management.core</groupId>
-                <artifactId>org.wso2.carbon.identity.organization.management.service</artifactId>
-                <version>${org.wso2.carbon.identity.organization.management.core.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.testutil</artifactId>
                 <scope>test</scope>
@@ -314,11 +309,6 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
             </dependency>
-                <dependency>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -386,7 +376,6 @@
 
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
         <testng.version>7.10.1</testng.version>
-        <jacoco.version>0.8.4</jacoco.version>
         <!-- Mockito Versions are Updated  -->
         <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
         <mockito.version>5.3.1</mockito.version>
@@ -463,25 +452,6 @@
                     </executions>
                 </plugin>
                 <plugin>
-                    <groupId>org.jacoco</groupId>
-                    <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>${jacoco.version}</version>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>prepare-agent</goal>
-                            </goals>
-                        </execution>
-                        <execution>
-                            <id>report</id>
-                            <phase>test</phase>
-                            <goals>
-                                <goal>report</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-                    <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>${jacoco.version}</version>
