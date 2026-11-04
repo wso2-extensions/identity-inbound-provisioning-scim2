@@ -3187,6 +3187,8 @@ public class SCIMUserManagerTest {
             return name.contains("/") ? "SECOND" : "PRIMARY";
         });
         identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
+        identityUtil.when(() -> IdentityUtil.addDomainToName("engineering", "SECOND"))
+                .thenReturn(currentGroupName);
         scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
                 .thenReturn(currentGroupName);
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
@@ -3235,6 +3237,8 @@ public class SCIMUserManagerTest {
             return name.contains("/") ? "SECOND" : "PRIMARY";
         });
         identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
+        identityUtil.when(() -> IdentityUtil.addDomainToName("platform", "SECOND"))
+                .thenReturn(canonicalNewGroupName);
         scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
                 .thenReturn(currentGroupName);
         scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(canonicalNewGroupName))
