@@ -3173,4 +3173,90 @@ public class SCIMUserManagerTest {
         verify(mockedUserStoreManager).updateGroupName(currentGroupName, newGroupName);
     }
 
+
+    @Test
+    public void testPatchGroupDomainlessUnchangedDisplayNameUsesCanonicalNameForMembership() throws Exception {
+
+        String groupId = "group-id-6";
+        String currentGroupName = "SECOND/engineering";
+        String memberName = "SECOND/jane";
+        String memberId = "member-id-4";
+
+        identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenAnswer(invocation -> {
+            String name = invocation.getArgument(0);
+            return name.contains("/") ? "SECOND" : "PRIMARY";
+        });
+        identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
+                .thenReturn(currentGroupName);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain("engineering"))
+                .thenReturn(currentGroupName);
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.getUserIDFromProperties(anyString(), anyString(), anyString()))
+                .thenReturn(memberId);
+
+        PatchOperation displayNameOperation = new PatchOperation();
+        displayNameOperation.setOperation(SCIMConstants.OperationalConstants.REPLACE);
+        displayNameOperation.setAttributeName(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME);
+        displayNameOperation.setValues("engineering");
+
+        Map<String, String> memberObject = new HashMap<>();
+        memberObject.put(SCIMConstants.GroupSchemaConstants.DISPLAY, memberName);
+        memberObject.put(SCIMConstants.GroupSchemaConstants.VALUE, memberId);
+        PatchOperation memberOperation = new PatchOperation();
+        memberOperation.setOperation(SCIMConstants.OperationalConstants.ADD);
+        memberOperation.setAttributeName(SCIMConstants.GroupSchemaConstants.MEMBERS);
+        memberOperation.setValues(memberObject);
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        patchOperations.put(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
+                Collections.singletonList(displayNameOperation));
+        patchOperations.put(SCIMConstants.GroupSchemaConstants.MEMBERS,
+                Collections.singletonList(memberOperation));
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        scimUserManager.patchGroup(groupId, currentGroupName, patchOperations);
+
+        verify(mockedUserStoreManager, never()).renameGroup(anyString(), anyString());
+        verify(mockedUserStoreManager).updateUserListOfRoleWithID(eq(currentGroupName),
+                aryEq(new String[0]), aryEq(new String[]{memberId}));
+        verify(mockedUserStoreManager, never()).updateGroupName(anyString(), anyString());
+    }
+
+    @Test
+    public void testPatchGroupDomainlessRenameUsesCanonicalName() throws Exception {
+
+        String groupId = "group-id-7";
+        String currentGroupName = "SECOND/engineering";
+        String canonicalNewGroupName = "SECOND/platform";
+
+        identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenAnswer(invocation -> {
+            String name = invocation.getArgument(0);
+            return name.contains("/") ? "SECOND" : "PRIMARY";
+        });
+        identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
+                .thenReturn(currentGroupName);
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain("platform"))
+                .thenReturn(canonicalNewGroupName);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
+
+        PatchOperation displayNameOperation = new PatchOperation();
+        displayNameOperation.setOperation(SCIMConstants.OperationalConstants.REPLACE);
+        displayNameOperation.setAttributeName(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME);
+        displayNameOperation.setValues("platform");
+
+        Map<String, List<PatchOperation>> patchOperations = new HashMap<>();
+        patchOperations.put(SCIMConstants.GroupSchemaConstants.DISPLAY_NAME,
+                Collections.singletonList(displayNameOperation));
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        scimUserManager.patchGroup(groupId, currentGroupName, patchOperations);
+
+        verify(mockedUserStoreManager).renameGroup(groupId, canonicalNewGroupName);
+        verify(mockedUserStoreManager).updateGroupName(currentGroupName, canonicalNewGroupName);
+    }
+
+
 }
