@@ -3189,8 +3189,8 @@ public class SCIMUserManagerTest {
         identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
         scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
                 .thenReturn(currentGroupName);
-        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
-                .thenReturn(currentGroupName);
+        when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
+        when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.getUserIDFromProperties(anyString(), anyString(), anyString()))
                 .thenReturn(memberId);
