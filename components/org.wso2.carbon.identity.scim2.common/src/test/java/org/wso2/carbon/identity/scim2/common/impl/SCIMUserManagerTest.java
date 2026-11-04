@@ -3030,6 +3030,7 @@ public class SCIMUserManagerTest {
         verify(mockedUserStoreManager).updateUserListOfRoleWithID(eq(groupName),
                 aryEq(new String[]{memberId}), aryEq(new String[0]));
         verify(mockedUserStoreManager, never()).updateGroupName(anyString(), anyString());
+        verify(mockedUserStoreManager, never()).renameGroup(anyString(), anyString());
     }
 
     @Test
@@ -3123,6 +3124,7 @@ public class SCIMUserManagerTest {
         verify(mockedUserStoreManager).updateUserListOfRoleWithID(eq(groupName),
                 aryEq(new String[0]), aryEq(new String[]{memberId}));
         verify(mockedUserStoreManager, never()).updateGroupName(anyString(), anyString());
+        verify(mockedUserStoreManager, never()).renameGroup(anyString(), anyString());
     }
 
     @Test
