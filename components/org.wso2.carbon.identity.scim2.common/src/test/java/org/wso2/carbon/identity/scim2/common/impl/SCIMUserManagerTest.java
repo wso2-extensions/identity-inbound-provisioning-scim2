@@ -3189,7 +3189,7 @@ public class SCIMUserManagerTest {
         identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
         scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
                 .thenReturn(currentGroupName);
-        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain("engineering"))
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
                 .thenReturn(currentGroupName);
         when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
         when(mockedUserStoreManager.getUserIDFromProperties(anyString(), anyString(), anyString()))
@@ -3237,7 +3237,7 @@ public class SCIMUserManagerTest {
         identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
         scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(currentGroupName))
                 .thenReturn(currentGroupName);
-        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain("platform"))
+        scimCommonUtils.when(() -> SCIMCommonUtils.getGroupNameWithDomain(canonicalNewGroupName))
                 .thenReturn(canonicalNewGroupName);
         when(ApplicationManagementService.getInstance()).thenReturn(applicationManagementService);
         when(applicationManagementService.getServiceProvider(anyString(), anyString())).thenReturn(null);
