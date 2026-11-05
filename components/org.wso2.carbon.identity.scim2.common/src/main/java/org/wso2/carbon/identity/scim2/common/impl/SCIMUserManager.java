@@ -3479,16 +3479,18 @@ public class SCIMUserManager implements UserManager {
         int totalGroupCount;
         try {
             String pagedFilter = resolvePagedGroupNameFilter(domainName, SCIMCommonConstants.ANY);
-            Set<String> groupNames = listPagedGroupNames(pagedFilter, domainName, startIndex, count);
-            Integer pagedGroupCount = countPagedGroupNames(pagedFilter, domainName, startIndex, count, groupNames);
+            GroupNamePage pagedGroups = listPagedGroupNames(pagedFilter, domainName, startIndex, count);
+            Integer pagedGroupCount = countPagedGroupNames(pagedFilter, domainName, startIndex, pagedGroups);
+            Set<String> groupNames;
             if (pagedGroupCount != null) {
+                groupNames = pagedGroups.names;
                 totalGroupCount = pagedGroupCount;
+            } else if (pagedGroups != null) {
+                // The store pages its roles but cannot count them (LDAP).
+                groupNames = pagedGroups.names;
+                totalGroupCount = resolveUncountedPageTotal(domainName, null, startIndex, pagedGroups);
             } else {
-                if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-                    groupNames = getGroupNamesForGroupsEndpoint(domainName);
-                } else {
-                    groupNames = getRoleNamesForGroupsEndpoint(domainName);
-                }
+                groupNames = listLegacyGroupNames(domainName);
 
                 totalGroupCount = groupNames.size();
                 // Adjust startIndex and endIndex to ensure they are within bounds
@@ -3596,9 +3598,11 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Lists one page of group names from the user store, or returns null if the store cannot page.
+     * Lists one page of group names from the user store, or returns null if the store cannot page. Below the store's
+     * MaxRoleNameListLength one group more than the page is requested and dropped, so the page tells whether a group
+     * follows it; at that limit the store returns no more than the page, so a full page may have more.
      */
-    private Set<String> listPagedGroupNames(String pagedFilter, String domainName, int startIndex, Integer count)
+    private GroupNamePage listPagedGroupNames(String pagedFilter, String domainName, int startIndex, Integer count)
             throws org.wso2.carbon.user.core.UserStoreException {
 
         if (pagedFilter == null) {
@@ -3608,9 +3612,13 @@ public class SCIMUserManager implements UserManager {
         if (limit <= 0) {
             return null;
         }
+        boolean probe = limit < getMaxGroupPageSize(domainName);
         try {
             // The user store takes the one based start index as its offset.
-            return new LinkedHashSet<>(Arrays.asList(carbonUM.listRoleNames(pagedFilter, limit, startIndex)));
+            List<String> names = Arrays.asList(carbonUM.listRoleNames(pagedFilter, probe ? limit + 1 : limit,
+                    startIndex));
+            return new GroupNamePage(new LinkedHashSet<>(names.subList(0, Math.min(names.size(), limit))),
+                    probe ? names.size() > limit : names.size() >= limit);
         } catch (org.wso2.carbon.user.core.NotImplementedException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Paginated group listing is not available for the user store domain: " + domainName, e);
@@ -3620,21 +3628,22 @@ public class SCIMUserManager implements UserManager {
     }
 
     /**
-     * Returns the total for a paged listing, or null if the caller should list the names itself.
+     * Returns the total for a paged listing, or null if there is no page or the user store cannot count its roles.
      */
-    private Integer countPagedGroupNames(String pagedFilter, String domainName, int startIndex, Integer count,
-                                         Set<String> page) throws org.wso2.carbon.user.core.UserStoreException {
+    private Integer countPagedGroupNames(String pagedFilter, String domainName, int startIndex, GroupNamePage page)
+            throws org.wso2.carbon.user.core.UserStoreException {
 
         if (page == null) {
             return null;
         }
-        // Listing and count share a predicate, so a short first page already holds every match.
-        if (startIndex <= 1 && page.size() < resolveGroupPageLimit(domainName, count)) {
-            return page.size();
+        // Listing and count share a predicate, so a first page with no group after it already holds every match.
+        if (startIndex <= 1 && !page.hasMore) {
+            return page.names.size();
         }
         try {
             return (int) Math.min(carbonUM.countRoleNames(pagedFilter), Integer.MAX_VALUE);
         } catch (org.wso2.carbon.user.core.NotImplementedException e) {
+            // The user store pages its role listing but cannot count it. The caller resolves the total from the page.
             if (log.isDebugEnabled()) {
                 log.debug("Paginated group count is not available for the user store domain: " + domainName, e);
             }
@@ -3674,6 +3683,83 @@ public class SCIMUserManager implements UserManager {
             }
         }
         return givenMax;
+    }
+
+    /**
+     * Total for a page from a store that cannot count its roles: exact when no group follows the page, otherwise
+     * one more than the rows served, raised to the figure of the unpaginated listing (filtered when a filter is
+     * given) while the rows served are below the store's cap, since that figure is capped per search base. An
+     * empty page past the first proves nothing, so it reports that figure, as the fallback did; if that listing
+     * fails, a page in hand keeps its lower bound and an empty page fails as the fallback did.
+     */
+    private int resolveUncountedPageTotal(String domainName, ExpressionNode filter, int startIndex,
+                                          GroupNamePage page) throws CharonException {
+
+        int served = Math.max(startIndex, 1) - 1 + page.names.size();
+        if (!page.names.isEmpty() && !page.hasMore) {
+            return served;
+        }
+        int lowerBound = page.names.isEmpty() ? 0 : served + 1;
+        if (!page.names.isEmpty() && served >= getMaxGroupPageSize(domainName)) {
+            return lowerBound;
+        }
+        try {
+            int legacyCount = filter == null ? listLegacyGroupNames(domainName).size()
+                    : listLegacyFilteredGroupNames(filter, domainName).size();
+            return Math.max(lowerBound, legacyCount);
+        } catch (UserStoreException | IdentitySCIMException | CharonException e) {
+            if (page.names.isEmpty()) {
+                // Nothing in hand: the listing failed, as it did before paging.
+                if (e instanceof CharonException) {
+                    throw (CharonException) e;
+                }
+                throw new CharonException("Error in obtaining role names from user store.", e);
+            }
+            // The page is already in hand; the unpaginated listing only raised the figure.
+            if (log.isDebugEnabled()) {
+                log.debug("Unpaginated group listing failed for the user store domain: " + domainName, e);
+            }
+            return lowerBound;
+        }
+    }
+
+    /**
+     * One page of group names and whether the user store holds a group beyond it.
+     */
+    private static final class GroupNamePage {
+
+        private final Set<String> names;
+        private final boolean hasMore;
+
+        private GroupNamePage(Set<String> names, boolean hasMore) {
+
+            this.names = names;
+            this.hasMore = hasMore;
+        }
+    }
+
+    /**
+     * Every group name of the domain, or of every store when no domain is given, through the unpaginated listing,
+     * which the user store caps.
+     */
+    private Set<String> listLegacyGroupNames(String domainName) throws UserStoreException, IdentitySCIMException {
+
+        return carbonUM.isRoleAndGroupSeparationEnabled() ? getGroupNamesForGroupsEndpoint(domainName)
+                : getRoleNamesForGroupsEndpoint(domainName);
+    }
+
+    /**
+     * Every group name matching the filter through the unpaginated listing, which the user store caps.
+     */
+    private List<String> listLegacyFilteredGroupNames(ExpressionNode node, String domainName)
+            throws org.wso2.carbon.user.core.UserStoreException, CharonException {
+
+        List<String> groupsList = new ArrayList<>(getGroupList(node, domainName));
+        // Remove roles, if the role and group separation feature is enabled.
+        if (carbonUM.isRoleAndGroupSeparationEnabled()) {
+            groupsList.removeIf(SCIMCommonUtils::isHybridRole);
+        }
+        return groupsList;
     }
 
     /**
@@ -3824,19 +3910,17 @@ public class SCIMUserManager implements UserManager {
             List<String> groupsList;
             String pagedFilter = resolvePagedGroupNameFilter(domainName, buildGroupNameFilterPattern(node));
             Integer pageCount = count == 0 ? null : count;
-            Set<String> pagedNames = listPagedGroupNames(pagedFilter, domainName, startIndex, pageCount);
-            Integer pagedGroupCount = countPagedGroupNames(pagedFilter, domainName, startIndex, pageCount,
-                    pagedNames);
+            GroupNamePage pagedGroups = listPagedGroupNames(pagedFilter, domainName, startIndex, pageCount);
+            Integer pagedGroupCount = countPagedGroupNames(pagedFilter, domainName, startIndex, pagedGroups);
             if (pagedGroupCount != null) {
-                groupsList = new ArrayList<>(pagedNames);
+                groupsList = new ArrayList<>(pagedGroups.names);
                 totalGroupCount = pagedGroupCount;
+            } else if (pagedGroups != null) {
+                // The store pages its roles but cannot count them (LDAP).
+                groupsList = new ArrayList<>(pagedGroups.names);
+                totalGroupCount = resolveUncountedPageTotal(domainName, node, startIndex, pagedGroups);
             } else {
-                groupsList = new ArrayList<>(getGroupList(node, domainName));
-
-                // Remove roles, if the role and group separation feature is enabled.
-                if (carbonUM.isRoleAndGroupSeparationEnabled()) {
-                    groupsList.removeIf(SCIMCommonUtils::isHybridRole);
-                }
+                groupsList = listLegacyFilteredGroupNames(node, domainName);
 
                 totalGroupCount = groupsList.size();
                 // Adjust startIndex and endIndex to ensure they are within bounds
