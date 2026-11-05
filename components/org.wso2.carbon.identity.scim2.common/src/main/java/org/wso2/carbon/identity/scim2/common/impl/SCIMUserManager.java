@@ -3690,10 +3690,10 @@ public class SCIMUserManager implements UserManager {
      * one more than the rows served, raised to the figure of the unpaginated listing (filtered when a filter is
      * given) while the rows served are below the store's cap, since that figure is capped per search base. An
      * empty page past the first proves nothing, so it reports that figure, as the fallback did; if that listing
-     * fails, the figure is the lower bound already in hand.
+     * fails, a page in hand keeps its lower bound and an empty page fails as the fallback did.
      */
     private int resolveUncountedPageTotal(String domainName, ExpressionNode filter, int startIndex,
-                                          GroupNamePage page) {
+                                          GroupNamePage page) throws CharonException {
 
         int served = Math.max(startIndex, 1) - 1 + page.names.size();
         if (!page.names.isEmpty() && !page.hasMore) {
@@ -3708,6 +3708,13 @@ public class SCIMUserManager implements UserManager {
                     : listLegacyFilteredGroupNames(filter, domainName).size();
             return Math.max(lowerBound, legacyCount);
         } catch (UserStoreException | IdentitySCIMException | CharonException e) {
+            if (page.names.isEmpty()) {
+                // Nothing in hand: the listing failed, as it did before paging.
+                if (e instanceof CharonException) {
+                    throw (CharonException) e;
+                }
+                throw new CharonException("Error in obtaining role names from user store.", e);
+            }
             // The page is already in hand; the unpaginated listing only raised the figure.
             if (log.isDebugEnabled()) {
                 log.debug("Unpaginated group listing failed for the user store domain: " + domainName, e);

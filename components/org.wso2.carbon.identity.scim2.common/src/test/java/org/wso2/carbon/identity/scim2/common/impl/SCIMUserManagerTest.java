@@ -163,6 +163,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -837,6 +838,54 @@ public class SCIMUserManagerTest {
         verify(mockedUserStoreManager).countRoleNames("PRIMARY/*");
         verify(mockedUserStoreManager, times(unpaginatedListed ? 1 : 0)).getRoleNames(anyString(), anyInt(),
                 anyBoolean(), anyBoolean(), anyBoolean());
+    }
+
+    @DataProvider(name = "uncountedGroupListingWithoutUnpaginatedListing")
+    public Object[][] uncountedGroupListingWithoutUnpaginatedListing() {
+
+        return new Object[][]{
+                // startIndex, count, names the store returns for count + 1, rows, total (null: the listing fails).
+                {1, 50, 51, 50, 51},
+                {1000, 51, 0, 0, null}
+        };
+    }
+
+    @Test(dataProvider = "uncountedGroupListingWithoutUnpaginatedListing")
+    public void testListGroupsWhenUserStoreCannotCountAndUnpaginatedListingFails(int startIndex, int count,
+                                                                                int returned, int rows, Integer total)
+            throws Exception {
+
+        String[] page = new String[returned];
+        for (int i = 0; i < returned; i++) {
+            page[i] = "group" + (startIndex + i);
+            when(mockedUserStoreManager.getGroupByGroupName(page[i], null))
+                    .thenReturn(buildUserCoreGroupResponse(page[i], "id-" + page[i], null));
+        }
+        when(mockedUserStoreManager.isRoleAndGroupSeparationEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRoleNames(anyString(), anyInt(), anyBoolean(), anyBoolean(), anyBoolean()))
+                .thenThrow(new org.wso2.carbon.user.core.UserStoreException("The directory is not reachable."));
+        when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isSCIMEnabled()).thenReturn(true);
+        when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfig);
+        doReturn(page).when(mockedUserStoreManager).listRoleNames("PRIMARY/*", count + 1, startIndex);
+        when(mockedUserStoreManager.countRoleNames(anyString()))
+                .thenThrow(new org.wso2.carbon.user.core.NotImplementedException("Not implemented."));
+        when(mockIdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = true;
+
+        SCIMUserManager scimUserManager = new SCIMUserManager(mockedUserStoreManager, mockedClaimManager);
+        if (total == null) {
+            // An empty page past the end has nothing in hand, so the failed listing fails the request.
+            assertThrows(CharonException.class, () -> scimUserManager.listGroupsWithGET(null, startIndex, count,
+                    null, null, "PRIMARY", null));
+            return;
+        }
+        GroupsGetResponse groupsResponse = scimUserManager.listGroupsWithGET(null, startIndex, count,
+                null, null, "PRIMARY", null);
+
+        // The page in hand is served with its lower bound.
+        assertEquals(groupsResponse.getGroups().size(), rows);
+        assertEquals(groupsResponse.getTotalGroups(), (int) total);
     }
 
     @Test
