@@ -4227,7 +4227,7 @@ public class SCIMUserManager implements UserManager {
             // Validate the memberIds sent in the update request against the Ids retrieved from the user store.
             if (isNotEmpty(addedMembers)) {
                 validateUserIds(addedMemberIdsFromUserstore, newlyAddedMemberIds);
-                filterExistingGroupMembers(groupId, addedMemberIdsFromUserstore);
+                filterExistingGroupMembers(newGroupName, addedMemberIdsFromUserstore);
             }
 
             if (isNotEmpty(deletedMemberIds)) {
@@ -4285,16 +4285,16 @@ public class SCIMUserManager implements UserManager {
     /**
      * Check whether the users in the set are already existing in the group and remove existing users from the set.
      *
-     * @param groupId                       Group Id.
+     * @param groupName                     Domain qualified group name.
      * @param addedMemberIdsFromUserstore   Set of user ids.
      */
-    private void filterExistingGroupMembers(String groupId, Set<String> addedMemberIdsFromUserstore) throws
-            CharonException, UserStoreException, IdentitySCIMException, BadRequestException {
+    private void filterExistingGroupMembers(String groupName, Set<String> addedMemberIdsFromUserstore) throws
+            org.wso2.carbon.user.core.UserStoreException {
 
-        Group group = doGetGroupWithGroupId(groupId, false, true);
-        if (group != null) {
-            addedMemberIdsFromUserstore.removeIf(member -> group.getMembers() != null &&
-                    group.getMembers().contains(member));
+        for (String memberId : new ArrayList<>(addedMemberIdsFromUserstore)) {
+            if (carbonUM.isUserInRoleWithID(memberId, groupName)) {
+                addedMemberIdsFromUserstore.remove(memberId);
+            }
         }
     }
 
