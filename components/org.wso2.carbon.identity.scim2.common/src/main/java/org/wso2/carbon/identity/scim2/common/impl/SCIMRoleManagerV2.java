@@ -169,15 +169,9 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             List<String> localGroupIds = groupIds.stream()
                     .filter(groupId -> !validIdpGroupIds.contains(groupId))
                     .collect(Collectors.toList());
-            RoleBasicInfo roleBasicInfo;
-            // Mark the role as created by the organization, so that it is handled as an organization custom role.
-            IdentityUtil.threadLocalProperties.get().put(RoleConstants.IS_ORGANIZATION_CUSTOM_ROLE_CREATION_FLOW, true);
-            try {
-                roleBasicInfo = roleManagementService.addRole(role.getDisplayName(), role.getUsers(), localGroupIds,
-                        permissionList, audienceType, role.getAudienceValue(), tenantDomain);
-            } finally {
-                IdentityUtil.threadLocalProperties.get().remove(RoleConstants.IS_ORGANIZATION_CUSTOM_ROLE_CREATION_FLOW);
-            }
+            RoleBasicInfo roleBasicInfo =
+                    roleManagementService.addRole(role.getDisplayName(), role.getUsers(), localGroupIds,
+                            permissionList, audienceType, role.getAudienceValue(), tenantDomain);
             if (isNotEmpty(idpGroupList)) {
                 roleManagementService.updateIdpGroupListOfRole(roleBasicInfo.getId(), idpGroupList, new ArrayList<>(),
                         tenantDomain);
@@ -541,15 +535,10 @@ public class SCIMRoleManagerV2 implements RoleV2Manager {
             }
 
             // If users and groups are provided, they will be ignored. No error response will be returned.
-            RoleBasicInfo roleBasicInfo;
-            // Mark the role as created by the organization, so that it is handled as an organization custom role.
-            IdentityUtil.threadLocalProperties.get().put(RoleConstants.IS_ORGANIZATION_CUSTOM_ROLE_CREATION_FLOW, true);
-            try {
-                roleBasicInfo = roleManagementService.addRole(role.getDisplayName(), Collections.emptyList(),
-                        Collections.emptyList(), permissionList, audienceType, role.getAudienceValue(), tenantDomain);
-            } finally {
-                IdentityUtil.threadLocalProperties.get().remove(RoleConstants.IS_ORGANIZATION_CUSTOM_ROLE_CREATION_FLOW);
-            }
+            RoleBasicInfo roleBasicInfo =
+                    roleManagementService.addRole(role.getDisplayName(), Collections.emptyList(),
+                            Collections.emptyList(), permissionList, audienceType,
+                            role.getAudienceValue(), tenantDomain);
 
             String locationURI = getSCIMRoleURLBasedOnVersion(roleBasicInfo.getId());
             return buildSCIMRoleResponse(roleBasicInfo, locationURI);

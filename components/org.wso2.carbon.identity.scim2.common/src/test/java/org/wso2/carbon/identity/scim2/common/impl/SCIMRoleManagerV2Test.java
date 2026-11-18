@@ -38,7 +38,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
-import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Permission;
@@ -89,7 +88,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.Error.INVALID_AUDIENCE;
@@ -850,13 +848,8 @@ public class SCIMRoleManagerV2Test {
         when(applicationManagementService.getApplicationByResourceId(eq("MainAppId"), any()))
                 .thenReturn(mainApp);
         // Reaching role management shows that the shared application is not rejected.
-        boolean[] isOrganizationCustomRoleCreationFlow = {false};
         when(roleManagementService.addRole(eq(ROLE_NAME), any(), any(), any(), any(), any(), eq(SAMPLE_TENANT_DOMAIN)))
-                .thenAnswer(invocation -> {
-                    isOrganizationCustomRoleCreationFlow[0] = Boolean.TRUE.equals(IdentityUtil.threadLocalProperties
-                            .get().get(RoleConstants.IS_ORGANIZATION_CUSTOM_ROLE_CREATION_FLOW));
-                    throw new IdentityRoleManagementException(ROLE_ALREADY_EXISTS.getCode(), "Role already exists.");
-                });
+                .thenThrow(new IdentityRoleManagementException(ROLE_ALREADY_EXISTS.getCode(), "Role already exists."));
 
         RoleV2 roleV2 = new RoleV2();
         roleV2.setDisplayName(ROLE_NAME);
@@ -867,10 +860,6 @@ public class SCIMRoleManagerV2Test {
         } finally {
             // The application management service mock is shared by the other tests.
             when(applicationManagementService.getMainAppId(anyString())).thenReturn(null);
-            // The role is marked as created by the organization only while it is being added.
-            assertTrue(isOrganizationCustomRoleCreationFlow[0]);
-            assertFalse(IdentityUtil.threadLocalProperties.get()
-                    .containsKey(RoleConstants.IS_ORGANIZATION_CUSTOM_ROLE_CREATION_FLOW));
         }
     }
 }
