@@ -257,6 +257,8 @@ public class SCIMUserManager implements UserManager {
     private static final String COMPATIBILITY_SETTING_GROUP_SCIM2 = "scim2";
     private static final String COMPATIBILITY_SETTING_DISABLE_PASSWORD_UPDATE_IN_ME_ENDPOINT =
             "disablePasswordUpdateInMeEndpoint";
+    private static final String COMPATIBILITY_SETTING_ENFORCE_ATTRIBUTE_PROFILE_READ_ONLY =
+            "enforceAttributeProfileReadOnly";
     /*
      * Claims in this set are used to trigger specific identity management flows.
      * While their values can be updated via SCIM PATCH or PUT requests,
@@ -6012,7 +6014,7 @@ public class SCIMUserManager implements UserManager {
      * @param newClaimList User claim list for the user's new state.
      * @throws UserStoreException Error while accessing the user store.
      * @throws CharonException    {@link CharonException}.
-     * @throws BadRequestException If a blocked claim is targeted via the /scim2/Me endpoint.
+     * @throws BadRequestException If a claim restricted for the initiating persona is targeted.
      */
     private void updateUserClaims(User user, Map<String, String> oldClaimList,
                                   Map<String, String> newClaimList)
@@ -6039,13 +6041,12 @@ public class SCIMUserManager implements UserManager {
         // Combine the claims to be added and modified.
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
 
-        // For self-service (Me endpoint) requests, validate that none of the claims being
-        // added or modified are blocked for the /scim2/Me endpoint.
+        // Validate that none of the claims being added or modified are restricted for the initiating persona.
         Flow currentFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
-        if (currentFlow != null && Flow.InitiatingPersona.USER.equals(currentFlow.getInitiatingPersona())) {
+        if (currentFlow != null) {
             Set<String> claimsBeingUpdated = new HashSet<>(userClaimsToBeModified.keySet());
             claimsBeingUpdated.addAll(userClaimsToBeDeleted.keySet());
-            SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claimsBeingUpdated);
+            validateClaimsBeingUpdated(currentFlow.getInitiatingPersona(), claimsBeingUpdated);
         }
 
         boolean isExecutableUserProfileUpdate =
@@ -6106,7 +6107,7 @@ public class SCIMUserManager implements UserManager {
      *                                       schema.
      * @throws UserStoreException  Error while accessing the user store.
      * @throws CharonException     {@link CharonException}.
-     * @throws BadRequestException If a blocked claim is targeted via the /scim2/Me endpoint.
+     * @throws BadRequestException If a claim restricted for the initiating persona is targeted.
      */
     private void updateUserClaims(User user, Map<String, String> oldClaimList,
                                   Map<String, String> newClaimList, Map<String, String> allSimpleMultiValuedClaimsList)
@@ -6178,15 +6179,14 @@ public class SCIMUserManager implements UserManager {
         // Combine the claims to be added and modified.
         userClaimsToBeModified.putAll(userClaimsToBeAdded);
 
-        // For self-service (Me endpoint) requests, validate that none of the claims being
-        // added or modified are blocked for the /scim2/Me endpoint.
+        // Validate that none of the claims being added or modified are restricted for the initiating persona.
         Flow currentFlow = IdentityContext.getThreadLocalIdentityContext().getCurrentFlow();
-        if (currentFlow != null && Flow.InitiatingPersona.USER.equals(currentFlow.getInitiatingPersona())) {
+        if (currentFlow != null) {
             Set<String> claimsBeingUpdated = new HashSet<>(userClaimsToBeModified.keySet());
             claimsBeingUpdated.addAll(userClaimsToBeDeleted.keySet());
             claimsBeingUpdated.addAll(simpleMultiValuedClaimsToBeAdded.keySet());
             claimsBeingUpdated.addAll(simpleMultiValuedClaimsToBeRemoved.keySet());
-            SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claimsBeingUpdated);
+            validateClaimsBeingUpdated(currentFlow.getInitiatingPersona(), claimsBeingUpdated);
         }
 
         boolean isExecutableUserProfileUpdate =
@@ -8272,5 +8272,64 @@ public class SCIMUserManager implements UserManager {
                     "Error while retrieving compatibility setting for disablePasswordUpdateInMeEndpoint for tenant: " +
                             tenantDomain, e);
         }
+    }
+
+    /**
+     * Validates the claims being updated against the restrictions applicable to the initiating persona.
+     * Self-service (/scim2/Me) requests are validated against the end user attribute profile and admin requests are
+     * validated against the console attribute profile.
+     *
+     * @param initiatingPersona  Initiating persona of the current flow.
+     * @param claimsBeingUpdated Set of local claim URIs that are about to be updated.
+     * @throws BadRequestException If one or more of the claims are restricted for the initiating persona.
+     * @throws CharonException     If an error occurs while retrieving the local claims.
+     */
+    private void validateClaimsBeingUpdated(Flow.InitiatingPersona initiatingPersona, Set<String> claimsBeingUpdated)
+            throws BadRequestException, CharonException {
+
+        if (Flow.InitiatingPersona.USER.equals(initiatingPersona)) {
+            SCIMCommonUtils.validateBlockedClaimsForMeEndpoint(claimsBeingUpdated);
+            if (isAttributeProfileReadOnlyEnforced()) {
+                SCIMCommonUtils.validateReadOnlyClaimsForAttributeProfile(claimsBeingUpdated,
+                        ClaimConstants.DefaultAllowedClaimProfile.END_USER.getProfileName(), tenantDomain);
+            }
+        } else if (Flow.InitiatingPersona.ADMIN.equals(initiatingPersona) && isAttributeProfileReadOnlyEnforced()) {
+            SCIMCommonUtils.validateReadOnlyClaimsForAttributeProfile(claimsBeingUpdated,
+                    ClaimConstants.DefaultAllowedClaimProfile.CONSOLE.getProfileName(), tenantDomain);
+        }
+    }
+
+    /**
+     * Checks whether the read-only configurations of the attribute profiles should be enforced for SCIM2 user
+     * updates, based on the tenant compatibility setting.
+     *
+     * @return True if the attribute profile read-only configurations should be enforced.
+     */
+    private boolean isAttributeProfileReadOnlyEnforced() {
+
+        CompatibilitySettingsManagerImpl compatibilitySettingsManager =
+                (CompatibilitySettingsManagerImpl) SCIMCommonComponentHolder.getCompatibilitySettingsManager();
+        if (compatibilitySettingsManager == null) {
+            return false;
+        }
+
+        try {
+            CompatibilitySetting enforceAttributeProfileReadOnlyCompatibilitySetting =
+                    compatibilitySettingsManager.getCompatibilitySettingsByGroupAndSetting(tenantDomain,
+                            COMPATIBILITY_SETTING_GROUP_SCIM2,
+                            COMPATIBILITY_SETTING_ENFORCE_ATTRIBUTE_PROFILE_READ_ONLY);
+            if (enforceAttributeProfileReadOnlyCompatibilitySetting != null &&
+                    enforceAttributeProfileReadOnlyCompatibilitySetting.getCompatibilitySettings() != null &&
+                    enforceAttributeProfileReadOnlyCompatibilitySetting.getCompatibilitySettings()
+                            .get(COMPATIBILITY_SETTING_GROUP_SCIM2) != null) {
+                return Boolean.parseBoolean(enforceAttributeProfileReadOnlyCompatibilitySetting
+                        .getCompatibilitySettings().get(COMPATIBILITY_SETTING_GROUP_SCIM2)
+                        .getSettingValue(COMPATIBILITY_SETTING_ENFORCE_ATTRIBUTE_PROFILE_READ_ONLY));
+            }
+        } catch (CompatibilitySettingException e) {
+            log.error("Error while retrieving compatibility setting for enforceAttributeProfileReadOnly for tenant: " +
+                    tenantDomain, e);
+        }
+        return false;
     }
 }

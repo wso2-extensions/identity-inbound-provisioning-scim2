@@ -26,6 +26,10 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
@@ -40,6 +44,7 @@ import org.wso2.carbon.identity.scim2.common.test.utils.CommonTestUtils;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.charon3.core.exceptions.BadRequestException;
+import org.wso2.charon3.core.exceptions.CharonException;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -55,7 +60,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
@@ -754,6 +761,92 @@ public class SCIMCommonUtilsTest {
         }
     }
 
+    @Test(description = "Input set contains no claims read-only for the attribute profile — validation should pass.")
+    public void testValidateReadOnlyClaimsForAttributeProfile_NoReadOnlyClaims() throws Exception {
+
+        mockLocalClaims(Arrays.asList(
+                getLocalClaim("http://wso2.org/claims/emailaddress", END_USER_PROFILE, false),
+                getLocalClaim("http://wso2.org/claims/mobile", END_USER_PROFILE, true)));
+
+        Set<String> claims = new HashSet<>(Collections.singletonList("http://wso2.org/claims/emailaddress"));
+        SCIMCommonUtils.validateReadOnlyClaimsForAttributeProfile(claims, END_USER_PROFILE, "carbon.super");
+    }
+
+    @Test(description = "Input set contains a claim read-only for the attribute profile — exception message should " +
+            "list it.")
+    public void testValidateReadOnlyClaimsForAttributeProfile_ReadOnlyClaimFound() throws Exception {
+
+        mockLocalClaims(Arrays.asList(
+                getLocalClaim("http://wso2.org/claims/emailaddress", END_USER_PROFILE, false),
+                getLocalClaim("http://wso2.org/claims/mobile", END_USER_PROFILE, true)));
+
+        Set<String> claims = new HashSet<>(Arrays.asList(
+                "http://wso2.org/claims/emailaddress",
+                "http://wso2.org/claims/mobile"));
+
+        try {
+            SCIMCommonUtils.validateReadOnlyClaimsForAttributeProfile(claims, END_USER_PROFILE, "carbon.super");
+            throw new AssertionError("Expected BadRequestException to be thrown.");
+        } catch (BadRequestException e) {
+            String detail = e.getDetail();
+            assertTrue(detail != null && detail.contains("http://wso2.org/claims/mobile")
+                            && !detail.contains("http://wso2.org/claims/emailaddress"),
+                    "Exception detail should list only the read-only claims.");
+        }
+    }
+
+    @Test(description = "Claim is read-only only for a different attribute profile — validation should pass.")
+    public void testValidateReadOnlyClaimsForAttributeProfile_ReadOnlyForOtherProfile() throws Exception {
+
+        mockLocalClaims(Collections.singletonList(
+                getLocalClaim("http://wso2.org/claims/mobile", CONSOLE_PROFILE, true)));
+
+        Set<String> claims = new HashSet<>(Collections.singletonList("http://wso2.org/claims/mobile"));
+        SCIMCommonUtils.validateReadOnlyClaimsForAttributeProfile(claims, END_USER_PROFILE, "carbon.super");
+    }
+
+    @Test(description = "Error while retrieving local claims — should throw CharonException.",
+            expectedExceptions = CharonException.class)
+    public void testValidateReadOnlyClaimsForAttributeProfile_ClaimMetadataError() throws Exception {
+
+        ClaimMetadataManagementService claimMetadataManagementService = mock(ClaimMetadataManagementService.class);
+        scimComponentHolder.when(SCIMCommonComponentHolder::getClaimManagementService)
+                .thenReturn(claimMetadataManagementService);
+        when(claimMetadataManagementService.getLocalClaims("carbon.super"))
+                .thenThrow(new ClaimMetadataException("Error"));
+
+        Set<String> claims = new HashSet<>(Collections.singletonList("http://wso2.org/claims/mobile"));
+        SCIMCommonUtils.validateReadOnlyClaimsForAttributeProfile(claims, CONSOLE_PROFILE, "carbon.super");
+    }
+
+    @Test(description = "Empty input set — validation should pass without retrieving local claims.")
+    public void testValidateReadOnlyClaimsForAttributeProfile_EmptyInputSet() throws Exception {
+
+        SCIMCommonUtils.validateReadOnlyClaimsForAttributeProfile(Collections.emptySet(), CONSOLE_PROFILE,
+                "carbon.super");
+        scimComponentHolder.verify(SCIMCommonComponentHolder::getClaimManagementService, never());
+    }
+
+    private void mockLocalClaims(List<LocalClaim> localClaims) throws ClaimMetadataException {
+
+        ClaimMetadataManagementService claimMetadataManagementService = mock(ClaimMetadataManagementService.class);
+        scimComponentHolder.when(SCIMCommonComponentHolder::getClaimManagementService)
+                .thenReturn(claimMetadataManagementService);
+        when(claimMetadataManagementService.getLocalClaims("carbon.super")).thenReturn(localClaims);
+    }
+
+    private LocalClaim getLocalClaim(String claimUri, String profileName, boolean isReadOnly) {
+
+        Map<String, String> claimProperties = new HashMap<>();
+        claimProperties.put(ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX + profileName +
+                ClaimConstants.CLAIM_PROFILE_PROPERTY_DELIMITER + ClaimConstants.READ_ONLY_PROPERTY,
+                String.valueOf(isReadOnly));
+        return new LocalClaim(claimUri, Collections.emptyList(), claimProperties);
+    }
+
+    private static final String CONSOLE_PROFILE = ClaimConstants.DefaultAllowedClaimProfile.CONSOLE.getProfileName();
+    private static final String END_USER_PROFILE =
+            ClaimConstants.DefaultAllowedClaimProfile.END_USER.getProfileName();
     private static final String SCIM_NICK_NAME_CLAIM = "urn:ietf:params:scim:schemas:core:2.0:User:nickName";
     private static final String SCIM_TITLE_CLAIM = "urn:ietf:params:scim:schemas:core:2.0:User:title";
     private static final String SCIM_EMAIL_CLAIM = "urn:ietf:params:scim:schemas:core:2.0:User:emails";

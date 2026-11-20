@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.util.ClaimConstants;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
@@ -1512,6 +1513,45 @@ public class SCIMCommonUtils {
             throw new BadRequestException(
                     "The following claims are not allowed to be updated via the scim2/Me endpoint: "
                             + String.join(", ", restrictedClaimsFound),
+                    ResponseCodeConstants.MUTABILITY);
+        }
+    }
+
+    /**
+     * Validates that none of the provided local claim URIs are marked as read-only for the given attribute profile.
+     *
+     * @param localClaimUris Set of local claim URIs that are about to be updated.
+     * @param profileName    Attribute profile name (e.g., "console", "endUser").
+     * @param tenantDomain   Tenant domain.
+     * @throws BadRequestException If one or more of the provided claims are read-only for the attribute profile.
+     * @throws CharonException     If an error occurs while retrieving the local claims.
+     */
+    public static void validateReadOnlyClaimsForAttributeProfile(Set<String> localClaimUris, String profileName,
+                                                                 String tenantDomain)
+            throws BadRequestException, CharonException {
+
+        if (localClaimUris == null || localClaimUris.isEmpty()) {
+            return;
+        }
+
+        List<LocalClaim> localClaims;
+        try {
+            localClaims = SCIMCommonComponentHolder.getClaimManagementService().getLocalClaims(tenantDomain);
+        } catch (ClaimMetadataException e) {
+            throw new CharonException("Error while retrieving local claims of tenant: " + tenantDomain, e);
+        }
+        String readOnlyProfilePropertyKey = ClaimConstants.PROFILES_CLAIM_PROPERTY_PREFIX + profileName +
+                ClaimConstants.CLAIM_PROFILE_PROPERTY_DELIMITER + ClaimConstants.READ_ONLY_PROPERTY;
+        List<String> readOnlyClaimsFound = localClaims.stream()
+                .filter(localClaim -> localClaimUris.contains(localClaim.getClaimURI()))
+                .filter(localClaim -> Boolean.parseBoolean(localClaim.getClaimProperty(readOnlyProfilePropertyKey)))
+                .map(LocalClaim::getClaimURI)
+                .sorted()
+                .collect(Collectors.toList());
+        if (!readOnlyClaimsFound.isEmpty()) {
+            throw new BadRequestException(
+                    "The following claims are read-only and cannot be updated: "
+                            + String.join(", ", readOnlyClaimsFound),
                     ResponseCodeConstants.MUTABILITY);
         }
     }
